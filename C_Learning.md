@@ -326,41 +326,7 @@ while (~(ch = getchar()))
 ### 函数、数组和指针
 
    1. 使用指针形参
-   2. 指针表示法和数组表示法
-
-```c
-char* GetMemory(void)
-{
-   char p[] = "hello world";
-   return p;
-}
-
-int main()
-{
-   char* str = NULL;
-   str = GetMemory();
-   printf(str);
-   return 0;
-}
-```
-
-运行后不会打印"hello world"，只会打印乱码。虽然"hello world"字符串定义在了GetMemory()中，但字符串常量是静态变量保存于内存的静态区中，在GetMemory()退出后并不会被销毁，其定义在GetMemory()中只意味着其位于GetMemory()的定义域中。但问题在于虽然"hello world"字符串常量不会被销毁，但char p[]意味着开辟了新的内存空间给p数组，而其是"hello world"的一份临时拷贝，在GetMemory()退出时被销毁。因此返回的p指向了一个被系统回收的区域，即野指针问题。将数组写成指针形式可以规避这个问题。
-
-```c
-char* GetMemory(void)
-{
-   char* p = "hello world"; // *p指向的空间是静态区不会被销毁
-   return p;
-}
-
-int main()
-{
-   char* str = NULL; 
-   str = GetMemory(); 
-   printf(str);
-   return 0;
-}
-```
+   2. 指针表示法和数组表示法：两种方法本质上都是指针操作，arr[i] == *arr+i。数组表示法是为了让使用者更好理解
 
 ### 保护数组中的数据
 
@@ -379,22 +345,64 @@ int main()
 ### 表示字符串和字符串I/O
 
    1. 在程序中定义字符串
-      1. 字符串字面量
+      1. 字符串字面量：字符串常量属于静态存储类别 static storage class，这说明如果在函数中使用字符串常量 ，该字符串只会被储存一次，在整个程序的生命期内存在，即使函数被调用多次
       2. 字符串数组和初始化
-      3. 数组和指针
-      4. 数组和指针区别
-      5. 字符串数组
+      3. 数组和指针区别
+         * 数组形式：字符串在程序运行时被载入到静态存储区中，程序在没有运行到相关代码时不会在栈区创建数组，数组形式意味着在栈区开辟了一个字符串常量的临时拷贝。可以进行arr+i操作，但不能进行++arr的操作。同时如果是定义在函数中，该数组是一个自动变量，该拷贝在函数结束时栈区被销毁，可能会造成野指针问题
+         * 指针形式：创建了一个指针变量，其指向堆区中字符串常数的首地址，可以进行++arr的操作
+
+         ```c
+         char* GetMemory(void)
+         {
+            char p[] = "hello world";
+            return p;
+         }
+
+         int main()
+         {
+            char* str = NULL;
+            str = GetMemory();
+            printf(str);
+            return 0;
+         }
+         ```
+
+         运行后不会打印"hello world"，只会打印乱码。虽然"hello world"字符串定义在了GetMemory()中，但字符串常量是静态变量保存于内存的静态区中，在GetMemory()退出后并不会被销毁，其定义在GetMemory()中只意味着其位于GetMemory()的定义域中。但问题在于虽然"hello world"字符串常量不会被销毁，但char p[]意味着开辟了新的内存空间给p数组，而其是"hello world"的一份临时拷贝，在GetMemory()退出时被销毁。因此返回的p指向了一个被系统回收的区域，即野指针问题。将数组写成指针形式可以规避这个问题。
+
+         ```c
+         char* GetMemory(void)
+         {
+            char* p = "hello world"; // *p指向的空间是静态区不会被销毁
+            return p;
+         }
+
+         int main()
+         {
+            char* str = NULL; 
+            str = GetMemory(); 
+            printf(str);
+            return 0;
+         }
+         ```
+
+      4. 字符串数组
    2. 指针和字符串
 
 ### 字符串输入
 
-   1. 分配空间
-   2. gets()函数
+   1. 分配空间：必须为输入的字符串提供足够的空间。和直接存储字符串不同，存储输入的字符串时编译器不会自动计算字符串的长度
+   2. gets()函数 ```char* gets(char* buffer);```
+      1. 读取整行输入，直至遇到换行符，然后丢弃换行符，存储其余字符，并在这些字符的末尾添加一个\0使其称为一个C字符串
+      2. gets()函数只有一个参数，是无法判断输入的内容是否放的进数组中的，容易产生缓冲区溢出，利用其甚至可以造成系统安全上的漏洞，因此不建议使用
    3. gets()的替代品
-      1. fgets() fputs()
-      2. gets_s()
-      3. scanf()和以上函数的区别
-   4. scanf()函数
+      1. 单字符IO：getchar()
+      2. fgets() ```char* fgets(char* string, int n, FILE* stream );```
+         * fgets()被设计用于处理文件输入
+         * fgets()第二个参数用于控制读入字符的最大数量
+         * 与gets()丢弃换行符不同，fgets()会保留换行符，因此要与fputs()配对使用
+      3. gets_s()
+      4. sget_s()
+   4. scanf()函数：scanf()使用%s来读取字符串，但它读到空白字符就停止了，因此scanf()更像是用来读取一个单词，而非一整句话。scanf()的典型用法就是读取并转换混合数据类型为某种标准形式
 
 ### 字符串输出
 
