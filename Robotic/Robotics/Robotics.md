@@ -18,8 +18,8 @@
   
   <img src="正向和逆向运动学.jpg" width="65%">
   
-  * 前向运动学 
-  * 逆向运动学
+  * 前向运动学：**已知机械臂的关节角度和几何参数，求解机械臂的末端位置和姿态**
+  * 逆向运动学：**已知机械臂的末端位置和姿态，求解机械臂的关节角度和几何参数**
 * 动力学 Dynamics：讨论力/力矩如何产生运动
 
 ## *手臂几何描述方式 -- DH方法（Craig Version）*
@@ -114,11 +114,12 @@ $$
 
 ### 连杆变换的连乘
 
-坐标系 $\left\{n\right\}$ 相对于 $\left\{0\right\}$ 的总变换矩阵为 $^0_nT=^0_1T\ ^1_2T\ ^2_3T\cdots^{n-1}_nT$
+坐标系 $\left\{n\right\}$ 相对于 $\left\{0\right\}$ 的总变换矩阵为下式，且可以拆分为旋转部分和移动部分
+$$
+^0_nT=^0_1T\ ^1_2T\ ^2_3T\cdots^{n-1}_nT=\left[\begin{matrix}_n^0R_{3\times3}&_0^nP_{3\times1}\\0&1\end{matrix}\right]
+$$
 
-### 工具位置计算
-
-定位函数：$_T^ST=_S^BT^{-1}\ _W^BT\ _T^WT$
+工具位置计算，定位函数：$_T^ST=_S^BT^{-1}\ _W^BT\ _T^WT$
 
 ## *实例*
 
@@ -499,9 +500,14 @@ $$
 
 <img src="杆件的速度传播.png">
 
-### 旋转关节
+### 旋转关节的速度传播
 
 对于旋转关节相对于是一个刚体的纯旋转
+
+* 初速度
+  $$
+  ^1\omega_1=\left[\begin{matrix}0\\0\\\dot{\theta}_1\end{matrix}\right],\ ^1v_1=\left[\begin{matrix}0\\0\\0\end{matrix}\right]
+  $$
 
 * 角速度传播
   $$
@@ -513,7 +519,7 @@ $$
   ^iv_{i+1}=\ ^iv_i+\ ^i\omega_i\times\ ^iP_{i+1}\\\xRightarrow{_i^{i+1}R}\ ^{i+1}v_{i+1}=_i^{i+1}R\left(^iv_i+^i\omega_i\times\ ^iP_{i+1}\right)
   $$
 
-### 移动关节
+### 移动关节的速度传播
 
 对于移动关节相对于是一个刚体的纯线运动
 
@@ -533,34 +539,47 @@ $$
 
 在机器人学中，通常使用雅可比将关节速度与操作臂末端的笛卡尔速度联系起来
 $$
-\boldsymbol{Y}=F\left(\boldsymbol{X}\right)\xrightarrow{求导}\boldsymbol{\dot{Y}}=J(\boldsymbol{X})\cdot\boldsymbol{\dot{X}}\\^0\boldsymbol{v}=\left[\begin{matrix}^0v\\^0\omega\end{matrix}\right]=^0J(\boldsymbol{\Theta})\dot{\boldsymbol{\Theta}}
+\boldsymbol{Y}=F\left(\boldsymbol{X}\right)\xrightarrow{求导}\boldsymbol{\dot{Y}}=J(\boldsymbol{X})\cdot\boldsymbol{\dot{X}}\\\dot{P}=^0\boldsymbol{v}=\left[\begin{matrix}^0v\\^0\omega\end{matrix}\right]=^0J(\boldsymbol{\Theta})\dot{\boldsymbol{\Theta}}
 $$
 
 $^0\boldsymbol{v}$ 是机械臂末端相对于固定参考系的速度，$\boldsymbol{\Theta}$ 是所有关节角度的集合，$^0J(\boldsymbol{\Theta})$ 是所有关节角度的Jacobian，Jacobian是时变的线性变化
 
-Jacobian更换参考系
+Jacobian矩阵的维度
+
+* 平面
+* 空间
+
+### Jacobian的计算
+
+* 直接利用end-effector的速度与关节角的微分关系来计算
+* 通过速度传播与Jacobian更换参考系来计算
+
 $$
 ^A\boldsymbol{v}=\left[\begin{matrix}^Av\\^A\omega\end{matrix}\right]=^AJ(\boldsymbol{\Theta})\dot{\boldsymbol{\Theta}}=\left[\begin{matrix}^A_BR&0\\0&^A_BR\\\end{matrix}\right]\left[\begin{matrix}^Bv\\^B\omega\end{matrix}\right]\Rightarrow\ ^AJ(\boldsymbol{\Theta})=\left[\begin{matrix}^A_BR&0\\0&^A_BR\\\end{matrix}\right]\ ^BJ(\boldsymbol{\Theta})
 $$
 
-### 可逆性
+### 奇点与可逆性
 
 奇异性大致可以分为
 
 * 工作空间边界的奇异位形
 * 工作空间内部的奇异位形
 
-当操作臂处于奇艺位形时，它会失去一个或多个自由度。也就是说，在笛卡尔空间的某个方向上，无论选择什么样的关节速度都不能够使机器人手臂运动
+当操作臂处于奇异位形时，它会失去一个或多个自由度。也就是说，在笛卡尔空间的某个方向上，无论选择什么样的关节速度都不能够使机器人手臂运动
+
+当判断奇点与自由度损失情况时，用相对于end-effector的Jacobian矩阵会便利的多
 
 ## *操作臂静力*
 
-求保持系统**静态平衡**的关节力/力矩。关节静力和静力矩是由是施加在最后一个连杆上的静力或静力矩引起的
+### 静力和力矩传递
+
+不考虑连杆重力，求保持系统**静态平衡**的关节力/力矩。关节静力和静力矩是由是施加在最后一个连杆上的静力或静力矩引起的
 
 <img src="单个连杆的静力力矩平衡.png" width="50%">
 
-令 $f_i$ 为连杆 $i-1$ 施加在连杆 $i$ 上的力，$n_i$ 为连杆 $i-1$ 施加在连杆 $i$ 上的力矩。相当于同一个参考坐标系 $\left\{i\right\}$ 有如下。并且用 $\left\{i+1\right\}$ 相对于 $\left\{i\right\}$ 的旋转矩阵 $^i_{i+1}R$ 实现两个坐标系之间的静力转换
+令 $f_i$ 为连杆 $i-1$ 施加在连杆 $i$ 上的力，$n_i$ 为连杆 $i-1$ 施加在连杆 $i$ 上的力矩。相对于同一个参考坐标系 $\left\{i\right\}$ 有如下。并且用 $\left\{i+1\right\}$ 相对于 $\left\{i\right\}$ 的旋转矩阵 $^i_{i+1}R$ 实现两个坐标系之间的静力转换
 $$
-force:\ ^if_i=\ ^if_{i+1}\xRightarrow{^i_{i+1}R}\ ^if_i=\ ^i_{i+1}R\ ^{i+1}f_{i+1}\\torque:\ ^in_i=\ ^in_{i+1}+\ ^iP_{i+1}\times\ ^if_{i+1}\xRightarrow{^i_{i+1}R}\ ^in_i=\ ^i_{i+1}R\ ^{i+1}n_{i+1}+\ ^iP_{i+1}\times\ ^if_{i+1}
+force:\ ^if_i=\ ^if_{i+1}\xRightarrow{^i_{i+1}R}\ ^if_i=\ ^i_{i+1}R\ ^{i+1}f_{i+1}\\torque:\ ^in_i=\ ^in_{i+1}+\ ^iP_{i+1}\times\ ^if_{i+1}\xRightarrow{^i_{i+1}R}\ ^in_i=\ ^i_{i+1}R\ ^{i+1}n_{i+1}+\ ^iP_{i+1}\times\ ^if_i
 $$
 
 
@@ -569,9 +588,103 @@ $$
 revolute:\tau_i=\ ^in_i^T\ ^i\hat{Z}_i\\prismatic:\tau_i=\ ^if_i^T\ \hat{Z}_i
 $$
 
+### 力域中的Jacobian
 
-
+### 速度和静力的笛卡尔变换
 
 # 动力学：Lagrange/Euler Analysis
+
+
+
+## *牛顿方程和欧拉动力学方程*
+
+### 转动惯量
+
+### 计算力和力矩
+
+牛顿方程：刚体质心以加速度 $\dot{v}_C$ 作加速运动，可以通过牛顿方程计算作用在质心上的力 $F$ 引起刚体的加速度
+$$
+F=m\dot{v}_C
+$$
+欧拉动力学方程：刚体质心的角速度和角加速度分别为 $\omega$ 和 $\dot{\omega}$，$^CI$ 是刚体在坐标系 $\left\{C\right\}$ 中的惯性张量，$\left\{C\right\}$ 的原点在刚体的质心。可以通过欧拉方程计算引起刚体转动的力矩 $N$
+$$
+N=\ ^CI\dot{\omega}+\omega\times\ ^CI\omega
+$$
+
+## *Newton-Euler递推过程*
+
+假设已知关节的位置、速度和加速度 $\Theta,\dot{\Theta},\ddot{\Theta}$，结合机器人运动学和质量分布的知识，可以计算出驱动关节运动所需的力、力矩
+
+### 初始化
+
+* Assumption：robot 有N个joints，$\left\{N+1\right\}$ 是end-effector的坐标系
+* 确定初速度以及enf-effector承受的力和力矩 $^0\omega_0,\ ^0\dot{\omega}_0,\ ^0v_0,\ ^0\dot{v}_0,\ ^{N+1}f_{N+1},\ ^{N+1}n_{N+1}$
+* Gravity:  $^0\dot{v}_0=-G$
+
+### 速度前向过程
+
+* Joint $i+1$ is revolute
+
+  * Rotational acceleration
+    $$
+    ^{i+1}\omega_{i+1}=\ _i^{i+1}R\cdot\ ^i\omega_i+\dot{\Theta}_{i+1}\cdot\ ^{i+1}Z_{i+1}\\^{i+1}\dot{\omega}_{i+1}=\ _i^{i+1}R\cdot\ ^i\dot{\omega}_i+\ _i^{i+1}R\cdot\ ^i\omega_i\times\dot{\Theta}_{i+1}\cdot\ ^{i+1}Z_{i+1}+\ddot{\Theta}_{i+1}\ ^{i+1}Z_{i+1}
+    $$
+
+  * Linear acceleration
+    $$
+    ^{i+1}\dot{v}_{i+1}=\ _i^{i+1}R\cdot\left[^i\dot{\omega}_i\times\ ^iP_{i+1}+\ ^i\omega_i\times\left(^i\omega_i\times\ ^iP_{i+1}\right)+\ ^i\dot{v}_i\right]
+    $$
+
+* Joint $i+1$ is prismatic
+
+  * Rotational acceleration
+    $$
+    ^{i+1}\omega_{i+1}=\ _i^{i+1}R\cdot\ ^i\omega_i\\^{i+1}\dot{\omega}_{i+1}=\ _i^{i+1}R\cdot\ ^i\dot{\omega}_i
+    $$
+
+  * Linear acceleration
+    $$
+    ^i\dot{v}_{C_i}=\ ^i\dot{\omega}_i\times\ ^iP_{C_i}+\ ^i\omega_i\times\left(^i\omega_i\times\ ^iP_{C_i}\right)+\ ^i\dot{v}_i
+    $$
+
+### 力、力矩反向过程
+
+* 作用在link $i$ 的质心 $C_i$ 的力和力矩
+  $$
+  ^iF_i=m\cdot\ ^i\dot{v}_{C_i}\\\ ^iN_i=\ ^{C_{i}}I_i\cdot\ ^i\dot{\omega}_i+\ ^i\omega_i\times\ ^{C_i}I_i\cdot\ ^i\omega_i
+  $$
+
+* 作用在joint $i$ 的力和力矩
+  $$
+  ^if_i=\ ^i_{i+1}R\cdot\ ^{i+1}f_{i+1}+\ ^iF_i\\^in_i=\ ^iN_i+\ ^i_{i+1}R\cdot\ ^{i+1}n_{i+1}+\ ^iP_{C_i}\times\ ^iF_i+\ ^iP_{i+1}\times\ ^{i}_{i+1}R\ ^{i+1}f_{i+1}
+  $$
+
+### 计算 $\tau$
+
+和静力中的情况一样，这里再给出一遍
+$$
+revolute:\tau_i=\ ^in_i^T\ ^i\hat{Z}_i\\prismatic:\tau_i=\ ^if_i^T\ \hat{Z}_i
+$$
+现在需要考虑重力的影响：$^0\dot{v}_0=-G$。State-space equation 有以下三种形式
+
+* MVG-form
+  $$
+  \tau=M\left(\Theta\right)\ddot{\Theta}+V\left(\Theta,\dot{\Theta}\right)+G\left(\Theta\right)
+  $$
+
+* MBCG-form
+  $$
+  \tau=M\left(\Theta\right)\ddot{\Theta}+B\left(\Theta\right)\left[\dot{\Theta}\dot{\Theta}\right]+C\left(\Theta\right)\left[\dot{\Theta}^2\right]+G\left(\Theta\right)
+  $$
+
+  * $B\left(\Theta\right)$ 的维度是 $n\times n\left(n-1\right)/2$，$\left[\dot{\Theta}\dot{\Theta}\right]$ 是下面这个向量的缩写
+    $$
+    \left(\dot{\Theta}_1\dot{\Theta}_2,\dot{\Theta}_1\dot{\Theta}_3,\cdots,\dot{\Theta}_{n-1}\dot{\Theta}_n\right)^T
+    $$
+
+  * $C\left(\Theta\right)$ 的维度是 $n\times n$，$\left[\dot{\Theta}^2\right]$ 是下面这个向量的缩写
+    $$
+    \left(\dot{\Theta}_1^2,\dot{\Theta}_2^2,\cdots,\dot{\Theta}_n^2\right)^T
+    $$
 
 # PID Control

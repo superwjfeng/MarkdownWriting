@@ -172,8 +172,8 @@
 * 和BFS的区别
   * 因为是权图，可以使用代价函数 $f(n) = g(n)$，表示从起点到当前点的移动代价
   * 使用**优先级队列**作为容器，将有最小path cost的节点放在队头，通过这个优先级队列保证达到目标节点的时候路径一定是最短的
-  * ==所有被放入expolored队列的节点一定都满足最短路径==
-  * BFS在第一次遇到目标节点时就进行Goal test并返回Solution，且不会将目标节点加入Frontier。但UCS会将目标节点加入Frontier，且UCS的Goal test不是在第一次遇到目标时就进行，而是在选到目标要进行expansion加入frontier前才进行，因为有可能存在其他optimal routes，这样做就可以验证所有到目标的路径，并且选出Path-cost最小的那一条路径返回solution
+  * **所有被放入 `expolored` 队列的节点一定都满足最短路径**
+  * BFS在第一次遇到目标节点时就进行Goal test并返回Solution，且不会将目标节点加入 `frontier`。但UCS会将目标节点加入 `frontier`，且UCS的Goal test不是在第一次遇到目标时就进行，而是在选到目标要进行expansion加入 `frontier` 前才进行，因为有可能存在其他optimal routes，这样做就可以验证所有到目标的路径，并且选出Path-cost最小的那一条路径返回solution
   * **若UCS的path cost是unitary cost，即所有的path cost都相同时，UCS=BFS**
 * Performance of UCS
   * The cost $C^*$ of the optimal solution and the minimum step-cost $\varepsilon$
@@ -181,6 +181,8 @@
   * Optimal if all costs greater than $\varepsilon$
   * 最坏情况是当目标所在的分支的cost都非常大，而其他的分支都是 $\varepsilon$ ，此时时间复杂度和空间复杂度都等于 $(b-1)+(b-1)b+(b-1)b^2+\cdots+(b-1)b^{(C^*/\varepsilon)}=\mathcal{O}(b^{1+(C^*/\varepsilon)})$
 * 可以得到最优路径，但仍然是BFS，速度较慢
+
+Dijkstra算法的C++实现可以看数据结构与算法.md
 
 ### 深度优先算法 DFS
 
@@ -231,9 +233,9 @@
 
 ### 启发式搜索算法 Heuristic search algorithm
 
-有信息搜索算法也称为启发式搜索算法，假定了我们对搜索问题还有额外的知识。所谓额外的只是是指除了图模型自带的各节点的邻居、流向和权重信息（==真实cost==）外的信息。
+有信息搜索算法也称为启发式搜索算法，假定了我们对搜索问题还有额外的知识。所谓额外的只是是指除了图模型自带的各节点的邻居、流向和权重信息（**真实cost**）外的信息
 
-有信息搜索的过程和UCS一样，区别只是启发式搜索根据 evalution function $f(n)$ 探索，该方程给定了探索这个节点的一项，程序会优先探索 $f(n)$ 小的节点。该方程和UCS很像，但UCS是根据已经探索过的路径信息给出接下来的一项，而启发式搜索则需要提供额外的信息。定义 $g(n)$ 为之前探索过的节点的真实代价总和，对于UCS而言，$f(n)=g(n)$。
+有信息搜索的过程和UCS一样，区别只是启发式搜索根据 evaluation function $f(n)$ 探索，该方程给定了探索这个节点的一项，程序会优先探索 $f(n)$ 小的节点。该方程和UCS很像，但UCS是根据已经探索过的路径信息给出接下来的一项，而启发式搜索则需要提供额外的信息。定义 $g(n)$ 为之前探索过的节点的真实代价总和，对于UCS而言，$f(n)=g(n)$。
 
 对于启发式算法，还定义了一个启发函数 Heuristic function $h(n)\geq0$ 来表示 estimated cost of the cheapest path from the state at node *n* to a goal state，对于**目标节点满足 $h(n)=0$，否则不admissible**
 
