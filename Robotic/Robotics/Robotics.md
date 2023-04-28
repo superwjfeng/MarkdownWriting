@@ -8,7 +8,7 @@
 
 ### 不同的空间
 
-* 关节空间 Joint Space：对于一个n自由度的操作臂来说，它的所有连杆位置可由一组n个关节变量加以确认。这样的一组变量被称为 $n\times1$ 的关节向量
+* 关节空间 Joint Space：对于一个n自由度的操作臂来说，它的所有连杆位置可由一组n个关节变量加以确认。这样的一组变量被称为 $n\times1$ 的关节向量。Revolute是 $\theta$，Prismatic是 $d$
 * 笛卡尔空间 Cartesian Space：当位置是在空间中相互交互的轴上测量，且姿态是使用旋转矩阵、欧拉角等表示方式表示的时候，称这个空间为笛卡尔空间，有时也称为任务空间或操作空间
 * 驱动器空间 Acctuator Space：由于测量操作臂位置的传感器常常安装在驱动器上，因此进行控制器运算的时候时必须把关节向量表示成一组驱动器变量方程，即驱动向量
 
@@ -111,6 +111,13 @@ DH表示法有两种，Standard Version 和 Craig Version，区别在于坐标�
 $$
 ^{i-1}_iT={\color{green}^{i-1}_RT}{\color{orange}^R_QT}{\color{purple}^Q_PT}{\color{red}^P_iT}={\color{green}T_{\hat{X}_{i-1}}(\alpha_{i-1})}{\color{orange}T_{\hat{X_R}}(a_{i-1})}{\color{purple}T_{\hat{Z}_Q}(\theta_i)}{\color{red}T_{\hat{Z}_p}(d_i)}=\left[\begin{matrix}c\theta_i&-s\theta_i&0&a_{i-1}\\s\theta_ic\alpha_{i-1}&c\theta_ic\alpha_{i-1}&-s\alpha_{i-1}&-s\alpha_{i-1}d_i\\s\theta_is\alpha_{i-1}&c\theta_is\alpha_{i-1}&c\alpha_{i-1}&c\alpha_{i-1}d_i\\0&0&0&1\end{matrix}\right]
 $$
+
+因为绕y轴进行转动的矩阵形式为 $R_Y=\left[\begin{matrix}\cos{\theta}&0&\sin{\theta}\\0&1&0\\-\sin{\theta}&0&\cos{\theta}\end{matrix}\right]$，而 $_i^{i-1}T$ general form 的第一行第三项一直是0，也就是说无法DH方法无法表示关于Y轴的转动，因此也无法任意选择 frame $\left\{0\right\}$ 的位置
+
+有两个方法来解决无法表示Y轴转动的问题
+
+1. 修改DH参数：可以对DH参数进行适当的修改，将关节的旋转轴线从y轴改为z轴或x轴，从而使得DH方法可以直接应用。这种方法的缺点是可能会导致机械臂的运动学模型出现一些不必要的复杂性，同时也需要对DH表格进行重新编制
+2. 使用扩展DH方法：扩展DH方法是一种更加通用的机械臂运动学建模方法，可以描述任意方向的关节旋转。该方法通过引入四元数表示关节旋转，从而能够描述y轴方向的关节旋转。扩展DH方法的缺点是需要更加复杂的数学运算和计算机实现，因此对计算资源要求更高
 
 ### 连杆变换的连乘
 
@@ -537,21 +544,30 @@ $$
 
 ### Jacobian意义
 
+根据前向运动学的知识，给定Joint space $\boldsymbol{\Theta}$ 参数（Revolute是 $\theta$，Prismatic是 $d$），可以得到EE的表示，对于3维和2维分别有如下
+$$
+P=fkm(\boldsymbol{\Theta})_{3D}=\left[\begin{matrix}p_x&p_y&p_z&o_x&o_y&o_z\end{matrix}\right]^T\\P=fkm(\boldsymbol{\Theta})_{2D}=\left[\begin{matrix}p_x&p_y&o_z\end{matrix}\right]^T
+$$
 在机器人学中，通常使用雅可比将关节速度与操作臂末端的笛卡尔速度联系起来
 $$
 \boldsymbol{Y}=F\left(\boldsymbol{X}\right)\xrightarrow{求导}\boldsymbol{\dot{Y}}=J(\boldsymbol{X})\cdot\boldsymbol{\dot{X}}\\\dot{P}=^0\boldsymbol{v}=\left[\begin{matrix}^0v\\^0\omega\end{matrix}\right]=^0J(\boldsymbol{\Theta})\dot{\boldsymbol{\Theta}}
 $$
 
-$^0\boldsymbol{v}$ 是机械臂末端相对于固定参考系的速度，$\boldsymbol{\Theta}$ 是所有关节角度的集合，$^0J(\boldsymbol{\Theta})$ 是所有关节角度的Jacobian，Jacobian是时变的线性变化
-
-Jacobian矩阵的维度
-
-* 平面
-* 空间
+$^0\boldsymbol{v}$ 是机械臂末端相对于固定参考系的速度，$\boldsymbol{\Theta}$ 是所有关节角度的集合，$^0J(\boldsymbol{\Theta})$ 是所有关节角度的Jacobian，Jacobian是时变的线性变化。Jacobian矩阵的维度为 $6\times n$ （3维），$n$ 是joint的数量可。以分为两部分，前三个是position/Cartesian，后三个是orientation
 
 ### Jacobian的计算
 
-* 直接利用end-effector的速度与关节角的微分关系来计算
+* 直接利用DH建模来计算，假设有 $_n^0T=\left[\begin{matrix}R_{3\times3}&\boldsymbol{t}\\\boldsymbol{0}_{3\times1}&1\end{matrix}\right]$
+
+  * 求前三个关于position/Cartesian的Jacobian的时候就是直接
+    $$
+    \frac{\partial ^0v}{\partial\dot{\Theta}}=\frac{\partial\boldsymbol{t}}{\partial\Theta}
+    $$
+
+  * 
+
+  * 求后三个关于orientation的Jacobian的时候，因为对于revolute关节角速度的速度传播关系为 $^{i+1}\omega_{i+1}=\ _i^{i+1}R\ ^i\omega_i+\dot{\theta}_{i+1}\ ^{i+1}\hat{Z}_{i+1}$（当然对于prismatic就直接是0），所以有 $\frac{\partial\ ^{i+1}\omega_{i+1}}{\partial\dot{\theta}_{i+1}}=\ ^{i+1}\hat{Z}_{i+1}$，所以只要依次求得 $^{0}_iT,\ i\leq n$ 的第三列就可以了（或者是 $^0_iR,\ i\leq n$ 的最后一列），然后把所以的列拼接起来
+
 * 通过速度传播与Jacobian更换参考系来计算
 
 $$
@@ -562,7 +578,7 @@ $$
 
 奇异性大致可以分为
 
-* 工作空间边界的奇异位形
+* 工作空间边界的 奇异位形
 * 工作空间内部的奇异位形
 
 当操作臂处于奇异位形时，它会失去一个或多个自由度。也就是说，在笛卡尔空间的某个方向上，无论选择什么样的关节速度都不能够使机器人手臂运动
@@ -593,8 +609,6 @@ $$
 ### 速度和静力的笛卡尔变换
 
 # 动力学：Lagrange/Euler Analysis
-
-
 
 ## *牛顿方程和欧拉动力学方程*
 
@@ -627,12 +641,12 @@ $$
 
   * Rotational acceleration
     $$
-    ^{i+1}\omega_{i+1}=\ _i^{i+1}R\cdot\ ^i\omega_i+\dot{\Theta}_{i+1}\cdot\ ^{i+1}Z_{i+1}\\^{i+1}\dot{\omega}_{i+1}=\ _i^{i+1}R\cdot\ ^i\dot{\omega}_i+\ _i^{i+1}R\cdot\ ^i\omega_i\times\dot{\Theta}_{i+1}\cdot\ ^{i+1}Z_{i+1}+\ddot{\Theta}_{i+1}\ ^{i+1}Z_{i+1}
+    ^{i+1}\omega_{i+1}=\ _i^{i+1}R\cdot\ ^i\omega_i+\dot{\Theta}_{i+1}\cdot\ ^{i+1}Z_{i+1}=\ _i^{i+1}R\cdot\ ^i\omega_i+\left[\begin{matrix}0\\0\\\dot{\Theta}_{i+1}\end{matrix}\right]\\^{i+1}\dot{\omega}_{i+1}=\ _i^{i+1}R\cdot\ ^i\dot{\omega}_i+\ _i^{i+1}R\cdot\ ^i\omega_i\times\dot{\Theta}_{i+1}\cdot\ ^{i+1}Z_{i+1}+\ddot{\Theta}_{i+1}\ ^{i+1}Z_{i+1}=\ _i^{i+1}R\cdot\ ^i\dot{\omega}_i+\ _i^{i+1}R\cdot\ ^i\omega_i\times\left[\begin{matrix}0\\0\\\dot{\Theta}_{i+1}\end{matrix}\right]+\left[\begin{matrix}0\\0\\\ddot{\Theta}_{i+1}\end{matrix}\right]
     $$
 
   * Linear acceleration
     $$
-    ^{i+1}\dot{v}_{i+1}=\ _i^{i+1}R\cdot\left[^i\dot{\omega}_i\times\ ^iP_{i+1}+\ ^i\omega_i\times\left(^i\omega_i\times\ ^iP_{i+1}\right)+\ ^i\dot{v}_i\right]
+    ^{i+1}v_{i+1}=\ _i^{i+1}R\left(^iv_i+\ ^i\omega_i\times\ ^iP_{i+1}\right)\\^{i+1}\dot{v}_{i+1}=\ _i^{i+1}R\cdot\left[^i\dot{\omega}_i\times\ ^iP_{i+1}+\ ^i\omega_i\times\left(^i\omega_i\times\ ^iP_{i+1}\right)+\ ^i\dot{v}_i\right]
     $$
 
 * Joint $i+1$ is prismatic
@@ -644,19 +658,24 @@ $$
 
   * Linear acceleration
     $$
-    ^i\dot{v}_{C_i}=\ ^i\dot{\omega}_i\times\ ^iP_{C_i}+\ ^i\omega_i\times\left(^i\omega_i\times\ ^iP_{C_i}\right)+\ ^i\dot{v}_i
+    ^{i+1}v_{i+1}=\ _i^{i+1}R\left(^iv_i+\ ^i\omega_i\times\ ^iP_{i+1}\right)+\dot{d}_{i+1}\ ^{i+1}Z_{i+1}\\^{i+1}\dot{v}_{i+1}=\ _i^{i+1}R\cdot\left[^i\dot{\omega}_i\times\ ^iP_{i+1}+\ ^i\omega_i\times\left(^i\omega_i\times\ ^iP_{i+1}\right)+\ ^i\dot{v}_i\right]+2\cdot\ ^{i+1}\omega_{i+1}\times\dot{d}_{i+1}\ ^{i+1}Z_{i+1}+\ddot{d}_{i+1}\ ^{i+1}Z_{i+1}
     $$
+
+反向计算过程中需要计算center mass的linear acceleration
+$$
+^i\dot{v}_{C_i}=\ ^i\dot{\omega}_i\times\ ^iP_{C_i}+\ ^i\omega_i\times\left(^i\omega_i\times\ ^iP_{C_i}\right)+\ ^i\dot{v}_i\\^iP_{C_i}=\ ^i_0T\cdot\ ^0P_{C_i}
+$$
 
 ### 力、力矩反向过程
 
 * 作用在link $i$ 的质心 $C_i$ 的力和力矩
   $$
-  ^iF_i=m\cdot\ ^i\dot{v}_{C_i}\\\ ^iN_i=\ ^{C_{i}}I_i\cdot\ ^i\dot{\omega}_i+\ ^i\omega_i\times\ ^{C_i}I_i\cdot\ ^i\omega_i
+  ^iF_i=m_i\cdot\ ^i\dot{v}_{C_i}\\\ ^iN_i=\ ^{C_{i}}I_i\cdot\ ^i\dot{\omega}_i+\ ^i\omega_i\times\left(\ ^{C_i}I_i\cdot\ ^i\omega_i\right)
   $$
 
 * 作用在joint $i$ 的力和力矩
   $$
-  ^if_i=\ ^i_{i+1}R\cdot\ ^{i+1}f_{i+1}+\ ^iF_i\\^in_i=\ ^iN_i+\ ^i_{i+1}R\cdot\ ^{i+1}n_{i+1}+\ ^iP_{C_i}\times\ ^iF_i+\ ^iP_{i+1}\times\ ^{i}_{i+1}R\ ^{i+1}f_{i+1}
+  ^if_i=\ ^i_{i+1}R\cdot\ ^{i+1}f_{i+1}+\ ^iF_i\\^in_i=\ ^iN_i+\ ^i_{i+1}R\cdot\ ^{i+1}n_{i+1}+\ ^iP_{C_i}\times\ ^iF_i+\ ^iP_{i+1}\times\left(^{i}_{i+1}R\ ^{i+1}f_{i+1}\right)
   $$
 
 ### 计算 $\tau$
@@ -671,7 +690,7 @@ $$
   $$
   \tau=M\left(\Theta\right)\ddot{\Theta}+V\left(\Theta,\dot{\Theta}\right)+G\left(\Theta\right)
   $$
-
+  
 * MBCG-form
   $$
   \tau=M\left(\Theta\right)\ddot{\Theta}+B\left(\Theta\right)\left[\dot{\Theta}\dot{\Theta}\right]+C\left(\Theta\right)\left[\dot{\Theta}^2\right]+G\left(\Theta\right)
@@ -687,4 +706,124 @@ $$
     \left(\dot{\Theta}_1^2,\dot{\Theta}_2^2,\cdots,\dot{\Theta}_n^2\right)^T
     $$
 
-# PID Control
+## *Lagrangian Dynamics*
+
+1. Compute Kinetic and Potential energies (for every link)
+   $$
+   ^0v_{C_i}=\frac{d}{dt}^0P_{C_i}
+   $$
+
+   * Kinetic energy
+     $$
+     k_i=\underbrace{\frac{1}{2}m_iv_{C_i}^T\cdot v_{C_i}}_{KE\ of\ linear\ motion}+\underbrace{\frac{1}{2}\ ^i\omega_i^T\cdot\ ^{C_i}I_i\cdot\ ^i\omega_i}_{KE\ of\ rotational\ motion}\\k=\sum\limits_{i=1}^{n}{k_i}
+     $$
+
+   * Potential energy
+     $$
+     u_i=-m_i\cdot\ ^0g^T\cdot\ ^0P_{C_i}+u_{ref}\\u=\sum\limits_{i=1}^{n}{u_i}
+     $$
+
+2. Compute energy derivatives for each joint $i$
+   $$
+   \tau_i=\frac{d}{dt}\frac{\partial k}{\partial\dot{\Theta}_i}-\frac{\partial k}{\partial\Theta_i}+\frac{\partial u}{\partial\Theta_i}
+   $$
+
+3. Compute joint torques vector
+
+# 线性控制
+
+## *Linear control of robot and recap*
+
+### 机械臂的反馈与闭环控制
+
+<img src="机器人控制系统.png">
+$$
+\tau=M\left(\Theta_d\right)\ddot{\Theta}_d+V\left(\Theta_d,\dot{\Theta}_d\right)+G\left(\Theta_d\right)
+$$
+机械臂的闭环控制系统 open-loop control：大多数机器人会在每一个关节处都有一个位置、速度和加速度的传感器来测量joint configuration $\Theta,\ \dot{\Theta},\ \ddot{\Theta}$，从而可以通过从动力学中得到的MVG表达式通过误差反馈 $E=\Theta_d-\Theta,\ \dot{E}=\dot{\Theta}_d-\dot{\Theta}$ 来控制合适的关节扭矩 $\tau$
+
+### 二阶线性系统
+
+典型二阶系统的微分方程通过拉氏变换转换为s域的代数方程（特征方程）方便求解
+$$
+m\ddot{x}+b\dot{x}+kx=0\xrightarrow{\mathcal{L}}ms^2+bs+k=0
+$$
+方程的根为
+$$
+s_{1,2}=-\frac{b}{2m}\pm\frac{\sqrt{b^2-4mk}}{2m}
+$$
+
+* $b^2>4mk$，两个不相等的实根。此时为过阻尼
+
+* $b^2<4mk$，复根。此时为欠阻尼，系统振荡
+
+* $b^2=4mk$，相等实根。这是我们所期望的情况，此时为临界阻尼，系统在最短的时间内从非零初始位置迅速返回到平衡位置而不出现振荡
+
+  <img src="二阶系统分类.png" width="65%">
+
+### 二阶系统的控制
+
+Mass-spring系统是二阶系统的典型代表，它的开环动力学运动微分方程为
+$$
+m\ddot{x}+b\dot{x}+kx=f
+$$
+给出一种控制规律（控制方程 $f$）：力是反馈的函数，其中 $k_p$ 是静态位置误差系数，而 $k_v$ 是静态速度误差系数
+$$
+f=-k_px-k_v\dot{x}
+$$
+
+联立开环动力学运动微分方程和控制方程可以得到闭环动力学运动微分方程
+$$
+m\ddot{x}+b\dot{x}+kx=f=-k_px-k_v\dot{x}\\m\ddot{x}+\left(b+k_v\right)\dot{x}+\left(k+k_p\right)x\triangleq m\ddot{x}+b'\dot{x}+k'x=0
+$$
+我们的目标是达到临界组阻尼从而达到最快无振荡相应，根据上一小节有临界阻尼的条件为
+$$
+b'=2\sqrt{mk'}
+$$
+
+## *Control law partitioning*
+
+将控制器分为基于模型控制部分和伺服控制部分，这样系统的参数 $m,\ b,\ k$ 就仅仅取决于模型部分，而与伺服部分是完全独立的
+$$
+m\ddot{x}+b\dot{x}+kx=f\triangleq\alpha f'+\beta
+$$
+$f'$ 作为新的系统输入，通过设定特定的 $\alpha,\ \beta$ 值可以将系统简化为一个单位质量的控制系统 $f'$，因此可以得到 $f'=\ddot{x}$
+$$
+\alpha\triangleq m\\\beta\triangleq b\dot{x}+kx
+$$
+和之前一样，仍然设计一个控制规律去计算 $f'$
+$$
+\left\{\begin{array}{l}f'=-k_v\dot{x}-k_pv\\f'=\ddot{x}\end{array}\right.\Rightarrow\ddot{x}+k_v\dot{x}+k_px=0
+$$
+因为是对于单位质量 $m=1$ 而言的，所以可以得到临界阻尼条件为 $k_v=2\sqrt{k_p}$，此时控制增益的设定非常简单而且完全与系统参数独立
+
+### 扩展到多维系统
+
+控制分解的最大好处就是降低了多维系统的控制难度，假设要控制n个质量体 $M$，那么它的二阶开环动力学方程为
+$$
+M\ddot{x}+B\dot{x}+Kx=f
+$$
+和单个控制对象一样，联立开环动力学运动微分方程和控制方程可以得到闭环动力学运动微分方程后进行控制分解
+$$
+M\ddot{x}+B\dot{x}+Kx=f=-K_v\dot{x}-K_px\\M\ddot{x}+\left(B+K_v\right)\dot{x}+\left(K+K_p\right)x=0
+$$
+令 $f\triangleq\alpha f'+\beta$ 后，可以得到
+$$
+\ddot{x}+K_v\dot{x}+K_px=0
+$$
+写成矩阵形式，$K_v,\ K_p$ 都是 $n\times n$ 的diagonal matrix
+$$
+\left[\begin{matrix}\ddot{x}_1\\\ddot{x}_2\\\vdots\\\ddot{x}_n\end{matrix}\right]+\left[\begin{matrix}k_{v1}&0&\cdots&0\\0&k_{v2}&\ddots&\vdots\\\vdots&\ddots&\ddots&0\\0&\cdots&0&k_{v_n}\end{matrix}\right]\cdot\left[\begin{matrix}\dot{x}_1\\\dot{x}_2\\\vdots\\\dot{x}_n\end{matrix}\right]+\left[\begin{matrix}k_{p1}&0&\cdots&0\\0&k_{p2}&\ddots&\vdots\\\vdots&\ddots&\ddots&0\\0&\cdots&0&k_{p_n}\end{matrix}\right]\cdot\left[\begin{matrix}x_1\\x_2\\\vdots\\x_n\end{matrix}\right]=\left[\begin{matrix}0\\0\\\vdots\\0\end{matrix}\right]\\\Leftrightarrow\left[\begin{matrix}\ddot{x}_1\\\ddot{x}_2\\\vdots\\\ddot{x}_n\end{matrix}\right]+\left[\begin{matrix}k_{v1}\dot{x}_1\\k_{v2}\dot{x}_2\\\vdots\\k_{vn}\dot{x}_n\end{matrix}\right]+\left[\begin{matrix}k_{p1}x_1\\k_{p2}x_2\\\vdots\\k_{pn}x_n\end{matrix}\right]=\left[\begin{matrix}0\\0\\\vdots\\0\end{matrix}\right]
+$$
+
+## *误差处理*
+
+### 轨迹跟踪
+
+
+$$
+\left\{\begin{array}{c}e\triangleq x_d-x\\\ddot{x}=f'=\ddot{x}_d+k_v\dot{e}+k_pe\end{array}\right.\Rightarrow \ddot{e}+k_v\dot{e}+k_pe=0
+$$
+
+
+### 抑制干扰

@@ -161,9 +161,9 @@
   * 每弹出一个点，把该点邻接点中没有进过队列的放进队列中
   * 直到队列变空
 * Performance of BFS
-  * 若 ***b*** 和 ***d*** 都是有限的，那么BFS是完备的；因为每一步的 path cost 都相等，所以总的cost是一个常数，因此是optimal
+  * BFS的图搜索一定是完备的；若 ***b*** 是有限的，那么BFS的树搜索也是完备的；因为每一步的 path cost 都相等，所以总的cost是一个常数，因此是optimal
   * 最坏情况下，每一个node都有 ***b*** 个字节点，那么BFS的空间复杂度和时间复杂度都为 $b+b^2+b^3+\cdots+b^d=\mathcal{O}(b^d)$
-* BFS中是一种以时间换空间的方法，具有完备性。虽然可以找到最优的路径，但大量的enqueue、dequeeu操作使算法消耗很大
+* BFS中是一种以时间换空间的方法，具有完备性。虽然可以找到最优的路径，但大量的enqueue、dequeue操作使算法消耗很大
 
 ### 带权图的BFS -- Uniform cost search/Dijkstra算法/一致代价搜索 UCS
 
@@ -203,7 +203,7 @@ Dijkstra算法的C++实现可以看数据结构与算法.md
 
 <img src="图DLS.png">
 
-* DLS规定了DFS的最大搜索深度，给定了一个limit ***l***，DLS在到达limit之后就会放去搜索，转而去搜索frontier中的其他节点
+* DLS规定了DFS的最大搜索深度，给定了一个limit ***l***，**DLS在到达limit之后就会放去搜索，转而去搜索frontier中的其他节点**
 * 返回值
   * 若一个节点返回solution，就会向上传递至根节点返回
   * 若一个节点返回failure，就会向上传递faliure，若最后的根节点也返回faliure，说明DLS的受限不起作用，也就是说这个图最深的深度也没有limit深
@@ -1006,7 +1006,7 @@ $$
 \forall x\ King(x)\Rightarrow Person(x)
 $$
 
-$\forall$ 读作对于所有的，上式的自然语言意义是所有的国王都是人。其中对象 $x$ 称为变量 Variable，它的实际作用是一个占位符 Placeholder
+$\forall$ 读作对于所有的，上c式的自然语言意义是所有的国王都是人。其中对象 $x$ 称为变量 Variable，它的实际作用是一个占位符 Placeholder
 
 $\forall$ 对应的自然连接词是 $\Rightarrow$ Implication
 
@@ -1765,7 +1765,7 @@ $$
 
 ### 不确定性多属性效用
 
-效用独立性 utility independence 概念将偏好独立性扩展：属性集 $\boldsymbol{X}$ 效用独立于属性集 $\boldsymbol{Y}$，若对 $\boldsymbol{X}$ 钟的属性的抽奖之间的偏好独立于 $\boldsymbol{Y}$ 中的属性的具体值
+效用独立性 utility independence 概念将偏好独立性扩展：属性集 $\boldsymbol{X}$ 效用独立于属性集 $\boldsymbol{Y}$，若对 $\boldsymbol{X}$ 中的属性的抽奖之间的偏好独立于 $\boldsymbol{Y}$ 中的属性的具体值
 
 MUI以为着agent的行为可以用乘法效用函数 multiplicative utility function 来描述
 
@@ -1798,7 +1798,7 @@ MUI以为着agent的行为可以用乘法效用函数 multiplicative utility fun
 
 ### 完全信息的一个通用公式
 
-完全信息价值 Value of Perfect Information VPI 指假设得到了关于某个随机变量 $E_j$ 值的精确证据 $E_j=e_j$
+**完全信息价值 Value of Perfect Information VPI/Value of Information VOI** 指假设得到了关于某个随机变量 $E_j$ 值的精确证据 $E_j=e_j$
 
 令 agent 的初始证据为 $\boldsymbol{e}$，那么当前最佳行为 $a$ 的效用/价值定义为
 $$
@@ -1808,7 +1808,7 @@ $$
 $$
 MEU(a|\boldsymbol{e},e_j)=\max\limits_{a}\sum\limits_{s'}{P(RESULT(a)=s'|a,\boldsymbol{e},e_j)U(s)'}
 $$
-因为 $E_j$ 是一个随机变量，其值是当前未知的，所以要确定发现 $E_j$ 的值，我们要在可能发现的所有可能值 $e_{jk}$ 上进行加权平均，比如下面求VPI时将每个可能行动 $e_{jk}$ 的MEU乘以其概率。最后为了得到VPI把原信息价值给减去得到差值
+因为 $E_j$ 是一个随机变量，其值是当前未知的，所以要确定发现 $E_j$ 的值，我们要在可能发现的所有可能值 $e_{jk}$ 上进行加权平均，比如下面求VPI时将每个可能行动 $e_{jk}$ 的MEU乘以其概率。最后为了得到VPI把原信息价值给减去得到差值。注意：计算VPI的时候要把信息的价格加上，得到的VPI意义是，若信息的价格小于VPI，那么购买信息就是值得的
 $$
 VPI_E(E_j)=\left(\sum\limits_k{P(E_j=e_{jk}|\boldsymbol{e})MEU(a_{ejk}|\boldsymbol{e},E_j=e_{jk})}\right)-MEU(a|\boldsymbol{e})
 $$
@@ -1821,7 +1821,7 @@ $$
 $$
 MEU(\alpha|e)=\max\limits_{a}{\sum\limits_{s'}{\left(P\left( Result(a)=s'|e\right)U\left(s'\right)\right)}}\\=P\left(Result(a_1)=oil|e\right)U(oil)+P\left(Result(a_1)=noOil|e\right)U(noOil)=\frac{1}{n}\left(C-\frac{C}{n}\right)+\frac{n-1}{n}\left(-\frac{C}{n}\right)=0
 $$
-若购买了专家的信息，又可以分为block 3有没有油
+若购买了专家的信息，又可以分为block 3有油和没有油的两种情况
 
 * block 3里确定有油，那么选择block 3进行开采
   $$
@@ -1838,7 +1838,7 @@ $$
 VPI_E(E_j)=\left(\sum\limits_k{P(E_j=e_{jk}|\boldsymbol{e})MEU(a_{ejk}|\boldsymbol{e},E_j=e_{jk})}\right)-MEU(a|\boldsymbol{e})\\=P\left(E=e_1|e\right)MEU\left(\alpha_{e_1},E=e_1\right)+P\left(E=e_2|e\right)MEU\left(\alpha_{e_2},E=e_2\right)\\=\frac{1}{n}\left(C-\frac{C}{n}\right)+\frac{n-1}{n}\left(\frac{1}{n-1}\left(C-\frac{C}{n}\right)+\frac{n-2}{n-1}\left(-\frac{C}{n}\right)\right)=\frac{C}{n}
 $$
 
-### VOI的属性
+### VPI的属性
 
 * Non-negative
 * Non-additive：同一类重复的信息没有意义

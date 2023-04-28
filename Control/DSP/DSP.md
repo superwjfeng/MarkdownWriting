@@ -298,21 +298,30 @@ $$
 ### 算法步骤
 
 * 设序列点数 $N=2^L$，$L$ 为正整数。若不满足则补零到满足条件。
+
 * 求前 $N/2$ 点的DFT
   * $X(k)=DFT\left[x(n)\right]=\sum\limits_{n=0}^{N-1}{{x(n)W_N^{kn}}}=\sum\limits_{n=even}{{x(n)W_N^{kn}}}+\sum\limits_{n=odd}{{x(n)W_N^{kn}}}$
   * 代入 $x(n)$ 的奇偶分组 $=\sum\limits_{n=0}^{N/2-1}{{x(2r)W_N^{2kr}}}+\sum\limits_{n=0}^{N/2-1}{{x(2r+1)W_N^{k(2r+1)}}}=\sum\limits_{n=0}^{N/2-1}{{x_1(r)W_N^{2kr}}}+W_N^k\sum\limits_{n=0}^{N/2-1}{{x_2(r)W_N^{2kr}}}$
   * 运用旋转因子的可约性 $W_N^{2kr}=W_{N/2}^{kr}$，得到前 $N/2$ 点的DFT：$\sum\limits_{n=0}^{N/2-1}{{x_1(r)W_{N/2}^{kr}}}+W_N^k\sum\limits_{n=0}^{N/2-1}{{x_2(r)W_{N/2}^{kr}}}=X_1(k)+W_N^kX_2(k)=DFT\left[x_1(r)\right]+W_N^kDFT\left[x_2(r)\right],\ k=0,1,\cdots,\frac{N}{2}-1$
+  
 * 求 $X(k)$ 后 $N/2$ 点的DFT：
   * 因为 $X_1(k),\ X_2(k)$ 是以 $N/2$ 为周期的，所以 $X_1(k+\frac{N}{2})=X_1(k),\ X_2(k+\frac{N}{2})=X_2(k)$
   * 根据旋转因子的共轭对称性 $W_N^{k+\frac{N}{2}}=W_N^{\frac{N}{2}}W_N^k=-W_N^k$，可以得到后半部分的求法为 $X(K+N/2)=X_1(k+N/2)+W_N^{(k+N/2)}X_2(k+N/2)=X_1(K)-W_N^{k}X_2(k)$
+  
 * $\left\{\begin{array}{l}X(k)=X_1(k)+W_N^kX_2(k)\\X(k+N/2)=X_1(k)-W_N^{k}X_2(k)\end{array}\right.,\ k=0,1,\cdots,\frac{N}{2}-1$
+
 * 蝶形单元 <img src="ButterflyUnit.jpg" width="85%"> 每进行一次蝶形运算需要1次乘法（CB可复用）和2次加法
-* 蝶形运算：运用N点DFT的一次时域抽取分解图 <img src="ButtlerflyAlgorithm1.jpg" width="75%">
+
+* 蝶形运算：运用N点DFT的一次时域抽取分解图
+
+  <img src="ButtlerflyAlgorithm1.jpg" width="75%">
 
 ### 二次分解（可以一直分解到不可分为止）
 
 * $N/2$ 仍为偶数，进一步分解 $N/2\rightarrow N/4$，即 $\left\{\begin{array}{l}x(2l)\coloneqq x_3(l)\\x(2l+1)\coloneqq x_4(l)\end{array}\right.\ l=0,1,\cdots,\frac{N}{4}-1\longrightarrow\left\{\begin{array}{l}X_1(k)=X_3(k)+W_{N/2}^kX_4(k)\\X_1(k+N/4)=X_3(k)-W_{N/2}^{k}X_4(k)\end{array}\right.,\ k=0,1,\cdots,\frac{N}{4}-1$，同理 $\left\{\begin{array}{l}X_2(k)=X_5(k)+W_{N/2}^kX_6(k)\\X_2(k+N/4)=X_5(k)-W_{N/2}^{k}X_6(k)\end{array}\right.,\ k=0,1,\cdots,\frac{N}{4}-1$
-* <img src="ButtlerflyAlgorithm2.jpg" width="75%">
+
+  <img src="ButtlerflyAlgorithm2.jpg" width="75%">
+
 * 还可以再进行一次分解，这里不继续下去了。对于 $N=8$ 的时域抽取基2FFT一共进行了3次时域抽取
 
 ## *频域抽取法基2FFT基本原理*
@@ -322,7 +331,10 @@ $$
 ## *DIT-FFT算法与直接计算DFT运算量的比较*
 
 * 由DIF-FFT的分解图可知，对于 $N=2^M$，一共需要 $M$ 级蝶形运算，每一级需要 $N/2$ 个蝶形运算，因此每一级需要 $N/2$ 次复数乘法和 $N$ 次复数加法，则所有的 $M$ 级蝶形运算共需要 $C_M=\frac{N}{2}M=\frac{N}{2}\log_2{N}$ 次复数乘法和 $C_A=NM=N\log_{2}{N}$ 次复数加法，即算法复杂度为 $o(n\log_{2}{n})$
-* 和直接计算DFT的 $o(n^2)$ 相比，当采样点为 $N=1024$ 时 $\frac{N^2}{n\log_{2}{n}}=204.8$ <img src="ZeitkomplexitaetVergleich.png" width="35%">
+
+* 和直接计算DFT的 $o(n^2)$ 相比，当采样点为 $N=1024$ 时 $\frac{N^2}{n\log_{2}{n}}=204.8$
+
+  <img src="ZeitkomplexitaetVergleich.png" width="35%">
 
 ## *DIT-FFT算法的运算规律及编程思想*
 
@@ -356,8 +368,11 @@ $$
 ### DCT优势
 
 * Sowohl FT als auch DFT erzeugen (egal was für ein Input), ein komplexes Sepktrum. Normalerweise reicht nur der relle Teil nicht aus, um das Signal zu erklären. Aber in Realität sind viele Signale relle Signale, und weisen sie eine Symmetrie auf. D.h, die Hälfte is unnötig, das Signal ist auch mit nur einer rekonstruierbar.
-* <div align="center"><img src="EnergyCompaction.png" width="80%"></div>
+
+  <img src="EnergyCompaction.png" width="60%">
+
 * 上图说明，DFT是对信号直接进行周期扩展，而DCT是对信号先镜像再周期扩展，这样做的好处在于对于扩展的信号间实现了平滑的过渡，而直接周期扩展会出现跳变，这种跳变在频域就对应着高频的分量。DCT变换后图像、信号的主要低频信号都集中在频域的原点处
+
 * Große Anteile der Signalenergie in wenigen Koeffizienten (energy compaction),deswegen können viele Koeffizienten gelöscht werden, d.h. starke Kompression ohne viele Informationen zu verlieren. DCT相比DFT具有更好的频域能量聚集度，即可以把更重要的信息聚集在一块，对于那些不重要的频域区域和系数能够直接裁剪掉。因此DCT变换非常适合于压缩算法的处理，比如JPEG就采用了DCT作为其图像压缩算法 Anwendung von DCT auf kleine Teilbereiche (Fenster) statt auf das ganze Bild ß kann Artefakte erzeugen
 
 ### DCT与JPEG有损压缩算法

@@ -1,6 +1,4 @@
-<style> table{margin:auto;} </style>
-
-# 1. 自动控制的一般概念
+# 自动控制的一般概念
 
 ## *自动控制理论发展概述*
 
@@ -19,7 +17,8 @@
 
 ### 自动控制系统的基本组成
 
-* <img src="komponentRegelungssystem.jpg" width="60%">
+<img src="komponentRegelungssystem.jpg" width="60%">
+
 * 被控对象
 * 控制装置
   * 测量元件
@@ -46,25 +45,30 @@
 * The response should be insensitive to changing of parameters(Robustness)
 
 ## *本课程的研究内容*
-<div align="center">
-<img src="InhaltVorlesung.png" width="60%">
-<img src="Analyasenuebersicht.png" width="60%" align="center">
-</div>
 
-# 2. 控制系统的数学模型
+<img src="InhaltVorlesung.png" width="60%">
+
+<img src="Analyasenuebersicht.png" width="50%">
+
+# 控制系统的数学模型
 
 ## *概述*
 
 * 数学模型：概述系统输入、输出变量以及内部各变量之间关系的数学表达式
+
 * 建模方法
   * 解析法（白盒子的机理分析法）：根据系统工作所依据的物理定律列写运动方程
   * 实验法（黑盒子的系统辨识法）：给系统施加某种测试信号，记录输出响应，并用适当的数学模型去逼近系统的输入输出特性
+  
 * 拉普拉斯变换 Laplace transform：$F\left(s\right)=\int_{0}^{\infty}{f\left(t\right)e^{-st}dt}$（详见DSP）
   * 常见函数拉普拉斯变换
-    * $\left\{\begin{array}{c}F_b(s)=\int_{-\infty}^{\infty}{f(t)e^{-st}dt}\\f(t)=\frac{1}{2\pi j}\int_{\sigma-j\omega}^{\sigma+j\omega}{F_b(s)e^{st}ds}\end{array}\right.$
+    $$
+    \left\{\begin{array}{c}F_b(s)=\int_{-\infty}^{\infty}{f(t)e^{-st}dt}\\f(t)=\frac{1}{2\pi j}\int_{\sigma-j\omega}^{\sigma+j\omega}{F_b(s)e^{st}ds}\end{array}\right.
+    $$
+    
     * cos推导 $\cos{\omega_0}=\frac{e^{j\omega_0t}+e^{-j\omega_0t}}{2}\xrightarrow{\mathcal{L}}\frac{1}{s-j\omega_0}+\frac{1}{s+j\omega_0}=\frac{s}{s^2+\omega_0^2}$
     * sin推导  $\sin{\omega_0}=\frac{e^{j\omega_0t}-e^{-j\omega_0t}}{2}\xrightarrow{\mathcal{L}}\frac{1}{s-j\omega_0}-\frac{1}{s+j\omega_0}=\frac{\omega_0}{s^2+\omega_0^2}$
-
+  
   t域|s域
   :-:|:-:
   $\delta(t)$ 根据采样性|1, $\sigma>-\infty$
@@ -74,7 +78,7 @@
   $\cos{\omega_0t}$|$\frac{s}{s^2+\omega_0^2}$
   $\sin{\omega_0t}$|$\frac{\omega_0}{s^2+\omega_0^2}$
   $f_T(t)$|$\int_{0}^{T}{f_T(t)e^{-st}dt}/(1-e^{-sT})$
-
+  
   * 拉普拉斯变换的重要定理（见信号与系统）
 
 ## *控制系统的时域数学模型*
@@ -178,7 +182,7 @@ $\Phi\left(s\right)=\frac{C\left(s\right)}{R(s)}=\frac{G_1\left(s\right)G_2(s)}{
   * 总输出 $C\left(s\right)=\frac{G_1\left(s\right)G_2(s)R(s)}{1+G_1\left(s\right)G_2(s)H(s)}+\frac{G_2(s)N(s)}{1+G_1\left(s\right)G_2(s)H(s)}$
   * 总误差 $E\left(s\right)=\frac{R(s)}{1+G_1\left(s\right)G_2(s)H(s)}+\frac{{-G}_2(s)H(s)N(s)}{1+G_1\left(s\right)G_2(s)H(s)}$
 
-# 3. 线性系统的时域分析与校正（由单位阶跃响应作为输入在时域下研究系统）
+# 线性系统的时域分析与校正（由单位阶跃响应作为输入在时域下研究系统）
 
 ## *概述*
 
@@ -243,7 +247,11 @@ $h\left(t_S\right)=1-e^{-\frac{t_s}{T}}=0.95,\ T_s=3T$
 * 典型结构
   * 开环增益 $G\left(s\right)=\frac{\omega_n^2}{s(s+2\xi\omega_n)},\ k=\frac{\omega_n}{2\xi}$
   * 闭环增益 $\Phi\left(s\right)=\frac{\omega_n^2}{s^2+2\xi\omega_ns+\omega_n^2}$，$\omega_n$为无阻尼自然频率 natural frequency，$\xi$为阻尼比 damp ratio
+  
 * 二阶系统的分类 $D\left(s\right)=s^2+2\xi\omega_ns+\omega_n^2\ =0$ 特征根为 $\lambda_{1,2}=-\xi\omega_n\pm\omega_n\sqrt{\xi^2-1}$
+  
+  <img src="二阶系统分类.png" width="65%">
+  
   * 0阻尼 0 damping $\xi=0,\ \lambda_{1,2}=\pm j\omega_n$ 不收敛的等幅振动曲线
   * 欠阻尼 Under damping $0<\xi<1,\ \lambda_{1,2}=-\xi\omega_n\pm j\sqrt{1-\xi^2}\omega_n$ 有超调量的收敛过程
   * 临界阻尼 Critical damping $\xi=1,\ \lambda_{1,2}=-\omega_n$ 初值斜率为0的无线逼近1的单调上升曲线
@@ -255,31 +263,80 @@ $h\left(t_S\right)=1-e^{-\frac{t_s}{T}}=0.95,\ T_s=3T$
 
 ### $\xi\geq1$, 过阻尼/临界阻尼二阶系统动态性能指标计算
 
-* 设过阻尼二阶系统的极点为 $\lambda_1=-\frac{1}{T_1}=-\left(\xi-\sqrt{\xi^2-1}\right)\omega_n \lambda_2=-\frac{1}{T_2}=-\left(\xi-\sqrt{\xi^2-1}\right)\omega_n$
-* 系统单位阶跃响应的拉氏变换 $C\left(s\right)=\Phi\left(s\right)R\left(s\right)=\frac{\omega_n^2}{\left(s+\frac{1}{T_1}\right)\left(s+\frac{1}{T_2}\right)\ }\frac{1}{s}\$
-* 进行拉氏反变换，得出系统单位阶跃响应 $h\left(t\right)=1+\frac{e^{-\frac{t}{T_1}}}{\frac{T_2}{T_1}-1}+\frac{e^{-\frac{t}{T_2}}}{\frac{T_1}{T_2}-1}(t\geq0)$
+* 设过阻尼二阶系统的极点为
+  $$
+  \lambda_1=-\frac{1}{T_1}=-\left(\xi-\sqrt{\xi^2-1}\right)\omega_n \lambda_2=-\frac{1}{T_2}=-\left(\xi-\sqrt{\xi^2-1}\right)\omega_n
+  $$
+
+* 系统单位阶跃响应的拉氏变换
+  $$
+  C\left(s\right)=\Phi\left(s\right)R\left(s\right)=\frac{\omega_n^2}{\left(s+\frac{1}{T_1}\right)\left(s+\frac{1}{T_2}\right)\ }\frac{1}{s}\
+  $$
+
+* 进行拉氏反变换，得出系统单位阶跃响应
+  $$
+  h\left(t\right)=1+\frac{e^{-\frac{t}{T_1}}}{\frac{T_2}{T_1}-1}+\frac{e^{-\frac{t}{T_2}}}{\frac{T_1}{T_2}-1}(t\geq0)
+  $$
+
 * 通过不同 $T_1\&T_2$的组合查表计算 $t_s$  
-* 由 $s^2+2\xi\omega_ns+\omega_n^2=\left(s+\frac{1}{T_1}\right)\left(s+\frac{1}{T_2}\right)$得$\xi=\frac{1+(T_1/T_2)}{2\sqrt{T_1/T_2}}$
+
+* 由 $s^2+2\xi\omega_ns+\omega_n^2=\left(s+\frac{1}{T_1}\right)\left(s+\frac{1}{T_2}\right)$ 得 $\xi=\frac{1+(T_1/T_2)}{2\sqrt{T_1/T_2}}$
 
 ### 欠阻尼二阶系统动态性能指标计算
 
 * 欠阻尼二阶系统极点的两种表示方法
   * 直角坐标 $\lambda_{1,2}=\sigma\pm j\omega_d=-\xi\omega_n\pm j\sqrt{1-\xi^2}\omega_n$
   * 极坐标 $\left\{\begin{array}{c}\lambda=\omega_n\\\angle\lambda=\beta\end{array}\right. \left\{\begin{array}{c}\cos{\beta}=\xi\\\sin{\beta}=\sqrt{1-\xi^2}\end{array}\right.$
+  
 * 欠阻尼二阶系统的单位阶跃响应
-  * 系统的单位阶跃响应的拉氏变换：$C\left(s\right)=\Phi\left(s\right)R\left(s\right)=\frac{\omega_n^2}{s^2+2\xi\omega_ns+\omega_n^2}\frac{1}{s}=\frac{\left[s^2+2\xi\omega_ns+\omega_n^2\right]-s(s+2\xi\omega_n)}{s(s^2+2\xi\omega_ns+\omega_n^2)}=\frac{1}{s}-\frac{s+2\xi\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}=\frac{1}{s}-\frac{s+\xi\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}-\frac{\xi}{\sqrt{1-\xi^2}}\frac{\sqrt{1-\xi^2}\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}$
-  * 利用复位移定理：$h\left(t\right)=1-e^{-\xi\omega_nt}\cos{\left(\sqrt{1-\xi^2}\omega_nt\right)}-\frac{\xi}{\sqrt{1-\xi^2}}e^{-\xi\omega_nt}\sin{\left(\sqrt{1-\xi^2}\omega_nt\right)}=1-\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}\left[\sqrt{1-\xi^2}\cos{\left(\sqrt{1-\xi^2}\omega_nt\right)}+\xi\sin{\left(\sqrt{1-\xi^2}\omega_nt\right)}\right]=1-\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}\sin{\left(\sqrt{1-\xi^2}\omega_nt+\arctan{\frac{\sqrt{1-\xi^2}}{\xi}}\right)}=1-\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}\sin{\left(\sqrt{1-\xi^2}\omega_nt+\beta\right)}$
-  * 为了求峰值点，即 $h(t)’=0$，系统单位脉冲响应 $k\left(t\right)=h^\prime\left(t\right)=\mathcal{L}^{-1}\left[\Phi\left(s\right)\right]=\mathcal{L}^{-1}\left[\frac{\omega_n^2}{s^2+2\xi\omega_ns+\omega_n^2}\right]=\mathcal{L}^{-1}\left[\frac{\omega_n}{\sqrt{1-\xi^2}}\frac{\sqrt{1-\xi^2}\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}\right]=\frac{\omega_n}{\sqrt{1-\xi^2}}e^{-\xi\omega_nt}\sin{(\sqrt{1-\xi^2}\omega_nt)}$
+  * 系统的单位阶跃响应的拉氏变换
+    $$
+    C\left(s\right)=\Phi\left(s\right)R\left(s\right)=\frac{\omega_n^2}{s^2+2\xi\omega_ns+\omega_n^2}\frac{1}{s}=\frac{\left[s^2+2\xi\omega_ns+\omega_n^2\right]-s(s+2\xi\omega_n)}{s(s^2+2\xi\omega_ns+\omega_n^2)}=\frac{1}{s}-\frac{s+2\xi\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}\\=\frac{1}{s}-\frac{s+\xi\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}-\frac{\xi}{\sqrt{1-\xi^2}}\frac{\sqrt{1-\xi^2}\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}
+    $$
+  
+  * 利用复位移定理
+    $$
+    h\left(t\right)=1-e^{-\xi\omega_nt}\cos{\left(\sqrt{1-\xi^2}\omega_nt\right)}-\frac{\xi}{\sqrt{1-\xi^2}}e^{-\xi\omega_nt}\sin{\left(\sqrt{1-\xi^2}\omega_nt\right)}\\=1-\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}\left[\sqrt{1-\xi^2}\cos{\left(\sqrt{1-\xi^2}\omega_nt\right)}+\xi\sin{\left(\sqrt{1-\xi^2}\omega_nt\right)}\right]\\=1-\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}\sin{\left(\sqrt{1-\xi^2}\omega_nt+\arctan{\frac{\sqrt{1-\xi^2}}{\xi}}\right)}=1-\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}\sin{\left(\sqrt{1-\xi^2}\omega_nt+\beta\right)}
+    $$
+    
+  * 为了求峰值点，即 $h(t)’=0$，系统单位脉冲响应
+    $$
+    k\left(t\right)=h^\prime\left(t\right)=\mathcal{L}^{-1}\left[\Phi\left(s\right)\right]=\mathcal{L}^{-1}\left[\frac{\omega_n^2}{s^2+2\xi\omega_ns+\omega_n^2}\right]\\=\mathcal{L}^{-1}\left[\frac{\omega_n}{\sqrt{1-\xi^2}}\frac{\sqrt{1-\xi^2}\omega_n}{\left(s+\xi\omega_n\right)^2+\left(1-\xi^2\right)\omega_n^2}\right]=\frac{\omega_n}{\sqrt{1-\xi^2}}e^{-\xi\omega_nt}\sin{(\sqrt{1-\xi^2}\omega_nt)}
+    $$
+  
 * 最佳阻尼比：$\xi=\sqrt2=0.707$
+
 * 欠阻尼二阶系统动态性能指标计算
-  * 峰值时间 Peak time: $h^\prime\left(t\right)=k\left(t\right)=\sin{\left(\sqrt{1-\xi^2}\omega_nt_p\right)}=0$    $t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}=\frac{\pi}{Im\lambda}$
-  * 超调量 Overshoot: $h\left(t_p\right)=1+e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}} \sigma\%=\frac{h\left(t_p\right)-h\left(\infty\right)}{h\left(\infty\right)}\ast100\%=e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}}\ast100\%$
-  * 超调量$\sigma$只和阻尼比$\xi$有关
-  * 调节时间 Setting time用定义求解欠阻尼二阶系统的调节时间比较麻烦，为简化计算，通常按阶跃响应的包络线进入5%或2%误差带的时间计算调节时间 $\left|1+\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}-1\right|=\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}=0.05\ or\ 0.02$ $t_s=-\frac{\ln{0.05}+\frac{1}{2}\ln{(1-\xi^2)}}{\xi\omega_n}\approx-\ln{\Delta\sqrt{1-\xi^2}}{\xi\omega_n}={\color{red}\frac{3.5}{\xi\omega n}(\Delta=5\%)\ or\ \frac{4}{\xi\omega n}(\Delta=2\%)}$
+  * 峰值时间 Peak time
+    $$
+    h^\prime\left(t\right)=k\left(t\right)=\sin{\left(\sqrt{1-\xi^2}\omega_nt_p\right)}=0\\t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}=\frac{\pi}{Im\lambda}
+    $$
+    
+  * 超调量 Overshoot
+    $$
+    h\left(t_p\right)=1+e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}} \sigma\%=\frac{h\left(t_p\right)-h\left(\infty\right)}{h\left(\infty\right)}\ast100\%=e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}}\ast100\%
+    $$
+  
+  * 超调量 $\sigma$ 只和阻尼比 $\xi$ 有关
+  
+  * 调节时间 Setting time用定义求解欠阻尼二阶系统的调节时间比较麻烦，为简化计算，通常按阶跃响应的包络线进入5%或2%误差带的时间计算调节时间
+    $$
+    \left|1+\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}-1\right|=\frac{e^{-\xi\omega_nt}}{\sqrt{1-\xi^2}}=0.05\ or\ 0.02\\t_s=-\frac{\ln{0.05}+\frac{1}{2}\ln{(1-\xi^2)}}{\xi\omega_n}\approx-\ln{\Delta\sqrt{1-\xi^2}}{\xi\omega_n}={\color{red}\frac{3.5}{\xi\omega n}(\Delta=5\%)\ or\ \frac{4}{\xi\omega n}(\Delta=2\%)}
+    $$
+    
+    
     * 最佳阻尼比 Optimum damping ratio 选取阻尼比要看实际工程需要：民航客机取大阻尼比减小超调，战斗机取小阻尼比增大超调，减小调节时间
+  
 * 典型欠阻尼二阶系统动态性能、系统参数及极点分布之间的关系
-  * 从直角坐标变化：$\left\{\begin{array}{c}\sigma=\xi\omega_n\uparrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\rightarrow\\t_s=\frac{3.5}{\xi\omega_n}\downarrow\\\beta\downarrow\Rightarrow\xi\uparrow\Rightarrow\sigma\%=e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}}\downarrow\end{array}\right.\\\omega_d=\sqrt{1-\xi^2}\omega_n\uparrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\downarrow\\t_s=\frac{3.5}{\xi\omega_n}\rightarrow\\\beta\uparrow\Rightarrow\xi\rightarrow\Rightarrow\sigma\%\uparrow\end{array}\right.\end{array}\right.$
-  * 从极坐标变化：$\left\{\begin{array}{c}\beta\uparrow=\xi\omega_n\downarrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\uparrow\\t_s=\frac{3.5}{\xi\omega_n}\downarrow\\\beta\downarrow\Rightarrow\xi\uparrow\Rightarrow\sigma\%=e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}}\downarrow\end{array}\right.\\\omega_n\uparrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\downarrow\\t_s=\frac{3.5}{\xi\omega_n}\downarrow\\\beta\rightarrow\Rightarrow\xi\rightarrow\Rightarrow\sigma\%\rightarrow\end{array}\right.\end{array}\right.$
+  * 从直角坐标变化
+    $$
+    \left\{\begin{array}{c}\sigma=\xi\omega_n\uparrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\rightarrow\\t_s=\frac{3.5}{\xi\omega_n}\downarrow\\\beta\downarrow\Rightarrow\xi\uparrow\Rightarrow\sigma\%=e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}}\downarrow\end{array}\right.\\\omega_d=\sqrt{1-\xi^2}\omega_n\uparrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\downarrow\\t_s=\frac{3.5}{\xi\omega_n}\rightarrow\\\beta\uparrow\Rightarrow\xi\rightarrow\Rightarrow\sigma\%\uparrow\end{array}\right.\end{array}\right.
+    $$
+    
+  * 从极坐标变化
+    $$
+    \left\{\begin{array}{c}\beta\uparrow=\xi\omega_n\downarrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\uparrow\\t_s=\frac{3.5}{\xi\omega_n}\downarrow\\\beta\downarrow\Rightarrow\xi\uparrow\Rightarrow\sigma\%=e^{-\frac{\xi\pi}{\sqrt{1-\xi^2}}}\downarrow\end{array}\right.\\\omega_n\uparrow\Rightarrow\left\{\begin{array}{c}t_p=\frac{\pi}{\sqrt{1-\xi^2}\omega_n}\downarrow\\t_s=\frac{3.5}{\xi\omega_n}\downarrow\\\beta\rightarrow\Rightarrow\xi\rightarrow\Rightarrow\sigma\%\rightarrow\end{array}\right.\end{array}\right.
+    $$
 
 ### 改善二阶系统动态性能的措施
 
@@ -310,23 +367,40 @@ $h\left(t_S\right)=1-e^{-\frac{t_s}{T}}=0.95,\ T_s=3T$
 
 ### 稳定的充要条件
 
-系统闭环特征方程的所有根都具有负的实部，即所有闭环特征跟均位于s平面左半面。<img src="StableRegion.png">
+系统闭环特征方程的所有根都具有负的实部，即所有闭环特征跟均位于s平面左半面
 
-* 设系统闭环传函为：$\Phi\left(s\right)=\frac{M\left(s\right)}{D(s)}=\frac{b_m\left(s-z_1\right)\left(s-z_2\right)\ldots(s-z_m)}{a_n\left(s-\lambda_1\right)\left(s-\lambda_2\right)\ldots(s-\lambda_m)}$
-* 设闭环极点为互不相同的单根，则单位脉冲响应的拉氏反变换为：$C\left(s\right)=\frac{A_1}{s-\lambda_1}+\frac{A_2}{s-\lambda_2}+\ldots+\frac{A_n}{s-\lambda_n}=\sum\limits_{i=1}^{n}\frac{A_i}{s-\lambda_i}$
+<img src="StableRegion.png">
+
+* 设系统闭环传函为
+  $$
+  \Phi\left(s\right)=\frac{M\left(s\right)}{D(s)}=\frac{b_m\left(s-z_1\right)\left(s-z_2\right)\ldots(s-z_m)}{a_n\left(s-\lambda_1\right)\left(s-\lambda_2\right)\ldots(s-\lambda_m)}
+  $$
+
+* 设闭环极点为互不相同的单根，则单位脉冲响应的拉氏反变换为
+  $$
+  C\left(s\right)=\frac{A_1}{s-\lambda_1}+\frac{A_2}{s-\lambda_2}+\ldots+\frac{A_n}{s-\lambda_n}=\sum\limits_{i=1}^{n}\frac{A_i}{s-\lambda_i}
+  $$
+
 * 拉氏反变换求单位脉冲响应：$k\left(t\right)=A_1e^{\lambda_1t}+A_2e^{\lambda_2t}+\ldots+A_ne^{\lambda_nt}=\sum\limits_{i=1}^{n}{A_ie^{\lambda_it}}$
+
 * 若施加单位脉冲响应$\lim\limits_{t\rightarrow\infty}{k\left(t\right)}=\lim\limits_{t\rightarrow\infty}\sum\limits_{i=1}^{n}{A_ie^{\lambda_it}}=0$，则系统是稳定的，得到$\lim\limits_{t\rightarrow\infty}e^{\lambda_it}=0$，则特征根必有负实部
 
 ### 稳定判据, 设系统特征方程$D\left(s\right)=a_ns^n+a_{n-1}s^{n-1}+\ldots a_1s+a_0=0$
 
 * 判定稳定的必要条件：$a_i>0$
-* 劳斯判据 Routh criterion：使用闭环传函的特征方程（即分子）。系统稳定的充分必要条件是劳斯表中第一列系数都大于零，否则系统不稳定，而且第一列系数符号改变的次数就是系统特征方程中正实部跟的个数<img src="RouthTable.png">
+
+* 劳斯判据 Routh criterion：使用闭环传函的特征方程（即分子）。系统稳定的充分必要条件是劳斯表中第一列系数都大于零，否则系统不稳定，而且第一列系数符号改变的次数就是系统特征方程中正实部跟的个数
+
+  <img src="RouthTable.png">
+
 * 劳斯判据的特点：代数稳定判据
   * 由闭环特征多项式系数（不解根）判定系统稳定性
   * 不能用于研究如何调整系统结构来改善系统稳定性的问题
+  
 * 劳斯判据特殊情况的处理
   * 某行第一列元素为零而该行元素不全为零时，用一个很小的整数$\varepsilon$代替第一列的零元素参与计算，表格计算完成后再令$\varepsilon\rightarrow0$
   * 某行元素全部为零时，利用上一行元素构成辅助方程，对辅助方程求导得到新的方程，用新方程的系数代替该行的零元素继续计算
+  
 * 稳定性结论
   * 系统的稳定性是其自身的属性，与输入类型、形式无关
   * <font color="red">系统稳定与否，只取决于闭环极点，与闭环零点无关，闭环零点会影响留数，因此会改变动态性能，但不影响稳定性，闭环极点决定模态，因此决定系统的稳定性</font>
@@ -372,7 +446,7 @@ II|$\infty$|$\infty$|K|0||0|$\frac{A}{K}$
 
 ### 复合矫正
 
-# 4. 根轨迹 Root locus（复域分析）
+# 根轨迹 Root locus（复域分析）
 
 ## *根轨迹的基本概念*
 
@@ -428,7 +502,7 @@ $\left\{\begin{array}{c}模值条件：\lvert G(s)H(s)\rvert=\frac{K^*\prod\limi
 
 ## 利用根轨迹分析系统性能
 
-# 5. 线性系统的频域分析与校正（以稳态正弦作为输入在频域下研究系统）
+# 线性系统的频域分析与校正（以稳态正弦作为输入在频域下研究系统）
 
 ## 频率特性的基本概念
 
@@ -473,7 +547,7 @@ $\left\{\begin{array}{c}模值条件：\lvert G(s)H(s)\rvert=\frac{K^*\prod\limi
 * 一阶复合微分环节 $Ts\pm1 G\left(j\omega\right)=\pm1+j\omega T G=1+ω2T2∠G=arctanωT180°-arctanωT$  
 * 二阶振荡环节 $G\left(s\right)=\frac{\omega_n^2}{s^2+2\xi\omega_ns+\omega_n^2}=\frac{1}{\left(\frac{s}{\omega_n}\right)^2+2\xi\frac{s}{\omega_n}+1}=\frac{\omega_n^2}{(s-\lambda_!)(s-\lambda_2)} G\left(j\omega\right)=\frac{1}{1-\frac{\omega^2}{\omega_n^2}+j2\xi\frac{\omega}{\omega_n}} G=11-ω2ωn22+2ξωωn2∠G=-arctam2ξωωn1-ω2ωn2$ 
   * 谐振频率 $\omega_r$ 和谐振峰值 $M_r$
-$\left|G\right|=\frac{1}{\sqrt{\left[1-\frac{\omega^2}{\omega_n^2}\right]^2+\left[2\xi\frac{\omega}{\omega_n}\right]^2}} \frac{d}{d\omega}\left|G\right|=0 \frac{d}{d\omega}\left\{\left[1-\frac{\omega^2}{\omega_n^2}\right]^2+\left[2\xi\frac{\omega}{\omega_n}\right]^2\right\}=0 ωr=ωn1-2ξ2Mr=Aωr=12ξ1-ξ2$
+  $\left|G\right|=\frac{1}{\sqrt{\left[1-\frac{\omega^2}{\omega_n^2}\right]^2+\left[2\xi\frac{\omega}{\omega_n}\right]^2}} \frac{d}{d\omega}\left|G\right|=0 \frac{d}{d\omega}\left\{\left[1-\frac{\omega^2}{\omega_n^2}\right]^2+\left[2\xi\frac{\omega}{\omega_n}\right]^2\right\}=0 ωr=ωn1-2ξ2Mr=Aωr=12ξ1-ξ2$
 * 二阶复合微分环节 G\left(s\right)=T^2s^2+2\xi Ts+1=\left(\frac{s}{\omega_n}\right)^2+2\xi\frac{s}{\omega_n}+1 G\left(j\omega\right)=1-\frac{\omega^2}{\omega_n^2}+j2\xi\frac{\omega}{\omega_n}
 * 延迟环节G\left(s\right)=e^{-\tau s} G\left(j\omega\right)=e^{-j\tau\omega} G=1∠G=-τω
 
@@ -542,7 +616,7 @@ $\left|G\right|=\frac{1}{\sqrt{\left[1-\frac{\omega^2}{\omega_n^2}\right]^2+\lef
 
 ## *频率法串联校正*
 
-# 6. 线性离散系统的分析与矫正
+# 线性离散系统的分析与矫正
 
 ## *离散系统*
 
@@ -562,9 +636,9 @@ $\left|G\right|=\frac{1}{\sqrt{\left[1-\frac{\omega^2}{\omega_n^2}\right]^2+\lef
 
 ## 离散系统的数字校正
 
-# 7. 非线性控制系统分析
+# 非线性控制系统分析
 
-# 8. 控制系统的状态空间分析与综合
+# 控制系统的状态空间分析与综合
 
 	Time-Domain analysis of the linear systems
 	求解含干扰输入的稳态误差

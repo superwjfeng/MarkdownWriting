@@ -129,38 +129,57 @@ void Func(int a, int b=20, int c); // 错误，不能间隔着给
 
     * 注意：只有返回值不同是不构成函数重载的，编译器无法识别
 
-### C++支持函数重载的原理 -- 名字修饰 Name-mangling
+### C++支持函数重载的原理 -- 符号修饰Name-decoration/符号改编 Name-mangling
 
-只有声明的函数或变量是没有地址的，只有在定义之后才会分配内存地址。在编译器的链接过程中，会生成符号表（同名的cpp文件和其头文件生成一份符号表），里面记录着不同函数的地址。只有声明的函数可以通过定义文件的符号表找到自己的地址，若没有找到就会报链接错误（编译阶段只报语法错误）
+只有声明的函数或变量在本目标文件中是没有分配虚拟地址的，只有在定义之后才会分配内存地址。在编译器的链接过程中，会去找总符号表（同名的cpp文件和其头文件生成一份符号表），里面记录着不同函数的地址。只有声明的函数可以通过定义文件的符号表找到自己的地址，若没有找到就会报链接错误（编译阶段只报语法错误）
 
-在Linux中利用`objdump -S`指令，可以发现在Linux的gcc编译器中，C语言编译器直接用函数名作为其符号表的命名，比如`<Func>`；而C++编译器则会进行函数名修饰，比如分别为`<_Z4Funcid>`和`<_Z4Funcii>`。修饰规则比较复杂，每种编译器在不同系统的修饰规则也不同
+在Linux中利用`objdump -S`指令，可以发现在Linux的gcc编译器中，C语言编译器直接用函数名作为其符号表的命名，比如`<Func>`；而C++编译器则会进行函数名修饰，比如分别为`<_Z4Funcid>`和`<_Z4Funcii>`。修饰规则比较复杂，每种编译器在不同系统的修饰规则也不同。关于GCC的基本C++修饰规则可以看自我修养P88
+
+binutils工具包里面了一个 `c++filt` 工具来解析被修饰过的名称
+
+```
+$ c++filt _Z4Funcid
+Func(int, double)
+```
+
+符号修饰规则不仅用于函数重载，对于全局（静态）变量和（局部）静态变量也要进行符号修饰防止冲突
+
+因为不同的编译器使用的符号修饰规则是不同的，所以不同的编译器编译产生的ELF文件是无法通过链接器连接到一块的，因为在符号表里找不到需要的符号，这是导致不同编译器之间不能互操作的主要原因之一
 
 ### C和C++互相调用库 `extern "C"`
 
 * 静态库.lib和动态库.dll（见操作系统）
+
 * C++调用C库
-  * C++中在调用C的头文件时使用extern "C"：告诉C++的编译器，这里面的函数使用C的库实现的，用C的规 则去链接查找它们
+  * C++中在调用C的头文件时使用 `extern "C"`：告诉C++的编译器，这里面的函数使用C的库实现的，用C的规则去链接查找它们
 
     ```cpp
     extern "C" {
             #include "....h"
             // ...
     }
+    extern "C" int var; //单独声明某个符号为C语言符号
     ```
     
-  * 附加库目录 <img src="VS_C_library1.png" width="80%">
-  * 附加依赖项 <img src="VS_C_library2.png" width="80%">
-* C调用C++库：同样是在C++中添加条件编译
+  * 附加库目录
+  
+    <img src="VS_C_library1.png" width="80%">
+  
+  * 附加依赖项
+  
+    <img src="VS_C_library2.png" width="80%">
 
-    ```cpp
-    #ifdef _cplusplus
-    extern "C" {
-    #endif
-            // ...
-    #ifdef __cplusplus
-    }
-    #endif
-    ```
+一种更通用的方式是在系统头文件中添加 `__cplusplus` 条件编译，这样可以让C++能调用C，也能让C调用C++。比如说C语言共享库 `string.h` 中的 `memset` 函数
+
+```cpp
+#ifdef __cplusplus
+extern "C" {
+#endif
+void *memset(void *, int, size_t);
+#ifdef __cplusplus
+}
+#endif
+```
 
 ## *引用 Reference*
 
@@ -1634,7 +1653,7 @@ static CGarbo Garbo;
 
 ## *C/C++内存分布（详见操作系统）*
 
-<div align="center"><img src="addressSpace.png" width="70%"></div>
+<img src="addressSpace.png" width="70%">
 
 * 堆会多申请一些空间来存放和堆自身有关的属性信息，即cookie数据
 * static修饰局部变量的本质就是将该变量开辟在全局区域
@@ -2747,15 +2766,22 @@ string(const string& s)
 <img src="vectorDef.png">
 
 * vector是一个类模板，对应的是数据结构中的顺序表/数组。比如声明一个存储int数据的数组 `vector<int> v1;`
-* vector成员：<img src="vectorMember.png" width="50%">
+
+* vector成员
+
+  <img src="vectorMember.png" width="50%">
 
 ### vector迭代器在 insert 和 erase 中的失效问题
 
 * 问题一：当insert（在pos前插入数据）中进行扩容时会出现迭代器失效问题
   * 旧的pos发生了越界造成了野指针问题。任意下图所示，在扩容后pos指针不会有变化，已经不处于新开的空间中了，即不处于_start和_finish之间
-  * <img src="迭代器失效问题1.png">
+  
+    <img src="迭代器失效问题1.png">
+  
   * 修正：计算pos和_start的相对位置，扩容后令原pos重新指向
+  
 * 问题二：在p位置修改插入数据以后不要访问p，因为p可能失效。这是因为调用insert的时候pos是传值传参，内部对pos的修改不会影响实参。STL库中的实现也没有给pos设置为传引用传参，因为这又会引起一些其他的问题；erase有可能会出现缩容的情况，但是很少，此时也不要在erase后解引用访问
+
 * 问题三：因为数据挪动，pos在insert/erase之后位置发生了改变。
   * 问题代码
 
@@ -2894,7 +2920,7 @@ string(const string& s)
 ### list的数据结构与迭代器模拟实现
 
 * C++中更倾向于使用独立的类封装，而不是使用内部类。因此list的设计采用了 `list_node`，迭代器和 `list` 总体分别封装成独立的类（这里 `list_npde` 和迭代器 直接用了 `struct`，因为要将类成员设置为公有，供 `list` 使用）
-* 单个节点和之前带头双向循环链表中的单节点中的数据一样
+* C++用**带头双向循环链表**来实现list
 
     ```cpp
     template<class T>
@@ -2973,9 +2999,9 @@ string(const string& s)
     lt.push_back(Pos(10, 20));
     lt.push_back(Pos(10, 21));
     ```
-    
-    * `T* operator->()` 返回的是lt中存储的一个结构体指针*Pos，若要取到其实中的数据应该要 `it->->_a1`，但编译器为了提高可读性，进行了特殊处理，即省略了一个 `->`，自动取到的就是Pos中的一个数据。因此当lt中存储的是自定义类型或者内置类型时，`->` 都可以看作是迭代器指针取数据
-    
+  
+  * `T* operator->()` 返回的是lt中存储的一个结构体指针*Pos，若要取到其实中的数据应该要 `it->->_a1`，但编译器为了提高可读性，进行了特殊处理，即省略了一个 `->`，自动取到的就是Pos中的一个数据。因此当lt中存储的是自定义类型或者内置类型时，`->` 都可以看作是迭代器指针取数据
+  
     ```cpp
     T& operator*()
         return _node->_data;

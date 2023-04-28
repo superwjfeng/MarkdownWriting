@@ -2,7 +2,7 @@
 
 # 经典视觉SLAM框架
 
-<div align="center"><img src="framework.png" align="center" ></div>
+<img src="framework.png" align="center">
 
 # 三维空间刚体运动
 
@@ -30,7 +30,11 @@
 ### 变换矩阵与齐次坐标
 
 * 多次欧式、仿射变换不是一个线性变换，因此我们引入一个数学技巧：齐次坐标。即引入第四维，其为常量1
-* 将旋转和平移整合到一个变换矩阵 Transform Matrix中，变换矩阵集合称为特殊欧式群 Special Euclidean Group $SE(3)=\left\{\mathbf{T}=\left[\begin{array}{cc}\mathbf{R}&t\\0^T&1\end{array}\right]\in\mathbb{R}^{4\times4}|\mathbf{R}\in SO(3),t\in\mathbf{R}^3\right\}$
+
+* 将旋转和平移整合到一个变换矩阵 Transform Matrix中，变换矩阵集合称为特殊欧式群 Special Euclidean Group
+  $$
+  SE(3)=\left\{\mathbf{T}=\left[\begin{array}{cc}\mathbf{R}&t\\0^T&1\end{array}\right]\in\mathbb{R}^{4\times4}|\mathbf{R}\in SO(3),t\in\mathbf{R}^3\right\}
+  $$
 
 ## *其他旋转表示法*
 
@@ -83,7 +87,7 @@
 
 ## *三维空间中的几何变换 -- 欧式、相似、放射、射影变换*
 
-<div align="center"><img src="Transformation.jpg" width="70%"></div>
+<img src="Transformation.jpg" width="70%">
 
 |变换名称|矩阵形式|DoF|不变性质
 |:-|:-|:-|:-|
@@ -122,8 +126,10 @@
 * 两边对时间求导 $\dot{\mathbf{R}}(t)\mathbf{R}(t)^T+\mathbf{R}(t)\dot{\mathbf{R}(t)^T}=0\rightarrow\dot{\mathbf{R}}(t)\mathbf{R}(t)^T=-\mathbf{R}(t)\dot{\mathbf{R}(t)^T}$
 * 从而可知 $\dot{\mathbf{R}}(t)\mathbf{R}(t)^T$ 是一个反对称矩阵，对于任意反对称矩阵，我们也可以找到唯一与之对应的向量，将这个运算称为$A^{\vee}$。因此可以找到一个三维向量 $\phi(t)\in\mathbb{R}^3$ 与之对应，即 $\dot{\mathbf{R}}(t)\mathbf{R}(t)^T=\phi(t)^{\wedge}$
 * 等式两边右乘 $\mathbf{R}(t)$
-  * $\dot{\mathbf{R}}(t)\mathbf{R}(t)^T\mathbf{R}(t)=\dot{\mathbf{R}}=\phi(t)^{\wedge}\mathbf{R}(t)=\left[\begin{array}{c}0&-{\phi}_3&{\phi}_2\\{\phi}_3&0&-{\phi}_1\\-{\phi}_2&{\phi}_1&0\end{array}\right]\mathbf{R}(t)$
-  * 可以看到，要求旋转矩阵的导数，只要对其左乘一个 $\phi^{\wedge}(t)$ 矩阵即可
+  $$
+  \dot{\mathbf{R}}(t)\mathbf{R}(t)^T\mathbf{R}(t)=\dot{\mathbf{R}}=\phi(t)^{\wedge}\mathbf{R}(t)=\left[\begin{array}{c}0&-{\phi}_3&{\phi}_2\\{\phi}_3&0&-{\phi}_1\\-{\phi}_2&{\phi}_1&0\end{array}\right]\mathbf{R}(t)
+  $$
+  可以看到，要求旋转矩阵的导数，只要对其左乘一个 $\phi^{\wedge}(t)$ 矩阵即可
 * 考虑$t_0=0$时，设此时旋转矩阵为 $\mathbf{R}(0)=\mathbf{I}$，根据导数定义，在$t=0$进行一阶泰勒展开得到 $\mathbf{R}(t)\approx\mathbf{R}(t_0)+\dot{\mathbf{R}}(t_0)(t-t_0)=\mathbf{I}+\phi(t_0)^{\wedge}(t)$：$\phi$ 反映了 $\mathbf{R}$ 的导数性质，故称它在 $SO(3)$的正切空间 Tangent Space上
 * 解上面的微分方程可以得到 ${\color{red}\mathbf{R}=\exp{\left(\phi_0^{\wedge}(t)\right)}}$
   * 给定某时刻的 $\mathbf{R}$，就能求得一个对应的 $\phi$，它描述了 $\mathbf{R}$ 在局部的导数关系。$\phi$正是对应到 $SO(3)$ 上的李代数 $\mathfrak{so}(3)$
@@ -152,35 +158,67 @@
 ### SO(3)上的指数映射 $\mathfrak{so}(3)\rightarrow SO(3);\ \phi^{\wedge}\mapsto \exp{(\phi^{\wedge})}$
 
 * 任意矩阵的指数映射可以写成一个泰勒展开 $\exp{(\phi^{\wedge})}=\sum\limits^{\infty}\limits_{n=0}{\frac{1}{n!}(\phi^{\wedge})^n}$，其只有在收敛的时候才有结果，但这个展开不能拿来计算（只用来推导稳定性）
+
 * 拆分 $\phi=\theta\mathbf{a},\lVert a\rVert=1$，通过以下两条性质可进行计算
   * $\mathbf{a}^{\wedge}\mathbf{a}^{\wedge}=\mathbf{a}\mathbf{a}^T-\mathbf{I}$（可直接代入 $a^{\wedge}=\left[\begin{array}{c}0&-a_3&a_2\\a_3&0&-a_1\\-a_2&a_1&0\end{array}\right]$ 推导得到，下式同）
   * $\mathbf{a}^{\wedge}\mathbf{a}^{\wedge}\mathbf{a}^{\wedge}=-\mathbf{a}^{\wedge}$
-* $\left\{\begin{array}{l}\theta=\arccos{\left(\frac{trace(R)-1}{2}\right)}\\\mathbf{a}=\frac{1}{2\sin{\theta}}\left[\begin{array}{l}r_{32}-r_{23}\\r_{13}-r_{31}\\r_{21}-r_{12}\end{array}\right]\end{array}\right.$
+
+  $$
+  \left\{\begin{array}{l}\theta=\arccos{\left(\frac{trace(R)-1}{2}\right)}\\\mathbf{a}=\frac{1}{2\sin{\theta}}\left[\begin{array}{l}r_{32}-r_{23}\\r_{13}-r_{31}\\r_{21}-r_{12}\end{array}\right]\end{array}\right.
+  $$
+
 * 通过泰勒展开和相关项合并后可以得到 $\exp{(\phi^{\wedge})}=\cos{\theta}\mathbf{I}+(1-\cos{\theta}aa^T)+\sin{\theta}a^{\wedge}$
   * 该公式就是罗德里格斯公式，这意味着 $\mathfrak{so}(3)$ 实际上就是由旋转向量构成的空间，而指数映射就是罗德里格斯公式。通过它们可以把 $\mathfrak{so}(3)$ 中任意一个向量对应到一个位于 $SO(3)$ 中的旋转矩阵。这说明李代数空间和轴角表示方法是等价的
-  * 相反也可以定义反方向 $SO(3)\rightarrow \mathfrak{so}(3)$ 的对数映射：$\phi=\ln{\mathbf{(R)}^{\vee}}=\left(\sum\limits_{n=0}\limits^{\infty}{\frac{(-1)^n}{n+1}(\mathbf{R}-\mathbf{I})^{n+1}}\right)^{\vee}$
-* <div align="center"><img src="SO3Conversion.png"></div>
+  
+  * 相反也可以定义反方向 $SO(3)\rightarrow \mathfrak{so}(3)$ 的对数映射
+    $$
+    \phi=\ln{\mathbf{(R)}^{\vee}}=\left(\sum\limits_{n=0}\limits^{\infty}{\frac{(-1)^n}{n+1}(\mathbf{R}-\mathbf{I})^{n+1}}\right)^{\vee}
+    $$
+  
+  <img src="SO3Conversion.png" width="60%">
+  
+  
 
 ### SE(3)上的指数映射
 
 * 指数映射：$\exp{(\xi^{\wedge})}=\left[\begin{array}{cc}\exp{\phi^{\wedge}}&\mathbf{J}\rho\\0^T&1\end{array}\right]$，$\mathbf{J}=\frac{\sin{\theta}}{\theta}\mathbf{I}+(1-\frac{\sin{\theta}}{\theta})\mathbf{a}\mathbf{a}^T+\frac{1-\cos{\theta}}{\theta}\mathbf{a}^{\wedge}$
+
 * 对数映射
-* <div align="center"><img src="SE3Conversion.png"></div>
+
+  <img src="SE3Conversion.png" width="70%">
+
+  
 
 ## *李代数求导与扰动模型*
 
 ### BCH公式与近似形式
 
 * 两个李代数指数映射乘积由Baker-Campbell-Hausdorff（BCH）公式给出
-  * $\ln{(\exp{A}\exp{B})}=A+B+\frac{1}{2}[A,\ B]+\frac{1}{12}[A,\ [A,\ B]]-\frac{1}{12}[B,[A,\ B]]+...$
-  * [ ]为李括号。BCH表示当计算两个矩阵指数之积时，它们会产生一些由李括号组成的余项
-* 特别地，当考虑 $SO(3)$ 上的李代数 $\ln{(\exp{\phi_1^{\wedge}}\exp{\phi_2^{\wedge}})}^{\vee}$，当 $\phi_1$ 或 $\phi_2$ 为小量时，小量二次以上的项都可以被忽略，此时BCH拥有线性近似表达 $\ln{(\exp{\phi_1^{\wedge}}\exp{\phi_2^{\wedge}})}^{\vee}\approx\left\{\begin{array}{c}J_l(\phi_2)^{-1}\phi_1+\phi_2,&if\ \phi_1\ is\ small\\J_r(\phi_1)^{-1}\phi_2+\phi_2,&if\ \phi_2\ is\ small\end{array}\right.$，此处的 $J_l=\mathbf{J}=\frac{\sin{\theta}}{\theta}\mathbf{I}+(1-\frac{\sin{\theta}}{\theta})\mathbf{a}\mathbf{a}^T+\frac{1-\cos{\theta}}{\theta}\mathbf{a}^{\wedge},\ J_r(\phi)=J_l(-\phi)$
-* 在李群上对 $R$ 左乘小扰动 $\Delta R$，根据BCH近似，其李代数为 $\exp{(\Delta\phi^{\wedge})}\exp{(\phi^{\wedge})}=\exp{\left((\phi+J_l^{-1}(\phi)\Delta\phi)^{\wedge}\right)}$
-* 反之，在李代数上进行除法，让一个 $\phi$ 加上 $\Delta\phi$，那么可以近似为李群上带左右雅可比的乘法 $\exp{\left((\phi+\Delta\phi)^{\wedge}\right)}=\exp{((J_l\Delta\phi)^{\wedge})}\exp{(\phi^{\wedge})}=\exp{(\phi^{\wedge})}\exp{((J_l\Delta\phi)^{\wedge})}$
+  $$
+  \ln{(\exp{A}\exp{B})}=A+B+\frac{1}{2}[A,\ B]+\frac{1}{12}[A,\ [A,\ B]]-\frac{1}{12}[B,[A,\ B]]+...
+  $$
+  [ ]为李括号。BCH表示当计算两个矩阵指数之积时，它们会产生一些由李括号组成的余项
+  
+* 特别地，当考虑 $SO(3)$ 上的李代数 $\ln{(\exp{\phi_1^{\wedge}}\exp{\phi_2^{\wedge}})}^{\vee}$，当 $\phi_1$ 或 $\phi_2$ 为小量时，小量二次以上的项都可以被忽略，此时BCH拥有线性近似表达
+  $$
+  \ln{(\exp{\phi_1^{\wedge}}\exp{\phi_2^{\wedge}})}^{\vee}\approx\left\{\begin{array}{c}J_l(\phi_2)^{-1}\phi_1+\phi_2,&if\ \phi_1\ is\ small\\J_r(\phi_1)^{-1}\phi_2+\phi_2,&if\ \phi_2\ is\ small\end{array}\right.\\此处的 \ J_l=\mathbf{J}=\frac{\sin{\theta}}{\theta}\mathbf{I}+(1-\frac{\sin{\theta}}{\theta})\mathbf{a}\mathbf{a}^T+\frac{1-\cos{\theta}}{\theta}\mathbf{a}^{\wedge},\ J_r(\phi)=J_l(-\phi)
+  $$
+
+* 在李群上对 $R$ 左乘小扰动 $\Delta R$，根据BCH近似，其李代数为
+  $$
+  \exp{(\Delta\phi^{\wedge})}\exp{(\phi^{\wedge})}=\exp{\left((\phi+J_l^{-1}(\phi)\Delta\phi)^{\wedge}\right)}
+  $$
+
+* 反之，在李代数上进行除法，让一个 $\phi$ 加上 $\Delta\phi$，那么可以近似为李群上带左右雅可比的乘法
+  $$
+  \exp{\left((\phi+\Delta\phi)^{\wedge}\right)}=\exp{((J_l\Delta\phi)^{\wedge})}\exp{(\phi^{\wedge})}=\exp{(\phi^{\wedge})}\exp{((J_l\Delta\phi)^{\wedge})}
+  $$
 
 ### SO(3)上的李代数求导
 
-$\min\limits_{T}{J(T)}=\sum\limits_{i=1}^{N}{\Vert z_i-Tp_i\Vert_2^2}$
+$$
+\min\limits_{T}{J(T)}=\sum\limits_{i=1}^{N}{\Vert z_i-Tp_i\Vert_2^2}
+$$
 
 * 用给李代数表示姿态，然后根据李代数加法对李代数求导
 * 对李群左乘或右乘微小扰动，然后对该扰动求导
@@ -189,15 +227,24 @@ $\min\limits_{T}{J(T)}=\sum\limits_{i=1}^{N}{\Vert z_i-Tp_i\Vert_2^2}$
 
 李群不满足加法，不能计算导数，转换为其李代数
 
-$\frac{\partial(Rp)}{\partial\phi}\Rightarrow\frac{\partial(\exp{(\phi^{\wedge})}p)}{\partial\phi}=(-Rp)^{\wedge}J_l$，包含比较复杂的 $J_l$，计算麻烦
+$$
+\frac{\partial(Rp)}{\partial\phi}\Rightarrow\frac{\partial(\exp{(\phi^{\wedge})}p)}{\partial\phi}=(-Rp)^{\wedge}J_l
+$$
+包含比较复杂的 $J_l$，计算麻烦
 
 ### 扰动模型（左乘）
 
-$\frac{\partial(Rp)}{\partial\varphi}=\lim\limits_{\varphi\rightarrow 0}{\frac{\exp(\varphi^{\wedge})\exp(\phi^{\wedge})p-\exp(\phi^{\wedge})p}{\varphi}}=\lim\limits_{\varphi\rightarrow 0}{\frac{(I+\varphi^{\wedge})\exp(\phi^{\wedge})p-\exp(\phi^{\wedge})p}{\varphi}}\\=\lim\limits_{\varphi\rightarrow 0}{\frac{\varphi^{\wedge}Rp}{\varphi}}=\lim\limits_{\varphi\rightarrow 0}{\frac{-(Rp)^{\wedge}\varphi}{\varphi}}=-(Rp)^{\wedge}$
+$$
+\frac{\partial(Rp)}{\partial\varphi}=\lim\limits_{\varphi\rightarrow 0}{\frac{\exp(\varphi^{\wedge})\exp(\phi^{\wedge})p-\exp(\phi^{\wedge})p}{\varphi}}=\lim\limits_{\varphi\rightarrow 0}{\frac{(I+\varphi^{\wedge})\exp(\phi^{\wedge})p-\exp(\phi^{\wedge})p}{\varphi}}\\=\lim\limits_{\varphi\rightarrow 0}{\frac{\varphi^{\wedge}Rp}{\varphi}}=\lim\limits_{\varphi\rightarrow 0}{\frac{-(Rp)^{\wedge}\varphi}{\varphi}}=-(Rp)^{\wedge}
+$$
 
 ### SE(3)上的李代数求导
 
-$\frac{\partial(Tp)}{\partial\delta\xi}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\exp(\delta\xi^{\wedge})\exp(\xi^{\wedge})p-\exp{(\xi^){\wedge}p}}{\delta\xi}}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\exp(I+\delta\xi^{\wedge})\exp(\xi^{\wedge})p-\exp{(\xi^{\wedge}})p}{\delta\xi}}\\=\lim\limits_{\delta\xi\rightarrow0}{\frac{\delta\xi^{\wedge}\exp{\xi^{\wedge}}p}{\delta\xi}}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\left[\begin{array}{c}\delta\phi^{\wedge}&\delta p\\0^T&0\end{array}\right]\left[\begin{array}{c}Rp+t\\1\end{array}\right]}{d\xi}}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\left[\begin{array}{c}\delta\phi^{\wedge}(Rp+t)+\delta p\\0^T\end{array}\right]}{d\xi}}\triangleq(Tp)^{\odot}$
+$$
+\frac{\partial(Tp)}{\partial\delta\xi}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\exp(\delta\xi^{\wedge})\exp(\xi^{\wedge})p-\exp{(\xi^){\wedge}p}}{\delta\xi}}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\exp(I+\delta\xi^{\wedge})\exp(\xi^{\wedge})p-\exp{(\xi^{\wedge}})p}{\delta\xi}}\\=\lim\limits_{\delta\xi\rightarrow0}{\frac{\delta\xi^{\wedge}\exp{\xi^{\wedge}}p}{\delta\xi}}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\left[\begin{array}{c}\delta\phi^{\wedge}&\delta p\\0^T&0\end{array}\right]\left[\begin{array}{c}Rp+t\\1\end{array}\right]}{d\xi}}=\lim\limits_{\delta\xi\rightarrow0}{\frac{\left[\begin{array}{c}\delta\phi^{\wedge}(Rp+t)+\delta p\\0^T\end{array}\right]}{d\xi}}\triangleq(Tp)^{\odot}
+$$
+
+
 
 ## 实践 Sophus
 
@@ -207,28 +254,54 @@ $\frac{\partial(Tp)}{\partial\delta\xi}=\lim\limits_{\delta\xi\rightarrow0}{\fra
 
 ### 针孔相机模型
 
-* 小孔成像模型 <img src="Pinhole.jpg" width="50%">
+* 小孔成像模型
+
+  <img src="Pinhole.jpg" width="50%">
+
 * 根据模型原理可以得到相机坐标系中 $(X, Y)$ 的点P与其投影的关系： $\frac{Z}{f}=-\frac{X}{X'}=-\frac{Y}{Y'}$
-* <img src="wholeTransProcess.jpg">
+
+  <img src="wholeTransProcess.jpg" width="60%">
+
 * 归一化成像平面：
   * 原式中的负号表示小孔成像得到的像和是图像的倒像。为了便于处理和简化数学表示，归一化图像平面。原理上相当于是把投影相对于小孔做了对称。实际也要翻转相机拍摄得到的倒像，因此这样的数学操作是合理的。这种情况也被称为针孔模型
   * $\frac{Z}{f}=\frac{X}{X'}=\frac{Y}{Y'}\rightarrow\left\{\begin{array}{c}X'=f\frac{X}{Z}\\Y'=f\frac{Y}{Z}\end{array}\right.$ 从该式中也可以看出，无论X和Z（或者Y和Z）有多大，在固定焦距时最后得到的投影都是相同的，也就是失去了尺度信息
+  
 * 相机坐标系变换为像素坐标系 $(u,v)$ 得到内参数矩阵
   * 将像素坐标系的原点定义在图像的左上角。像素坐标系与成像平面之间，相差一个缩放和一个远点的平移，设缩放倍数 $\alpha,\beta$（单位为pixel/m），平移了 $[c_x,c_y]^T$（单位为pixel）
+  
   * $\left\{\begin{array}{c}u=\alpha X'+c_x\\v=\beta Y'+c_y\end{array}\right.$ 代入 $X',Y'$，合并 $f_x=\alpha f,\ f_y=\beta f$ 得到 $\left\{\begin{array}{c}u=f_x\frac{X}{Z}+c_x\\v=f_y\frac{Y}{Z}+c_y\end{array}\right.$
-  * 左侧为齐次坐标，右侧为非齐次坐标 $\left[\begin{array}{c}u\\v\\1\end{array}\right]=\frac{1}{Z}\left[\begin{array}{c}f_x&0&c_x\\0&f_y&c_y\\0&0&1\end{array}\right]\left[\begin{array}{c}X\\Y\\Z\end{array}\right]\triangleq\frac{1}{Z}\mathbf{K}_f\mathbf{P}\rightarrow Z\left[\begin{array}{c}u\\v\\1\end{array}\right]=\left[\begin{array}{c}f_x&0&c_x\\0&f_y&c_y\\0&0&1\end{array}\right]\left[\begin{array}{c}X\\Y\\Z\end{array}\right]\triangleq \mathbf{K}_f\mathbf{P}$
-  * 考虑摄像机偏斜，引入Skwer factor $s_{\theta}$：<img src="CameraPixelCoordinates.jpg" width="35%"> $K=K_sK_f=\left[\begin{array}{c}f_xs_x&fs_{\theta}&c_x\\0&f_ys_y&c_y\\0&0&1\end{array}\right]$
+  
+  * 左侧为齐次坐标，右侧为非齐次坐标
+    $$
+    \left[\begin{array}{c}u\\v\\1\end{array}\right]=\frac{1}{Z}\left[\begin{array}{c}f_x&0&c_x\\0&f_y&c_y\\0&0&1\end{array}\right]\left[\begin{array}{c}X\\Y\\Z\end{array}\right]\triangleq\frac{1}{Z}\mathbf{K}_f\mathbf{P}\rightarrow Z\left[\begin{array}{c}u\\v\\1\end{array}\right]=\left[\begin{array}{c}f_x&0&c_x\\0&f_y&c_y\\0&0&1\end{array}\right]\left[\begin{array}{c}X\\Y\\Z\end{array}\right]\triangleq \mathbf{K}_f\mathbf{P}
+    $$
+  
+  * 考虑摄像机偏斜，引入Skwer factor $s_{\theta}$： $K=K_sK_f=\left[\begin{array}{c}f_xs_x&fs_{\theta}&c_x\\0&f_ys_y&c_y\\0&0&1\end{array}\right]$
+  
+    <img src="CameraPixelCoordinates.jpg" width="35%">
+  
   * K被称为内参数矩阵 Intrinsics Matrix。K由生产厂商告知，或者通过单目棋盘格张正由标定法进行标定 Calibration
+  
   * In CV II
-    * $\lambda Z\left[\begin{array}{c}x'\\y'\\1\end{array}\right]=\left[\begin{array}{c}S_x&S_{\theta}&0\\0&S_y&O_y\\0&0&1\end{array}\right]\left[\begin{array}{c}f&0&0\\0&f&0\\0&0&1\end{array}\right]\left[\begin{array}{c}1&0&0&0\\0&1&0&0\\0&0&1&0\end{array}\right]\left[\begin{array}{c}X\\Y\\Z\\1\end{array}\right]=K_sK_f\Pi_0X$
-    * Assuming Z to be a constant $\lambda>0$, $S_{\theta}$ skew matrix, $\Pi_0$ Standard projection matrix, $\Pi$ General projection matrix
+    
+    
+    $$
+    \lambda Z\left[\begin{array}{c}x'\\y'\\1\end{array}\right]=\left[\begin{array}{c}S_x&S_{\theta}&0\\0&S_y&O_y\\0&0&1\end{array}\right]\left[\begin{array}{c}f&0&0\\0&f&0\\0&0&1\end{array}\right]\left[\begin{array}{c}1&0&0&0\\0&1&0&0\\0&0&1&0\end{array}\right]\left[\begin{array}{c}X\\Y\\Z\\1\end{array}\right]=K_sK_f\Pi_0X
+    $$
+    Assuming Z to be a constant $\lambda>0$, $S_{\theta}$ skew matrix, $\Pi_0$ Standard projection matrix, $\Pi$ General projection matrix
+  
 * 世界坐标系变换为相机坐标系得到外参数矩阵
   * 相机是在运动的，相机坐标系是根据相机在世界坐标系（$P_w$）中的位姿所确定的。而相机的位姿根据由旋转矩阵 $\mathbf{R}$ 和平移向量 $t$ 所确定
   * $ZP_{uv}=Z\left[\begin{array}{c}u\\v\\1\end{array}\right]=\mathbf{K}\mathbf{P}=\mathbf{K}(\mathbf{R}P_w+t)=\mathbf{K}[R\ T]P_w=MP_w$
     * $[R\ T]$ 称为相机的外参数矩阵 Extrinsics Matrix
     * M为相机的总参数矩阵
   * $(RP_w+t)=[X,Y,Z]^T\rightarrow [X/Z,Y/Z,1]^T$ 最后得到的是归一化坐标。从这个模型中可以看出，如果对相机坐标同时乘以任意非零常数，归一化坐标都是一样的，这说明点的深度在投影过程中丢失了，所以单目视觉中无法得道像素点的深度值
-* 总结 ${\color{blue}P'_{3\times 1}}={\color{red}K_{3\times 3}}[I\ \ \ 0]{\color{purple}P_{4\times 1}}={\color{red}K}[I\ \ \ 0]{\color{red}\left[\begin{array}{c}R&T\\0&1\end{array}\right]}{\color{orange}P_{w,4\times 1}}={\color{red}K[R\ \ \ T]}{\color{orange}P_w}={\color{green}M_{3\times 4}}{\color{orange}P_w}$
+  
+* 总结
+  $$
+  {\color{blue}P'_{3\times 1}}={\color{red}K_{3\times 3}}[I\ \ \ 0]{\color{purple}P_{4\times 1}}={\color{red}K}[I\ \ \ 0]{\color{red}\left[\begin{array}{c}R&T\\0&1\end{array}\right]}{\color{orange}P_{w,4\times 1}}={\color{red}K[R\ \ \ T]}{\color{orange}P_w}={\color{green}M_{3\times 4}}{\color{orange}P_w}
+  $$
+
 * Preimage and Coiamge
   * Preimage 原像：像平面上一条直线L的preimage指的是过光心与直线L的平面，一个点P的preimage指的是过光心与点P的直线，所以preimage指的是可能会投影到该点活该直线的所有空间三维点的集合，它构成了一个二维的空间
   * Coimage 余像：与preimage正交的点的集合。直观上，与直线的preimage（一个平面）垂直的是一条直线；与点的preimage（一条直线）垂直的是一个平面
@@ -236,9 +309,16 @@ $\frac{\partial(Tp)}{\partial\delta\xi}=\lim\limits_{\delta\xi\rightarrow0}{\fra
 ### 畸变 Distorsion
 
 * 畸变是因为相机透镜在生产中或多或少的误差所造成的，不可能完全避免 Impeferc lenses and manufacturing errors
+
 * 分类
-  * 桶形畸变 Barrel distorsion <img src="BarrelDistorsion.png" width="25%">
-  * 枕形畸变 Pincushion distorsion <img src="PincushionDistorsion.png" width="25%">
+  * 桶形畸变 Barrel distorsion
+  
+    <img src="BarrelDistorsion.png" width="25%">
+  
+  * 枕形畸变 Pincushion distorsion
+  
+    <img src="PincushionDistorsion.png" width="25%">
+  
 * 畸变模型
   * 多项式畸变模型 Polynomial distortion model
     * 径向：$\left\{\begin{array}{c}x_{corrected}=x_d(1+a_1r^2+a_2r^4)\\y_{corrected}=y_d(1+a_1r^2+a_2r^4)\end{array}\right.$
@@ -246,21 +326,28 @@ $\frac{\partial(Tp)}{\partial\delta\xi}=\lim\limits_{\delta\xi\rightarrow0}{\fra
   * A more general model: FOV (Field of Vision)/ATAN (ArcTangent) model by Devernay and Faugeras
     * $g_{ATAN}(r)=\frac{1}{\omega r}\arctan{\left(2r\tan{\left(\frac{\omega}{2}\right)}\right)}$
     * Cannot be used to on camera whose FOV is greater than 180 degree
+  
 * Pixel coordinates of the distorted camera are $\left[\begin{array}{l}u_d\\v_d\\1\end{array}\right]=K\left[\begin{array}{c}\pi_d(\widetilde{X})\\1\end{array}\right]=K\left[\begin{array}{c}g\left(\lVert\pi(\widetilde{X})\rVert\right)\pi_d(\widetilde{X})\\1\end{array}\right]$
+
 * 畸变矫正与插值算法（见Vision/CV2/Algorithm中的畸变矫正与线性插值算法。Tips：线性插值是畸变矫正与图像放大缩小旋转等算法的核心）
 
 ### 弱透视投影摄像机 Weak Perspective
 
-* <div align="center"><img src="WeakPerspective.png" width="50%"></div>
+<img src="WeakPerspective.png" width="50%">
+
 * 当被投影物体离投影面较远时，被投影物体的点都近似的在同一个面上
 * $\left\{\begin{array}{c}x'=\frac{f'}{z}x\\y'=\frac{f'}{z}y\end{array}\right.\overrightarrow{z=z_0}\left\{\begin{array}{c}x'=\frac{f'}{z_0}x\\y'=\frac{f'}{z_0}y\end{array}\right.$ 令放大率m为 $m=\frac{f'}{z_0}$，此时映射变成了线性关系
 * 弱透视投影在数学方面更简单，当物体较小且较远时准确，常用于图像识别任务
 
 ### 正交投影摄像机 Orthogonal Perspective $\triangleq$
 
-* <div align="center"><img src="OrthogonalPersp.png" width="60%"></div>
+<img src="OrthogonalPersp.png" width="60%">
+
 * 摄像机中心到像平面的距离无限远时
-* $\left\{\begin{array}{c}x'=\frac{f'}{z}x\\y'=\frac{f'}{z}y\end{array}\right.\rightarrow\left\{\begin{array}{c}x'=x\\y'=y\end{array}\right.$
+  $$
+  \left\{\begin{array}{c}x'=\frac{f'}{z}x\\y'=\frac{f'}{z}y\end{array}\right.\rightarrow\left\{\begin{array}{c}x'=x\\y'=y\end{array}\right.
+  $$
+
 * 正交投影更多应用在CAD等工业设计软件中
 
 ### 双目相机模型 Stereo
@@ -298,7 +385,10 @@ $\frac{\partial(Tp)}{\partial\delta\xi}=\lim\limits_{\delta\xi\rightarrow0}{\fra
 
 * 对原函数进行一阶泰勒展开 $f(x+\Delta x)\approx f(x)+J(x)^T\Delta x$，得到增量方程 $\Delta x^*=\underset{x}{\arg\min\ }{\Delta x}{\frac{1}{2}\Vert f(x)+J(x)^T\Delta x\Vert^2}$
 * 对增量方程 w.r.t $\Delta x$ 展开后求导
-  * $\frac{1}{2}\Vert f(x)+J(x)^T\Delta x\Vert^2=\left(\frac{1}{2}(f(x)+J(x)^T\Delta x\right)^T\left(\frac{1}{2}(f(x)+J(x)^T\Delta x\right)=\frac{1}{2}\left(\Vert f(x)\Vert_2^2+2f(x)J(x)^T\Delta x+\Delta x^TJ(x)J(x)^T\Delta x\right)$
+  $$
+  \frac{1}{2}\Vert f(x)+J(x)^T\Delta x\Vert^2=\left(\frac{1}{2}(f(x)+J(x)^T\Delta x\right)^T\left(\frac{1}{2}(f(x)+J(x)^T\Delta x\right)=\frac{1}{2}\left(\Vert f(x)\Vert_2^2+2f(x)J(x)^T\Delta x+\Delta x^TJ(x)J(x)^T\Delta x\right)
+  $$
+  
   * w.r.t $\Delta x$ 求导并令其为0：$J(x)f(x)+J(x)J^T(x)\Delta x=0\rightarrow J(x)J^T(x)\Delta x=-J(x)f(x)\rightarrow H(x)\Delta x=g(x)$ 可以看到这个形式和二阶牛顿法的增量方程形式是很相似的，但GN方法利用 $JJ^T$ 代替了计算复杂的 $H$
   * 总结：${\color{red}\Delta=-(J^TJ)^{-1}J^Tr}$
 * 算法步骤
@@ -362,7 +452,7 @@ SLAM系统分为前端和后段，其中前端也称为视觉里程计。视觉�
 
 ### 对极约束
 
-<div align="center"><img src="EpipolarGeometry.jpg" width="80%"></div>
+<img src="EpipolarGeometry.jpg" width="60%">
 
 * $x_2^T\widehat{T}Rx_1=x_2^TEx_1=0$ 描述了同一场景或物体的两个视点图像间的几何关系，将搜索范围
 * 推导
@@ -420,8 +510,11 @@ SLAM系统分为前端和后段，其中前端也称为视觉里程计。视觉�
 ### 利用三角测量/三角化测量深度信息以进行结构重构 Structure reconstruction via Triangulation
 
 * 已知，考虑n对匹配点 $\lambda_2^jx_2^j=\lambda_1^jRx_1^j+\gamma T,\ (j=1,2,\cdots,n)$（以相机1为参考系），恢复每对点的深度信息 $\lambda_1,\ \lambda_2$
+
 * 两边左乘 $\widehat{x_2^j}$，得到 $\lambda_1^j\widehat{x_2^j}Rx_1^j+\gamma \widehat{x_2^j}T=0\longleftrightarrow M^j\bar{\lambda^j}=\left[\begin{array}{c}\widehat{x_2^j}Rx_1^j|_{3\times1}&\widehat{x_2^jT}|_{3\times1}\end{array}\right]_{3\times2}\left[\begin{array}{c}\lambda_1^j\\\gamma\end{array}\right]_{2\times1}=0$
-* $\left[M\in\mathbb{R}^{(3n\times{(n+1)}}\right]\cdot(\vec{\lambda}\in\mathbb{R}^{n+1})\triangleq\left[\begin{array}{c}\widehat{x_2^1}Rx_1^1&0&0&0&0&\widehat{x_2^1}T\\0&\widehat{x_2^2}Rx_1^2&0&0&0&\widehat{x_2^2}T\\0&0&\cdots&0&0&\vdots\\0&0&0&\widehat{x_2^{n-1}}Rx_1^{n-1}&0&\widehat{x_2^{n-1}}T\\0&0&0&0&\widehat{x_2^n}Rx_1^n&\widehat{x_2^n}T\end{array}\right]_{3n\times(n+1)}\cdot\left[\begin{array}{c}\lambda_1^1\\\lambda_1^2\\\vdots\\\lambda_1^n\\\gamma\end{array}\right]_{n+1}=0$
+  $$
+  \left[M\in\mathbb{R}^{(3n\times{(n+1)}}\right]\cdot(\vec{\lambda}\in\mathbb{R}^{n+1})\triangleq\left[\begin{array}{c}\widehat{x_2^1}Rx_1^1&0&0&0&0&\widehat{x_2^1}T\\0&\widehat{x_2^2}Rx_1^2&0&0&0&\widehat{x_2^2}T\\0&0&\cdots&0&0&\vdots\\0&0&0&\widehat{x_2^{n-1}}Rx_1^{n-1}&0&\widehat{x_2^{n-1}}T\\0&0&0&0&\widehat{x_2^n}Rx_1^n&\widehat{x_2^n}T\end{array}\right]_{3n\times(n+1)}\cdot\left[\begin{array}{c}\lambda_1^1\\\lambda_1^2\\\vdots\\\lambda_1^n\\\gamma\end{array}\right]_{n+1}=0
+  $$
 
 * 由于噪声、八点法结果的不准确等，所以要用齐次最小二乘解尺度 $\vec{\lambda}$ 向量
 
@@ -434,7 +527,9 @@ SLAM系统分为前端和后段，其中前端也称为视觉里程计。视觉�
 
 ### 单应矩阵 Homography matrix
 
-<div align="center"><img src="Homography.jpg" width="50%"> <img src="HomographyDeduction.jpg" width="50%"></div>
+<img src="Homography.jpg" width="50%">
+
+<img src="HomographyDeduction.jpg" width="50%">
 
 * 推导
   * $X_2=RX_1+T\rightarrow x_2^T\widehat{T}Rx_1=x_2^TEx_1=0$
@@ -481,10 +576,15 @@ SLAM系统分为前端和后段，其中前端也称为视觉里程计。视觉�
 ### P3P
 
 * P3P需要利用给定的3个点的几何关系
-* <div align="center"><img src="P3P.jpg" width="80%"></div>
+
+  <img src="P3P.jpg" width="80%">
+
 * $s\left[\begin{array}{c}u_1\\v_1\\1\end{array}\right]=\left[\begin{array}{c}t_1&t_2&t_3&t_4\\t_5&t_6&t_7&t_8\\t_9&t_{10}&t_{11}&t_{12}\end{array}\right]\left[\begin{array}{c}X\\Y\\Z\\1\end{array}\right]$
+
 * $\Delta Oab \sim\Delta OAB,\ \Delta Obc\sim\Delta OBC,\ \Delta Oac\sim\Delta OAC$
+
 * $\left\{\begin{array}{c}(1-u)y^2-ux^2-\cos{<b,c>}y+2uxy\cos{<a,b>}+1=0\\(1-w)x^2-wy^2-\cos{<a,c>}y+2wxy\cos{<a,b>}+1=0\end{array}\right.$
+
 * 需要利用吴消元法来求该方程组的解析解 $(x,y)$。最多可能得到4个解，然后用一个验证点来验证得到合适的答案
 
 ### 最小化重投影误差求解PnP BA方法（BA的图模型结构特点与通用的快速求解方法见下文后端部分）
