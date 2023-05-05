@@ -29,3 +29,11 @@ staging area 暂存区
 
 
 master 是主要分支，它是一个对于SHA-1的map，即 `map<string, string>`
+
+
+
+vimdiff ?
+
+
+
+origin一般用作本地对remote repository的名称
