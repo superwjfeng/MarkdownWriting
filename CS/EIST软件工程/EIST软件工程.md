@@ -37,3 +37,8 @@ vimdiff ?
 
 
 origin一般用作本地对remote repository的名称
+
+
+
+`git branch --set-upstream-to=origin/mas
+ter`
