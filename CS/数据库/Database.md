@@ -2,7 +2,7 @@
 
 ## *数据库简介*
 
-数据库用来管理数据，数据库是以某种有组织的方式存储数据集合。ßß数据库是针对文件内容进行操作，不需要用户手动进行数据管理
+数据库用来管理数据，数据库是以某种有组织的方式存储数据集合。数据库是针对文件内容进行操作，不需要用户手动进行数据管理
 
 ### 主流数据库
 
@@ -255,7 +255,7 @@ create table if not exists votes(
 
 # 表
 
-## *表操作*
+## *表定义操作*
 
 ### 创建表
 
@@ -424,6 +424,7 @@ mysql> select * from test;
   ```
 
   此时主键就设置好了
+
   ```mysql
   mysql> desc test2;
   +-------+------------------+------+-----+---------+-------+
@@ -516,6 +517,223 @@ mysql> create table student (
 ### 外键 foreign key
 
 外键用于定义主表和从表之间的关系：外键约束主要定义在从表上，主表则必须是有主键约束或unique约束。当定义外键后，要求外键列数据必须在主表的主键列存在或为null
+
+先来看一下不使用外键约束会发生什么。分别建立 `student_tb` 和 `class_tb` 两张表，根据业务的情况，学生的class_id天然的就和班级的id有关
+
+```mysql
+mysql> create table if not exists student_tb(
+    -> id bigint primary key,
+    -> name char(32) not null,
+    -> class_id bigint
+    -> ) engine=innodb;
+    
+mysql> create table if not exists class_tb(
+    -> id bigint primary key,
+    -> name varchar(32) not null,
+    -> teacher varchar(32) not null
+    -> ) engine=innodb;
+```
+
+那么有下面两种很实际的情况
+
+* 插入一个学生，但是他的class_id是在班级表里找不到的，这时应该要禁止插入
+* 删除一个班级，但是这个班级里还有人，这时应该要禁止删除
+
+如果仅仅是按照上面的方法来定义两张两张表，虽然已经可以在语义上已经属于外键了，但两张表仍然是两张独立的表。因而我们要用外键约束。外键建立在从表，定义了主表和从表之间的约束关系
+
+```mysql
+# 先创建主表
+mysql> create table if not exists class_tb(
+    -> id bigint primary key,
+    -> name varchar(32) not null,
+    -> teacher varchar(32) not null
+    -> ) engine=innodb;
+    
+# 再建立从表
+mysql> create table if not exists student_tb(
+    -> id bigint primary key,
+    -> name char(32) not null,
+    -> class_id bigint
+    -> foreign key (class_id) references class_tb(id) # 外键约束
+    -> ) engine=innodb;
+```
+
+## *表的增删改查操作*
+
+表的增删改查称为CRUD Create Retrive Update Delete，其中create仅仅是一个单词，和建表的 `create` 操作没什么关系
+
+```mysql
+mysql> create table if not exists students (
+    -> id int unsigned primary key auto_increment,
+    -> sn int unsigned unique key not null comment "Student ID",
+    -> name varchar(64) not null comment "Students' name",
+    -> qq varchar(64) unique key
+    -> );
+```
+
+### Create 插入
+
+可以忽略列名称，但必须全列插入；可以忽略某些列数据，但必须指明往哪些列插入
+
+* 单行数据 + 全列插入：除了自增列外若每列指明了变量，那就按顺序匹配插入；若插入多行数据就用 `,` 分割数据
+
+* 由于主键或者唯一键对应的值已经存在而导致插入失败，这时候直接更新
+
+  ```mysql
+  INSERT ... ON DUPLICATE KEY UPDATE column = value [, column = value] ... # 中括号表示可以省略
+  ```
+
+  * 0 row affected：表中有冲突数据，但冲突数据的值和 update 的值相等。可以用 `select row_count();` 来查看最近一条指令 how many rows affected
+  * 1 row affected：表中没有冲突数据，数据被插入
+  * 2 row affected：表中有冲突数据，并且数据已经被更新
+
+* 没有冲突就插入，有冲突就直接替换
+
+  ```mysql
+  REPLACE INTO students (sn, name) VALUES (20001, '曹阿瞒');
+  ```
+
+### Retrive 查找
+
+```mysql
+SELECT
+[DISTINCT] {* | {column [, column] ...}
+[FROM table_name]
+[WHERE ...]
+[ORDER BY column [ASC | DESC], ...]
+LIMIT ...
+```
+
+* select 列
+
+  * 全列查询
+
+  * 指定列查询
+
+  * 查询字段为表达式
+
+    ```mysql
+    SELECT id, name, chinese + math + english FROM exam_result;
+    SELECT id, name, chinese + math + english AS total FROM exam_result; # 重命名为total
+    ```
+
+  * 为查询结果指定别名
+
+  * 结果去重
+
+    ```mysql
+    SELECT DISTINCT math FROM exam_result;
+    ```
+
+* where 条件
+
+  `''` 和 NULL 是不一样的：`''` 是存在的空串，而NULL是不存在。如果筛选条件是 `WHERE XX = NULL` 是搜不出来的
+
+  如果要筛选NULL可以用 `<==>NULL`、`<=>NULL` 和 `IS NULL`（推荐用这个）
+
+  
+
+  `BETWEEN ... AND ...` 效果等价于 `>= AND <= `  前闭后闭区间，只能用于整数和浮点数，不能用于字符串
+
+  
+
+  `LIKE 孙%` 模糊匹配姓孙的，%匹配0个或多个，`_` 匹配1个字符（`__` 匹配2个字符）
+
+  
+
+  select的顺序问题？当 `select name, id from exam_result where XXX` 时其实是先找到表做了遍历，然后进行所有字段的筛选，即 `select * from exam_result where XXX`，最后再从中裁剪出 `name, id` 字段
+
+  如何理解先找到表做筛选？下面这个语句会报错 `Unknown column 'total' in 'where clause'`，因为要先执行后半段去表里total，但是找不到
+
+  ```mysql
+  SELECT name, id, chinese+math+english AS total FROM exam_result WHERE total<200; # 报错
+  SELECT name, id, chinese+math+english AS total FROM exam_result WHERE chinese+math+english<200; # 修正
+  ```
+
+* 结果排序
+
+  ```mysql
+  -- ASC 为升序（从小到大）
+  -- DESC 为降序（从大到小）
+  -- 默认为 ASC
+  SELECT ... FROM table_name [WHERE ...] ORDER BY column [ASC|DESC], [...];
+  ```
+
+  比较字符串的时候是逐个比较值
+
+  NULL视为比任何值都小，升序出现在最上面
+
+  排序是最后一步，所以可以用别名
+
+* 筛选分页结果
+
+  ```mysql
+  -- 起始下标为 0
+  -- 从 0 开始，筛选 n 条结果
+  SELECT ... FROM table_name [WHERE ...] [ORDER BY ...] LIMIT n;
+  -- 从 s 开始，筛选 n 条结果
+  SELECT ... FROM table_name [WHERE ...] [ORDER BY ...] LIMIT s, n;
+  -- 从 s 开始，筛选 n 条结果，比第二种用法更明确，建议使用
+  SELECT ... FROM table_name [WHERE ...] [ORDER BY ...] LIMIT n OFFSET s;
+  ```
+
+  建议：对未知表进行查询时，最好加一条 `LIMIT 1`，避免因为表中数据过大，查询全表数据导致数据库卡死
+
+### Update 修改
+
+对查询到的结果进行列值更新
+
+```mysql
+UPDATE table_name SET column = expr [, column = expr ...] [WHERE ...] [ORDER BY ...] [LIMIT ...];
+```
+
+
+
+### Delete 删除
+
+* 删除
+
+  ```mysql
+  DELETE FROM table_name [WHERE ...] [ORDER BY ...] [LIMIT ...]
+  ```
+
+* 截断
+
+  ```mysql
+  TRUNCATE [TABLE] table_name
+  ```
+
+  * 只能对整表操作，不能像 DELETE 一样针对部分数据操作
+  * 实际上 MySQL 不对数据操作，所以比 DELETE 更快，但是TRUNCATE在删除数据的时候，并不经过真正的事物，所以无法回滚
+  * 会重置 AUTO_INCREMENT 项
+
+
+
+MySQL三大日志
+
+* undolog：是Innodb存储引擎生成的日志，用于事务的回滚和MVCC，保证了事务的原子性
+* redolog：是Innodb存储引擎生成的日志，用于崩溃后修复数据，保证了事务的持久性
+* binlog：是Server层生成的日志，用于备份数据、集群等。就是记录下所有的SQL指令
+
+
+
+MySQL中所有操作都是在内存中的，由OS定期落盘。写日志是直接落盘，比写数据（还要调数据库结构）快的多
+
+### 插入查询结果
+
+拷贝表结构生成一张空表，即不拷贝数据
+
+```mysql
+CREATE TABLE no_duplicate_table LIKE duplicate_table;
+```
+
+### grouby字句
+
+在select中使用group by 子句可以对指定列进行分组查询
+
+```mysql
+select column1, column2, .. from table group by column;
+```
 
 # 内置函数
 

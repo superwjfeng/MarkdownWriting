@@ -205,6 +205,8 @@ fmt是格式化IO的包
 
 实体 entity 第一个字母的大小写决定其可见性是否跨包，若名称以大写字母开头，那么它是导出的 exported，也就是它对包外是可见和可访问的，可以被包外的其他程序引用
 
+**Go语言中的封装是以包为单位的**。包内的结构体、方法对包内的其他对象是开放的，都可以用。但只有首字母大写时，其他包才能用
+
 ### 声明
 
 声明给一个程序实体命名，并且设定其部分或全部属性
@@ -271,8 +273,8 @@ go编译器不允许局部变量定义了但不使用，会报错。如果要这
 数据类型可以分为四类
 
 * 基础类型 Basic type
-* 聚合类型 aggregate type
-* 引用类型 reference type：指针、切片 slice、map
+* 聚合类型 aggregate type：数组、结构体 **传值传参**
+* 引用类型 reference type：指针、切片 slice、map **传引用传参**
 * 接口类型 interface type
 
 ### 基础类型
@@ -303,6 +305,8 @@ go编译器不允许局部变量定义了但不使用，会报错。如果要这
 
 ### 聚合类型 aggregate type
 
+聚合类型的特点就是做参数时是传值传参，即传递副本，函数里面对副本的修改不影响外面
+
 * 数组 array
 
   * 支持显式和隐式初始化
@@ -329,30 +333,89 @@ go编译器不允许局部变量定义了但不使用，会报错。如果要这
   }
   ```
 
-### slice 切片/动态序列
+## *slice 切片/动态序列*
+
+### slice相较于数组的优势
 
 go 数组的长度不可改变，在特定场景中这样的集合就不太适用。为此go提供了slice这种动态变长数组，与数组相比slice的长度是不固定的，可以追加元素，在追加时可能使切片的容量增大
 
-当进行传参的时候动态slice相比于固定长度的数组有很大的优势。数组的传参首先类型上要严格匹配，其次数组传参是在进行值拷贝，代价很大
+当进行传参的时候动态slice相比于固定长度的数组有很大的优势。数组的传参首先类型上要严格匹配，其次数组传参是在进行值拷贝，代价很大。**而slice做参数传参的时候传的是引用**。可以看8-slice的实验
 
-三种声明方式
+### slice的三种声明方式
 
 ```go
 var identifier []type
 ```
 
+* 声明slice1是一个切片，并且初始化默认值是1、2、3，长度len是3
 
+  ```go
+  slice1 := []int{1, 2, 3}
+  ```
 
-### map 键值对字典
+* 声明slice2是一个切片，但是并没有给slice2分配空间，用 `make` 开空间
+
+  ```go
+  var slice2 []int
+  //slice2 := []int{} 这样也可以
+  slice2 = make([]int, 3)
+  ```
+
+* 声明slice3是一个切片，同时给slice分配空间，len=3，初始化值是0
+
+  ```go
+  var slice3 []int = make([]int, 3)
+  //slice3 := make([]int, 3)
+  ```
+
+### slice追加与截取
+
+<img src="slice.drawio.png">
+
+slice相当于C++中的vector。slice的len表示左右指针之间的距离，capacity表示左指针至底层数组末尾的距离
 
 ```go
-/* 使用 make 函数 */
-map_variable := make(map[KeyType]ValueType, initialCapacity)
+var numbers = make([]int, 3, 5) // len = 3, cap = 5
+var numbers = make([]int, 3) // len = 3, cap = 3 [0 0 0]
+numbers = append(numbers, 1) // len = 4, cap = 6 [0 0 0 1]
 ```
 
+用 `append` 尾插，用 `[]` 取元素。但是要注意截取后指向的地址是同一个，如果要深拷贝要用 `copy`
 
+## *map 键值对字典*
 
-### 接口类型 interface type
+### map的声明
+
+* 直接声明
+
+  ````go
+  var identifier map[keyType]valueType, initialCap 
+  ````
+
+* 用make开空间
+
+  ```go
+  var myMap map[string]string
+  myMap = make(map[string]string, 10)
+  ```
+
+* 显式声明
+
+  ```go
+  myMap := map[string]string {
+      "one" : "c++",
+      "two" : "java",
+      "three" : "python", //别忘了最后一行的逗号
+  }
+  ```
+
+注意，map的底层和C++的unodered_map一样，里面是乱序的，通过哈希来映射
+
+### map的使用
+
+`delete` 删除元素，其他都一样
+
+map做函数参数传参的时候跟slice一样，都是引用传参
 
 ## *流控制*
 
@@ -448,7 +511,17 @@ func function_name( [parameter list] ) [return_types] {
 
 ## *方法*
 
-## *接口（多态）*
+## *接口实现多态*
+
+### 多态的实现
+
+注意：如果没有重写所有的接口方法，那么就没有完成多态
+
+### interface空接口与类型断言
+
+`interface{}` 空接口，可以用来引用任意的数据类型，和C里的 `void*` 一样
+
+type可以分成 static type 和 concrete type，将 `(type, value)` 称为一个pair，反射 reflection 是通过变量来找到concrete type
 
 # 异常
 
