@@ -65,6 +65,7 @@ public class HelloWorld {
   * `void` 表示main方法没有返回值
   * 根据Java语言规范，main方法必须声明为 `public`
 * 跟C++一样，每条语句必须用分号结尾，代码块用 `{}` 限定，但是**嵌套的代码块中跨层不允许定义同名变量**
+* 不需要 `return 0;`
 
 ### 编译&run
 
@@ -295,6 +296,8 @@ Java的控制流和C++基本上一样，但有以下几个区别
 
 # 对象与类
 
+类的五大成员：**属性、方法、构造器、代码块、内部类**
+
 ## *声明与实例化*
 
 ### 声明
@@ -509,7 +512,9 @@ Java中没有析构函数。一旦对象有资格进行垃圾收集，也就是�
 
 ## *包*
 
-### package
+### package管理机制
+
+Java的每个文件都是以public类同名的，不允许存在重名的类，因此就出现了包的概念。包 package的主要功能是用于分类管理
 
 Java的包机制类似于C++中的命名空间 namespace 特性，可以认为Java的package和import语句类似于C++中的namespace和using指令
 
@@ -517,21 +522,13 @@ Java的包机制类似于C++中的命名空间 namespace 特性，可以认为Ja
 package 完整路径;
 ```
 
+### 使用方法
 
-
-包 package的主要功能是用于分类管理
-
-package是java的关键字，后面跟的名称表示从属于哪一个包，也就是把当前类定义在某个包里面。如果没有写package，那么所有类都是放在default package里面的，即 `java.lang`
-
-import一定要写在package后面
-
-如果import了不同路径的相同名称的类，还是要在使用时增加包名防止冲突
-
-
-
-包名为了区分类名（类名大写），所以一般package都是小写
-
-JVM会自动导入 `java.lang` 中的类，所以可以直接使用String，因为JVM自动导入了 `java.lang.String`
+* package是java的关键字，后面跟的名称表示从属于哪一个包，也就是把当前类定义在某个包里面。如果没有写package，那么所有类都是放在default package里面的，即 `java.lang`。JVM会自动导入 `java.lang` 中的类，所以可以直接使用String，因为JVM自动导入了 `java.lang.String`
+* import一定要写在package后面
+* 如果import了不同路径的相同名称的类，还是要在使用时增加包名防止冲突
+* 包名为了区分类名（类名大写），所以一般package都是小写
+* 包的命名规则为 com.公司名.项目名.业务模块名
 
 ## *JAR文件*
 
@@ -543,31 +540,30 @@ JAR文件使用ZIP格式压缩
 
 ## *抽象类*
 
-只有声明没有实现的方法称为抽象方法
+### 定义
+
+父类方法是不确定的，只是给出一个大致的抽象轮廓，要由子类不断继承后实现抽象方法充实。抽象类的意义在于做顶层设计
+
+**只有声明没有实现的方法称为抽象方法**
 
 ```java
 abstract class Person {
-    public abstract void eat();
+    public abstract void eat(); //abstract方法不能有具体的方法体 { }
 }
 ```
 
-抽象类不完整，不可以直接构造对象
+### 细节
 
-若类中含有抽象方法，那么这个类是抽象类；若类是抽象类，它的方法不一定是抽象方法
-
-让抽象类不断变得具体的方法是通过不断继承。虽然抽象类无法直接构造对象，但是可以通过子类简介构建对象
-
-若抽象类中含有抽象方法，当子类继承抽象类时，需要重写抽象方法，将方法补充完整
-
- `final` 不能和 `abstract`一块用
-
-
-
-
-
-在抽象类中可以有构造方法，只是不能直接创建抽象类的实例对象，但实例化子类的时候，就会初始化父类，不管父类是不是抽象类都会调用父类的构造方法
-
-
+* 抽象类不完整，不可以直接构造对象/实例化
+* 若类中含有抽象方法，那么这个类是抽象类；若类是抽象类，它的方法不一定是抽象方法
+* 抽象类的本质还是类，它可以有任意的成员，比如实现好的方法、静态成员等
+* 让抽象类不断变得具体的方法是通过不断继承
+  * 虽然抽象类无法直接构造对象，但是可以通过子类间接构建对象
+  * 在抽象类中可以有构造方法，只是不能直接创建抽象类的实例对象，但实例化子类的时候，就会初始化父类，不管父类是不是抽象类都会调用父类的构造方法
+* 若抽象类中含有抽象方法，当子类继承抽象类时，需要**重写所有抽象方法**，将方法补充完整。除非它自己也声明为abstract
+*  `private、final、static` 不能和 `abstract 方法`一块用，因为它们都是和 abstract 相矛盾的
+  * 子类继承后要重写所有方法，`final` 禁止重写
+  * 静态方法属于类，可以被类直接调用，但抽象方法没有实现
 
 ## *封装*
 
@@ -588,31 +584,6 @@ main方法也是public的，main方法是由JVM调用的，JVM调用时应该可
 3. protected：受保护权限，子类可以访问
 4. public：公有，任意使用
 
-
-
-
-
-### 内部类
-
-Java不允许外部类只允许声明为public（而且只有一个）或default，所谓的外部类，就是在源码中直接声明在最外面的类
-
-内部类就当成是外部类的属性来使用
-
-因为内部类可以看作是外部类的属性，所以需要构建外部类才可以使用
-
-```java
-public class Test {
-    public static void main(String[] args) {}
-
-    OuterClass outer = new OuterClass();
-    OuterClass.InnerClass inner = outer.new InnerClass();
-}
-
-class OuterClass {
-    public class InnerClass {}
-}
-```
-
 ### 单例模式
 
 ```java
@@ -629,8 +600,6 @@ class User {
     return new User();
 }
 ```
-
-
 
 ## *继承*
 
@@ -677,8 +646,6 @@ class Child extends Parent {
 }
 ```
 
-
-
 ## *多态*
 
 ```java
@@ -717,7 +684,7 @@ Java中所有的类默认都会以 `java.lang.Object` 作为父类。也就是�
 class User extends Obejct {} //等价于 class User {}
 ```
 
-`obj.toString()` 将对象转换成字符串，默认打印的就是对象的内存地址（十六进制），可以重写
+`obj.toString()` 将对象转换成字符串，默认 `System.out.println` 打印的就是对象的内存地址（十六进制），可以重写
 
 `obj.hashCode()` 获取对象的内存地址（十进制）
 
@@ -729,48 +696,182 @@ class User extends Obejct {} //等价于 class User {}
 
 ## *接口*
 
+### 定义
+
 接口可以理解为规则，接口是抽象的，规则的属性必须为固定值，而且不能修改。属性和行为的访问权限必须为公共的，属性应该是静态的，行为应该是抽象的
 
+接口就是给出一些没有实现的方法，封装到一起。等到某个类要使用的时候，再根据具体情况把这些方法重写
+
+接口中的所有方法都是**默认抽象**的，不用加abstract。JDK 8.0 后接口可以有静态方法和默认方法，也就是说接口可以有方法的具体实现
+
 ```java
-interface 接口名称 { 规则属性 }
+interface 接口名称 { 属性; 方法; }
+class 类名 implements 接口名称 {
+    自己属性;
+    自己方法;
+    必须实现的接口的抽象方法;
+}
 ```
 
 接口和类是两个层面的东西，接口可以继承自其他接口，类的对象需要遵循接口（实现 implements），类需要实现接口，且可以实现多个接口
 
+### 形象的UsbInterface例子
+
 ```java
-interface Person {
-    public void eat();
+public interface UsbInterface {
+    //规定接口的相关方法，相当于制定了标准
+    public void start();
+    public void stop();
 }
-class Student implements Person{
-    public void eat() {
-        //...
+//实现Camera的接口，本质上就是重写接口方法
+public class Camera implements UsbInterface {
+    @override
+    public void start() { System.out.println("Camera works."); }
+    public void stop() { System.out.println("Camera stops."); }
+}
+//实现Phone的接口
+public class Phone implements UsbInterface {
+    @override
+    public void start() { System.out.println("Phone works."); }
+    public void stop() { System.out.println("Phone stops."); }
+}
+public class Computer {
+    //编写一个方法，让计算机工作
+    //因为Camera和Phone都implements UsbInterface，所以接到下面的方法里直接就可以用了
+    public void work(UsbInterface usbInterface) {
+        usbInterface.start();
+        usbInterface.stop();
     }
 }
 ```
 
-### 接口与抽象类
+### 应用场景
+
+有一个项目经理管3个程序员开发一个软件。为了控制和管理软件，项目经理可以定义一些接口，然后由程序员具体实现
+
+定义了一个接口来实现数据库的connect和close两个方法。如果不定义统一的接口，那就是每个人自己实现自己的，会非常混乱
+
+```java
+public interface DBInterface { //项目经理规定的接口
+    public void connect(); //连接方法
+    public void close(); //关闭连接
+}
+public class MySQLDB implements DBInterface {
+    @override
+    public void connect() {/**/} //实现
+    public void connect() {/**/}
+}
+public class RedisDB implements DBInterface {
+    @override
+    public void connect() {/**/} //实现
+    public void connect() {/**/}
+}
+public class UseDB {
+    public static void main(String[] args) {
+        MySQLDB mysqlDB = new MySQLDB(); //调用
+        RedisDB redisDB = new RedisDB();
+    }
+    public void use(DBInterface db) { //参数是接口
+        db.coonect();
+        db.close();
+    }
+}
+```
+
+### 细节
+
+* 接口不能被实例化
+* 权限问题
+  * 接口自身的修饰符只能是public和默认
+  * 接口中所有方法都默认是public方法，接口中的抽象方法可以不用abstract来修饰
+  * 接口中的属性都是public static final的
+* 一个普通类实现接口，必须把该接口的所有方法都实现，可以使用alt+enter快捷键
+* 一个抽象类实现接口，可以不用实现接口的方法
+* 一个类可以同时实现多个接口（类似继承）
+* 接口不能继承其他的类，但是可以继承多个别的接口
+
+### 接口与继承
+
+实现接口是对Java单继承的一定补充，同时又避免了C++多继承产生菱形继承的问题：当子类继承了父类，就自动拥有了父类的功能；若子类需要扩展功能，就可以通过实现接口的方式扩展
+
+举一个例子：猫是从猫科动物那边继承过来的，所以是is-a关系；而猫又可以像鱼一样游泳（实现了鱼游泳的接口），所以是like-a的关系（当然这个例子是不准确的，毕竟猫不会游泳😂）
 
 **相同点**
 
-（1）都不能被实例化 （2）接口的实现类或抽象类的子类都只有实现了接口或抽象类中的方法后才能实例化。
+* 都不能被实例化
+* 接口的实现类或抽象类的子类都只有实现了接口或抽象类中的方法后才能实例化
 
 **不同点**
 
-（1）接口只有定义，不能有方法的实现，java 1.8中可以定义default方法体，而抽象类可以有定义与实现，方法可在抽象类中实现。
+* 接口只有定义，不能有方法的实现，java 1.8中可以定义default方法体，而抽象类可以有定义与实现，方法可在抽象类中实现
+* 实现接口的关键字为implements，继承抽象类的关键字为extends。一个类可以实现多个接口，但一个类只能继承一个抽象类。所以，使用接口可以间接地实现多重继承
+* 接口强调特定功能的实现，而抽象类强调所属关系
+* 接口成员变量默认为public static final，必须赋初值，不能被修改；其所有的成员方法都是public、abstract的。抽象类中成员变量默认default，可在子类中被重新定义，也可被重新赋值；抽象方法被abstract修饰，不能被private、static、synchronized和native等修饰，必须以分号结尾，不带花括号
+* **接口在一定程度上实现代码解耦，即接口规范性+动态绑定**
 
-（2）实现接口的关键字为implements，继承抽象类的关键字为extends。一个类可以实现多个接口，但一个类只能继承一个抽象类。所以，使用接口可以间接地实现多重继承。
+## *内部类*
 
-（3）接口强调特定功能的实现，而抽象类强调所属关系。
+### 介绍
 
-（4）接口成员变量默认为public static final，必须赋初值，不能被修改；其所有的成员方法都是public、abstract的。抽象类中成员变量默认default，可在子类中被重新定义，也可被重新赋值；抽象方法被abstract修饰，不能被private、static、synchronized和native等修饰，必须以分号结尾，不带花括号。
+Java不允许外部类只允许声明为public（而且只有一个）或default，所谓的外部类，就是在源码中直接声明在最外面的类
 
-### 匿名类
+内部类就当成是外部类的属性来使用
+
+因为内部类可以看作是外部类的属性，所以需要构建外部类才可以使用
+
+```java
+public class Test {
+    public static void main(String[] args) {}
+
+    OuterClass outer = new OuterClass();
+    OuterClass.InnerClass inner = outer.new InnerClass();
+}
+
+class OuterClass { //外部类
+    public class InnerClass {} //内部类
+}
+
+class OtherClass {} //外部其他类
+```
+
+### 四大内部类
+
+* 定义在外部类局部位置上，比如方法内
+  * 局部内部类（有类名）
+  * 匿名内部类（没有类名）
+* 定义在外部类的成员位置上
+  * 成员内部类（没用static修饰）
+  * 静态内部类（有static修饰）
+
+### 局部内部类
+
+```java
+class Outer {
+    private int n1 = 100;
+    public void m1() {
+        //局部内部类是定义在外部类的局部位置，通常在方法中
+        class Inner {}
+    }
+}
+```
+
+局部内部类是定义在外部类的局部位置的，比如方法中且有类名
+
+* 可以直接访问外部类的所有成员，包括私有的。突破了private成员只能本类访问的限制
+* 不能添加访问修饰符，因为**它的地位就是一个局部变量**，局部变量不能使用修饰符，但是可以用final（不能被其他内部类继承）
+* 作用域：仅仅在定义它的方法或代码块中
+* 局部内部类直接访问外部类成员
+* 外部类访问局部内部类的成员要先创建内部类对象再调用
+* 外部其他类不可以访问局部内部类
+* 若外部类和局部内部类的成员重名了，就采用就近原则，若想访问外部类的成员可以用 `Outer.this.member` 来访问
+
+## *匿名类*
 
 在某些场合下，类的名字不重要，只是想使用类中的方法或功能，那么此时可以采用特殊的语法：匿名类。匿名类就是没有名字的类
 
 # 范型
 
-# 常用类和集合
+# 常用类
 
 
 
@@ -790,12 +891,93 @@ Integer i1 = i; //这种操作很频繁，这么写的时候JVM会自动将这�
 int i2 = i1;
 ```
 
-## *集合*
+# 集合
+
+## *Intro*
+
+### 数组 vs. 集合
+
+* 数组
+  * 长度开始时必须指定，而且一旦指定后就不能更改了
+  * 保存的必须为同一类型的元素
+  * 使用数组进行增加/删除元素的代码比较麻烦
+* 集合
+  * 可以动态保存任意多个对象，使用比较方便
+  * 提供了一系列方便的操作对象的方法：add、remove、set、get等
+  * 使用集合添加、删除新元素的代码简洁
+
+### Hierarchy
+
+<img src="collectionHierarchy.webp" width="50%">
 
 根据数据的不同，Java的集合分为2大体系
 
 * 单一数据体系：Collection接口定义了相关的规则
-* 成对出现的数据体系：键值对数据
+
+  * List 接口 有序列表
+
+    * ArrayList 动态数组。当元素加入时，其大小将会动态地增长，内部的元素可以直接通过get与set方法进行访问。元素顺序存储，随机访问很快，删除非头尾元素慢。新增元素慢而且费资源，较适用于无频繁增删的情况，比数组效率低，如果不是需要可变数组，可考虑使用数组，非线程安全
+    * LinkedList 双向链表。在添加和删除元素时具有比ArrayList更好的性能，但在get与set方面弱于ArrayList。适用于：没有大规模的随机读取，有大量的增加/删除操作。随机访问很慢，增删操作很快，不耗费多余资源。允许null元素，非线程安全
+    * Vector 线程安全的ArrayList，开销比ArrayList要大。如果程序本身是线程安全的，那么使用ArrayList是更好的选择。Vector和ArrayList在更多元素添加进来时会请求更大的空间。Vector每次请求其大小的双倍空间，而ArrayList每次对size增长50%
+
+    * Stack
+
+  * Queue 接口 
+
+    * PriorityQueue 优先级队列
+    * ArrayDeque 双端队列
+
+  * Set 接口 去重表
+
+    * HashSet：HashSet通过哈希表实现。它不保证元素的顺序，也不保证元素按照某种顺序排序。HashSet允许使用null元素，但只能有一个null元素。HashSet的性能较高，对于常见的操作（添加、删除、包含）的平均时间复杂度为O(1)
+    * TreeSet：TreeSet是基于TreeMap实现的。它可以保证元素按照一定的顺序排序，例如自然顺序或者通过Comparator指定的顺序。TreeSet不允许使用null元素。TreeSet的性能较差，对于常见的操作的平均时间复杂度为O(log n)
+    * LinkedHashSet：LinkedHashSet继承自HashSet，也是通过哈希表实现的。不同的是，它还维护了一个双向链表，因此可以保证元素的插入顺序。LinkedHashSet允许使用null元素，但只能有一个null元素。LinkedHashSet的性能略低于HashSet，但仍然比TreeSet快
+
+* 成对出现的数据体系：键值对数据 Map接口
+
+  * HashMap HashMap是Java中最常用的Map实现。它基于哈希表实现，支持O(1)的时间复杂度进行put和get操作。但是，由于其非线程安全，当多个线程同时操作HashMap时可能会导致数据丢失或死锁等问题
+  * TreeMap TreeMap是基于红黑树实现的Map。与HashMap相比，它的插入和查找操作要稍慢一些，但是它的元素是有序的，可以通过Comparator或Comparable接口指定排序规则。同时，TreeMap是线程安全的
+  * LinkedHashMap LinkedHashMap是HashMap的一个变体，它保留了插入顺序，因此遍历LinkedHashMap时可以按照插入顺序进行迭代。与HashMap相比，它的空间占用稍大一些，同时性能略低
+  * ConcurrentHashMap ConcurrentHashMap是Java中专门为多线程设计的Map实现，它采用分段锁机制，每个段内的元素可以被多个线程同时访问和修改，不同段之间的修改操作是互不干扰的。ConcurrentHashMap的性能要比同步的HashMap或HashTable高很多
+  * HashTable类，它也是一种基于哈希表的实现，但比HashMap和ConcurrentHashMap的实现更为简单，且不支持`null`键和值。HashTable是线程安全的，但相比ConcurrentHashMap的分段锁实现，其性能较低，因为所有操作都需要在整个哈希表上进行同步，而不仅仅是在一小部分上。因此，在Java 2之后，推荐使用ConcurrentHashMap代替HashTable，除非需要与遗留代码进行互操作
+  * Properties
+
+
+## *Collection*
+
+### List
+
+初始化
+
+```java
+List<String> list1 = new ArrayList<>(); //用List接口来接收
+List<String> list2 = new ArrayList<>(Arrays.asList("apple", "banana", "orange"));
+List<String> list3 = new ArrayList<>();
+list.add("apple");
+list.add("banana");
+list.add("orange");
+```
+
+常用方法
+
+* add
+  * `add(E element)`：将指定元素添加到列表的末尾
+  * `add(int index, E element)`：将指定元素插入到列表的指定位置
+* remove 
+  * `remove(int index)`：从列表中删除指定位置的元素
+  * `remove(Object o)`：从列表中删除指定元素的第一个匹配项
+* `get(int index)`：返回列表中指定位置的元素
+* `set(int index, E element)`：用指定的元素替换列表中指定位置的元素
+* `indexOf(Object o)`：返回列表中第一个匹配元素的索引，如果列表不包含该元素，则返回-1
+* `size()`：返回列表中的元素数
+* `isEmpty()`：如果列表不包含任何元素，则返回true
+* `clear()`：从列表中删除所有元素
+
+### Set
+
+## *Map*
+
+## *Collections工具类*
 
 # UML
 
@@ -925,88 +1107,376 @@ UML Class Diagram Tutorial：https://www.visual-paradigm.com/guide/uml-unified-m
 
 # 异常
 
-<img src="Java异常.png" width="50%">
+若某个方法不能够采用正常的途径完成它的任务后正常返回，那么此时可以通过抛出 throw 一个封装了错误信息的异常对象。这个方法将会立即退出，不会返回任何值，也不会从调用这个方法的代码处继续执行。取而代之的是异常处理机制开始搜索能够处理这种异常状况的异常处理器 exception handler
 
-Error类里面保存了大量的错误场景
+## *Java异常体系*
 
-Java中异常分类2大类
+<img src="Java异常体系.png" width="80%">
 
-* 可以通过代码恢复正常逻辑执行的异常，称之为运行期异常 RuntimeExceptoion
-* 不可以通过代码恢复的异常，称之为编译期异常 Exception
+Java中所有异常对象都派生于Throwable类的一个类示例。然后分为Error和Exception两类
 
-范围最大的是Exception，RuntimeException继承了Exception
+* 错误Error：Error描述了Java运行时系统的内部错误和资源耗尽错误，程序不应该抛出这种错误，比如栈溢出错误是无法通过编译来检查，程序员对此无能为力
+* 由编程错误导致的异常属于RuntimeExceptoion 运行时错误。最具代表性的RuntimeException有数组越界访问、访问null等
+* 程序本身没有问题，由IO问题引起的可以通过代码恢复正常逻辑执行的异常属于IOException 非运行时错误/检查型错误。最具代表性的IOException有试图超越文件末尾读数据、打开的文件不存在等
+
+ Java语言规范将派生于Error类或RuntimeException类的所有异常称为非检查型 unchecked 异常，所有其他的异常称为检查型 checked 异常，上图给出了较为详细的分类。**编译器将检查程序员是否为所有的检查型异常提供了异常处理器**（这是因为Error类是OS的任务，而RuntimeException编译器就会检查出来）
+
+RuntimeException及其子类被称为未检查异常，这意味着**编译器不会强制要求在代码中处理这些异常**。然而，如果未处理这些异常，它们会在运行时抛出并终止程序的执行
+
+因此，尽管RuntimeException不需要强制要求在方法签名中声明或捕获，但**最好在代码中使用try-catch块来捕获这些异常并进行处理**，以确保程序的正常运行
 
 ## *异常处理*
 
-捕捉多个异常的时候，需要先捕捉范围小的异常，然后再捕捉范围大的异常
+### tray catch finally 捕获
 
 ```java
-try {
-    可能出现异常的代码，若出现异常门JVM会将遗产个进行封装形成一个具体的异常类，然后将这个异常抛出
-}
-catch ( 抛出的异常对象 对象引用 ) {
-    异常的解决方案
-}
-catch () {}
-finally {
-    最终执行的代码逻辑
+public class Main {
+    public static void main(String[] args) {
+        int a = 1;
+        int b = 0;
+
+        try { // try block will be executed first
+            System.out.println(a/b);
+        }
+        catch (ArithmeticException e) { // catch block will be executed if there is an exception
+            System.out.println("ArithmeticException");
+        }
+        catch (RuntimeException e) {
+            System.out.println("Runtime");
+        }
+        catch (Exception e) {
+            System.out.println("Exception");
+        }
+        finally { // finally block will be executed no matter whether there is an exception or not
+            System.out.println("finally");
+        }
+    }
 }
 ```
 
+finally是无论如何最后都会被执行的，可以不要finally，但是IO、资源关闭的善后处理工作可以放到finally
 
+捕获链：捕捉多个异常的时候，需要先捕捉范围小的异常，然后再捕捉范围大的异常。最高层的异常要写在后面，否则会发生覆盖，Throwable可以用来捕获任何的异常
+
+### throw throws 主动抛出异常
 
 ```java
-int i = 0;
-try {
-	int j = 10 / i;
-} catch (ArithmeticException e) {
-    e.getMessage(); //错误的信息
-    e.printStackTrace(); //打印栈信息
-} finally {
-    System.out.println("最终执行的代码")
+public class Test {
+    public static void main(String[] args) {
+        try {
+            new Test().test(1, 0);
+        } catch (ArithmeticException e) {
+            e.printStackTrace();
+        }
+    }
+    // throws: 声明异常，抛给上层
+    public void test(int a, int b) throws ArithmeticException {
+        if (b == 0) {
+            throw new ArithmeticException("b can not be 0"); // 主动抛异常给上层
+        }
+    }
 }
 ```
 
+主动抛异常一般是在方法里。把它可能的异常抛给上层调用者，由调用者来处理
+
+主动抛异常是在方法的声明处用throws关键字指明要抛哪种异常
+
+## *自定义异常*
+
+### 自定义步骤
+
+使用Java内置的异常类可以描述在编程时出现的大部分异常情况。除此之外，用户还可以自定义异常。用户自定义的异常，**只需要继承Exception类就可以**
+
+1. 创建自定义异常类
+2. 在方法中通过throw关键字抛出异常对象
+3. 若在当前抛异常的方法中处理异常，可以使用try-catch语句捕获并处理；否则在方法的声明处通过throws关键字指明要抛哪种异
+4. 出现异常的方法的调用者要捕获并处理异常
+
+### demo
+
+```java
+public class MyException extends Exception {
+    // 假设这个异常是>10的时候抛异常
+    private int detail;
+
+    public MyException(int a) {
+        this.detail = a;
+    }
+    //toString()方法是Object类的方法，所有类都继承了Object类，所以所有类都有toString()方法
+    //toString()方法的作用是返回该对象的字符串表示
+    //在这里重写toString()方法，返回自定义的异常信息
+    public String toString() {
+        return "MyException[" + detail + "]";
+    }
+}
+```
+
+## *实际应用中的经验*
+
+* 处理运行时异常时，采用逻辑去合理规避同时辅助try-catch处理
+* 在多重catch块后面，可以加一个 `catch(Exception)` 来处理可能会被遗漏的异常
+* 对于不确定的代码，也可以加上try-catch来处理潜在的异常
+* 尽量去处理异常，切忌只是简单地调用 `printStackTree()` 去打印输出
+* 具体如何处理异常，要根据不同的业务需求和异常类型去决定
+* 尽量添加finally语句块去释放占用的资源
+
+# IO流
+
+## *文件*
+
+### 概念
+
+文件在程序中是以流的形式来操作的
+
+流 Stream：数据在数据源和程序（内存）之间经历的路径
+
+* 输入流：数据从数据源到程序的路径
+* 输出流：数据从程序到数据源的路径
+
+### 常用操作
+
+Java的File类以抽象的方式代表文件名和目录路径名（Java中目录也被当作文件）。该类主要用于文件和目录的创建、文件的查找和文件的删除等。**File对象代表内存中文件和目录的对象抽象，暂时不真实存在，之后还要通过 `File.createNewfile()` 来真正落盘**。通过以下构造方法创建一个File对象。
+
+* 通过给定的父抽象路径名和子路径名字符串创建一个新的File实例
+
+  ```java
+  File(File parent, String child);
+  ```
+
+* 通过将给定路径名字符串转换成抽象路径名来创建一个新 File 实例
+
+  ```java
+  File(String pathname);
+  ```
+
+* 根据 parent 路径名字符串和 child 路径名字符串创建一个新 File 实例
+
+  ```java
+  File(String parent, String child);
+  ```
+
+* 通过将给定的 file: URI 转换成一个抽象路径名来创建一个新的 File 实例
+
+  ```java
+  File(URI uri);
+  ```
+
+File的类操作：https://www.runoob.com/java/java-file.html
+
+主要的方法有getName、getAbsolutePath、getParent、length、exists、isFile、isDirectory等
+
+## *IO流原理及流的分类*
+
+### 流的分类
+
+* 按操作数据单位不同分为
+  * 字节流 8 bit，适合二进制文件，如音视频等 InputStream/OutputStream 抽象类
+  * 字符流 适合文本文件，一个字符对应几个字节是由采用的编码来决定的 Reader/Writer 抽象类
+* 按数据流的流向不同分为：输入流、输出流
+* 按流的角色不同分为：节点流、处理流/包装流
+
+### IO流体系
+
+<img src="IO流体系图.jpg" width="50%">
+
+流和文件的关系是：流是中间传输的数据，文件是具体数据的载体
+
+## *输入流*
+
+### InputStream 字节流
+
+<img src="InputStreamClass.png" width="50%">
+
+* FileInputStream
+
+  A FileInputStream obtains input bytes from a file in a file system.
+
+  一定要close，单字节用 `read()` 读取，可以用 `read(byte[] b)` 多字节读取提高效率
+
+  ```java
+  public class FileInputStream_ {
+      public static void main(String[] args) {}
+      public void readFile01() {
+          String filePath = "src/MyException.java";
+          int readData = 0;
+          FileInputStream fileInputStream = null;
+          try{
+              fileInputStream = new FileInputStream(filePath);
+              while ((readData = fileInputStream.read()) != -1) {
+                  System.out.print((char)readData); // readData是返回实际读取的int数，强制转换成char类型
+              }
+          } catch (IOException e) { // 不能用FileNotFoundException，因为read要抛出IOException
+              e.printStackTrace();
+          } finally {
+              // 必须关闭流，释放资源
+              try {
+                  fileInputStream.close();
+              } catch (IOException e) {
+                  e.printStackTrace();
+              }
+          }
+      }
+  }
+  ```
+
+* BufferedInputStream
+
+* ObjectInputStream
+
+### Reader 字符流
+
+字符流传输的最小数据单位是 char。`Reader`和`Writer`本质上是一个能自动编解码的`InputStream`和`OutputStream`
+
+* FileReader：最重要的是read方法用来读取单字符，也可以 `read(char[])` 批量读取多字符。读到尾就返回-1
+* BufferedReader
+* InputStreamReader
+
+## *输出流*
+
+<img src="OutputStreamClass.png" width="50%">
+
+### OutputStream 字节流
+
+* FileOutputStream: A file output stream is an output stream for writing data to a File or to a FileDescriptor
+* BufferedOutputStream
+* ObjectOutputStream
+
+### Writer 字符流
+
+使用字符流需要手动flush，否则数据不会写入通道
+
+* FileWriter
+* BufferedWriter
+* OutputStreamWriter
+
+## *节点流和处理流*
+
+节点流可以从一个特定的数据源读写数据，比如FilerReader、FileWriter
+
+处理流/包装流是连接在已存在的流（可以是节点流或处理流）之上，为程序提供更为强大的读写功能，比如BufferedReader、BufferedWriter
+
+### 标准输入输出流
 
 
-# IO
+
+## *Properties类*
 
 # 并发
 
-```java
-Thread.currentThread().getName(); //Thread是线程类；currentThread用于获取当前正在运行的线程；getName用于获取线程的名称
-```
-
-默认都是在main线程（主线程）中执行
-
-
-
-```java
-public class test {
-    public static void main() {
-        Thread t = new Thread(); //创建线程
-		t.start(); //启动线程
-    }
-}
-```
-
-自定义线程类
-
-```java
-class MyThread extends Thread {
-	public void run() {
-        System.out.println(Thread.currentThread().getName());
-    }
-}
-```
-
-## *线程状态*
+## Java*线程状态*
 
 <img src="线程生命周期.drawio.png" width="50%">
 
-NEW 新建 -> RUNNABLE 可运行 -> TERMINATED 终止 
+NEW 新建 -> RUNNABLE 可运行 -> TERMINATED 终止
 
-## *程池*
+* NEW是尚未启动的线程
+* RUNNABLE 在JVM中执行的线程。具体执行与否取决于OS，所以还可以分成两种状态
+* BLOCKED 被阻塞等待监视器锁定的线程
+* WAITING 正在等待另一个线程执行特定动作的线程
+* TIMED_WAITING 正在等待另一个线程执行动作达到指定等待时间的线程
+* TERMINATED 已退出的线程
+
+<img src="threadState.jpg" width="70%">
+
+## *线程基本使用*
+
+有两种方法
+
+### 继承Thread类，重写run方法后调用start
+
+```java
+class MyThread extends Thread {
+    @override
+	public void run() { //run方法是一个普通的方法，并没有真正的启动一个线程
+        System.out.println(Thread.currentThread().getName());
+    }
+}
+public class Thread1 {
+    public static void main(String[] args) {
+        MyThread thread = new MyThread();
+        thread.start(); //启动线程
+    }
+}
+```
+
+不能直接调用 `thread.run()`，因为run方法是一个普通的方法，并没有真正的启动一个线程。必须要用start方法
+
+### 实现Runnable接口，重写run方法
+
+Java是单继承的，在某些情况下一个类可能已经继承了某个父类，此时再用继承Thread类并重写run方法来创建线程就不可能了。因此还有另外一个方法，即通过implements Runnable接口并重写run方法来创建线程
+
+和前面继承重写后start的方式不一样，这里不可以让自定义线程对象直接start，而是要把自定义线程对象放到Thread的实例化对象中再start。因为这里底层使用了代理模式这种设计模式
+
+```java
+class MyThread implements Runnable {
+    @override
+	public void run() { //run方法是一个普通的方法，并没有真正的启动一个线程
+        System.out.println(Thread.currentThread().getName());
+    }
+}
+public class Thread2 {
+    public static void main(String[] args) { 
+        MyThread myThread = new MyThread();
+        Thread thread = new Thread(myThread);
+        thread.start(); //启动线程
+    }
+}
+```
+
+## *Thread类常用方法*
+
+### 基本方法
+
+* setName 设置线程名称
+* getName 返回该线程的名称
+* start 让该线程开始执行，JVM底层调用该线程的start0方法
+* run 调用线程对象run
+* setPriority 更改线程的优先级
+* getPriority 获取线程的优先级
+* sleep 在指定的毫秒内让执行的线程休眠
+* interrupt 中断线程
+
+### 进程协调
+
+* yield 线程的礼让，让出CPU让其他线程执行，但礼让的事件不确定，所以也不一定礼让成功
+* join 线程的插队，插队的线程一旦插队成功，则肯定先执行完插入的线程的所有任务
+* setDeamon 设置为守护线程
+
+## *Synchronized 互斥锁*
+
+### 使用方法
+
+Java语言中的Synchronized关键字相当于给临界资源加了互斥锁
+
+* 同步代码块设置对象锁，同步代码块就是临界资源
+
+  ```java
+  synchronized (对象) { //得到对象的锁，才能操作同步代码
+      //需要被同步的代码
+  }
+  ```
+
+  * 可以给`synchronized(this)`，也就是给某个实例化对象 `synchronized(对象名)` 
+  * 静态方法里的同步代码块是 `synchronized(类名)`
+
+* 放在方法声明中，表示整个方法为同步方法，这时锁住this对象
+
+  ```java
+  public synchronized void m (String name) {
+      //需要被同步的代码
+  }
+  ```
+
+  * 非静态同步方法默认是给this的，相当于 `synchronized(this)`，也就是给每一个实例化对象的 。若实例化了多个对象去访问同一个临界资源就会破坏锁，必须要保证是一个共享的对象！（static对象只创建一次）
+
+  * 静态同步方法的锁是给当前类本身的
+
+### 释放锁
+
+线程执行同步代码块或同步方法时，程序调用 `Thread.sleep()` 或 `Thread.yield()` 方法暂停当前线程的执行，不会释放锁
+
+应该尽量避免使用suspend和resume方法来控制线程
 
 # 网络
 
@@ -1015,6 +1485,24 @@ java.net 包中 J2SE 的 API 包含有类和接口，它们提供低层次的通
 java.net 包中提供了TCP和UDP两种常见的网络协议的支持
 
 <img src="Socket通信模型.png" width="50%">
+
+## *InetAddress*
+
+```java
+public class Network {
+    public static void main(String[] args) throws UnknownHostException {
+        // 获取本机的InetAddress对象，反之也可以通过InetAddress.getByName("IP地址")获取指定IP地址的InetAddress对象
+        InetAddress localHost = InetAddress.getLocalHost();
+        System.out.println("计算机名：" + localHost.getHostName());
+        System.out.println("IP地址：" + localHost.getHostAddress());
+
+        // 通过域名获取InetAddress对象
+        InetAddress baidu = InetAddress.getByName("www.baidu.com");
+        System.out.println("hostName：" + baidu.getHostName());
+        System.out.println("IP地址：" + baidu.getHostAddress());
+    }
+}
+```
 
 ## *UDP*
 
@@ -1115,19 +1603,22 @@ public class SimpleTCPClient {
          // 创建一个套接字并连接到指定的IP地址和端口号
          Socket socket = new Socket("127.0.0.1", 8888);
 
-         // 获取输出流并向服务器发送数据
+         // 获取和socket对象关联的输出流并向服务器发送数据
          OutputStream out = socket.getOutputStream();
          String message = "Hello, server!";
          out.write(message.getBytes());
+         //socket.shutdownOutput();
 
-         // 获取输入流并读取服务器的响应
+         // 获取和socket对象关联的输入流并读取服务器的响应
          InputStream in = socket.getInputStream();
          byte[] buffer = new byte[1024];
-         int length = in.read(buffer);
-         String response = new String(buffer, 0, length);
-         System.out.println("Server response: " + response);
-
-         // 关闭套接字和流
+         int readLen = 0;
+         while ((readLen = inputStream.read(buf)) != -1) {
+         	response = new String(buffer, 0, readLen); //根据读取到的实际长度来显示内容
+         	System.out.println("Server response: " + response);
+         }
+         
+          // 关闭套接字和流!
          out.close();
          in.close();
          socket.close();
@@ -1153,21 +1644,24 @@ import java.net.*;
 public class SimpleTCPServer {
    public static void main(String[] args) {
       try {
-         // 创建一个ServerSocket并监听指定的端口
+         // 创建一个ServerSocket并监听指定的端口，要求在本地没有其他服务在监听8888，否则会异常
+         // Java的ServerSocket不需要lisetn，而且可以通过accept返回多个socket对象，本身就实现了多并发
          ServerSocket serverSocket = new ServerSocket(8888);
          System.out.println("Server listening on port 8888...");
 
          while (true) {
-            // 接受客户端的连接请求
+            // 接受客户端的连接请求，阻塞等待
             Socket socket = serverSocket.accept();
             System.out.println("New client connected: " + socket.getRemoteSocketAddress());
 
             // 获取输入流并读取客户端发送的数据
             InputStream in = socket.getInputStream();
             byte[] buffer = new byte[1024];
-            int length = in.read(buffer);
-            String message = new String(buffer, 0, length);
-            System.out.println("Client message: " + message);
+            int readLen = 0;
+         	while ((readLen = inputStream.read(buf)) != -1) {
+         		response = new String(buffer, 0, readLen); //根据读取到的实际长度来显示内容
+         		System.out.println("Server response: " + response);
+         	}
 
             // 向客户端发送响应数据
             OutputStream out = socket.getOutputStream();
