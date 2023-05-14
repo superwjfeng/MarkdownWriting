@@ -175,7 +175,71 @@ docker run -i -t ubuntu /bin/bash
 5. Docker启动容器并执行 `/bin/bash`。因为容器正在交互式地运行并附加到用户的终端（由于 `-i` 和 `-t` 标志），用户可以使用键盘提供输入，同时将输出记录到其终端
 6. 当用户输入 `exit` 以终止 `/bin/bash` 命令时，容器停止但不被删除。用户可以再次启动它或将其删除
 
+## *zDocker的命令*
+
+<img src="docker常用命令.png" width="70%">
+
+### 镜像的命令
+
+* `docker pull` 下载镜像。如果不写tag，就默认下载latest
+* `docker rmi -f 镜像ide` 删除指定的镜像 
+* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
+
+### 容器的命令
+
+有了镜像才可以创建容器
+
+* `docker run [可选参数] image`
+
+  * --name="Name" 容器名字
+
+  * -d 后台方式运行
+
+  * -it 使用交互方式运行，进入容器查看内容。需要指定一个shell，比如 `/bin/bash`
+
+  * -p 指定容器的端口
+
+* `docker ps` 查看目前运行的容器
+
+  * `docker ps -a` 查看运行过的所有容器
+  * `docker ps -a -n=1` 查看最近运行过的1个容器
+  * `docker ps -q` 显示容器编号
+
+* 退出容器
+
+  * exit 直接停止并退出容器
+  * Ctrl+P+Q 容器不停止退出
+
+* 删除容器 
+
+  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
+  * `docker rm -f $(docker ps -aq) ` 删除所有的容器
+
+* 启动和停止容器的操作
+
+  * 启动容器 `docker start 容器id`
+  * 重启容器 `docker restart 容器id`
+  * 停止当前正在运行的容器 `docker sotp 容器id`
+  * 强制停止当前容器 `docker kill 容器id`
+
+### 常用其他命令
+
+* 后台启动容器
+* 日志 `docker logs -f -t --tail NUM` 显示日志条数
+* 查看容器中进程信息 `docker top 容器id`
+* 查看镜像原数据 `docker inspect`
+
+### 进入容器的命令和拷贝命令
+
+* `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
+* `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
+* `docker cp 容器id:容器内路径` 目的主机路径
+
 ## *Workflow*
+
+<img src="docker_workflow.png" width="50%">
+
+编写Dockerfile -> build 生成 images -> run 形成 containers -> push 到远程库
 
 ### Dockerfile编写
 

@@ -1488,6 +1488,10 @@ java.net 包中提供了TCP和UDP两种常见的网络协议的支持
 
 ## *InetAddress*
 
+InetSocketAddress类主要作用是**封装端口**，它是在在InetAddress基础上加端口，但它是有构造器的
+
+
+
 ```java
 public class Network {
     public static void main(String[] args) throws UnknownHostException {

@@ -71,6 +71,32 @@ using namespace std;
 
 缺省参数是声明或定义函数时为函数的参数指定一个默认值。在调用该函数时，若没有指定实参则采用该形参的默认值，否则使用指定的实参
 
+* 半缺省参数必须是位于左边，且不能间隔着给
+
+```cpp
+void Func(int a, int b, int c=30); // 正确
+void Func(int a=10, int b=20, int c); // 错误，必须是在左边
+void Func(int a, int b=20, int c); // 错误，不能间隔着给
+```
+
+* 缺省参数不能在函数声明和定义中同时出现。当分离定义时，以声明为准，因为在汇编形成符号表时以声明中的定义为准
+
+* 缺省值必须是常量或者全局变量，不能是局部变量
+
+  ```cpp
+  // wz、def和ht的声明必须出现在函数之外
+  sz wd = 80;
+  char def = ' ';
+  sz ht();
+  string screen(sz = ht(), sz = wd, char = def);
+  string window = screen(); //调用screen(ht(), 80, ' ');
+  void f2() {
+      def = '*'; //重新赋值，改变默认实参的值
+      sz wd = 100; //局部变量构成隐藏，但没有改变默认值
+      window = screen(); //调用screen(ht(), 80, '*');
+  }
+  ```
+
 ### 缺省参数分类
 
 * 全缺省参数
@@ -85,24 +111,18 @@ void Func(int a=10, int b=20, int c=30);
 void Func(int a, int b=20, int c=30);
 ```
 
-### 注意点
+### 声明问题
 
-* 半缺省参数必须是位于左边，且不能间隔着给
+在给定的namespace种一个形参只能被赋予一次默认实参，因此函数的后续声明只能为之前没有默认值的形参添加默认实参，而且该形参右侧的所有形参必须都有默认值
 
-```cpp
-void Func(int a, int b, int c=30); // 正确
-void Func(int a=10, int b=20, int c); // 错误，必须是在左边
-void Func(int a, int b=20, int c); // 错误，不能间隔着给
-```
-
-* 缺省参数不能在函数声明和定义中同时出现。当分离定义时，以声明为准，因为在汇编形成符号表时以声明中的定义为准
-* 缺省值必须是常量或者全局变量
+通常应该在函数声明中指定默认实参，并将该声明放在头文件中
 
 ## *函数重载 Function Overloading*
 
 ### 函数重载概念
 
-* 函数重载允许在同一作用域中声明几个功能类似的同名函数。函数重载很方便，就像在使用同一个函数一样
+* 函数重载允许在**同一作用域**中声明几个功能类似的同名函数。函数重载很方便，就像在使用同一个函数一样
+* C++的名字查找发生在类型检查之前，所以函数重载必须是在同一作用域，否则会构成同名隐藏
 * 函数重载类型
   * 参数个数不同
 
@@ -431,6 +451,7 @@ C++类型转换之reinterpret_cast - 叫啥名呢的文章 - 知乎 https://zhua
 ```cpp
 const char *pc;
 char *p = const_cast<char*>(pc); //pc现在是非常量了
+*pc = 2;
 ```
 
 `const_cast` 常用于有函数重载的上下文中
@@ -1848,7 +1869,24 @@ const int& x = 10; // 甚至可以引用常量
 
 ### constexpr变量
 
-在一个复杂系统中是很难确定到底一个
+constexpr 是 C++11 引入的一个关键字，用于声明一个“常量表达式函数”，也可以用于声明一个“常量表达式变量”
+
+constexpr指针的初始值必须是nullptr或者是0，或者是存储在某个固定地址中的对象
+
+ constexpr 的出现是为了方便程序员声明常量表达式，从而提高程序的效率。使用 constexpr 声明的常量表达式可以在编译时就被求值，从而避免了在运行时进行计算。字面值类型 literal type 是指在编译时就要被计算确定的值，因此 constexpr 不能被定义在函数体内，除了地址不变的static局部静态对象，所以 constexpr 引用能绑定到静态局部对象上
+
+除了用于声明常量表达式函数和变量之外，`constexpr` 还可以用于要求函数或变量在编译时就必须被求值，避免栈开销，否则编译器会报错。这种约束可以帮助程序员写出更加高效和可靠的代码
+
+```cpp
+constexpr int factorial(int n) {
+    return (n <= 1) ? 1 : (n * factorial(n - 1));
+}
+
+int main() {
+    constexpr int result = factorial(5); // 在编译时就被求值
+    static_assert(result == 120, "factorial(5) should be 120");
+}
+```
 
 ### 指针、常量和类型别名
 
@@ -1878,6 +1916,36 @@ const int& x = 10; // 甚至可以引用常量
 const类型的左值可以用来接受const或者非const，所以比较保险；但反过来非const就无法接受const了，因为有权限放大
 
 ### const与函数重载
+
+若参数只有const区别，不会构成函数重载
+
+```cpp
+void test(int x) {};
+void test(const int x) {}; //redefinition 
+
+void test(int &x) {};
+void test(const int &x) {}; //正确 
+void test(int *x) {};
+void test(const int *x) {}; //正确 
+```
+
+但**若形参是某种类型的指针或引用，则通过区分其指向的是常量对象还是非常量对象可以实现函数重载**
+
+当传递一个非常量对象或者指向非常量对象的指针时，编译器会优先选用非常量版本的函数
+
+### constexpr函数
+
+* 函数的返回类型及所有形参的类型都得是字面值类型（即算数类型、引用、指针等编译时确定的值）
+
+* 函数体中个必须有且只有一条return语句
+
+  ```cpp
+  constexpr int new_sz() { return 42; }
+  ```
+
+constexpr函数和inline一样，主要是为了加快调用速度
+
+inline和constexpr的多个定义要完全一致，所以一般都直接在头文件中定义一次
 
 ## *const与类*
 
@@ -3302,6 +3370,8 @@ string(const string& s)
 
 ## *仿函数 Functor*
 
+仿函数又称为函数对象 funciton object
+
 在优先级队列中需要比较元素的大小以进行建堆。但在建堆的逻辑中，比较大小是写死的，若此时要将大堆切换成小堆，就需要进入源码中改比较的顺序。这在实际中是不可能的。因此在类实例化时候就需要提供一个“开关”进行控制
 
 仿函数是一个类/结构体，它的目标是使一个类的使用看上去像一个函数。 其实现就是类中实现一个 `bool operator()`（**`()`也是运算符！**)，这个类就有了类似函数的行为，就是一个仿函数类了
@@ -3331,7 +3401,7 @@ cout << lsFunc(1, 2) << endl; //看起来就像是一个普通的函数调用
 cout << lsFunc.operator()(1, 2) << endl; //本质就是调用运算符重载
 ```
 
-要注意的点是类实例化时要传入的是类型，而函数重载时传入的则是对象。比如`std::sort()`是一个函数重载，它在调用的时候要传入一个 `Compare comp`的对象（`std::greater<int>()` 对象有括号），而对于priority_queue类实例化则传入的是 `less<int>`这种类型
+要注意的点是**类实例化时要传入的是类型，而函数重载时传入的则是对象**。比如`std::sort()`是一个函数重载，它在调用的时候要传入一个 `Compare comp`的对象（`std::greater<int>()` 对象有括号），而对于priority_queue类实例化则传入的是 `less<int>`这种类型
 
 ```cpp
 vector<int> v;
@@ -4123,11 +4193,13 @@ auto y2 = 20.22
 ```
 
 * `auto` 可以进行自动变量推导
-* `decltype`可以推导一个变量的类型，再用推导结果去定义一个新的变量
+* `decltype`可以推导一个变量的类型，再用推导结果去定义一个新的变量。过程中编译器会尝试分析表达式类型，但不会去计算表达式的值
 
 ### `nullptr`
 
 C语言中 NULL 被定义为常量0，因此在使用空指针时可能会出现一些错误。C++中引入了指针空值关键字 nullptr，它的类型是 `(void*)0`
+
+## *尾置返回*
 
 ## *一些新的关键字*
 
@@ -4246,7 +4318,7 @@ auto swap1 = [](int& x1, int& x2)->void {
 
 `[capture-list](parameters)mutable -> return-type {statement}` 没有函数名，记法：`[](){}`
 
-* `[capture-list]` 捕捉列表：编译器根据 `[]` 来判断接下来的代码是否为lambda函数，捕捉列表能够捕捉父作用域的变量供lambda函数使用。本质还是==传参==
+* `[capture-list]` 捕捉列表：编译器根据 `[]` 来判断接下来的代码是否为lambda函数，捕捉列表能够捕捉父作用域的变量供lambda函数使用。本质还是**传参**
   * 捕捉方式
     * `[var]`：表示以值传递方式捕捉变量var，也就是说拷贝了var，对新var的改变不会改变原来的var
     * `[=]`：表示值传递的方式捕捉所有父作用域中的变量（包括this）
