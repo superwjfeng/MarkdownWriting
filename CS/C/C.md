@@ -1,3 +1,8 @@
+---
+Title: C
+Author: Weijian Feng 封伟健
+---
+
 # 信息的表示和处理
 
 ## *信息存储*
@@ -2453,8 +2458,6 @@ void free (void* ptr);
   * 若参数ptr指向的空间不是动态开辟的，则 `free()` 的行为未定义
   * 若参数ptr是NULL，则函数什么事都不做
 
-### glibc中malloc实现原理
-
 ### calloc
 
 ```c
@@ -2960,20 +2963,20 @@ int main(int argc, char **argv) {
 ```c
 typedef struct
 {
-  unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
-  Elf32_Half    e_type;         /* Object file type */
-  Elf32_Half    e_machine;      /* Architecture */
-  Elf32_Word    e_version;      /* Object file version */
-  Elf32_Addr    e_entry;        /* Entry point virtual address */
-  Elf32_Off e_phoff;        /* Program header table file offset */
-  Elf32_Off e_shoff;        /* Section header table file offset */
-  Elf32_Word    e_flags;        /* Processor-specific flags */
-  Elf32_Half    e_ehsize;       /* ELF header size in bytes */
-  Elf32_Half    e_phentsize;        /* Program header table entry size */
-  Elf32_Half    e_phnum;        /* Program header table entry count */
-  Elf32_Half    e_shentsize;        /* Section header table entry size */
-  Elf32_Half    e_shnum;        /* Section header table entry count */
-  Elf32_Half    e_shstrndx;     /* Section header string table index */
+    unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
+    Elf32_Half    e_type;         /* Object file type */
+    Elf32_Half    e_machine;      /* Architecture */
+    Elf32_Word    e_version;      /* Object file version */
+    Elf32_Addr    e_entry;        /* Entry point virtual address */
+    Elf32_Off e_phoff;        /* Program header table file offset */
+    Elf32_Off e_shoff;        /* Section header table file offset */
+    Elf32_Word    e_flags;        /* Processor-specific flags */
+    Elf32_Half    e_ehsize;       /* ELF header size in bytes */
+    Elf32_Half    e_phentsize;        /* Program header table entry size */
+    Elf32_Half    e_phnum;        /* Program header table entry count */
+    Elf32_Half    e_shentsize;        /* Section header table entry size */
+    Elf32_Half    e_shnum;        /* Section header table entry count */
+    Elf32_Half    e_shstrndx;     /* Section header string table index */
 } Elf32_Ehdr;
 ```
 
@@ -3058,16 +3061,16 @@ ELF中关于段的信息存储在一个结构体数组中，数组的长度就�
 ```c
 typedef struct
 {
-  Elf32_Word    sh_name;        /* Section name (string tbl index) */
-  Elf32_Word    sh_type;        /* Section type */
-  Elf32_Word    sh_flags;       /* Section flags */
-  Elf32_Addr    sh_addr;        /* Section virtual addr at execution */
-  Elf32_Off sh_offset;      /* Section file offset */
-  Elf32_Word    sh_size;        /* Section size in bytes */
-  Elf32_Word    sh_link;        /* Link to another section */
-  Elf32_Word    sh_info;        /* Additional section information */
-  Elf32_Word    sh_addralign;       /* Section alignment */
-  Elf32_Word    sh_entsize;     /* Entry size if section holds table */
+    Elf32_Word    sh_name;        /* Section name (string tbl index) */
+    Elf32_Word    sh_type;        /* Section type */
+    Elf32_Word    sh_flags;       /* Section flags */
+    Elf32_Addr    sh_addr;        /* Section virtual addr at execution */
+    Elf32_Off sh_offset;      /* Section file offset */
+    Elf32_Word    sh_size;        /* Section size in bytes */
+    Elf32_Word    sh_link;        /* Link to another section */
+    Elf32_Word    sh_info;        /* Additional section information */
+    Elf32_Word    sh_addralign;       /* Section alignment */
+    Elf32_Word    sh_entsize;     /* Entry size if section holds table */
 } Elf32_Shdr;
 ```
 
@@ -3145,12 +3148,12 @@ ELF文件中的符号表是一个 `Elf32_Sym` 结构体的数组，和段结构�
 ```c
 typedef struct
 {
-  Elf32_Word    st_name;        /* Symbol name (string tbl index) */
-  Elf32_Addr    st_value;       /* Symbol value 符号值 */
-  Elf32_Word    st_size;        /* Symbol size */
-  unsigned char st_info;        /* Symbol type and binding 符号类型和绑定信息 */
-  unsigned char st_other;       /* Symbol visibility */
-  Elf32_Section st_shndx;       /* Section index 符号所在段 */
+    Elf32_Word    st_name;        /* Symbol name (string tbl index) */
+    Elf32_Addr    st_value;       /* Symbol value 符号值 */
+    Elf32_Word    st_size;        /* Symbol size */
+    unsigned char st_info;        /* Symbol type and binding 符号类型和绑定信息 */
+    unsigned char st_other;       /* Symbol visibility */
+    Elf32_Section st_shndx;       /* Section index 符号所在段 */
 } Elf32_S
 ```
 
@@ -3221,7 +3224,7 @@ typedef struct
 
 使用链接器，**可以直接引用其他模块的函数和全局变量而无须知道它们的地址**。对于没有见过的符号会直接给全0，真正的虚拟地址等之后链接器给出。每个要被修正的地方叫做一个重定位入口 Relocation entry
 
-头文件并不参加链接和编译。编译器第一步要做的就是简单的把头文件在包含它的源文件中展开。不知你是否能理解这句话。也就是头文件里面有什么内容，通通把它移到包含这个头文件的源文件里
+头文件并不参加链接和编译。编译器第一步要做的就是简单的把头文件在包含它的源文件中展开，也就是头文件里面有什么内容，通通把它移到包含这个头文件的源文件里
 
 ## *内容详解*
 
@@ -3419,9 +3422,9 @@ typedef struct
 
 ### 动态链接的引入
 
-动态链接 Dynamic Linking 是指将链接过程推迟到运行时再进行。用一个比喻来类比，静态链接就是在车间把所有零部件组装成整车后放到4S店里销售，而动态链接就是只有等到订单之后，车间才会把所有零件组装起来（当然这个比喻有点不准确，因为不同的车辆之间不可能使用同一批零件）
+动态链接 Dynamic Linking 是指**将链接过程推迟到运行时再进行**。用一个比喻来类比，静态链接就是在车间把所有零部件组装成整车后放到4S店里销售，而动态链接就是只有等到订单之后，车间才会把所有零件组装起来（当然这个比喻有点不准确，因为不同的车辆之间不可能使用同一批零件）
 
-比如说 `Program1.o` 中用到了 `Lib.o`，那么OS把 `Program1.o` 装载进内存后，发现它有对 `Lib.o` 的依赖关系，那么就把 `Lib.o` 页装载进内存，然后此时发现需要的零部件都到齐了，再进行链接。若此时有一个 `Program2.o`，它也依赖于 `Lib.o`。那么把 `Program2.o` 装载进内存后，发现 `Lib.o` 已经在之前 `Program1.o` 动态编译的时候加载进内存了，所以不需要再加在一次，可以直接用 `Lib.o` 链接
+比如说 `Program1.o` 中用到了 `Lib.o`，那么OS把 `Program1.o` 装载进内存后，发现它有对 `Lib.o` 的依赖关系，那么就把 `Lib.o` 页装载进内存，然后此时发现需要的零部件都到齐了，再进行链接。若此时有一个 `Program2.o`，它也依赖于 `Lib.o`。那么把 `Program2.o` 装载进内存后，发现 `Lib.o` 已经在之前 `Program1.o` 动态编译的时候加载进内存了，所以不需要再加载一次，可以直接用 `Lib.o` 链接
 
 Pros and Cons of Dynamic Linking
 
@@ -3431,7 +3434,7 @@ Pros and Cons of Dynamic Linking
   * 程序的可扩展性更强，动态链接是制作程序插件 Plug-in 的原理
 * Cons
   * 当程序所依赖的某个模块更新后，由于新模块与旧模块之间不兼容，导致了原有的程序无法启动 DLL Hell
-  * 程序每次被装载都要重新链接，因此存在一定的性能损失，当时经过延迟绑定 Lazy Binding 等优化后，可以尽可能地减少性能损失，动态链接与静态链接的速度差异大概可以控制在5%以内
+* 程序每次被装载都要重新链接，因此存在一定的性能损失，不过经过延迟绑定 Lazy Binding 等优化后，可以尽可能地减少性能损失，动态链接与静态链接的速度差异大概可以控制在5%以内
 
 ### 动态链接文件
 
@@ -3487,9 +3490,10 @@ Linux中的ELF动态链接文件被称为**动态共享对象 DSO Dynamic Shared
   #endif
   ```
 
-`gcc -fPIC -shared -o Lib.so Lib.c` 产生共享对象
+<img src="动态链接的简单例子.png">
 
-`gcc -o Program1 Program1.c ./Lib.so` 和 `gcc -o Program2 Program2.c ./Lib.so` 分别编译链接 `Programm1.c` 和 `Programm2.c`
+1. `gcc -fPIC -shared -o Lib.so Lib.c` ：由 `Lib.c` 产生共享对象（动态库）`Lib.so`，其中 -shared 和 -fPIC 分别是用共享库和生成地址无关代码
+2. ``gcc -o Program1 Program1.c ./Lib.so` 和 `gcc -o Program2 Program2.c ./Lib.so` 分别编译链接 `Programm1.c` 和 `Programm2.c`
 
 用 `file Lib.so` 来查看一下共享对象的文件类型
 
@@ -3498,45 +3502,70 @@ $ file Lib.so
 Lib.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=fe9d79dbda9002eed7116d070b8086dff2c6bc91, not stripped
 ```
 
-
-
 若 `foobar()` 是一个静态目标对象中的函数，则链接器直接进行空间分配和重定位；若 `foobar()` 是一个定在某个动态共享对象中的函数，那么链接器就会将这个符号的引用标记成一个动态链接的符号，不会对它进行地址重定位，把这个过程留到装载时再进行
 
 装载的时候不仅需要映射动态链接文件本身，还有运行库和动态链接器
 
 ## *动态链接的地址分配*
 
+共享对象在被加载时，如何确定它在进程虚拟地址空间中的位置？
+
 ### 固定装载地址的问题
 
-共享对象在编译时不能假设集资在进程虚拟地址空间中的位置，而可执行文件可以确定它在进程虚拟空间中的起始位置，因为可执行文件是第一个被加载的文件，它可以选择一个固定空闲的地址
+早期的静态共享库 Static Shared Libray 采用的就是由OS（最早期是人工）来分配固定装载地址。这个过程极其缓慢，且会带来库升级后难以重新链接的问题。注意区分静态共享库与静态库、动态共享库的区分
+
+为了解决固定装载地址的问题，**共享对象在编译时不能预设自己在进程虚拟地址空间中的位置**。与静态库相对的是，可执行文件可以确定它在进程虚拟空间中的起始位置，因为可执行文件是第一个被加载的文件，它可以选择一个固定空闲的地址，在32位Linux OS中这个地址往往是 0x08040000
 
 ### 装载时重定位
 
-链接时重定位 Link Time Relocation
+静态链接的**链接时重定位 Link Time Relocation**：静态链接是在编译时将所有需要的目标文件和库文件链接在一起，生成一个单独的可执行文件。由于静态链接生成的可执行文件包含了所有的符号信息和代码，所以链接时重定位可以直接进行。也就是说，所有符号地址都可以在链接时解析，这样生成的可执行文件在加载和执行时不需要再进行重定位。因此，静态链接的可执行文件通常比较大，但执行时速度较快
 
-装载时重定位 Load Time Relocation
+动态链接的**装载时重定位 Load Time Relocation**：动态链接是在程序运行时将需要的共享库加载到内存中，并将程序与这些库进行链接。由于共享库是在程序运行时才加载的，所以不能在链接时进行所有的地址解析和重定位。为了解决这个问题，动态链接通常采用装载时重定位的方式，即在共享库加载到内存时，动态链接器会对共享库中的符号地址进行解析和重定位，将符号地址映射到正确的内存地址上。这样，程序才能正确地调用共享库中的函数和变量。由于动态链接器需要进行符号解析和地址重定位的工作，所以动态链接的程序启动时间比静态链接的程序长一些，但是由于共享库的代码可以被多个进程共享，所以动态链接通常会减小程序的内存占用
 
 ### 地址无关代码 PIC
 
-地址无关代码 Position-independent Code PIC
+但是单独依靠装载时重定位是无法解决问题的。一个动态库被装载进内存后，它的指令是被所有调用它的进程共享共享的，所以不能直接去重定位动态库中的引用，因为每个进程的内存布局和地址空间不同，装载时重定位会根据每个进程的实际情况修改指令中的地址引用。这样，即使多个进程共享了同一份指令，但经过重定位后，动态共享库中的这条地址相对于每个进程的指令虚拟地址实际上是不同的。**重定位就是更新符号的虚拟地址**
+
+该问题要通过**地址无关代码 Position-independent Code PIC** 来解决。PIC的思想是既然每一次重定位共享库中的待重定位指令都需要修改它，就把这部分共享的指令抽离出来和进程的数据放在一块，数据是每个进程独享一份的。这样其余的指令部分仍然保持不变
 
 ## *PIC的具体分析*
 
+### 共享对象的4种地址引用方式
+
+<img src="地址无关代码例子.png" width="40%">
+
 可以将共享对象模块中的地址引用按照是否为跨模块分为两类：模块内部引用和模块外部引用；按照不同的引用方式又可以分为指令引用和数据引用。因此一共有4种情况
 
-### 模块内部调用或跳转
 
-### 模块内部数据访问
 
-### 模块间数据访问
+<img src="共享对象的4种地址引用方式.png">
 
-### 模块间调用或跳转
+* 模块内部调用或跳转
+* 模块内部数据访问
+* 模块间数据访问
+* 模块间调用或跳转
+
+### 共享模块的全局变量问题
 
 ## *动态链接相关结构*
 
 ### `.interp` 段
 
 ### `.dynamic` 段
+
+```c
+/* Dynamic section entry.  */
+
+typedef struct
+{
+    Elf32_Sword   d_tag;          /* Dynamic entry type */
+    union
+    {
+        Elf32_Word d_val;         /* Integer value */
+        Elf32_Addr d_ptr;         /* Address value */
+    } d_un;
+} Elf32_Dyn;
+```
 
 ### 动态符号表
 
@@ -3552,9 +3581,21 @@ Lib.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically link
 
 ## *装载方式*
 
-### VM前：覆盖装入
+动态装载：把程序最常用的部分留驻在内存中，不太常用的部分放到磁盘上
+
+装载方式以虚拟内存页映射机制的发明为分割，可以分为覆盖装入 Overlay 和页映射 Paging
+
+页映射机制可以看 *操作系统.md* 中的分页部分。页装载则会根据局部性原理由OS进行调度
+
+### 虚拟内存前：覆盖装入
 
 <img src="覆盖载入.drawio.png" width="35%">
+
+覆盖装入在没有发明虚拟存储之前使用比较广泛，现在基本上已经被淘汰了，只有一些比较老的系统才会使用
+
+程序员在编写程序的时候必须手动将程序分割位若干份，也就是上图中的一个个小块。然后编写一个小的代码来管理这些模块何时应该驻留在内存中而何时则应该被放到磁盘上。这个管理员被称为 **Overlay Manager 覆盖管理器**。实际上覆盖管理器在页映射机制中就是OS本身
+
+如上图右边所示，按照被划分的程序之间的依赖关系可以将其组织成树状结构的调用路径
 
 ## *进程虚拟内存空间分布*
 

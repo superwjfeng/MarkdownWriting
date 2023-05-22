@@ -152,6 +152,10 @@ Deployment: Process of delivering software from a development environment to a l
 
 ### serverless
 
+# 技术架构的演进
+
+Baremetal 单机架构：应用服务和数据库服务共用一台服务器。出现在互联网早期，访问量比较小，单机就可以满足需求
+
 # AWS
 
 # Docker的使用
