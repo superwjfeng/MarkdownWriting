@@ -1,3 +1,8 @@
+---
+Title: EIST软件工程
+Author: Weijian Feng 封伟健
+Source: TUM EIST
+---
 # Introduction
 
 ## *软件开发模式*
@@ -172,7 +177,41 @@ Non-functional requirements 是指依一些条件判断系统运作情形或其�
   * Packaging dependencies for deployment, e.g., containers
   * DevOps pipeline: continuous integration and deployment
 
-# Software Architecture in Cloud
+# 网络通信框架
+
+## *通用数据交换*
+
+XML（eXtensible Markup Language）、JSON（JavaScript Object Notation）和 Protocol Buffers（通常称为Protobuf）都是用于描述和表示数据的通用格式，但在语法、应用场景和特点上有一些区别。以下是对 XML 和 JSON 的介绍和对比
+
+### XML
+
+* 语法：XML 使用自定义的标记（Tags）来标识数据的结构和内容。它使用起始标签和结束标签来定义元素，可以嵌套和包含属性。XML 的语法比较繁琐，标记需要封闭，并且有更多的符号和冗余
+* 应用场景：XML 在数据交换、配置文件、文档存储等方面有广泛应用。它被广泛用于Web服务、SOAP和XML-RPC等通信协议
+* 可读性：XML 对人类来说比较容易阅读和理解，标记和结构清晰可见。它是一种自我描述的格式
+* 可扩展性：XML 允许自定义标签和结构，可以根据需要进行扩展和定义复杂的数据模型
+
+### JSON
+
+* 语法：JSON 使用简洁的KV键值对的形式来表示数据，其中键是字符串，值可以是字符串、数字、布尔值、数组、对象等。JSON 的语法相对简单，符号较少，对于 JavaScript 来说是一种原生的数据格式
+* 应用场景：JSON 在 Web 开发、API、移动应用程序等领域广泛使用。它被广泛用于 RESTful API 的数据交换，也是许多前端和后端框架中的常用数据格式
+* 可读性：JSON 对人类来说也相对容易阅读和理解，尤其对于熟悉 JavaScript 的开发者来说。它是一种比 XML 更紧凑的数据表示方式
+* 轻量级：JSON 的语法相对较简单，数据量较小，传输和解析的效率较高
+
+### Protobuf
+
+* 语法：Protobuf 使用结构化的消息定义语言（IDL）来描述数据结构和消息类型。它使用.proto文件定义消息的结构，包括字段、类型和消息之间的关系
+* 应用场景：**Protobuf 在高性能、跨平台的数据交换和存储方面非常强大**。它通常用于大规模分布式系统、高性能网络通信和数据存储等领域
+* 可读性：Protobuf 的编码格式是二进制的，不像 XML 和 JSON 那样易于人类阅读和解析。它更注重在高效的数据传输和解析上
+* 体积和效率：相比于 XML 和 JSON，Protobuf 的编码更紧凑，数据体积更小。它使用二进制格式进行编码和传输，减少了数据大小和网络传输的开销。同时，Protobuf 的解析速度也比 XML 和 JSON 更快，因为它的编解码过程是高度优化的
+
+### 对比
+
+* 语法：XML 使用自定义的标记（Tags），JSON 使用KV键值对的形式，而 Protobuf 使用结构化的消息定义语言（IDL）
+* 可读性：XML 和 JSON 相对容易阅读和理解，而 Protobuf 的二进制编码格式不直接面向人类
+* 数据体积：相同数据的体积上，Protobuf 通常比 XML 和 JSON 更小，因为它使用二进制编码和紧凑的数据表示方式
+* 解析效率：Protobuf 的解析速度通常比 XML 和 JSON 更快，因为它的编解码过程是高度优化的，而 XML 和 JSON 的解析过程相对更复杂
+
+在实际选择时，需要根据具体的需求和应用场景来决定使用哪种序列化方案。如果关注高性能、低网络开销和紧凑的数据表示，Protobuf 是一个不错的选择。而如果可读性和可调试性对于数据交换更为重要，XML 和 JSON 可能更合适
 
 ## *Three-tier architecture*
 
@@ -197,17 +236,49 @@ A[Presentation]<-->B[Application]<-->C[Data]
 
 数十年来，**三层架构都是C/S Web应用程序的主要架构**。 目前，大多数三层应用程序的目标是实现现代化、使用云原生 Cloud-native 技术（例如容器和微服务）以及迁移到云端
 
-层间需要通信来传输数据，最广泛使用的技术是REST和RPC
+层间需要通信来传输数据，最广泛使用的技术是REST架构和RPC远程调用方式
 
-### REST
+### REST、RPC和HTTP的关系
 
-REpresentational State Transfer is a **set of constraints for communication**
+REST、RPC（Remote Procedure Call）和HTTP（Hypertext Transfer Protocol）是三个不同的概念，但它们之间存在一些关系和联系
 
-* Client-server: client and server are independent
-* Stateless 无状态: the server does not maintain a state between requests，不会保留旧请求的信息
-* Cacheable: data can be cached anywhere (client, server, on the network)
-* Uniform interface: the server interface should be usable by an arbitrary client, without knowledge of the internal server representation
-* Layered systems: clients can transparently communicate with the server through other layers (proxy, load balancer)
+* REST与HTTP的关系
+
+  **REST 是一种软件架构风格**，强调使用统一的接口和资源来设计和构建分布式系统。HTTP是一种应用最广泛的协议，**REST 常常使用 HTTP 协议作为通信协议**。因此，RESTful API 通常通过 HTTP 来进行通信，使用 HTTP 方法（GET、POST、PUT、DELETE）对资源进行操作
+
+* RPC与HTTP的关系
+
+  **RPC 本身并不是一个特定的协议，它是一种远程过程调用的机制**，用于实现分布式系统中的不同节点之间的通信。RPC 的目标是使远程调用像本地函数调用一样简单
+
+  RPC **可以使用不同的协议来实现**，包括在应用层、传输层或网络层进行通信。因此，RPC 既可以是应用层协议，也可以使用其他层的协议进行实现
+
+  在实际应用中，有一些常见的应用层 RPC 框架和协议，例如 **gRPC、Apache Thrift 和 XML-RPC 等**。这些框架和协议定义了通信的规范和方式，包括消息格式、编解码、序列化和反序列化等。它们可以在应用层或传输层上进行通信，并提供了一套 API 和工具，简化了远程调用的过程。
+
+  除此之外，HTTP 可以作为 RPC 的传输协议之一，通过 HTTP 协议实现 RPC 被称为 HTTP-RPC 或者 HTTP-based RPC。RPC 可以使用其他协议（如 TCP、UDP）作为底层通信协议，与 HTTP 并不强关联
+
+* REST和RPC都是进行网络通信的架构风格，它们之间的区别
+
+  * REST 强调使用统一的接口和资源，通过资源的状态转移来进行操作，而 RPC 强调远程过程调用，即像调用本地函数一样调用远程函数
+  * REST 基于无状态的通信协议，如 HTTP，每个请求都包含足够的信息，而 RPC 可以使用各种协议进行通信，包括无状态和有状态的协议
+  * REST 更加面向资源和数据的操作，而 RPC 更加面向方法和过程的调用
+
+虽然 REST 和 RPC 在设计思想和实现方式上有所差异，但它们都是用于构建分布式系统的通信机制。在实际应用中，可以根据需求选择合适的通信方式，使用 RESTful API、RPC 或者其他适合的协议来满足系统的通信需求。同时，HTTP 作为广泛使用的协议，可以被 REST 和 RPC 用作通信的基础协议之一
+
+## *REST*
+
+### intro
+
+REST Representational State Transfer 是一种**基于网络的软件架构风格**，用于设计和构建分布式系统和网络应用程序。它在 Web 开发中广泛应用，特别是在构建 Web API（Application Programming Interface）时非常常见
+
+REST 的设计原则强调以下几个关键概念：
+
+1. 资源（Resources）：在 REST 中，所有的数据和功能都被视为资源，可以通过唯一的标识符（如 URL）进行访问和操作。资源可以是任何事物，如用户、文章、图片等
+2. 统一接口（Uniform Interface）：REST 使用统一的接口来处理资源。这包括使用标准的 HTTP 方法（如 GET、POST、PUT、DELETE）对资源进行操作，以及使用合适的 HTTP 状态码表示操作结果
+3. 无状态性（Stateless）：REST 是无状态的，意味着每个请求都应该包含足够的信息来完全理解和处理该请求，而不依赖于之前的请求或会话状态。每个请求都是独立的，服务器不需要维护客户端的状态
+4. 资源表述（Resource Representation）：资源的表述是通过常见的数据格式（如 JSON、XML）来表示，以便在客户端和服务器之间传输和解析数据
+5. Layered systems: clients can transparently communicate with the server through other layers (proxy, load balancer)
+
+通过遵循 REST 的设计原则，可以构建具有良好可伸缩性、松耦合性和可扩展性的分布式系统。RESTful API 的设计使得客户端和服务器之间的通信变得简单和直观，而且易于在不同的平台和编程语言之间进行交互
 
 ### REST methods
 
@@ -241,7 +312,7 @@ REpresentational State Transfer is a **set of constraints for communication**
   curl -X DELETE https://api.github.com/repos/OWNER/REPO
   ```
 
-### RPC
+## *RPC*
 
 Remote Procedure Calls allow the execution of function calls on a remote process
 
@@ -255,13 +326,19 @@ D[Front-end<br>website, mobile, ...</br>]<-->E[Service management<br>recommendat
 
 上图是两个典型的应用：网店和流媒体服务
 
+# Software Architecture in Cloud
+
 ## *Monolithic architecture*
 
-单体式架构
+### 单体式架构的主要类型
+
+### 优势
+
+### 劣势
 
 
 
-# Microservice Architecture
+## *Microservice Architecture*
 
 低耦合高内聚
 
