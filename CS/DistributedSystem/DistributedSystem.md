@@ -1028,6 +1028,14 @@ Configuration 是成员变更中一个非常重要的概念，它描述了集群
 
 绝大多数 Raft 算法的实现，采用的都是单节点变更的方法，比如 Etcd、Hashicorp Raft
 
+## *Raft的应用*
+
+* etcd：etcd 是一个分布式键值存储系统，被广泛用于构建分布式系统和服务发现。etcd 使用了 Raft 算法来实现分布式一致性，确保数据在集群中的副本之间的一致性
+* Consul：Consul 是一个分布式服务发现和配置工具，用于构建分布式系统和微服务架构。Consul 使用了 Raft 算法来实现一致性协议，确保数据的一致性和可靠性
+* CockroachDB：CockroachDB 是一个分布式关系型数据库系统，它使用 Raft 算法来实现数据的一致性和高可用性。CockroachDB 的分布式复制和故障恢复机制都建立在 Raft 的基础上
+* TiKV：TiKV 是 TiDB（分布式关系型数据库）的分布式存储引擎，它使用 Raft 算法来实现分布式复制和一致性。TiKV 提供了强一致性的分布式数据存储能力
+* Kafka：Kafka 是一个高吞吐量的分布式消息队列系统，它使用了一种基于 Raft 的副本管理协议，称为 Kafka Raft Metadata Protocol（KRaft）。KRaft 用于管理 Kafka 的元数据副本，确保高可用性和一致性
+
 # 应用
 
 ## *gRPC*
