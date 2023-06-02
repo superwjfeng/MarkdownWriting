@@ -4,6 +4,8 @@ Author: Weijian Feng 封伟健
 Source: Official documentation for gRPC <https://grpc.io/docs/>, 官方文档中文翻译 <https://doc.oschina.net/grpc?t=56831>
 ---
 
+C++用命名空间，Java用外部类进行统一爹管理
+
 # Protobuf
 
 ## *intro*
@@ -36,6 +38,8 @@ Protobuf 提供了一种定义数据结构的语言，称为 Protocol Buffers La
 
 ### 定义消息字段
 
+<img src="ScalarValueType.png">
+
 在 message 中可以定义其属性字段，字段定义格式为：`字段类型 字段名 = 字段唯一编号;`
 
 * 字段名称命名规范：全小写字母，多个字母之间用 `_` 隔开
@@ -57,6 +61,10 @@ Sint32的效率更高一点
 ### 编译proto文件
 
 `-I` 指定搜索目录，不带的话就默认从当前目录搜索
+
+
+
+把get给省略了，字段名函数就是get方法
 
 
 
@@ -96,3 +104,75 @@ g++ -o TestPb main.cc contacts.pb.cc -std=c++11 -lprotobuf
 * 不再打印联系人的序列化结果，而是将通讯录序列化后并写入文件中
 * 从文件中将通讯录解析出来，并进行打印
 * 新增联系人属性，共包括：姓名、年龄、电话信息
+
+### decode
+
+```shell
+❯ protoc --decode=contacts.Contacts contacts.proto < contacts.bin
+Type not defined: contacts.Contacts
+❯ protoc --decode=contacts2.Contacts contacts.proto < contacts.bin
+contacts {
+  name: "zhangsan"
+  age: 20
+  phone {
+    number: "82"
+  }
+  phone {
+    number: "138"
+  }
+}
+```
+
+### 枚举
+
+反序列化时protobuf会对之前没有设置枚举值的字段默认设置为0
+
+### any
+
+可以将any类型理解为一种泛型，可以用来存储任意的数据类型
+
+先定义好message，再用 `PackFrom()` 方法转换
+
+### oneof
+
+保证唯一性
+
+不可以使用repeated
+
+### 默认值
+
+虽然标量没有has方法，但大多数情况下结合业务的语意信息是可以兼容其默认值的
+
+
+
+### 更新消息
+
+* 新增：不要和已有字段的名字和编号冲突即可
+* 修改
+* 删除：不可以直接删除，会造成数据损坏、错位等问题。被删除的字段要用 `reserved` 保留，之后不能被使用
+
+不认识的字段不会被删除，而是会存储到未知字段
+
+未知字段不能直接通过get获取
+
+遍历UnkownFieldSet
+
+
+
+## *通讯录v4-网络通讯录*
+
+### 流程
+
+1. 定义不同request和response的message
+2. client序列化req
+3. client调用req发送
+4. server反序列化req
+5. server业务处理
+6. server序列化response
+7. server调用response发送
+8. client反序列化response
+9. client业务处理
+10. 回到第一步循环
+
+## *序列化性能对比*
+

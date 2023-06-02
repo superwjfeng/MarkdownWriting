@@ -183,6 +183,20 @@ Non-functional requirements 是指依一些条件判断系统运作情形或其�
 
 XML（eXtensible Markup Language）、JSON（JavaScript Object Notation）和 Protocol Buffers（通常称为Protobuf）都是用于描述和表示数据的通用格式，但在语法、应用场景和特点上有一些区别。以下是对 XML 和 JSON 的介绍和对比
 
+### IDL
+
+接口描述语言 Interface Description Language，IDL是一种用于描述系统、组件或服务之间的接口的语言。它提供了一种结构化的方式来定义接口的方法、参数、数据类型和协议等信息，以便不同的系统或组件之间能够进行有效的通信和交互
+
+接口描述语言的主要作用是定义接口的规范，使得不同的系统能够理解和解析接口定义，并在运行时进行相应的操作和通信。它提供了一种中立的、独立于编程语言和平台的方式来描述接口，使得不同的编程语言和平台之间可以通过解析接口描述语言的定义来实现互操作性
+
+以下是一些常见的接口描述语言
+
+1. IDL（Interface Definition Language）：IDL是一种用于定义分布式对象的接口的语言，最初由OMG（Object Management Group）定义。它被广泛应用于CORBA（Common Object Request Broker Architecture）分布式系统中，用于描述对象之间的接口和通信协议
+2. WSDL（Web Services Description Language）：WSDL是一种用于描述Web服务接口的语言，定义了Web服务的操作、消息格式和网络协议等信息。它使用XML（eXtensible Markup Language）来描述接口，被广泛用于SOAP（Simple Object Access Protocol）和RESTful（Representational State Transfer）等Web服务标准中
+3. protobuf（Protocol Buffers）：protobuf是一种由Google开发的接口描述语言，用于定义数据结构和接口的格式。它使用简洁的二进制编码格式，并支持多种编程语言。protobuf广泛应用于Google内部和开源社区，用于高效的数据序列化和通信
+4. JSON Schema：JSON Schema是一种基于JSON格式的接口描述语言，用于定义JSON数据的结构和约束。它提供了一种声明式的方式来描述JSON数据的类型、格式、校验规则等，以确保数据的有效性和一致性
+5. RAML（RESTful API Modeling Language）：RAML是一种用于建模和描述RESTful API的语言。它提供了一种简洁的方式来定义API的资源、方法、参数、请求和响应等信息，以便于开发者理解和使用API
+
 ### XML
 
 * 语法：XML 使用自定义的标记（Tags）来标识数据的结构和内容。它使用起始标签和结束标签来定义元素，可以嵌套和包含属性。XML 的语法比较繁琐，标记需要封闭，并且有更多的符号和冗余

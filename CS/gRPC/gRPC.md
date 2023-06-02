@@ -12,7 +12,7 @@ gRPC的源码库 <https://github.com/grpc/grpc>
 
 gRPC（Google Remote Procedure Call）是一种高性能、通用的开源远程过程调用（RPC）框架，由Google开发并开源。它基于HTTP/2协议和Protocol Buffers（protobuf）序列化协议，用于构建跨平台和跨语言的分布式应用程序
 
-gRPC 提供了一种简单的方法来定义服务接口和消息类型，并自动生成支持多种编程语言的客户端和服务器端代码。它支持多种编程语言，如C++、Java、Python、Go、C#等，因此可以在不同的环境和语言之间轻松进行通信
+gRPC 提供了一种简单的方法来定义服务接口和消息类型（**基于服务，与具体哪种语言无关**），并自动生成支持多种编程语言的客户端和服务器端代码。它支持多种编程语言，如C++、Java、Python、Go、C#等，因此可以在不同的环境和语言之间轻松进行通信
 
 以下是 gRPC 的一些关键特性：
 
@@ -29,6 +29,26 @@ gRPC 提供了一种简单的方法来定义服务接口和消息类型，并自
 7. 支持服务发现和负载均衡：gRPC 提供了服务发现和负载均衡的功能，可以轻松部署和管理大规模的分布式系统
 
 gRPC 在微服务架构和分布式系统中具有广泛的应用。它提供了高效的网络通信和跨语言支持，使得不同服务能够方便地进行通信和协作。无论是构建大规模的云原生应用程序、实现高性能的数据传输，还是构建实时流处理系统，gRPC 都是一个强大的工具
+
+## *项目结构*
+
+1. xxxx-api 模块
+
+    定义 protobuf IDL语言并通过命令创建具体的代码，后续client server引入使用
+
+    * message
+    * service
+
+2. xxxx-server模块
+
+    * 实现api模块中定义的服务接口
+    * 发布gRPC服务（创建服务端程序）
+
+3. xxxx-client模块
+   * 创建服务端stub（代理）
+   * 基于stub的RPC调用
+
+
 
 ## *C++ API*
 
@@ -267,3 +287,34 @@ gRPC 在微服务架构和分布式系统中具有广泛的应用。它提供了
        }
    }
    ```
+
+
+
+
+
+
+
+
+
+```protobuf
+// 后续protobuf生成的java代码一个源文件还是多个源文件xx.java
+option java_multiple_files = false;
+// 指定protobuf生成的类放置在哪个包中
+option java_package = "com. suns";
+// 指定的protobuf生成的外部类的名字（管理内部类【内部类オ是真正开发使用】）
+option java_outer_classname = "UserServoe";
+```
+
+
+
+
+
+
+
+```protobuf
+service HelloService{
+	rpc hello (HelloRequest) returns (HelloResponse) {}
+}
+＃里面是可以定义多个服务方法
+```
+
