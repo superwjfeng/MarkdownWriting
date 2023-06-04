@@ -584,7 +584,7 @@ main方法也是public的，main方法是由JVM调用的，JVM调用时应该可
 3. protected：受保护权限，子类可以访问
 4. public：公有，任意使用
 
-### 单例模式
+## *单例模式*
 
 ```java
 class User {
@@ -600,6 +600,26 @@ class User {
     return new User();
 }
 ```
+
+### 用enum设计
+
+在Java中，使用`enum`设计单例模式是一种常见的做法。`enum`在Java中是一种特殊的类，它只能有有限个实例，且这些实例在程序的整个生命周期中是唯一的。下面是使用`enum`设计单例模式的示例代码：
+
+```java
+public enum Singleton {
+    INSTANCE;
+    // 可以在这里添加其他实例变量和方法
+    public void doSomething() {
+        // 单例的行为逻辑
+    }
+}
+```
+
+在这个示例中，`Singleton`是一个`enum`，**它只有一个枚举实例`INSTANCE`**。这个实例在程序中是唯一的，并且可以通过`Singleton.INSTANCE`来访问。
+
+可以在`enum`中添加其他的实例变量和方法，以实现单例逻辑。在这个示例中，`doSomething()`方法是一个展示单例行为的方法，用户可以根据自己的需求添加其他方法和变量
+
+使用这种方式设计的单例模式具有线程安全和防止反射攻击的优点。需要使用这个单例时，可以通过`Singleton.INSTANCE`来获取单例对象，并调用其中的方法这个例子中，通过`Singleton.INSTANCE`获取单例对象，并调用`doSomething()`方法执行单例的行为逻辑
 
 ## *继承*
 

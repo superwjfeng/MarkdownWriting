@@ -413,6 +413,8 @@ ADD(a | b, a&b);
 
 ## *C++的强制类型转换*
 
+<https://learn.microsoft.com/zh-cn/cpp/cpp/casting-operators?view=msvc-170>
+
 ### 为什么C++需要四种类型转换
 
 C++继承了C语言的隐式类型转换和显式类型转换体系，可以看C.md类型转换部分
@@ -423,7 +425,7 @@ C++兼容了C隐式类型转换和强制类型转换，但希望用户不要再�
 
 强制类型转换的形式为 **`cast_name<type>(expression);`**
 
-### `static_cast`
+### `static_cast` 用于非多态类型转换
 
 ```cpp
 double d = 12.34;
@@ -435,9 +437,14 @@ double *dp = static_cast<double*>(p); //规范使用void*转换
 
 任何具有明确定义的类型转换，只要不包含底层const，都可以使用 `static_cast`
 
-`static_cast` 是一种**安全**的类型转换运算符，它可以将一种类型转换为另一种类型。`static_cast` 可以执行隐式类型转换，例如将整数类型转换为浮点类型，也可以执行显式类型转换，例如将指针类型转换为整数类型。`static_cast` 进行类型转换时会执行一些类型检查和转换，以确保类型转换是合法的。
+`static_cast` 是一种**相对安全**的类型转换运算符，它可以将一种类型转换为另一种类型。`static_cast` 可以执行隐式类型转换，例如将整数类型转换为浮点类型，也可以执行显式类型转换，例如将指针类型转换为整数类型。`static_cast` 进行类型转换时会执行一些类型检查和转换，以确保类型转换是合法的
 
-### `reinterpret_cast`
+举两个内存池项目中的例子
+
+1. 有 ` T *obj = nullptr;` 和 `char *_memory = nullptr;`，`obj = (T *)_memory` 可以通过编译，而 `obj = static_cast<T *>(_memory) ` 会报错：`invalid ‘static_cast’ from type ‘char*’ to type ‘TreeNode*’ 
+2. `void *next = *(static_cast<void **>(_freeList)` 从 `*` 转换成 `**` 是可以的
+
+### `reinterpret_cast` 用于对位进行简单的重新解释
 
 C++类型转换之reinterpret_cast - 叫啥名呢的文章 - 知乎 https://zhuanlan.zhihu.com/p/33040213
 
@@ -461,7 +468,7 @@ char *p = const_cast<char*>(pc); //pc现在是非常量了
 
 `const_cast` 常用于有函数重载的上下文中
 
-### `dynamic_cast`
+### `dynamic_cast` 用于多态类型的转换
 
 `dynamic_cast`和前面的三类用于增强C++规范的类型转换不同，它专用于区分父类指针是指向子类还是指向父类，即用于将一个父类对象的指针/引用转换为子类对象的指针或引用，即动态转换
 
