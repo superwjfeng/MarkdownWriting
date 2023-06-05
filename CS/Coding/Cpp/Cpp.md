@@ -427,6 +427,8 @@ C++兼容了C隐式类型转换和强制类型转换，但希望用户不要再�
 
 ### `static_cast` 用于非多态类型转换
 
+<https://learn.microsoft.com/zh-cn/cpp/cpp/static-cast-operator?view=msvc-170>
+
 ```cpp
 double d = 12.34;
 int a = static_cast<int>(d);
@@ -1820,7 +1822,7 @@ class A final {};
   	Singleton(const Singleton&) = delete; //防拷贝
   
   	int _a;
-  	//static Singleton _sInst; //声明，否则构造私有取不到，声明的为类成员就能令定义时取到
+  	//static Singleton _sInst; //声明，否则构造私有取不到，声明为类成员就能令定义时取到
   	static Singleton* _spInst; //声明
   };
   
@@ -1833,7 +1835,7 @@ class A final {};
   }
   ```
 
-* 懒汉模式 Lazy Initialization：用到的时候在初始化创s建（延迟加载）。若单例对象构造十分耗时或者会占用很多资源，而有可能这个对象程序运行时并不会用到。若此时在程序时也要对这个对象进行初始化就会令程序启动非常缓慢
+* 懒汉模式 Lazy Initialization：用到的时候在初始化创建（延迟加载）。若单例对象构造十分耗时或者会占用很多资源，而有可能这个对象程序运行时并不会用到。若此时在程序时也要对这个对象进行初始化就会令程序启动非常缓慢
 
   ```cpp
   static Singleton* GetInstance() {
