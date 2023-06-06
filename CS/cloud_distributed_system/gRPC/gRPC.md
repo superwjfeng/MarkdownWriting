@@ -48,7 +48,7 @@ gRPC 在微服务架构和分布式系统中具有广泛的应用。它提供了
     ```protobuf
     syntax = "proto3";
     
-    // 后续protobuf生成的java代码一个源文件还是多个源文件xx.java
+    // 后续protobuf生成的java代码一个源文件还是多个源文件xx.java。否则会为每个message、enum、service生成独立的class
     option java_multiple_files = false;
     // 指定protobuf生成的类放置在哪个包中
     option java_package = "com. suns";

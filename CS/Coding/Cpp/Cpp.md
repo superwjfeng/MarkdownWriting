@@ -11,7 +11,7 @@ C with classes -> C++1.0 -> ... -> C++98（C++标准第一个版本，引入STL�
 
 ## *命名空间 namespace*
 
-在大型的Project中，同一个作用域中可能存在大量同样命名的变量/函数/结构体等，C编译器无法解决这种冲突，C++通过命名空间解决了该冲突
+ 在大型的Project中，同一个作用域中可能存在大量同样命名的变量/函数/结构体等，C编译器无法解决这种冲突，C++通过命名空间解决了该冲突
 
 ### 定义命名空间
 
@@ -1391,7 +1391,7 @@ Date& operator=(const Date& d) {
 * 参数类型：const Date& **传引用**提高效率，且不修改Date类，因此用const保护
 * 返回值类型：返回引用可以避免传值拷贝，提高返回效率，有返回值的目的是为了支持连续赋值。如果传指针返回，外面接受还需要解引用，非常别扭
 * 要检查是否自己给自己赋值（不写也不会报错，只是为了提高效率）
-* 返回*this：要符合连续赋值的含义
+* 返回\*this：要符合连续赋值的含义
 * 赋值运算符只能重载成类的成员函数不能重载成全局函数，会被覆盖。赋值运算符如果不显式实现，编译器会生成一个默认的。此时用户再在类外自己实现一个全局的赋值运算符重载，就和编译器在类中生成的默认赋值运算符重载冲突了，故赋值运算符重载只能是类的成员函数
 
 ### 默认赋值运算符重载的浅拷贝问题
@@ -1684,6 +1684,8 @@ struct Data {
 
 ## *特殊类设计*
 
+Cpp 第44节课，2小时左右开始
+
 ### 不能被拷贝的类
 
 * C++98
@@ -1731,32 +1733,56 @@ HeapOnly* obj3 = new HeapOnly; //堆上
 HeapOnly obj4(obj1); //拷贝
 ```
 
-要创建对象需要通过构造函数和拷贝构造，只要想办法把它们堵死到只能在堆上创建对象就可以
+要创建对象需要通过构造函数和拷贝构造，**只要想办法把它们堵死到只能在堆上创建对象就可以**
 
-* 将类的构造函数私有，拷贝构造声明成私有，防止别人调用拷贝在栈上生成对象
-
-* 提供一个静态的成员函数，在该静态成员函数中完成堆对象的创建
-
-  * 调用成员函数 `CreateObject` 需要现有类对象，然后类对象又只能通过成员函数得到，一个经典的先有鸡还是先有蛋问题
-  * 因此将 `CreateObject` 设置为不需要没有this指针的静态成员函数，且构造函数不需要this指针就可以调用
+* 首先考虑一下能否通过析构函数私有来解决
 
   ```cpp
   class HeapOnly {
-  public:
-      static HeapOnly* CreateObject() {
-          return new HeapOnly;
-      }
   private:
-      HeapOnly() {}
-      HeapOnly(const HeapOnly&) = delete; //防拷贝
-  };
+      ~HeapOnly() {}
+  private:
+      int _a;
+  }
+  
+  int main() {
+      HeapOnly hp1; // 报错，自动调用析构
+      static HeapOnly hp2; // 报错，自动调用析构
+      HeapOnly* ptr = new HeapOnly; // 通过，自定义类型不会自动调用析构
+      // delete ptr; // 需要手动调用，此时报错
+    	return 0;
+  }
   ```
+
+  hp1和hp2是可以的，因为它们强制调用析构函数，但是ptr是自定义类型，不会调用默认析构函数，所以反而避开了私有析构
+
+* 实际采用的方法是
+
+  * 将类的构造、拷贝构造声明成私有，防止别人调用拷贝在栈上生成对象。赋值拷贝可写可不写，因为都禁止了构造，也不会有对象被new出来
+
+
+  * 提供一个静态的成员函数，在该静态成员函数中完成堆对象的创建
+
+    * 调用成员函数 `CreateObject` 需要现有类对象，然后类对象又只能通过成员函数得到，一个经典的先有鸡还是先有蛋问题
+    * 因此将 `CreateObject` 设置为不需要没有this指针的静态成员函数，且构造函数不需要this指针就可以调用
+
+    ```cpp
+    class HeapOnly {
+    public:
+        static HeapOnly* CreateObject() {
+            return new HeapOnly // new出来的对象返回指针，不需要调拷贝构造
+        }
+    private:
+        HeapOnly() {}
+        HeapOnly(const HeapOnly&) = delete; //防拷贝
+        HeapOnly& operator=(const HeapOnly &hp) = delete; //禁止赋值拷贝
+    };
+    ```
+
 
 ### 只能在栈上创建对象的类
 
-传值返回必然要调用拷贝构造，因为有编译器优化，把传值返回的拷贝构造省去了，相当于直接构造
-
-要new对象必须要调用器其构造函数，设置成私有后new就不能访问构造函数了
+**栈的局部对象传值返回必然要调用拷贝构造**，因为有编译器优化，把传值返回的拷贝构造省去了，相当于直接构造。要new对象必须要调用其构造函数，设置成私有后new就不能访问构造函数了
 
 这里也不是移动构造，因为默认移动构造必须要不写构造函数
 
@@ -1768,13 +1794,17 @@ public:
     static StackOnly* CreateObject() {
         return StackOnly(); //编译器优化，传值返回没有拷贝构造
     }
-    StackOnly(const StackOnly&) = delete; //防拷贝
+    //// 不能禁拷贝构造，因为局部对象传值返回要调用
+    //StackOnly(const StackOnly&) = delete; //防拷贝
+    //StackOnly &operator=(const StackOnly &st) = delete;
     
     //void* operator new(size_t size) = delete;
 	//void operator delete(void* p) = delete;
 private:
     StackOnly() {}
 };
+
+static StackOnly copy2(st1); //不禁拷贝就不能解决这种拷贝，这是一个缺陷
 ```
 
 ### 不能被继承的类
@@ -1802,11 +1832,15 @@ class A final {};
 
 设计模式 Design Pattern：是一套被反复使用、多数人知晓的、经过分类的代码设计经验总结，具体可以看上面的文章。比较重要的有适配器模式、单例模式、迭代器模式、观察者模式和工厂模式
 
+Java对设计模式的要求是比较高的，因为Java本身的库设计就用到了很多设计模式。而C++等语言则没有很普遍使用设计模式。设计模式是有益的工具，可以提高代码的可读性、可维护性和灵活性。然而，过度使用设计模式可能导致复杂性增加、过度工程化、不必要的复用、过度抽象化和性能损失等劣势。在应用设计模式时，应根据具体的问题和需求进行合理的权衡，避免滥用和不必要的复杂性
+
 单例模式 Singleton Pattern：一个类只能创建一个对象。该模式可以保证系统中在当前进程中该类只有一个实例，并提供一个访问它的全局访问点，该实例被所有程序模块共享。比如在某个服务器程序中，该服务器的配置信息存放在一个文件中，这些配置数据由一个单例对象统一读取，然后服务进程中的其他对象再通过这个单例对象获取这些配置信息
 
 单例模式在何时创建这个唯一的对象有区别，即
 
 * 饿汉模式 Eager Initialization：不管将来用不用，程序启动时就创建一个唯一的实例对象
+
+  **构造私有、禁止拷贝，在类外定义全局static成员并用new实例赋值给它用来保存唯一一个实例，类内必须定义static成员以让构造取到、提供一个Get方法生成一个实例**
 
   ```cpp
   class Singleton {
@@ -1822,12 +1856,12 @@ class A final {};
   	Singleton(const Singleton&) = delete; //防拷贝
   
   	int _a;
-  	//static Singleton _sInst; //声明，否则构造私有取不到，声明为类成员就能令定义时取到
-  	static Singleton* _spInst; //声明
+  	//static Singleton _sInst; //仅仅是声明，否则构造私有取不到，声明为类成员就能令定义时取到
+  	static Singleton* _spInst; //仅仅是声明
   };
   
   //Singleton Singleton::_sInst; // 定义成全局的，而不是私有的，满足饿汉模式的要求（main函数之前就被初始化）
-  Singleton* Singleton::_spInst = new Singleton; //定义
+  Singleton* Singleton::_spInst = new Singleton; //类外才是定义，生成唯一一个实例
   
   int main() {
   	Singleton::GetInstance()->Print(); //只能这么取，因为不能实例化
@@ -1847,19 +1881,21 @@ class A final {};
   Singleton* Singleton::_spInst = nullptr; //定义
   ```
 
-实际中**懒汉比较常用**，因为饿汉有时候初始化速度太慢，并且当多个单例存在顺序依赖问题时，饿汉的初始化顺序不确定，而懒汉可以控制初始化顺序
+实际中**懒汉比较常用**，因为饿汉有时候初始化速度太慢，并且当多个单例存在顺序依赖问题时，饿汉静态成员的初始化顺序是不确定的，而懒汉可以控制初始化顺序
 
 单例不用析构，但是不属于内存泄漏，因为这个类一直在使用。不过可以在析构函数里写信息到文件中持久化，可以通过一个垃圾回收的内部类来实现
 
 ```cpp
-// 实现一个内嵌垃圾回收类
-class CGarbo {
-public:
-    ~CGarbo(){
-    if (Singleton::_spInst)
-    	delete Singleton::_spInst;
-    }
-};
+class Singleton {
+    // 实现一个内嵌垃圾回收类
+    class CGarbo {
+    public:
+        ~CGarbo(){
+        if (Singleton::_spInst)
+            delete Singleton::_spInst;
+        }
+    };
+}
 // 定义一个静态成员变量，程序结束时，系统会自动调用它的析构函数从而释放单例对象
 static CGarbo Garbo;
 ```

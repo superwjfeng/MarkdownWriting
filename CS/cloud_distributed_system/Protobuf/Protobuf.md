@@ -38,9 +38,9 @@ Protobuf 提供了一种定义数据结构的语言，称为 Protocol Buffers La
 * 使用 protoc 编译器编译 .proto 文件，生成一系列的接口代码，存放在新生成的头文件和源文件中
 * 依赖生成的接口，将编译生成的头文件包含进我们的代码中，实现对 .proto 文件中定义的字段进行设置和获取，和对 message 对象进行序列化和反序列化
 
-### 定义消息字段
+### 定义消息
 
-在 message 中可以定义其属性字段，字段定义格式为：`字段类型 字段名 = 字段唯一编号;`
+在 message 中可以定义其属性字段，字段 field 定义格式为：`字段类型 字段名 = 字段唯一编号;`
 
 * 字段名称命名规范：全小写字母，多个字母之间用 `_` 隔开
 * 字段类型分为：标量数据类型 Scalar value type 和 特殊类型（枚举、map）
@@ -253,6 +253,12 @@ contacts {
 }
 ```
 
+## *Message的Java API*
+
+### Builder
+
+### Sub-Builder for nested message
+
 ## *枚举 enum*
 
 ### 定义规则
@@ -286,6 +292,10 @@ enum Color {
 * `xxx_Name()`方法：用于根据枚举值获取对应的字符串表示
 * `xxx_IsValid()`：f校验枚举值是否有效的方法 
 * `xxx_Parse()`方法：用于将字符串表示转换为对应的枚举值
+
+### C++生成的接口
+
+### Java生成的接口
 
 ## *any*
 
@@ -334,6 +344,40 @@ void set_allocated_data(::PROTOBUF_NAMESPACE_ID::Any* data);
 保证唯一性
 
 不可以使用repeated
+
+## *map*
+
+Protobuf提供一种称为"map"的特殊数据类型，用于表示键值对的集合
+
+```protobuf
+map<key_type, value_type> field_name = field_number;
+```
+
+* key_type 是除了 float 和 bytes 类型以外的任意标量类型。 value_type 可以是任意类型
+* map 字段不可以用 repeated 修饰
+* map 中存入的元素是无序的
+
+### Java API
+
+```protobuf
+map<int32, int32> weight = 1;
+```
+
+protoc编译器会在message class和它的builder中生成下面的方法
+
+* `Map<Integer, Integer> getWeightMap();`：返回一个**不可修改**的map
+* `int getWeightOrDefault(int key, int default);`：返回key对应的value，或者default若key不存在
+* `int getWeightOrThrow(int key);`：返回key对应的value，或者抛 IllegalArgumentException 异常若key不存在
+* `boolean containsWeight(int key);`：检查map里是否有key
+* `int getWeightCount();`：返回map中元素个数
+
+protoc编译器只会在message的builder中生成下面的方法
+
+* `Builder putWeight(int key, int value);`：插入一个KV
+* `Builder putAllWeight(Map<Integer, Integer> value);`: Adds all entries in the given map to this field.
+* `Builder removeWeight(int key);`: Removes the weight from this field.
+* `Builder clearWeight();`: Removes all weights from this field.
+* `@Deprecated Map<Integer, Integer> getMutableWeight();`：返回一个**可修改**的map. Note that multiple calls to this method may return different map instances. The returned map reference may be invalidated by any subsequent method calls to the Builder.
 
 ## *更新消息*
 
