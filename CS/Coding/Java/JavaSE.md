@@ -1711,3 +1711,93 @@ public class SimpleTCPServer {
 接下来，它使用套接字的`getOutputStream()`方法获取输出流，并使用`write()`方法向客户端发送响应数据。最后，它关闭了套接字和相关的流，并等待下一次客户端连接
 
 在这个简单的示例中，我们同样使用了`try-catch`块来捕获可能抛出的`IOException`异常。此外，在每次接受连接后，我们使用了一个独立的线程来处理客户端的请求，以保持服务器的响应能力
+
+## *RMI*
+
+<https://www.liaoxuefeng.com/wiki/1252599548343744/1323711850348577>
+
+RMI Remote Method Invocation
+
+### 定义共享的借口
+
+Server会提供一个 `WorldClock` 服务，允许客户端获取指定时区的时间，即相当于调用下面这个服务
+
+```java
+LocalDateTime getLocalDateTime(String zoneId);
+```
+
+要实现RMI，服务器和客户端必须共享同一个接口。我们定义一个`WorldClock`接口。Java的RMI规定此接口必须派生自`java.rmi.Remote`，并在每个方法声明抛出`RemoteException`
+
+这个双方共享的interface就是ptotoc编译生成后的ServiceGrpc文件
+
+```java
+public interface WorldClock extends Remote {
+    LocalDateTime getLocalDateTime(String zoneId) throws RemoteException;
+}
+```
+
+### 服务器重写服务
+
+服务器要继承接口，然后重写服务
+
+```java
+public class WorldClockService implements WorldClock {
+    @Override
+    public LocalDateTime getLocalDateTime(String zoneId) throws RemoteException {
+        return LocalDateTime.now(ZoneId.of(zoneId)).withNano(0);
+    }
+}
+```
+
+### 服务器发布服务
+
+```java
+public class Server {
+    public static void main(String[] args) throws RemoteException {
+        System.out.println("create World clock remote service...");
+        // 实例化一个WorldClock:
+        WorldClock worldClock = new WorldClockService();
+        // 将此服务转换为远程服务接口:
+        WorldClock skeleton = (WorldClock) UnicastRemoteObject.exportObject(worldClock, 0);
+        // 将RMI服务注册到1099端口:
+        Registry registry = LocateRegistry.createRegistry(1099);
+        // 注册此服务，服务名为"WorldClock":
+        registry.rebind("WorldClock", skeleton);
+    }
+}
+```
+
+上述代码主要目的是通过RMI提供的相关类，将我们自己的`WorldClock`实例注册到RMI服务上。**RMI的默认端口是`1099`**，最后一步注册服务时通过`rebind()`指定服务名称为`"WorldClock"`
+
+Skeleton就是server？
+
+### Client
+
+```java
+public class Client {
+    public static void main(String[] args) throws RemoteException, NotBoundException {
+        // 连接到服务器localhost，端口1099:
+        // gRPC: ManagedChannel channel = ManagedChannelBuilder.forAddress(serverAddress, serverPort).build();
+        Registry registry = LocateRegistry.getRegistry("localhost", 1099); 
+        
+        // 查找名称为"WorldClock"的服务并强制转型为WorldClock接口:
+        // gRPC: HelloServiceGrpc.HelloServiceBlockingStub helloServiceStub = HelloServiceGrpc.newBlockingStub(managedChannel);
+        WorldClock worldClockStub = (WorldClock) registry.lookup("WorldClock");
+        
+        // 正常调用接口方法:
+        // gRPC: helloServiceStub.hello(helloRequest);
+        LocalDateTime now = worldClockStub.getLocalDateTime("Asia/Shanghai");
+        // 打印调用结果:
+        System.out.println(now);
+    }
+}
+```
+
+### RMI的问题
+
+Java的RMI严重依赖序列化和反序列化，而这种情况下可能会造成严重的安全漏洞，因为Java的序列化和反序列化不但涉及到数据，还涉及到二进制的字节码，即使使用白名单机制也很难保证100%排除恶意构造的字节码。因此，使用RMI时，双方必须是内网互相信任的机器，不要把1099端口暴露在公网上作为对外服务
+
+Java的RMI调用机制决定了双方必须是Java程序，其他语言很难调用Java的RMI
+
+
+
