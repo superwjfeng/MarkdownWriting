@@ -445,9 +445,31 @@ git的分支实质上仅是包含所指对象的SHA-1校验和文件，所以它
 * origin一般用作本地对remote repository的名称，它是 `git clone` 时的默认remote库名称，可以 `git clone [-o RemoteName] ` 换一个名字
 * 本地 `git init` 时的默认branch名称是master。因此对远程库的本地branch名称是，`<remote>/<branch>`，即origin/master
 
-### 基础指令
+### git的设置
+
+`git config`: Git 是一个 [高度可定制的](https://git-scm.com/docs/git-config) 工具。可以通过 `git config -l` 来查看设置列表
+
+可以通过 `git config --unset` 来重制当前仓库的设置
+
+`git config --global` 来设置当前host的全部仓库
+
+### 工作区、暂存区和版本库
 
 <img src="git三个区域.png" width="50%">
+
+* 工作区 Working directory：放需要管理的代码和文件的目录
+
+* 暂存区 Stage area/index：一般放在 `.git` 目录下的index文件中
+
+* 版本库 Repository (locally)：`.git` 这个隐藏目录被称为Git的版本库
+
+  <img src="git版本库内容.png" width="35%">
+
+修改的工作区内容的索引会写入对象库的一个新的git对象 object 中
+
+Git追踪管理的是修改，而不是文件
+
+### 基础指令
 
 Git 处理snapshot场景的方法是使用一种叫做 staging area 暂存区的机制，它允许用户指定下次快照中要包括那些改动
 
@@ -462,36 +484,122 @@ Git 处理snapshot场景的方法是使用一种叫做 staging area 暂存区的
 * `git diff <revision> <filename>`: 显示某个文件两个版本之间的差异
 * `git checkout <revision>`: 更新 HEAD 和目前的分支
 
+### 撤销与回滚
+
+* `git commit --amend`: 编辑提交的内容或信息
+* `git reset [--soft | --mixed | --hard] <file>`: 用于回退 rollback。**本质是回退版本库中的内容**
+  * `--mixed` 为**默认选项**，使用时可以不用带该参数。该参数将暂存区的内容退回为指定提交版本内容，工作区文件保持不变
+  * `--soft` 参数对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
+  * `--hard` 参数将暂存区与工作区都退回到指定版本。**切记工作区有未提交的代码时不要用这个命令**，因为工作区会回滚，没有commit的代码就再也找不回了，所以使用该参数前一定要慎重
+  * file的说明
+    * 可以直接使用commit id，表示指定退回的版本
+    * 一般会使用HEAD来替代：HEAD 表示当前版本，`HEAD^` 上一个版本，`HEAD^^` 上上一个版本，以此类推。也可以使用 `~数字` 来替代，比如 `HEAD~0` 表示当前版本，`HEAD~1` 为上一个版本，依次类推
+  * `git reset` 是可以来回rollback的，可以使用reflog来查看commit ID
+* `git checkout -- <file>`：丢弃修改，让工作区中的文件回到最近一次add或commit时的状态
+* `git restore`: git2.32版本后取代git reset 进行许多撤销操作
+
+应用场景：撤销回滚的目的是为了防止自己写的代码影响到远程库这个公共空间中的代码
+
+* 还没有add到暂存区
+  * `git checkout -- <file>`，注意一定要带上 `--`，否则checkout就是用来对branch进行操作的
+  * `git reset --hard file`
+* 已经add到暂存区，但还没有commit到版本库中：`git reset [--mixed ｜ --hard] file`
+* 已经commit到版本库中：前提是没有push到远程库 `git reset --hard file`
+
 ### 分支和合并
 
-* `git branch`: 显示分支。`git branch --set-upstream-to=origin/master`
+移动HEAD指针来指向不同的分支指针，分支指针再指向不同的commit ID。分支指针都放在 `.git/refs` 下面，分成了本地的heads和远端的remotes
+
+注意：在新建branch的时候是在当时的分支上进行了一次commit，即
+
+```
+--------+-----+-----+----------+-----+------+          Main Branch      
+Last commit before new branch<-|     |->new commit due to new branch    
+                                     |
+                                     |------+          New Branch
+```
+
+* `git branch`：显示本地分支，`git branch -r` 查看远端分支。`git branch --set-upstream-to=origin/master`
   * `git branch <name>`: 创建分支
-  * `git branch -d (BranchName)` 删除某条分支
+  * `git branch -d <BranchName>` 删除某条分支，注意删除某条分支的时候必须先切换到其他的分支上
+* `git checkout <branch>`：切换到特定的分支
 * `git checkout -b <name>`：创建分支并切换到该分支。相当于 `git branch <name>; git checkout <name>`
-* `git merge <revision>`: 合并到当前分支
+* `git merge <revision>`：合并到当前分支
 * `git mergetool`: 使用工具来处理合并冲突
 * `git rebase <basename> <topicname>`: 将一系列补丁 topicname 变基 rebase 新的基线 basename
 
+### 关于合并冲突的问题
+
+合并冲突模式
+
+* Fast-forward：看不出来是否有创建分支并merge，看起来就像是直接在当前分支上修改的，可以通过 `git merge [--no-ff -m "提提交信息"] <branch>` 来不使用fast-forward模式来merge，注意 -m 是一定要写的
+* No-ff 非fast-forward：可以看出来有没有经过merge
+
+```
+<<<<<<< HEAD
+当前分支的内容
+=======
+其他分支上发生冲突的内容
+>>>>>>>
+```
+
+解决冲突的方式是把不需要的代码全部删除，包括尖括号提示符
+
+merge冲突需要手动解决，并且**merge后一定要再进行一次commit**。HEAD会指向merge的新提交，但被merge的分支仍然会指向自己原来的commit
+
+```
+*   commit 1f7605d4cf4e180c21b693f2aed0f945611fa33b (HEAD -> main)
+|\  Merge: 27b9c7b 4dcd274
+| | Author: wjfeng <wj.feng@tum.de>
+| | Date:   Sat Jun 17 16:36:45 2023 +0200
+| |
+| |     main branch conflict fixed
+| |
+| * commit 4dcd27411054788c7030e7936d62ebb1ca2a3247
+| | Author: wjfeng <wj.feng@tum.de>
+| | Date:   Sat Jun 17 16:33:19 2023 +0200
+| |
+| |     test branch on dev
+| |
+* | commit 27b9c7bbc515a114af67ce45c5fa86d0e5591765
+|/  Author: wjfeng <wj.feng@tum.de>
+|   Date:   Sat Jun 17 16:34:25 2023 +0200
+|
+```
+
+从main上创建了一条新的branch后，若main上没有新的commit或者没有冲突就可以直接fast-forward merge
+
+### 分支管理的原则
+
+* master/main：稳定分支，用来发布新版本。不允许直接修改这个分支
+* dev：不稳定的开发分支，用来开发新功能。等测试完毕后再merge到master分支
+* 用 `git stash` 命令将当前工作区已经add（被git追踪了）但是还没有commit的内容存起来，会放在 `.git//refs/stash` 临时存储区中，将来可以被恢复。不能把没有add的文件stash
+* 可以通过 `git stash list` 来查看临时存储区的内容
+
+一个好习惯是：在master上merge完修复好的bug后，切换到dev上merge master，而不是在master上merge dev。若直接在master上merge dev，若出bug了，master分支会受到直接的影响，而在dev上merge master，就算出错影响的也只是dev
+
 ### 远端操作
+
+Pull requset是给仓库管理员看的合并请求
+
+origin是默认远程仓库的名字
+
+若本地分支和远程分支同名，可以将 `master:master` 省略为 `master`
+
+对于本地master和远程master，git会自动建立连接
+
+
 
 * `git remote`: 列出远端
 * `git remote add <name> <url>`: 添加一个远端
-* `git push <remote> <local branch>:<remote branch>`: 将对象传送至远端并更新远端引用
+* `git push <remote> <local branch>:<remote branch>`: 将本地的某一个分支传送至远端的某一个分支并更新远端引用
 * `git branch --set-upstream-to=<remote>/<remote branch>`: 创建本地和远端分支的关联关系
 * `git fetch`: 从远端获取对象/索引，`git fetch` 是用来获取远端的更新，不会将远端代码pull到本地
 * `git pull`: 相当于 `git fetch + git merge`
 * `git clone`: 从远端下载仓库
 
-### 撤销回滚
-
-* `git commit --amend`: 编辑提交的内容或信息
-* `git reset HEAD <file>`: 恢复暂存的文件
-* `git checkout -- <file>`: 丢弃修改
-* `git restore`: git2.32版本后取代git reset 进行许多撤销操作
-
 ### 高级操作
 
-* `git config`: Git 是一个 [高度可定制的](https://git-scm.com/docs/git-config) 工具
 * `git clone --depth=1`: 浅克隆（shallow clone），不包括完整的版本历史信息
 * `git add -p`: 交互式暂存
 * `git rebase -i`: 交互式变基
