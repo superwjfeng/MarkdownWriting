@@ -580,33 +580,60 @@ merge冲突需要手动解决，并且**merge后一定要再进行一次commit**
 
 ### 远端操作
 
-Pull requset是给仓库管理员看的合并请求
+Pull requset是给仓库管理员看的合并请求。当用户在自己的分支上进行代码修改后，用户可以向主项目（或主分支）提交一个pull request。这相当于提议将用户的代码更改合并到主项目中。Pull request允许其他开发者对用户的代码进行审查、提出修改建议或进行讨论。通过pull request，团队成员可以共同讨论代码变更、解决问题并确保代码质量
 
-origin是默认远程仓库的名字
+**从远程仓库克隆后，Git会自动把本地的master分支和远程的master分支连接起来，并且远程仓库的默认名称是origin**
 
-若本地分支和远程分支同名，可以将 `master:master` 省略为 `master`
+创建远端分支有两种方法，要么直接在远程库手动创建，要么在本地push一个新的分支。**绝对禁止直接在远程库中修改代码，必须是在本地修改后将改变push到远程库**
 
-对于本地master和远程master，git会自动建立连接
+* `git clone`：从远端下载仓库
 
+* `git remote -v`：列出远端
 
+* `git remote add <name> <url>`：添加一个远端
 
-* `git remote`: 列出远端
-* `git remote add <name> <url>`: 添加一个远端
-* `git push <remote> <local branch>:<remote branch>`: 将本地的某一个分支传送至远端的某一个分支并更新远端引用
-* `git branch --set-upstream-to=<remote>/<remote branch>`: 创建本地和远端分支的关联关系
-* `git fetch`: 从远端获取对象/索引，`git fetch` 是用来获取远端的更新，不会将远端代码pull到本地
-* `git pull`: 相当于 `git fetch + git merge`
-* `git clone`: 从远端下载仓库
+* `git push <remote repo> <local branch>:<remote branch>`：将本地的某一个分支传送至远端的某一个分支并更新远端引用
+
+  若本地分支和远程分支同名，可以将 `git push origin master:master` 省略冒号成 `git push origin master`
+
+* `git branch --set-upstream-to=<remote>/<remote branch>`：创建本地和远端分支的关联关系
+
+* `git fetch`：从远端获取对象/索引，`git fetch` 是用来获取远端的更新，不会将远端代码pull到本地
+
+* `git pull <remote repo> <remote branch>:<local branch>`：相当于 `git fetch + git merge`
+
+  若是要让远程分支与当前分支合并，可以省略冒号后的内容
+
+常用情景：**拉取一个本地不存在的新的远程分支到本地成为一个新的分支** `git checkout -b <local-branch> origin/<remote-branch>`，通过这个命令可以自动建立本地与远程的分支连接，这样以后就可以直接用短命令 `git push` 了
+
+### Detached HEAD
+
+当用户在 Git 中切换到一个特定的commit，而不是分支时， HEAD 引用会进入 detached HEAD 状态。这种状态下的提交可能会更加容易丢失，因此在进行任何修改之前，应谨慎考虑并理解当前所处的状态
+
+在 detached HEAD 状态下，HEAD 直接指向一个具体的提交，而不是一个具名的分支。这意味着当前不再位于任何分支的最新提交上
+
+当用户处于 detached HEAD 状态时，用户可以查看提交的内容，甚至进行修改和提交新的更改，但这些更改将不会与任何分支相关联。若在 detached HEAD 状态下进行提交，这些提交可能会很难恢复，因为没有分支引用指向它们
+
+Detached HEAD 状态通常发生在以下几种情况下
+
+1. 使用 `git checkout` 命令切换到特定的提交，而不是分支名称
+2. 使用 `git checkout` 命令切换到一个 tag
+3. 使用 `git checkout` 命令切换到一个远程分支的具体提交
+
+要解决detached HEAD状态，可以执行以下操作之一
+
+1. 若是意外进入了detached HEAD状态，但没有进行任何修改，可以直接通过运行 `git switch -` 或 `git checkout -` 返回到之前所在的分支
+2. 若是在detached HEAD状态下进行了修改，并且希望将这些更改与一个新的分支关联起来，可以使用 `git branch <new-branch-name>` 来创建一个新的分支，然后使用 `git switch <new-branch-name>` 切换到新的分支，并commit更改
 
 ### 高级操作
 
-* `git clone --depth=1`: 浅克隆（shallow clone），不包括完整的版本历史信息
-* `git add -p`: 交互式暂存
-* `git rebase -i`: 交互式变基
-* `git blame`: 查看最后修改某行的人
-* `git stash`: 暂时移除工作目录下的修改内容
-* `git bisect`: 通过二分查找搜索历史记录
-* `.gitignore`: [指定](https://git-scm.com/docs/gitignore) 故意不追踪的文件
+* `git clone --depth=1`：浅克隆（shallow clone），不包括完整的版本历史信息
+* `git add -p`：交互式暂存
+* `git tag <name>`：打标签
+* `git rebase -i`：交互式变基
+* `git blame`：查看最后修改某行的人
+* `git bisect`：通过二分查找搜索历史记录
+* `.gitignore`： [指定](https://git-scm.com/docs/gitignore) 故意不追踪的文件
 
 ## *Logging*
 
