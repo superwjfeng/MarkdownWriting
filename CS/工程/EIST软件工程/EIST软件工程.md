@@ -3,10 +3,6 @@ Title: EIST软件工程
 Author: Weijian Feng 封伟健
 Source: TUM EIST
 ---
-# Introduction
-
-## *软件开发模式*
-
 # Requirements
 
 ## *Introduction*
@@ -148,11 +144,7 @@ Non-functional requirements 是指依一些条件判断系统运作情形或其�
 
 ### Security 安全性
 
-* **Security**: Software deployed in the cloud is vulnerable to security vulnerabilities as the underlying computing infrastructure is untrusted (or shared by multiple tenants). Secure systems deal with securing computing, network and storage
-* **Security properties (CIA properties)**
-  * **Confidentiality** refers to protecting information from unauthorized access
-  * **Integrity** means data are trustworthy, complete and have not been accidentally altered or modified by an unauthorized user
-  * **Availability** means data are accessible when you need them
+**Security**: Software deployed in the cloud is vulnerable to security vulnerabilities as the underlying computing infrastructure is untrusted (or shared by multiple tenants). Secure systems deal with securing computing, network and storage
 
 ### Maintainability 可维护性
 
@@ -350,15 +342,310 @@ D[Front-end<br>website, mobile, ...</br>]<-->E[Service management<br>recommendat
 
 ### 劣势
 
-
-
 ## *Microservice Architecture*
 
-低耦合高内聚
+
+
+## *Example: Amazon Prime Video*
 
 # System Design & Implementation
 
-# Testing & Analysis
+## *Modularity*
+
+### 什么是模块化？
+
+软件系统可以倍分解为一系列的模块 modules 或者说子系统 subsystems。模块化可以以任意的形式来实现，比如类、方法、子系统、rpc服务等。也就是说，模块化可以被应用在任意的抽象层次
+
+模块化可以帮助管理软件的复杂度，微服务就是一个很好的模块化例子，我们将一个复杂的单体架构划分为大量的微服务系统
+
+理想情况下，每一个模块应该是与彼此都完全独立的，用户可以直接使用模块而不需要知道有其他模块的存在。但实际上模块之间或多或少是相关的，它们依赖彼此提供的功能或服务，这也是软件系统复杂性的来源之一。**一个好的系统设计应该是要致力于降低模块之间的相互依赖**
+
+### Terminology
+
+<img src="InterfaceImplementation.png" width="20%">
+
+* Interface 接口
+  * 接口包括开发人员在不同模块中工作所需了解的一切，以便使用给定的模块
+  * **Interface describes “what” the module does, but ”not how” it does it!**
+* Implementation 实现：是对接口定义内容的实际实现
+
+在开发一个模块时，开发人员必须理解该模块的接口和实现，以及任何其他依赖模块的接口
+
+### 实现模块之间的高内聚低耦合
+
+设计目标：在允许模块之间的相互依赖的同时降低软件整体的复杂度
+
+* Cohesion 内聚：衡量一个模块之间类之间的依赖性
+  * **高内聚**：模块中的类执行相似的任务，并通过多个关联相互关联
+  * 低内聚：大量杂类和辅助类，几乎没有关联
+* Coupling 耦合：衡量多个模块之间的依赖性
+  * 高耦合：一个模块的变动会对其他模块产生较大的影响
+  * **低耦合**：一个模块的变动对其他依赖模块的影响较小
+
+<img src="高内聚低耦合.png">
+
+一个好的系统设计旨在实现高内聚低耦合，高内聚追求提高模块内的关联性，低耦合则追求降低模块间的相互依赖
+
+高内聚可以通过将沟通、互动集中在模块内，而不是跨越模块边界来实现；低耦合则可以通过不让calling module知道called module的内部信息来实现
+
+* 高内聚
+  * Operations work on the same attributes
+  * Operations implement a common abstraction or service
+* 低耦合
+  * Small interfaces
+  * Information hiding principle
+  * No/minimal global data
+  * Interactions are mostly within the module rather than across module boundaries
+
+### Subsystem decomposition: Modules
+
+## *Design Pattern: Facade Pattern*
+
+### Intro
+
+外观模式 Facade Pattern 是一种软件设计模式，属于结构型模式。**它提供了一个higher-level的简化的接口（外观 Facade、入口），用于访问复杂子系统的功能**，从而隐藏了子系统的复杂性，并提供了一个更简单和统一的接口供客户端使用，同时也减少了客户端与子系统之间的直接依赖
+
+<img src="FacadePattern.png">
+
+一个demo：<https://www.runoob.com/design-pattern/facade-pattern.html>
+
+### 主要组成部分
+
+1. 外观 Facade：外观是客户端与子系统之间的接口，它封装了底层子系统的复杂性，并提供了一个简化的接口供客户端使用。外观根据客户端的请求，调用相应的子系统组件
+2. 子系统 Subsystems：子系统是实现系统功能的具体组件集合。它们包含了底层的业务逻辑和功能，但客户端并不直接与子系统的组件进行交互。外观模式通过外观作为中间层，将客户端请求转发给子系统来处理
+
+### Pros & Cons
+
+* Pros
+  1. 简化客户端使用：外观模式提供了一个简化的接口，使得客户端使用子系统更加方便。客户端只需与外观对象交互，而不需要了解和处理子系统的复杂性，从而简化了客户端的使用方式
+  2. 封装子系统复杂性：外观模式将底层子系统的复杂性封装在一个外观对象中。这样，客户端不需要了解子系统的内部工作细节，只需要通过外观对象进行交互。外观模式提供了一种高级接口，隐藏了子系统的复杂性，使得系统更易于理解和使用
+  3. 解耦客户端和子系统：通过外观模式，客户端只与外观对象进行交互，而不直接与子系统的组件进行交互。这样可以降低客户端和子系统之间的耦合度，使得系统更加灵活和可维护
+* Cons
+  1. 违反开闭原则：在外观模式中，如果需要新增或修改子系统的功能，可能需要修改外观对象的接口和实现。这违反了开闭原则，因为修改外观对象可能会影响到客户端代码。因此，在设计外观模式时，需要权衡灵活性和稳定性之间的平衡
+  2. 可能引入单点故障：外观模式将子系统的复杂性集中在一个外观对象中。如果外观对象出现问题或失败，整个子系统的功能可能受到影响。因此，需要谨慎设计和管理外观对象，以确保其稳定性和可靠性
+  3. 限制灵活性：外观模式通过提供一个统一的接口来隐藏子系统的复杂性，这可能会导致某些特定功能无法直接访问。如果需要对子系统的某个特定功能进行高度定制或优化，可能需要绕过外观对象，直接与子系统的组件进行交互
+
+## *接口设计*
+
+### Deep vs shallow modules
+
+<img src="ShallowDeeperModule.png" width="30%">
+
+* Deep modules
+  * They provide **powerful functionality yet have simple interfaces**, They provide good abstraction because only a small internal complexity is visible to users. 
+  * Deep module是一种具有多层次嵌套关系的模块设计方式。它通过将功能细分为多个嵌套的子模块来构建复杂的接口。每个子模块都负责特定的功能或任务，并且可以进一步嵌套其他子模块。这种深层次的嵌套结构使得接口的功能和复杂性可以逐级增加，以满足更细粒度的需求
+* Shallow modules
+  * Provide **huge interface, but less functionality**. More dependencies with other modules leading to high coupling
+  * Shallow module是一种扁平的模块设计方式，它没有多层次的嵌套关系。相反，它将所有的功能组织在同一个层次上。这种设计方式更简单直接，适用于相对简单的接口或功能较少的场景。Shallow module通常比Deep module更容易理解和使用
+* Module design as a cost vs benefit trade-off
+  * Cost: The complexity using the interface
+  * Benefits: Provided functionality of the module
+
+Deep modules的设计好与Shallow modules，**一个原则是可以将complexity藏到implementation里就藏进去，尽量不要增加接口的宽度**
+
+### 例子
+
+Linux的文件系统就是一个典型的Deep modules，它是由文件系统、虚拟文件系统、系统调用都嵌套构成的，最终向上层提供了系统调用接口 `open()`、`write()`、`read()` 等
+
+举一个生活中的例子
+
+假设我们正在设计一个在线购物系统的接口，其中包含以下功能：
+
+1. 添加商品到购物车（Add Item to Cart）：将商品添加到用户的购物车中
+2. 从购物车中移除商品（Remove Item from Cart）：从用户的购物车中移除指定的商品
+3. 获取购物车中的商品列表（Get Cart Items）：获取用户购物车中的所有商品列表
+4. 结算购物车（Checkout Cart）：对用户购物车中的商品进行结算
+
+Deep module的设计方式：Deep module将每个功能细分为多个嵌套的子模块，每个子模块都负责特定的功能。在这种设计中，Deep module 只是一个购物车模块在这个例子中，Deep module将购物车功能的所有操作方法放在一个深层次的CartManager模块中。每个方法都属于CartManager模块的一部分，负责不同的购物车功能
+
+Shallow module的设计方式：Shallow module的设计方式将所有功能组织在同一个层次上，没有多层次的嵌套关系。在这个例子中，Shallow module直接将购物车功能的所有操作方法放在一个ShoppingSystem模块中，没有额外的嵌套关系
+
+### Information hiding & leakage
+
+信息隐藏 Information hiding 是一种软件设计原则，旨在将模块或类的内部实现细节和数据隐藏起来，只向外界暴露必要的接口或方法。该原则的目标是减少系统中各个模块之间的依赖关系，提高模块的独立性和可维护性
+
+信息隐藏的核心思想是通过将模块的实现细节封装起来，限制对内部数据和方法的直接访问，从而降低模块之间的耦合度。模块只向外部提供必要的接口，外部只能通过这些接口与模块进行交互，而无需关心模块内部的具体实现。这样可以实现模块的独立演化，当内部实现发生变化时，只需保持接口的兼容性，而不会影响到外部的使用
+
+相反信息泄漏 information leakage 则是将设计细节暴露出去，这可能会导致模块之间的相互依赖
+
+Information hiding的最经典实现就是面向对象语言C++/Java的类，Private访问限定符用于implementation，Public访问限定符则用于interface
+
+## *General layered architecture*
+
+ 层式架构是模块化的最佳体现，每一层就是一个独立的子模块。网络栈、Linux文件系统，之前提过的三层Web架构都是层结构
+
+### Closed vs open layered architectures
+
+<img src="OpenCloseLayerArch.png" width="50%">
+
+* Closed layer architecture
+  * 每一层只能直接调用相邻下一层的服务
+  * 优势：层次清晰，维护性好
+* Open layer architecture
+  * 可以跨层调用，即Layer1不需要call Layer2来获取Layer n的服务，Layer1直接call Layer n
+  * 优势：高性能
+
+### Different layers, different abstraction
+
+每一层都应该提供不同的抽象，这样可以更好的解构系统
+
+尽量不要使用Pass-through method 传递方法。Pass-through methods 是指在类或对象中定义的方法，这些方法在实现时只是简单地将调用转发给其他对象或类的对应方法，不做任何额外的处理或逻辑
+
+## *MVC*
+
+# Security
+
+## *Security Engineering*
+
+### CIA properties
+
+* **Confidentiality** refers to protecting information from unauthorized access 避免被未经许可的访问拿到
+* **Integrity** means data are trustworthy, complete and have not been accidentally altered or modified by an unauthorized user 数据是完整的，不会被未经许可的用户故意或不当心修改
+* **Availability** means data are accessible when you need them 需要时可以被拿到
+
+### Thread Model
+
+A threat model is used to explicitly **list all threats that jeopardize the security of a system**
+
+Thread Model 定义了系统环境以及攻击者的能力
+
+* Enumerating and prioritizing all potential threats
+* Define system assumptions: Trusted and untrusted parts
+* Risk management and trade-offs
+
+一些典型的问题有
+
+* What are the high value-assets in a system?
+* Which components of a system are most vulnerable?
+* What are the most relevant threats or attack surfaces?
+
+## *安全系统设计原则*
+
+### Compartilization 区域分割
+
+和分割船舱，以致于当某个船舱进水时不至于帆船一样，软件工程甚至是整个计算机系统也要进行区域分割
+
+在安全工程领域，Compartilization 是一种关键概念和实践，用于将系统中的不同组件或资源隔离开来，以减少潜在的安全风险和限制潜在的攻击者的行动范围。隔离的目标是防止不受信任的组件对系统中的其他部分造成损害，并通过一些精心设计的通讯协议来限制潜在的攻击者从一个受损的组件中扩散到其他组件
+
+### Principle of least privileges 最小权限原则
+
+Least Privilege 用于确保用户、应用程序或进程**仅具有完成其必要任务所需的最低权限**。最小权限原则旨在减少系统中的安全风险，并限制恶意用户或攻击者可能利用的潜在攻击面
+
+最小权限原则包括以下关键概念
+
+1. 最小访问权限：用户、应用程序或进程应该只被授予完成其任务所需的最小访问权限。这意味着将权限限制在最低必要的级别，以防止不必要的权限滥用或误操作
+2. 权限分离：不同的用户角色或任务应该被分配不同的权限。每个用户或应用程序只能访问其工作所需的资源和功能，而不能访问其他敏感资源。这种权限分离减少了潜在的攻击面和错误操作的影响范围
+3. 基于需求的访问控制：通过实施基于需求的访问控制策略，只有在用户或进程确实需要访问某些资源或执行特定操作时，才授予相应的权限。这种策略确保权限的最小化，并且仅在必要时才进行授权
+4. 权限审计和监控：对权限的使用进行审计和监控，以确保权限不被滥用或越权访问。这可以通过记录和分析权限使用的日志来实现，并及时检测异常行为或潜在的安全威胁
+
+### Isolation via privilege mediation
+
+隔离的目的是将两个组件相互分离，并限制它们之间的交互在一个明确定义的应用程序编程接口（API）中进行
+
+为了实现组件之间的隔离，所有组件都需要某种形式的**安全监视器 security monitor**来进行监控和执行安全策略
+
+**安全监视器以比隔离组件更高的权限级别运行**，并确保它们遵守隔离规则。如果违反隔离规则，安全监视器会阻止违规行为，并可能终止违规组件的执行。这种安排可以确保隔离的有效性，并防止攻击者通过违反隔离来访问敏感资源或执行恶意行为
+
+### High-level 安全设计原则
+
+* Break system into compartments
+
+* Ensure each compartment is isolated
+
+* Ensure each compartment runs with least privilege
+
+* Treat compartment interface as the trust boundary
+
+  <img src="ReferenceMoniter.png">
+
+Trusted Computing Base（TCB）是指计算系统中被认为是可信任的核心组件集合。TCB包括操作系统内核、安全核心模块、认证机构、密码学实现以及其他被信任的软件和硬件组件。TCB的目标是提供一个可信的计算环境，确保系统的安全性和可靠性
+
+TCB的设计和实现应该经过严格的安全考虑，并遵循安全最佳实践。**它应该尽可能地简化和最小化，以减少潜在的攻击面**。TCB应该受到适当的保护措施，以防止未经授权的访问和恶意操作
+
+### Reference/Trusted monitor
+
+Reference Monitor 引用监视器是一个安全机制的概念，用于确保系统中的所有访问都受到适当的控制和监视。它是一个抽象的概念，代表着一个系统内核或安全子系统，负责执行访问控制策略并保护系统资源
+
+Trusted Monitor 在安全系统中起着至关重要的作用，它可以是操作系统内核的一部分，或者是一个独立的安全子系统。它通过实施访问控制策略、验证身份、执行审计等功能来确保系统的安全性和可靠性。Trusted Monitor 的设计和实现应该经过严格的安全考虑，并接受相应的验证和审计，以保证其可信度和有效性
+
+* 斡旋来自应用的请求
+* 必须一直被调用，不能被绕过
+* Tamperproof 防篡改，权限很高无法被杀死，或者被杀死的时候也会把它监控的进程一同杀死
+
+## *Access control 权限控制*
+
+### Terminology
+
+* Protected entities: “objects/resources” O。对象可以是任何资源，比如文件、系统资源、聂村等
+* Active objects: “subjects/principals” S (i.e., users/processes)
+
+### Authentication vs. Authorization
+
+Authentication（身份验证）和 Authorization（授权）是访问控制中两个关键的概念，它们在保护系统和资源的访问方面具有不同的作用
+
+Authentication（身份验证）是**用于验证用户或实体的身份是否合法和正确**。它是确认用户是谁的过程。身份验证通常涉及用户提供凭据（如用户名和密码、生物特征、数字证书等），然后系统对这些凭据进行验证，并确定用户是否具有合法的身份。身份验证确保用户是自己声称的那个人，而不是冒名顶替
+
+Authorization（授权）是**确定用户或实体对系统或资源的访问权限的过程**。一旦用户的身份得到验证，授权决定用户可以访问哪些资源以及可以执行哪些操作。它是定义访问权限和权限级别的过程。授权规定了用户能够做什么和不能做什么，以保证资源的安全性和保护用户数据
+
+在一个应用程序中，用户首先进行身份验证，提供用户名和密码进行验证。一旦身份验证成功，系统会检查该用户的授权级别和权限，以确定他们能够访问的功能、数据或服务。身份验证是确认用户是谁，而授权是决定用户可以做什么。这两个过程通常在访问控制的流程中一起使用，以确保只有合法用户获得适当的访问权限
+
+### ACL vs CL
+
+Access Control Lists ACLs 访问控制列表
+
+Capabilities Lists CLs
+
+## *ACL*
+
+### Access control matrix
+
+## *Capabilities*
+
+# 可靠性 & 可扩展性
+
+## *Reliability & Availability*
+
+## *Performance*
+
+## *Pattern implementation*
+
+## *Scalability*
+
+# 设计模式
+
+## *Adapter pattern*
+
+## *Observer pattern*
+
+## *Strategy pattern*
+
+## *MVC*
+
+# Testing
+
+## *Testing Overview*
+
+
+
+
+
+Black box testing可能会有部分代码是没法test到的
+
+
+
+Stub比Driver难写 2:03
+
+## *Mock testing*
+
+## *Automated large-scale testing*
+
+
+
+Fuzzing
+
+但有时候用户已经知道了大概要用哪些测试用例，但Fuzzing还是会无脑生成
+
+# Software Analysis
 
 # Software Management and Deployment
 
@@ -576,11 +863,13 @@ merge冲突需要手动解决，并且**merge后一定要再进行一次commit**
 * 用 `git stash` 命令将当前工作区已经add（被git追踪了）但是还没有commit的内容存起来，会放在 `.git//refs/stash` 临时存储区中，将来可以被恢复。不能把没有add的文件stash
 * 可以通过 `git stash list` 来查看临时存储区的内容
 
-一个好习惯是：在master上merge完修复好的bug后，切换到dev上merge master，而不是在master上merge dev。若直接在master上merge dev，若出bug了，master分支会受到直接的影响，而在dev上merge master，就算出错影响的也只是dev
+将代码merge到master中的好习惯是：**在master上merge完修复好的bug后，先切换到dev上merge master，再切换到master上merge dev**。而不是在master上merge dev。在merge的过程中也有可能因为一些误操作（少merge多merge了一行）等原因而出错，因此若直接在master上merge dev出bug了，master分支会受到直接的影响，而在dev上merge master，就算出错影响的也只是dev
 
 ### 远端操作
 
-Pull requset是给仓库管理员看的合并请求。当用户在自己的分支上进行代码修改后，用户可以向主项目（或主分支）提交一个pull request。这相当于提议将用户的代码更改合并到主项目中。Pull request允许其他开发者对用户的代码进行审查、提出修改建议或进行讨论。通过pull request，团队成员可以共同讨论代码变更、解决问题并确保代码质量
+远端merge有两种方法，一种是在本地merge后push到远端，另一种是使用Pull request，Pull requset是给仓库管理员看的合并请求，实际开发中推荐使用PR
+
+当用户在自己的分支上进行代码修改后，用户可以向主项目（或主分支）提交一个pull request。这相当于提议将用户的代码更改合并到主项目中。Pull request允许其他开发者对用户的代码进行审查、提出修改建议或进行讨论。通过pull request，团队成员可以共同讨论代码变更、解决问题并确保代码质量
 
 **从远程仓库克隆后，Git会自动把本地的master分支和远程的master分支连接起来，并且远程仓库的默认名称是origin**
 
@@ -596,15 +885,19 @@ Pull requset是给仓库管理员看的合并请求。当用户在自己的分�
 
   若本地分支和远程分支同名，可以将 `git push origin master:master` 省略冒号成 `git push origin master`
 
-* `git branch --set-upstream-to=<remote>/<remote branch>`：创建本地和远端分支的关联关系
-
 * `git fetch`：从远端获取对象/索引，`git fetch` 是用来获取远端的更新，不会将远端代码pull到本地
 
 * `git pull <remote repo> <remote branch>:<local branch>`：相当于 `git fetch + git merge`
 
   若是要让远程分支与当前分支合并，可以省略冒号后的内容
 
+### 本地库与远端库的连接关系
+
+可以通过 `git branch -vv` 来查看本地库与远程库的连接关系
+
 常用情景：**拉取一个本地不存在的新的远程分支到本地成为一个新的分支** `git checkout -b <local-branch> origin/<remote-branch>`，通过这个命令可以自动建立本地与远程的分支连接，这样以后就可以直接用短命令 `git push` 了
+
+但是若没有使用 `git checkout -b <local-branch> origin/<remote-branch>`，或者说忘记打后半部分了导致没有建立连接关系也不用紧，还可以使用`git branch --set-upstream-to=<remote>/<remote branch>` 来创建本地和远端分支的关联关系
 
 ### Detached HEAD
 
@@ -634,6 +927,95 @@ Detached HEAD 状态通常发生在以下几种情况下
 * `git blame`：查看最后修改某行的人
 * `git bisect`：通过二分查找搜索历史记录
 * `.gitignore`： [指定](https://git-scm.com/docs/gitignore) 故意不追踪的文件
+
+## *开发模型*
+
+DevOps到底是什么意思？ - 小枣君的文章 - 知乎 https://zhuanlan.zhihu.com/p/91371659
+
+### Waterfall 瀑布模式
+
+<img src="Waterfall.png" width="60%">
+
+瀑布模型在如今的开发中显得过于笨重，很少再使用了
+
+### Scrum 敏捷开发
+
+<img src="ScrumLifeCycle.png" width="70%">
+
+### DevOps
+
+开发的高频更新与运维的追求稳定是天生的矛盾。DevOps是一种软件开发和运维的文化和方法论，旨在促进开发团队和运维团队之间的协作、沟通和整合。它强调开发人员和运维人员之间的紧密合作，以实现快速、高质量的软件交付和持续改进
+
+DevOps的核心目标是通过自动化、持续集成、持续交付和持续部署等实践，加速软件开发和发布周期，提高软件交付的频率和质量。它鼓励开发团队和运维团队在整个应用程序生命周期中进行协作，共同承担责任，并共享对系统的理解。比如让运维人员会在项目开发期间就介入到开发过程中，了解开发人员使用的系统架构和技术路线，从而制定适当的运维方案。而开发人员也会在运维的初期参与到系统部署中，并提供系统部署的优化建议
+
+下图说明了Waterfall、Scrum和DevOps三种开发模式的区别
+
+<img src="三种开发模式对比.png" width="50%">
+
+以下是一些关键特征和实践，通常与DevOps相关联：
+
+1. 自动化：自动化是DevOps的核心原则之一。通过自动化构建、测试、部署和运维等任务，可以减少人工错误、提高效率和一致性
+2. 持续集成（CI）：持续集成是指将开发人员的代码更频繁地集成到共享代码库中，并通过自动化构建和测试来验证代码的正确性。这有助于发现和解决问题的早期阶段
+3. 持续交付（CD）：持续交付是指将通过持续集成生成的软件交付到预生产环境，并进行自动化测试和验证，以便随时可以将其部署到生产环境
+4. 自动化部署：通过自动化部署实践，将软件应用程序从开发环境、测试环境到生产环境中进行快速且可靠的部署
+5. 配置管理：使用配置管理工具（如Ansible、Chef、Puppet）来管理和自动化服务器和基础设施的配置，确保环境的一致性和可重复性
+6. 实时监控和日志管理：持续监控应用程序和基础设施的运行状况，收集和分析实时数据和日志，以便快速发现和解决问题
+
+通过采用DevOps实践，组织可以改善软件开发和运维之间的协作，缩短交付周期，提高应用程序的可靠性和质量，并能够更快地响应业务需求和市场变化
+
+### CI/CD
+
+<https://www.redhat.com/zh/topics/devops/what-is-ci-cd>
+
+<img src="CICD.png">
+
+* Continuous Integration 持续集成：CI属于开发人员的自动化流程。成功的 CI 表明应用代码的新更改会定期构建、测试并合并到共享存储库中。这种方法可以解决在一次开发中有太多应用分支，从而导致相互冲突的问题
+* Continuous Delivery/Deployment 持续交付/持续部署
+  * 持续交付：持续交付通常是指开发人员对应用的更改会自动进行错误测试并上传到存储库（如 GitHub 或容器注册表），然后由运维团队将其部署到实时生产环境中。这旨在解决开发和运维团队之间可见性及沟通较差的问题。因此，持续交付的目的就是确保尽可能减少部署新代码时所需的工作量
+  * 持续部署：指的是自动将开发人员的更改从存储库发布到生产环境，以供客户使用。它主要为了解决因手动流程降低应用交付速度，从而使运维团队超负荷的问题。持续部署以持续交付的优势为根基，实现了管道后续阶段的自动化
+
+常用的CI/CD工具：Jenkins、GitLab CI/CD、Travis CI、CircleCI、Bamboo、Azure DevOps、TeamCity等
+
+## *企业开发*
+
+### 企业开发环境
+
+* 开发环境 development：开发环境是程序猿们专门用于日常开发的服务器。为了开发调试方便，一般打开全部错误报告和测试工具，是最基础的环境
+* 测试环境 testing：一个程序在测试环境工作不正常，那么肯定不能把它发布到生产机上。该环境是开发环境到生产环境的过渡环境
+* 预发布环境/灰度环境 staging/pre-production
+  * 该环境是为避免因测试环境和线上环境的差异等带来的缺陷漏测而设立的一套环境。其配置等基本和生产环境一致，但目的是能让我们发正式环境时更有把握。所以预发布环境是你的产品质量最后一道防线，因为下一步你的项目就要上线了。要注意预发布环境服务器不在线上集成服务器范围之内，为单独的一些机器
+  * 所谓的灰度就是地域灰度、人群灰度环境，相当于是让小部分用户为我们的产品做测试
+* 生产环境 production：是指正式提供对外服务的线上环境，例如我们目前在移动端或PC端能访问到的APP都是生产环境
+
+### Git分支设计规范：GitFlow模型
+
+<img src="GitFlow.png">
+
+* master分支
+  * master为主分支，该分支为**只读且唯一的分支**。用于部署到正式发布环境，一般由合并release分支得到
+  * 主分支作为稳定的唯一代码库,任何情况下不允许直接在 master 分支上修改代码
+  * 产品的功能全部实现后，最终在master分支对外发布，另外所有在master分支的推送应该打 tag 做记录，方便追溯
+  * master 分支不可删除
+* release分支
+  * release为预发布分支，它是在本次上线所有的feature分支合并到develop分支之后，再基于develop分支创建的。可以被部署到测试或预发布集群
+  * 命名以 `release/` 开头，建议的命名规则为：`release/version_publishtime`
+  * release分支主要用于提交给测试人员进行功能测试。发布提测阶段，会以release分支代码为基准进行提测
+  * **如果在 release 分支测试出问题，需要回归验证 develop 分支看否存在此问题**
+  * release分支属于临时分支
+* develop分支
+  * develop 为开发分支，**基于master分支创建的只读且唯一的分支**，始终保持最新完成以及 bug 修复后的代码。可部署到开发环境对应集群
+  * 可根据需求大小程度确定是由 feature 分支合并，还是直接在上面开发（非常不建议）
+* feature分支
+  * Feature分支通常为新功能或新特性开发分支，**以develop分支为基础创建feature分支**
+  * 命名以 `feature/` 开头，建议的命名规则：`feature/user_createtime_feature`
+  * 新特性或新功能开发完成后，开发人员需合到develop分支
+  * 一旦该需求发布上线，便将其删除
+* hotfix分支
+  * hotfix分支为线上bug修复分支或叫补丁分支，主要用于对线上的版本进行 bug 修复。当线上出现紧急问题需要马上修复时，需要基于master 分支创建 hotfix 分支
+  * 命名以 `hotfix/` 开头，建议的命名规则 `hotfix/user_createtime_hotfix`
+  * 当问题修复完成后，需要**被合并到master分支和develop分支并推送远程**。一旦修复上线，便将其删除
+
+**没有什么所谓最好的分支模型，只有最合适公司、团队、提高开发效率的分支模型**
 
 ## *Logging*
 

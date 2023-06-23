@@ -2816,7 +2816,7 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
 * 极度追求效率，导致内部比较复杂，如类型萃取，迭代器萃取
 * STL的使用会有代码膨胀的问题
 
-### 常用\<algorithm>库函数笔记
+### 常用 `<algorithm>` 库函数笔记
 
 封装了容器通用的函数模板
 
@@ -2827,6 +2827,19 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
 * sort
   * sort要使用随机迭代器，也就是vector那种支持随机访问的迭代器
   * sort的底层是不稳定快排，若要保证稳定性需要用 `stable_sort`
+
+### 常用容器对比
+
+| 容器          | vector | list | deque | set  | multiset | map  | multimap |
+| ------------- | ------ | ---- | ----- | ---- | -------- | ---- | -------- |
+| 元素类型      | 值     | 值   | 值    | 值   | 值       | KV   | KV       |
+| 可重复？      | ✅      | ❌    |       |      |          |      |          |
+| 可随机存取？  |        |      |       |      |          |      |          |
+| 迭代器类型    |        |      |       |      |          |      |          |
+| 元素搜索速度  |        |      |       |      |          |      |          |
+| 快速插入      |        |      |       |      |          |      |          |
+| 释放          |        |      |       |      |          |      |          |
+| 允许reserve？ |        |      |       |      |          |      |          |
 
 # string
 
@@ -2862,7 +2875,7 @@ string是一个特殊的顺序表，与顺序表的不同之处是它的操作�
 * `operator[]` 重载的意义：可以像操作数组一样用 `[]` 去读写访问对象
 * `at` 和 `operator[]` 的区别是越界以后抛异常
 
-### 迭代器 iterator：范围for的底层实现，范围for的底层就是直接替换迭代器
+### 迭代器 iterator：范围for的底层实现，范围for的底层就是无脑直接替换迭代器
 
 * iterator是属于容器的一个类，它的用法很像指针，可能是指针也可能不是
 * string和vector不太使用迭代器，因为 `operator[]` 更方便，但是对于其他的容器如list、map、set来说只能用迭代器来访问。迭代器是所有容器的通用访问方式，用法类似
@@ -3339,18 +3352,31 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
 
 * vector成员
 
-  <img src="vectorMember.png" width="50%">
+  <img src="Vector结构.drawio.png">
 
 ### vector迭代器在 insert 和 erase 中的失效问题
 
 * 问题一：当insert（在pos前插入数据）中进行扩容时因为**会重新分配空间**会出现迭代器失效问题
-  * 旧的pos发生了越界造成了野指针问题。如下图所示，在扩容后pos指针不会有变化，已经不处于新开的空间中了，即不处于\_start和\_finish之间
+  * 旧的pos发生了越界造成了野指针问题。如下图所示，在扩容后pos指针不会有变化，已经不处于新开的空间中了，即不处于老的\_start和\_finish之间
   
     <img src="迭代器失效问题1.png">
   
-  * 修正：计算pos和_start的相对位置，扩容后令原pos重新指向
+  * 解决失效问题：扩容前计算pos和_start的相对位置，扩容后令原pos重新指向
   
-* 问题二：**在p位置修改插入数据以后不要访问p，因为p可能失效**。这是因为调用insert的时候pos是传值传参，内部对pos的修改不会影响实参。STL库中的实现也没有给pos设置为传引用传参，因为这又会引起一些其他的问题；erase有可能会出现缩容的情况，但是很少，此时也不要在erase后解引用访问
+* 问题二：扩容/缩容引发野指针问题。**在p位置修改插入数据以后不要访问p，因为p可能失效**。这是因为调用insert的时候pos是传值传参，内部对pos的修改不会影响实参。STL库中的实现也没有给pos设置为传引用传参，因为这又会引起一些其他的问题，因此我们尽量跟STL保持一致；**erase库中的实现有可能会出现缩容的情况，但是很少，此时也不要在erase后解引用访问**
+
+  ```c++
+  vector<int> v1;
+  v1.push_back(1);
+  v1.push_back(2);
+  v1.push_back(3);
+  v1.push_back(4);
+  vector<int>::iterator pos = find(v1.begin(), v1.end(), 3);
+  if (pos != v1.end())
+      v1.insert(pos, 30);
+  for (auto e : v1) { cout << e << " "; } //可能会访问野指针
+  cout << endl;
+  ```
 
 * 问题三：因为数据挪动，pos在insert/erase之后位置发生了改变
   * 问题代码
@@ -3377,7 +3403,7 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
     
     <img src="迭代器失效问题3.png" width="60%">
     
-  * 修正：每次insert/erase之后要更新迭代器，STL规定了erase/insert要返回删除/插入位置的下一个位置迭代器
+  * 修正：**每次insert/erase之后要更新迭代器（`++`），STL规定了erase/insert要返回删除/插入位置的下一个位置迭代器**
 
     ```cpp
     // STL规定了erase要返回删除位置的下一个位置迭代器
@@ -3402,10 +3428,12 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
         }
     }
     ```
-  
-* 总结：insert/erase之后不要直接访问pos。一定要更新，直接访问可能会出现各种意料之外的结果，且各个平台和编译器都有可能不同。这就是所谓的迭代器失效
+
+总结：insert/erase之后不要直接访问pos。一定要更新，直接访问可能会出现各种意料之外的结果，且各个平台和编译器都有可能不同。这就是所谓的迭代器失效
 
 ### 拷贝构造与高维数组的浅拷贝问题
+
+<https://www.jb51.net/article/272165.htm#_lab2_1_3>
 
 * 高维数组或容器里存的数据是另外的容器的时候，就会涉及到更深层次的深拷贝问题
 
@@ -3413,7 +3441,7 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
 
     原因是因为对于类似于在string的深拷贝实现使用的是memcpy函数，若容器中村的还是容器类的数据类型，那么它进行的仍然是浅拷贝。上图是利用杨辉三角OJ题做的试验，存储的数据类型是 `vector<vector<int>>`，可以看到左图虽然外层vector实现了深拷贝，但内容的数据仍然是浅拷贝。右边进行了修正
 
-* 深拷贝构造的写法
+* 深拷贝构造的写法：本质上是调用对象T实现的深拷贝复制运算符
   * 传统写法
 
     ```cpp
@@ -3423,7 +3451,7 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
         // 不能使用memcpy，memcpy也是浅拷贝，当出现类似与vector<vector<int>> 这种多维数组就会有问题
         // memcpy(_start, v._start, sizeof(T) * v.size());
         for (size_t i = 0; i < v.size(); i++)
-                _start[i] = v._start[i];
+                _start[i] = v._start[i]; //本质上是调用对象T实现的深拷贝复制运算符
         _finish = _start + v.size();
         _end_of_storage = _start + v.size();
     }
@@ -3475,22 +3503,28 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
 
 ## *list 链表*
 
+List是一个允许常数时间插入和删除的顺序容器，支持双向迭代器
+
 ### list的特殊operation
 
-* `splice`
+* `splice`：直接转移、拼接一个list到另外一个list上
 * `remove`
-* `srot` 排升序：属于list的sort和algorithm库中的sort的区别在于list的空间不连续，而algorithm的适用对象是连续空间，不能用于list。这是因为algorithm的底层qsort需要实现三数取中法。list的sort底层是MergeSort
-* list排序 VS vector排序：大量数据的排序vector效率远高于list
+* `srot` 排升序：属于list的sort和algorithm库中的sort的区别在于list的空间不连续，而algorithm的适用对象是连续空间，不能用于list。这是因为algorithm的底层qsort需要实现三数取中法。**list的sort底层是MergeSort**，而且list的归并不需要额外的空间了
+* list排序 VS vector排序：大量数据的排序vector效率远高于list，虽然MergeSort和qsort的效率都是***O(NlogN)***，但是vector的随机访问提供了巨大优势。**不要使用列表排序！**
 
-### list的erase迭代器失效
+### list的insert迭代器不失效，erase迭代器仍然失效
 
-* list的插入是在pos位置之前插入，它采取的方式新建一个newcode，然后改变指针指向，并没有挪动数据，因此迭代器的位置不会改变也不会出现野指针问题
+* List的insert是在pos位置之前插入，它采取的方式新建一个newcode，然后改变指针指向，并没有挪动数据，因此迭代器的位置不会改变也不会出现野指针问题
 * 但是当erase时迭代器仍然会失效：pos被erase，也就是被free了，这时候访问就是野指针问题。因此erase的返回值也是iterator，方便进行更新
 
 ### list的数据结构与迭代器模拟实现
 
-* C++中更倾向于使用独立的类封装，而不是使用内部类。因此list的设计采用了 `list_node`，迭代器和 `list` 总体分别封装成独立的类（这里 `list_npde` 和迭代器 直接用了 `struct`，因为要将类成员设置为公有，供 `list` 使用）
-* C++用**带头双向循环链表**来实现list
+list的增删查改实现可以参考数据结构中的双向带头循环列表的实现
+
+list的实现重点在于迭代器，因为list的迭代器不像vector是每一个元素的原生指针，而是指向一个节点node，节点中才规定了连接关系
+
+* C++中更倾向于使用独立的类封装，而不是使用内部类。因此list的设计由三个独立的类组成： `list_node` 类、迭代器和 `list` 总体分别封装成独立的类（这里 `list_npde` 和迭代器 直接用了 `struct`，因为要将类成员设置为公有，供 `list` 使用）
+* C++用**带头双向循环链表**来实现list，所以每个node里要带prev、next和头节点
 
     ```cpp
     template<class T>
@@ -3507,7 +3541,7 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
     }
     ```
     
-* 迭代器类封装
+* 迭代器类封装方便迭代器的运算符重载
 
     ```cpp
     template<class T, class Ref, class Ptr> // 准备多个模板参数是为了const_iterator复用
@@ -3570,7 +3604,7 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
     lt.push_back(Pos(10, 21));
     ```
   
-  * `T* operator->()` 返回的是lt中存储的一个结构体指针*Pos，若要取到其实中的数据应该要 `it->->_a1`，但编译器为了提高可读性，进行了特殊处理，即省略了一个 `->`，自动取到的就是Pos中的一个数据。因此当lt中存储的是自定义类型或者内置类型时，`->` 都可以看作是迭代器指针取数据
+  * `T* operator->()` 返回的是lt中存储的一个结构体指针*Pos，若要取到其实中的数据应该要 `it->->_a1`，因为it里首先存的是node，node里才存的是数据。但编译器为了提高可读性，进行了特殊处理，即省略了一个 `->`，自动取到的就是Pos中的一个数据。因此当lt中存储的是自定义类型或者内置类型时，`->` 都可以看作是迭代器指针取数据
   
     ```cpp
     T& operator*()
@@ -3951,6 +3985,54 @@ public:
 
 * 实现继承 Implementation inheritance：普通函数的继承是一种实现继承，子类继承了父类的普通函数，继承的是函数的实现
 * 接口继承 Interface inheritance：虚函数的继承是一种接口继承，子类继承的仅仅是父类虚函数的接口，因此要求返回值类型、函数名和参数列表完全相同。目的就是为了重写以达成多态。所以如果不需要实现多态，就不要把函数定义成虚函数
+
+### 实现接口
+
+C++ 中，虽然没有像一些其他编程语言（如 Java 和 C#）那样内置的 `interface` 关键字，但是可以通过抽象基类和纯虚函数来实现接口的概念
+
+接口在 C++ 中通常通过以下步骤实现：
+
+1. 创建抽象基类：定义一个抽象基类 Abstract Base Class，该类中声明纯虚函数（没有实现的虚函数）来定义接口的方法。抽象基类不能被实例化，只能被用作其他类的基类
+
+   ```c++
+   class Interface {
+   public:
+       virtual void method1() = 0;  // 纯虚函数声明
+       virtual void method2() = 0;
+   };
+   ```
+
+2. 派生具体类：从抽象基类派生具体类，实现接口中声明的纯虚函数
+
+   ```c++
+   class ConcreteClass : public Interface {
+   public:
+       void method1() override {
+           // 实现 method1 的具体逻辑
+       }
+   
+       void method2() override {
+           // 实现 method2 的具体逻辑
+       }
+   };
+   ```
+
+3. 使用接口：可以通过接口类型的指针或引用来访问具体类的对象，实现对接口的使用
+
+   ```c++
+   void someFunction(Interface* obj) {
+       obj->method1();  // 调用接口方法
+       obj->method2();
+   }
+   
+   int main() {
+       ConcreteClass concreteObj;
+       someFunction(&concreteObj);  // 将具体类对象传递给接口
+       return 0;
+   }
+   ```
+
+需要注意的是，C++ 中的接口是通过抽象基类和纯虚函数实现的，并且一个类可以实现多个接口（通过继承多个抽象基类）。在 C++20 及更高版本中，引入了 `concept` 的概念，可以用于更直观地定义和使用接口
 
 ## *多态原理介绍：以单继承为例*
 
@@ -4516,7 +4598,9 @@ C语言中 NULL 被定义为常量0，因此在使用空指针时可能会出现
 
 增加array的初衷是为了替代C语言的数组，因为委员会认为C语言的数组由于其越界判定问题所以特别不好，数组的越界写是抽查，所以不一定能查出来；越界读除了常数区和代码区外基本检查不出来
 
-array容器进行越界判定的方式是和vector类似的`[]`运算符重载函数。所以从越界检查的严格性和安全性角度来看还是有意义的。但因为用数组还是很方便而且用array不如用vector+resize。另一个问题是array和数组都是开在栈上，而vector是在栈上。所以C++11标准新增的array容器就变成了一个鸡肋
+forward_list和list的区别是它是一个单向链表，所以只有正向迭代器，在只需要正向迭代的情况下它的效率可能更高
+
+ array容器进行越界判定的方式是和vector类似的`[]`运算符重载函数。所以从越界检查的严格性和安全性角度来看还是有意义的。但因为用数组还是很方便而且用array不如用vector+resize。另一个问题是array和数组都是开在栈上，而vector是在栈上。所以C++11标准新增的array容器就变成了一个鸡肋
 
 ## *可变参数模板*
 
