@@ -24,7 +24,7 @@
 
 ```makefile
 test: test.cc # 依赖关系 -> 目标文件: 依赖文件
-    g++ -std=c++11 -o $@ $^ # 依赖方法，必须要用Tab锁进，不可以用空格
+    g++ -std=c++11 -o $@ $^ # 依赖方法，必须要用Tab缩进，不可以用空格
 
 .PHONY: clean
 clean:

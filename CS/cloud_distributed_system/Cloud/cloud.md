@@ -458,14 +458,6 @@ containerd实现CRI，成为CRI的事实标准
   * 需要调用docker API
   * 需要docker compose 或docker swarm
 
-# 实操
-
-Win上会自动挂载，Linux要手动挂载
-
-
-
-要先挂载一个文件，否则隔离不彻底，还是能看到其他文件
-
 # Cloud System Engineering
 
 ## *Introduction*
@@ -618,6 +610,73 @@ Deployment: Process of delivering software from a development environment to a l
 
 ### serverless
 
+# 容器虚拟化实操
+
+容器虚拟化是操作系统层的虚拟化。通过namespace进行各程序的隔离，通过cgroups进行资源的控制
+
+## *空间隔离实战*
+
+### NameSpace
+
+Linux的Namespace（命名空间）是一种操作系统级别的隔离机制，用于将系统资源抽象成独立的命名空间。每个命名空间提供了一种隔离的环境，使得在一个命名空间中的进程无法感知或影响到其他命名空间中的资源。Linux内核通过使用不同类型的命名空间，实现了对进程、网络、文件系统、用户、进程ID和挂载点等多个系统资源的隔离
+
+Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()` 和 `unshare()` 函数，为了确定隔离的到底是哪项namespace，在使用这些API 时，通常需要指定下面使用一些参数宏。如果要同时隔离多个namespace，和 `open` 一样可以使用 `|` 组合这些参数
+
+### 系统调用参数
+
+| NameSpace | 系统调用参数    | 被隔离的全局系统资源                   | 引入时的内核版本 |
+| --------- | --------------- | -------------------------------------- | ---------------- |
+| UTS       | `CLONE_NEWUTS`  | 主机名和域名                           | 2.6.19           |
+| IPC       | `CLONE_NEWIPC`  | 信号量、消息队列和共享内存--进程间通信 | 2.6.19           |
+| PID       | `CLONE_NEWPID`  | 进程编号                               | 2.6.24           |
+| Network   | `CLONE_NEWNET`  | 网络设备、网络栈、端口等               | 2.6.29           |
+| Mount     | `CLONE_NEWNS    | 文件系统挂载点                         | 2.4.19           |
+| User      | `CLONE_NEWUSER` | 用户和用户组                           | 3.8              |
+
+* UTS：每个容器能看到自己的hostname，拥有独立的主机名和域名
+* IPC：同一个IPC namespace的进程之间能互相通讯，不同的IPC namespace之间不能通信
+* PID：每个PID namespace中的进程可以有其独立的PID，每个容器可以有其PID为1的root进程
+* Network：每个容器用有其独立的网络设备，IP地址，IP路由表，/proc/net目录，端口号
+* Mount：每个容器能看到不同的文件系统层次结构
+* User：每个container可以有不同的user和group id
+
+### 需要用到的命令
+
+*  `dd` 命令用于读取、转换并输出数据。dd 可从标准输入或文件中读取数据，根据指定的格式来转换数据，再输出到文件、设备或标准输出
+* `mkfs` 命令用于在设备上创建Linux文件系统，俗称格式化
+* `df` /disk free 命令用于显示目前在Linux系统上的文件系统磁盘使用情况统计
+* mount命令用于加载文件系统到指定的加载点。此命令的也常用于挂载光盘，使我们可以访问光盘中的数据。Win上会自动挂载，Linux要手动挂载。挂载的实质是为磁盘添加入口（挂载点）
+* `unshare` 命令主要能力是使用与父程序不共享的名称空间运行程序
+
+
+
+
+
+
+
+要先挂载一个文件，否则隔离不彻底，还是能看到其他文件
+
+## *资源控制实战*
+
+### cgroups
+
+### 需要用到的命令
+
+* `pidstat`
+* `stress`
+
+## *LXC容器实战*
+
+### 需要用到的命令
+
+* `lxc-checkconfig`： 检查系统环境是否满足容器使用要求
+* `lxc-create -n NAME -t TEMPLATE_NAME [--template-options]`： 创建lxc容器
+* `lxc-start -n NAME -d`： 启动容器
+* `lxc-ls`： 列出所有容器，-f表示打印常用的信息
+* `lxc-info -n NAME`：查看容器相关的信息；
+* `lxc-attach`：进入容器执行命令
+* `lxc-stop`：停止容器
+* `lxc-destroy`：删除处于停机状态的容器
 
 # Docker的使用
 
