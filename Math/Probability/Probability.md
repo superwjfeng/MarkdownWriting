@@ -131,8 +131,14 @@
 
 ### Total probability formular/全概率公式
 
-* 最简单形式 <img src="TotalProb.jpg" width="50%">
-* 若 $B_1,B_2,\ldots,B_n$ 是 $\Omega$ 的一个划分，其互不相容（即 $A\subset B,P(AB)=P\left(A\right)$），则 $P(A)=\sum\limits_{i=1}^{n}{P(B_i)P(A|B_i)}$ <img src="TotalProbPartition.jpg" width="50%">
+* 最简单形式
+
+  <img src="TotalProb.jpg" width="30%">
+
+* 若 $B_1,B_2,\ldots,B_n$ 是 $\Omega$ 的一个划分，其互不相容（即 $A\subset B,P(AB)=P\left(A\right)$），则 $P(A)=\sum\limits_{i=1}^{n}{P(B_i)P(A|B_i)}$
+
+  <img src="TotalProbPartition.jpg" width="30%">
+
 * 模型
   * 摸彩模型
   * 敏感性问题调查

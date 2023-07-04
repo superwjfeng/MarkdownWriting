@@ -760,6 +760,238 @@ Fuzzing
 
 # Software Analysis
 
+## *Faults & Failures of Software*
+
+### Faults & error的种类
+
+* Undefined behaviour 未定义行为是指在程序中出现没有遵守编程语言标准定义的行为
+
+  C/C++以对机器的low-level控制闻名，未定义行为的存在是为了给编译器和实现提供更大的自由度，以便进行优化和简化。然而，程序员需要避免编写依赖于未定义行为的代码，因为它们可能会导致不可预测的结果和潜在的安全问题。良好的编程实践包括避免未定义行为，编写健壮和可移植的代码
+
+  典型的未定义行为有使用未初始化的变量、数组越界访问、整数溢出、野指针等
+
+  关于Binary Exploitation、缓冲区溢出攻击等内容可以看*C.md*
+
+  > **心脏出血漏洞**（英语：Heartbleed bug），简称为**心血漏洞**，是一个出现在[加密](https://zh.wikipedia.org/wiki/密码学)程序库[OpenSSL](https://zh.wikipedia.org/wiki/OpenSSL)的[安全漏洞](https://zh.wikipedia.org/wiki/安全漏洞)，该程序库广泛用于实现互联网的[传输层安全](https://zh.wikipedia.org/wiki/传输层安全协议)（TLS）协议。它于2012年被引入了OpenSSL中，2014年4月首次向公众披露。只要使用的是存在缺陷的OpenSSL实例，无论是服务器还是客户端，都可能因此而受到攻击。此问题的原因是在实现TLS的[心跳](https://zh.wikipedia.org/wiki/心跳_(计算机))扩展时没有对输入进行适当验证（缺少[边界检查](https://zh.wikipedia.org/wiki/边界检查)）[[3\]](https://zh.wikipedia.org/wiki/心脏出血漏洞#cite_note-3)，因此漏洞的名称来源于“心跳”（heartbeat）[[4\]](https://zh.wikipedia.org/wiki/心脏出血漏洞#cite_note-4)。该程序错误属于[缓冲区过读](https://zh.wikipedia.org/wiki/缓冲区过读)[[5\]](https://zh.wikipedia.org/wiki/心脏出血漏洞#cite_note-cve-5)，即可以读取的数据比应该允许读取的还多 -- wikipedia
+
+* Semantic faults 语义错误是指程序在语法上正确，但由于逻辑或语义错误而产生错误的行为。与语法错误不同，语义错误不会被编译器捕捉到，因为代码符合语言的语法规范，但程序的行为却不符合预期
+
+  语义错误可能导致程序输出错误的结果、崩溃或产生未定义的行为。这些错误通常是由程序员对程序逻辑的误解、错误的算法实现或错误的数据处理引起的
+
+  典型的语义错误有逻辑错误、数学错误、内存管理错误、并发错误（data race）、错误的函数调用和错误的类型转换等
+
+### Tradeoff
+
+* Soundness 完备性：if property P is provable, then P is true。不会漏报（假阴 false negative），但会误报（假阳 false positive）
+* Completness 完全性：if property P is true, then P is provable。不会误报，但会漏报
+
+|                  | Complete analysis                                            | Incomplete analysis                                          |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Sound analysis   | 既不会漏报也不会误报，但根据Gödel's incompleteness theorem 非常难实现 | 可能会误报，但不会漏报。这种情况是不理想的很麻烦要去找哪些是误报含麻烦 |
+| Unsound analysis | 可能会漏报，但不会误报。**这是我们要努力实现的目标**         | 既可能会误报，也可能会漏报                                   |
+
+### 软件分析方法
+
+静态程序分析（Static Program Analysis）和动态程序分析（Dynamic Program Analysis）是两种常见的软件工程技术，用于对计算机程序进行分析和评估。它们的目标是理解和改善程序的行为、性能和质量
+
+**静态程序分析是在程序的源代码或编译后的代码上进行分析，而不需要实际执行程序**。它主要关注程序的结构、语法和语义，通过对代码的语法解析、数据流分析、控制流分析、符号执行等技术来获取程序的各种属性和性质。静态分析可以检测代码中的潜在错误、安全漏洞、代码复杂度、代码规范违规等问题
+
+**动态程序分析是在程序运行时对其进行监测和评估**。它通过执行程序，并收集运行时数据（例如函数调用、变量状态、内存使用情况等）来获得关于程序行为的信息。动态分析可以帮助开发人员理解程序的实际执行路径、性能瓶颈、资源利用情况等，并可以用于调试和性能优化
+
+静态程序分析和动态程序分析在软件开发和维护过程中都扮演重要的角色。静态分析可以在早期发现潜在问题，减少代码缺陷和安全漏洞的风险。然而，它可能会产生误报或漏报，因为它只分析程序的代码而不执行实际运行。动态分析可以提供更准确的信息，因为它直接在程序运行时观察到的行为上进行分析，但需要运行程序，可能会导致一些性能开销。
+
+在实际应用中，静态和动态分析通常会结合使用，以获得更全面的程序分析结果。静态分析可以帮助指导动态分析的目标和范围，而动态分析可以提供实际运行环境中的行为信息来验证和补充静态分析的结果
+
+## *静态分析工具*
+
+### Compiler warnings
+
+<img src="静态分析.drawio.png">
+
+编译器自带的的分析工具
+
+* Java (more with -Xlint)
+* C/C++ with GCC, Clang, MSVC (more with -Wall, -Wextra, or /Wall respectively)
+* Rust (more with Clippy)
+
+### Infer
+
+<https://fbinfer.com>
+
+"Infer" 是一个由Facebook开发的用于Java、C、C++、Objective-C静态程序分析工具。它旨在帮助开发人员发现和修复移动应用程序中的潜在错误和问题，提高代码的质量和可靠性
+
+Infer 使用静态分析技术来分析应用程序的源代码，而无需实际运行应用程序。它通过检查代码的结构、语法和语义，并应用各种分析技术，如数据流分析、控制流分析、指针分析等，来发现代码中的潜在缺陷和问题
+
+Infer 可以帮助开发人员发现各种类型的代码问题，包括内存泄漏、空指针引用、资源使用错误、并发问题等。它还提供了对代码复杂性、代码规范违规、安全漏洞等方面的分析
+
+Infer 的工作流程通常包括以下步骤：
+
+1. 收集应用程序的源代码
+2. 对源代码进行静态分析，应用不同的分析技术来检测问题
+3. 生成分析报告，指出发现的问题，并提供相应的修复建议
+4. 开发人员根据报告中的信息进行代码修复和优化
+
+Infer 的优点包括：
+
+* 自动化：Infer 可以自动进行静态分析，无需手动运行和调试应用程序
+* 扩展性：Infer 可以应用于各种编程语言和应用程序类型
+* 高效性：Infer 使用高度优化的算法和技术，可以处理大型代码库并在合理的时间内生成分析结果
+* 可集成性：Infer 可以与常见的开发工具和持续集成系统集成，如版本控制系统、构建工具和代码审查工具
+
+### SpotBugs
+
+SpotBugs（前身为FindBugs）是一个开源的静态代码分析工具，用于发现Java应用程序中的潜在缺陷、错误和安全漏洞。SpotBugs使用静态分析技术，对Java字节码进行分析，而不需要源代码。它可以帮助开发人员提前发现和修复代码中的问题，提高代码质量和可靠性
+
+SpotBugs的特点和功能包括：
+
+1. 静态分析：SpotBugs通过检查Java字节码，识别代码中的潜在问题。它使用一系列预定义的规则和模式，来发现常见的编程错误、潜在的空指针引用、资源泄漏、并发问题等
+2. 多种规则集：SpotBugs提供了多个规则集，包括默认规则集、安全规则集和其他扩展规则集。开发人员可以根据需要选择合适的规则集，并自定义规则集来满足项目的特定需求
+3. 报告生成：SpotBugs生成详细的分析报告，指出发现的问题和错误，并提供修复建议。报告可以以不同的格式输出，如HTML、XML和文本格式，方便开发人员查看和分析结果
+4. IDE集成：SpotBugs可以与常见的集成开发环境（IDE）集成，如Eclipse和IntelliJ IDEA。这样开发人员可以在开发过程中实时检查代码，并及时发现问题
+5. 命令行支持：SpotBugs也提供命令行界面，可以通过命令行运行分析，方便集成到构建系统和持续集成流程中
+
+### LLVM Compiler Infrastructure
+
+LLVM（Low Level Virtual Machine）是一个开源的编译器基础设施项目，旨在为各种编程语言提供优化的编译器和工具，用来开发编译器前端前端和后端。LLVM的设计目标是提供可移植、高效和灵活的编译解决方案
+
+LLVM最早以C/C++为实作对象，到目前它已支援包括ActionScript、Ada、D语言、Fortran、GLSL、Haskell、Java字节码、Objective-C、Swift、Python、Ruby、Crystal、Rust、Scala以及C#等语言
+
+LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下是 LLVM 的关键组件
+
+<img src="LLVM的三阶段设计.png">
+
+1. 前端（Frontend）：LLVM 前端是与特定编程语言相关的部分。它能够将不同的源代码语言转换为 LLVM 的中间表示（LLVM IR），这种中间表示是一种低级别的、面向对象的指令集表示形式，类似于汇编语言
+2. 优化器（Optimizer）：LLVM 优化器是 LLVM 框架的核心组件之一。它可以对 LLVM IR 进行各种优化，包括常量折叠、循环优化、内联函数、代码消除、死代码消除等。这些优化可以显著提高程序的性能和执行效率
+3. 后端（Backend）：LLVM 后端负责将优化后的 LLVM IR 转换为目标平台的机器码。LLVM 支持多种不同的目标体系结构，包括x86、ARM、MIPS等，因此可以在多个平台上生成高效的机器码
+4. 工具链和库：LLVM 提供了一整套工具和库，用于构建编译器和开发工具。这些工具包括llvm-as（将汇编代码转换为 LLVM IR）、llvm-dis（将 LLVM IR 转换为可读的汇编代码）、llvm-link（将多个 LLVM 模块链接在一起）
+
+<img src="LLVM程序分析.drawio.png">
+
+### Clang Analyzer & Clang Tidy
+
+Clang Analyzer和Clang Tidy都是基于LLVM项目的开源静态代码分析工具，用于帮助开发人员发现和修复C、C++和Objective-C代码中的潜在问题和错误。它们可以作为Clang编译器的附加组件使用
+
+* Clang Analyzer： Clang Analyzer是基于LLVM静态分析框架的一部分，旨在检测代码中的常见编程错误、内存管理问题、并发问题等。它通过对源代码进行符号执行和路径敏感分析，构建程序的控制流图，并使用各种静态分析技术来检测可能的错误和缺陷。Clang Analyzer能够识别空指针引用、内存泄漏、使用未初始化的变量、并发问题等问题，并提供相关的警告和报告
+* Clang Tidy： Clang Tidy是另一个基于Clang的工具，用于进行静态代码分析和提供代码改进建议。它使用一系列可配置的检查器来检查代码，并提供建议和修复建议来改进代码质量和可读性。Clang Tidy可以检测和修复代码规范违规、不必要的复杂性、潜在的错误使用等问题。它还支持自定义规则和插件，以满足特定项目的需求
+
+Clang和GCC
+
+* Clang：Clang是基于LLVM项目开发的编译器前端。它采用模块化的设计，将编译过程划分为前端和后端。Clang的前端负责处理源代码，生成LLVM中间表示（LLVM IR）。它注重速度、可读性和可扩展性
+* GCC：GCC（GNU Compiler Collection）是GNU项目的一部分，它是一个集成的编译器系统。GCC以传统的单体设计为基础，包含前端、优化器和后端。它在代码生成方面具有丰富的优化和支持
+
+## *动态分析工具*
+
+### Dynamic binary instrumentation
+
+Dynamic Binary Instrumentation（动态二进制插桩）是一种在程序运行时动态修改和分析二进制代码的技术。它允许开发人员或安全研究人员在不修改源代码的情况下，对程序进行监视、分析和修改
+
+动态二进制插桩通常涉及以下步骤：
+
+1. 代码注入：通过插入特定的指令或代码片段，将插桩代码注入到目标二进制程序的内存中。插桩代码用于监视和修改程序执行过程
+2. 代码跟踪：插桩代码可以记录程序执行的详细信息，如函数调用、内存访问、分支指令等。这样可以帮助开发人员或研究人员了解程序的执行流程和行为
+3. 动态分析：通过在程序执行过程中监视和记录特定事件，如函数调用、参数传递、内存访问等，可以进行动态分析。这对于性能分析、错误排查、安全审计等方面非常有用
+4. 动态修改：插桩代码可以在程序运行时修改二进制代码，以实现诸如函数替换、错误修复、安全增强等功能。通过动态修改，可以在不重新编译和重新部署程序的情况下进行功能增强和修复
+
+动态二进制插桩通常由专用的工具和框架实现，例如**Pin、DynamoRIO、Valgrind**等。这些工具提供了API和库，使开发人员能够编写插桩代码，并在目标程序执行时加载和运行插桩代码
+
+### Compiler-assisted instrumentation
+
+Compiler-Assisted Instrumentation（CAI）借助编译器的帮助，一般比动态二进制插桩更高效
+
+CAI的工作流程通常如下：
+
+1. 源代码编译：源代码通过编译器进行编译，生成目标二进制文件
+2. 插桩代码生成：编译器根据用户的指定或默认配置，在目标二进制文件中插入额外的代码。这些代码可以是函数调用、计数器增加、事件记录等
+3. 目标二进制文件生成：插桩代码被合并到目标二进制文件中，生成最终的可执行文件
+4. 运行时收集信息：当程序运行时，插入的代码会被执行，收集所需的信息。这些信息可以用于分析程序的执行过程、发现错误、评估性能等
+
+### UndefinedBehaviorSanitizer
+
+<img src="编译器辅助插桩.drawio.png">
+
+UndefinedBehaviorSanitizer（UBSanitizer或UBSan）是LLVM/Clang编译器提供的一种工具，用于检测和诊断C/C++程序中的未定义行为（Undefined Behavior）。未定义行为是指在程序中使用了编程语言标准未定义的操作，这样的操作可能导致程序产生不确定的行为，包括崩溃、错误结果或安全漏洞
+
+UBSanitizer旨在帮助开发人员发现并修复潜在的未定义行为问题，从而提高程序的健壮性和安全性。它通过在编译时添加额外的运行时检查来实现对未定义行为的检测。使用UBSanitizer的好处在于，它能够帮助开发人员及早发现潜在的未定义行为问题，这些问题在某些情况下可能不容易被其他工具或静态分析器检测到。然而，UBSanitizer也可能会引入一些额外的运行时开销，因为它需要在程序运行时进行检查。
+
+要启用UBSanitizer，可以使用Clang编译器提供的特定选项进行编译。例如，在使用Clang编译C/C++程序时，可以使用以下选项来启用UBSanitizer
+
+```shell
+clang -fsanitize=undefined <source_file.c> # C
+clang++ -fsanitize=undefined <source_file.cpp> # cpp
+gcc -fsanitize=undefined
+```
+
+### Valgrind
+
+Valgrind是一个用于程序开发和调试的开源工具集，主要用于检测内存错误、数据竞争和性能问题。它提供了一系列的工具，其中最知名和常用的是Memcheck
+
+Memcheck是Valgrind工具集中最受欢迎的工具之一，用于检测内存错误，如内存泄漏、使用未初始化的变量、越界访问、重复释放等。Memcheck通过在运行时跟踪程序的内存访问，并提供详细的报告，帮助开发人员发现和修复潜在的内存错误。
+
+除了Memcheck之外，Valgrind还提供了其他几个工具，包括：
+
+1. Cachegrind：用于性能分析的工具，可以检测程序中的缓存命中率、分支预测和指令执行等方面的问题，帮助开发人员优化程序的性能。
+2. Callgrind：用于程序的函数调用图分析，可以帮助开发人员了解程序中函数的调用关系、调用次数和执行时间，以便进行性能优化。
+3. Helgrind：用于检测多线程程序中的数据竞争问题，帮助开发人员发现并修复由于线程间共享数据而引发的竞态条件和死锁等问题。
+4. Massif：用于内存分析的工具，可以跟踪程序的堆内存分配和释放情况，帮助开发人员了解程序在不同时间点的内存使用情况。
+
+Valgrind工具集对于开发人员来说非常有价值，可以帮助他们发现和解决在程序开发过程中常见的内存错误、性能问题和并发问题。它提供了详细的报告和统计信息，帮助开发人员定位问题并进行调试和优化。
+
+要使用Valgrind，需要将目标程序与Valgrind工具一起运行。例如，要使用Memcheck检测内存错误，可以在命令行中运行以下命令。Valgrind会在运行时拦截目标程序的执行，并提供相应的报告和分析结果
+
+```shell
+valgrind --tool=memcheck <your_program>
+```
+
+### AddressSanitizer
+
+AddressSanitizer（ASan）是一种内存错误检测工具，旨在帮助开发人员发现和调试C/C++程序中的内存错误，如缓冲区溢出、使用释放的内存和内存访问越界等问题。它由Google开发，集成在LLVM/Clang编译器中
+
+AddressSanitizer通过在程序运行时进行内存访问检测和记录来工作。它使用了**内存影子 shadow memory**的概念，在程序的每个字节之间维护一个附加的内存区域，用于存储关于每个内存位置的元数据信息。这些元数据用于跟踪内存分配、释放和访问情况
+
+<img src="ShadowMemory.drawio.png">
+
+当程序运行时，AddressSanitizer会检测到以下类型的内存错误：
+
+1. 缓冲区溢出：当程序写入超出分配的缓冲区范围的数据时，AddressSanitizer会捕获该错误并报告，在每个object前后添加readzone/trip wires
+
+   <img src="ASanRedzone.drawio.png">
+
+2. 内存访问越界：当程序访问超出分配的内存区域范围的数据时，AddressSanitizer会检测到越界访问
+
+3. 释放后使用：当程序在释放后继续使用已经释放的内存时，AddressSanitizer会检测到此类错误
+
+4. 内存泄漏：AddressSanitizer还可以检测到未释放的内存，帮助开发人员发现内存泄漏问题
+
+```shell
+clang -fsanitize=address <source_file.c>
+clang++ -fsanitize=address <source_file.cpp>
+```
+
+AddressSanitizer会引入一些额外的运行时开销，包括内存和性能方面的开销，比如说shadow memory。因此，它通常在调试和测试阶段使用，以帮助发现和修复内存错误，而不是在生产环境中使用
+
+### MemorySanitizer
+
+MemorySanitizer（MSan）是一种内存错误检测工具，旨在帮助开发人员发现和调试C/C++程序中的未初始化内存访问问题。它是由Google开发的，集成在LLVM/Clang编译器中
+
+MemorySanitizer通过在程序运行时进行动态分析来检测未初始化内存访问。它使用了 shadow memory，类似于AddressSanitizer（ASan），但其主要关注点是检测未初始化内存的使用
+
+在程序的每个字节之间，MemorySanitizer维护一个附加的内存区域，用于存储关于每个内存位置的元数据信息。这些元数据用于跟踪内存的初始化状态。当程序访问未初始化的内存时，MemorySanitizer会捕获该错误并报告
+
+MemorySanitizer可以检测到以下类型的未初始化内存访问问题：
+
+1. 读取未初始化内存：当程序试图读取未初始化的内存时，MemorySanitizer会检测到该错误
+2. 写入未初始化内存：当程序试图向未初始化的内存位置写入数据时，MemorySanitizer会捕获该错误
+3. 未初始化的内存传递：当程序将未初始化的内存传递给其他函数或操作时，MemorySanitizer也可以检测到该问题
+
+与AddressSanitizer类似，MemorySanitizer可以与其他工具和调试器一起使用，提供详细的错误报告和调试信息，帮助开发人员定位和修复未初始化内存访问问题。它通常与Clang编译器一起使用，并通过在编译时添加特定的选项来启用
+
+```shell
+clang -fsanitize=memory <source_file.c>
+clang++ -fsanitize=memory <source_file.cpp>
+```
+
+### ThreadSanitizer
+
 # Software Management and Deployment
 
 ## *Git*

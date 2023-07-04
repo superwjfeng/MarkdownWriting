@@ -265,6 +265,7 @@ ADD_SUBDIRECTORY(source_dir [binary_dir] [EXCLUDE_FROM_ALL])
 * `EXCLUDE_FROM_ALL` 函数是将写的⽬录从编译中排除，如程序中的example
 * 例：`ADD_SUBDIRECTORY(src bin)`
   * 将 src ⼦⽬录加⼊⼯程并指定编译输出(包含编译中间结果)路径为bin ⽬录
+  * 本质上和包头文件是一样的，相当于包子文件中的 `ADD_EXECUTABLE` 直接拷进来
   * 如果不进⾏ bin ⽬录的指定，那么编译结果(包括中间结果)都将存放在build/src ⽬录
 
 ## *构建库*

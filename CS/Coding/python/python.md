@@ -1470,6 +1470,10 @@ numpy中 `(n,)` 形状的既可以是行也可以是列，都是1D-array，当�
 
 # 常用的python工具包
 
+## *conda*
+
+用zsh安装sh可能会有问题，这时候可以换用bash安装
+
 ## *tqdm 进度条*
 
 简介：https://zhuanlan.zhihu.com/p/163613814
