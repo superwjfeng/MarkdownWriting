@@ -1666,7 +1666,9 @@ public class SimpleTCPClient {
 }
 ```
 
-这个代码使用了Java中的`Socket`类来创建一个TCP套接字，并使用该套接字连接到指定的IP地址和端口号。然后，它使用套接字的`getOutputStream()`方法获取输出流，并使用`write()`方法向服务器发送数据。
+这个代码使用了Java中的`Socket`类来创建一个TCP套接字，并使用该套接字连接到指定的IP地址和端口号。然后，它使用套接字的`getOutputStream()`方法获取输出流，并使用`write()`方法向服务器发送数据
+
+注意：Java在new socket的时候就自动connect了，不需要像C里面还需要调用conenct
 
 接下来，它使用套接字的`getInputStream()`方法获取输入流，并使用`read()`方法从服务器读取响应数据。最后，它关闭了套接字和相关的流。
 

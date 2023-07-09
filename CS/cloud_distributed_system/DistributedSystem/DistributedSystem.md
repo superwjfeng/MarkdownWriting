@@ -815,7 +815,7 @@ Gossip协议，也被称为 epidemic protocols，它的核心思想是一个希�
 
 Gossip 的三板斧分别是：直接邮寄 Direct Mail、反熵 Anti-entropy 和谣言传播 Rumor mongering，它们是实现最终一致性的常用三种方法
 
-### 
+
 
 
 
