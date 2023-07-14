@@ -499,12 +499,16 @@ Beta分布 $X\sim Be(a,b)$|$p(x)=\frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}x^{a-1}(1
 * 利用分布函数求（$g\left(x\right)$ 分段单调时）：原理和严格单调的公式是一样的
   * 因为是已知X密度函数来求Y密度函数，所以还是对x积分，上下限相当于是给出了Y求Y对X的反函数，因此是用将X用Y表示
   * Ex：设随机变量 $X$ 从 $\left(-\frac{\pi}{2},\frac{\pi}{2}\right)$ 上的均匀分布，求随机变量 $Y=\cos{X}$ 的密度函数 $p_Y\left(y\right)$  
-    * <img src="cosx_PDF.jpg">
+    
+    <img src="cosx_PDF.jpg">
+    
     * 画出的图只是Y与X的映射关系，不是对它作积分！！
     * 从实际意义来看：上下限实际上取得都是X的范围，但是因为要求Y的分布，因此将X用Y来表示
     * 但如果仅从计算的角度来看：积分里的密度函数本质上是对y的变上限积分，因此真正的变量是y，这两种看待的角度是矛盾的，注意不要混淆
   * Ex：设随机变量X服从标准正态分布 $N\left(0,1\right)$，分别求 $Y=\lvert X\rvert$ 和 $Y=2X^2+1$ 的密度函数
-    * <img src="Ex_norm_PDF.jpg" width="90%">
+    
+    <img src="Ex_norm_PDF.jpg" width="90%">
+    
     * 求除了正态分布之外的密度函数可以选择定积分后求导也可以选择直接求变上限函数的导数，别忘了最后要求一个X反函数的导
 * 延伸定理
   * 正态变量的线性变换仍为正态变量
@@ -811,7 +815,10 @@ Cauthy分布|$p\left(x\right)=\frac{1}{\pi\left(1+x^2\right)},\ -\infty<x<+\inft
 
 ## *Law of Large Numbers LLN 大数定律*
 
-大数定律的一般形式 ：研究在什么条件下随机变量序列的算术平均依概率收敛到其均值 $\frac{1}{n}\sum\limits_{i=1}^{n}{X_i}\ \overrightarrow{P}\ E\left(\frac{1}{n}\sum\limits_{i=1}^{n}X_i\right)$（或 $\lim\limits_{n\rightarrow\infty}{P\left\{\lvert\frac{1}{n}\sum\limits_{i=1}^{n}X_i-\frac{1}{n}\sum\limits_{i=1}^{n}E\left(X_i\right)\rvert<\varepsilon\right\}}=1$），即 $\bar{X}\ \overrightarrow{p}\ E\left(\bar{X}\right)$）
+大数定律的一般形式 ：研究在什么条件下随机变量序列的算术平均依概率收敛到其均值
+$$
+\frac{1}{n}\sum\limits_{i=1}^{n}{X_i}\ \overrightarrow{P}\ E\left(\frac{1}{n}\sum\limits_{i=1}^{n}X_i\right)\ or\\\lim\limits_{n\rightarrow\infty}{P\left\{\lvert\frac{1}{n}\sum\limits_{i=1}^{n}X_i-\frac{1}{n}\sum\limits_{i=1}^{n}E\left(X_i\right)\rvert<\varepsilon\right\}}=1,\ i.e.\bar{X}\ \overrightarrow{p}\ E\left(\bar{X}\right)
+$$
 
 ### Chebyshev inequality 切比雪夫不等式
 
@@ -846,22 +853,42 @@ Cauthy分布|$p\left(x\right)=\frac{1}{\pi\left(1+x^2\right)},\ -\infty<x<+\inft
 ## *Central Limit Theorem CLT中心极限定理*
 
 * 正态分布在自然界中非常常见。观察表明，如果一个量是由大量相互独立的随机因素的影响所造成的，而每个因素所起的作用都很微小，则这个量一般都服从或近似服从正态分布（独立随机变量和Y_n=\sum_{i=1}^{n}X_i的分布函数按分布收敛于正态分布）。中心极限定理研究独立随机变量之和所特有的规律性问题。
+
 * 独立同分布下的中心极限定理 Linderberg-Levy中心极限定理：设 $\left\{X_n\right\}$ 是独立同分布的随机变量序列，且 $E\left(X_i\right)=\mu,Var\left(X_i\right)=\sigma^2>0$ 存在，随机变量 $Y_n^\ast=\frac{\sum\limits_{k=1}^{n}X_k-E\left(\sum\limits_{k=1}^{n}X_k\right)}{\sqrt{D\left(\sum\limits_{k=1}^{n}X_k\right)}}=\frac{\sum\limits_{k=1}^{n}X_k-n\mu}{\sqrt n\sigma}\sim N\left(0,1\right)$ 的分布函数为 $F_n\left(x\right)=P\left\{Y_n\le x\right\}=P\left\{\frac{\sum\limits_{k=1}^{n}X_k-n\mu}{\sqrt n\sigma}<x\right\}$，则对任意实数 $x$ 有 $\lim\limits_{n\rightarrow\infty}F_n\left(x\right)=\Phi\left(x\right)=\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{x}{e^{-\frac{t^2}{2}}dt}$。即 $Y_n$ 依分布收敛于满足标准正态分布的X
-  * 若独立同分布序列 $\left\{X_n\right\}$，且 $E\left(X_i\right)=\mu,Var\left(X_i\right)=\sigma^2>0$ 存在，当n很大时，前n各随机变量和 $\sum\limits_{k=1}^{n}X_k\sim N\left(n\mu,n\sigma^2\right)$，标准化后有 $\frac{\sum\limits_{k=1}^{n}X_k-E\left(\sum\limits_{k=1}^{n}X_k\right)}{\sqrt{D\left(\sum\limits_{k=1}^{n}X_k\right)}}=\frac{\sum_{k=1}^{n}X_k-n\mu}{\sigma\sqrt n}\sim N\left(0,1\right)$
+  * 若独立同分布序列 $\left\{X_n\right\}$，且 $E\left(X_i\right)=\mu,Var\left(X_i\right)=\sigma^2>0$ 存在，当n很大时，前n各随机变量和 $\sum\limits_{k=1}^{n}X_k\sim N\left(n\mu,n\sigma^2\right)$，标准化后有
+    $$
+    \frac{\sum\limits_{k=1}^{n}X_k-E\left(\sum\limits_{k=1}^{n}X_k\right)}{\sqrt{D\left(\sum\limits_{k=1}^{n}X_k\right)}}=\frac{\sum_{k=1}^{n}X_k-n\mu}{\sigma\sqrt n}\sim N\left(0,1\right)
+    $$
+  
   * 无论每一个随机变量 $X_i$ 服从什么分布，只要每一个 $X_i$ 在和 $\sum\limits_{k=1}^{n}X_k$ 的分布中起的作用很微小，则和 $\sum\limits_{k=1}^{n}X_k$ 近似服从正态分布
-  * 但n很大时，可用正态分布近似计算概率：$P\left\{a<\sum_{k=1}^{n}X_k<b\right\}=P\left\{\frac{a-n\mu}{\sigma\sqrt n}<\frac{\sum_{k=1}^{n}X_k-n\mu}{\sigma\sqrt n}<\frac{b-n\mu}{\sigma\sqrt n}\right\}\approx\Phi\left(\frac{b-n\mu}{\sigma\sqrt n}\right)-\Phi\left(\frac{a-n\mu}{\sigma\sqrt n}\right)$
+  
+  * 但n很大时，可用正态分布近似计算概率
+    $$
+    P\left\{a<\sum_{k=1}^{n}X_k<b\right\}=P\left\{\frac{a-n\mu}{\sigma\sqrt n}<\frac{\sum_{k=1}^{n}X_k-n\mu}{\sigma\sqrt n}<\frac{b-n\mu}{\sigma\sqrt n}\right\}\approx\Phi\left(\frac{b-n\mu}{\sigma\sqrt n}\right)-\Phi\left(\frac{a-n\mu}{\sigma\sqrt n}\right)
+    $$
+    
 
 ### 二项分布的正态近似
 
 De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定理，它是专门针对二项分布的
 
 * 说明
-  * 设随机变量 $Y_n\sim B\left(n,p\right)$，则对任意实数x，有 $\lim\limits_{n\rightarrow\infty}P\left\{\frac{Y_n-np}{\sqrt{np\left(1-p\right)}}\le x\right\}=\Phi\left(x\right)=\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{x}{e^{-\frac{t^2}{2}}dt}$
+  * 设随机变量 $Y_n\sim B\left(n,p\right)$，则对任意实数x，有
+    $$
+    \lim\limits_{n\rightarrow\infty}P\left\{\frac{Y_n-np}{\sqrt{np\left(1-p\right)}}\le x\right\}=\Phi\left(x\right)=\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{x}{e^{-\frac{t^2}{2}}dt}
+    $$
+  
   * 定理表明，若 $X\sim B\left(n,p\right)$，当n充分大时，$X\sim N\left(np,np\left(1-p\right)\right)$，即正态分布是二项分布的极限分布
-  * 若 $X\sim B\left(n,p\right)$，当n很大时，可用正态分布近似简化计算二项分布的概率 $P\left\{a<X<b\right\}=P\left\{\frac{a-np}{\sqrt{np\left(1-p\right)}}<\frac{X-np}{\sqrt{np\left(1-p\right)}}<\frac{b-np}{\sqrt{np\left(1-p\right)}}\right\}\approx\Phi\left(\frac{b-np}{\sqrt{np\left(1-p\right)}}\right)-\Phi\left(\frac{a-np}{\sqrt{np\left(1-p\right)}}\right)$
+  
+  * 若 $X\sim B\left(n,p\right)$，当n很大时，可用正态分布近似简化计算二项分布的概率
+    $$
+    P\left\{a<X<b\right\}=P\left\{\frac{a-np}{\sqrt{np\left(1-p\right)}}<\frac{X-np}{\sqrt{np\left(1-p\right)}}<\frac{b-np}{\sqrt{np\left(1-p\right)}}\right\}\approx\Phi\left(\frac{b-np}{\sqrt{np\left(1-p\right)}}\right)-\Phi\left(\frac{a-np}{\sqrt{np\left(1-p\right)}}\right)
+    $$
+  
 * 应用场景
   * n为多大时，二项分布可用正态分布做近似计算？要依据实际问题情况来定，一般 $n\geq50$ 就可以，有时也可以放宽到 $n\geq30$
   * 在实际问题中，当 $p\le0.1$，n较大且 $np\le5$ 时，常用泊松分布做二项分布的近似计算；当n较大且 $np>5$ 或 $n\left(1-p\right)>5$ 时，常用正态分布做二项分布的近似计算
+  
 * 计算
   * 给定 $n,y$ 求 $\beta$
   * 给定 $n,\beta$ 求 $y$（求分位数）
@@ -1180,7 +1207,9 @@ $$
 * 最大似然思想：做一次试验就出现的事件有较大的概率，或者说让事件概率最大化意味着事件同时发生的可能性最大，而因为这些事件数据是同时发生的，所以此时得到的参数就是要估计的概率模型参数
 * 最大似然估计法：利用==已知的==总体的概率密度（分布律），根据最大似然思想，设计总体概率密度（分布律）中的未知参数的方法
 * MLE的直观理解
-  * <img src="MLE_ex.JPG" width="75%">
+  
+  <img src="MLE_ex.JPG" width="75%">
+  
   * 考虑射击10次，命中k次，命中概率为p，即满足二项分布 $X\sim B(n,p)$，给与命中数据为第一次10中4，第二次10中5，第三次10中6。估计参数 $p$
   * 构造最大似然函数，最大似然函数的意义是事件同时发生的概率，也就是当事件真实发生时，要使概率最大
   * 从结果可知，$p=0.5$，若不另MLE取最大值，则 $p$ 可能为0.3（图中绿色）或0.7（图中蓝色），此时概率分布明显改变，不符合实验结果
@@ -1310,12 +1339,19 @@ Bayes学派的基本观点是：任一未知量 $\theta$ 都可看做随机变�
 
 * $\mu_1-\mu_2$ 的置信区间
   * $\sigma_1^2$ 和 $\sigma_2^2$ 已知时
-    * 选取枢轴量 $u=\frac{\bar{X}-\bar{Y}-\left(\mu_1-\mu_2\right)}{\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_2^2}{n_2}}}\sim N\left(0,1\right)$
+    * 选取枢轴量
+      $$
+      u=\frac{\bar{X}-\bar{Y}-\left(\mu_1-\mu_2\right)}{\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_2^2}{n_2}}}\sim N\left(0,1\right)
+      $$
+    
     * 给定置信水平 $1-\alpha$，即要使得 $P\left\{-u_{\alpha/2}<\frac{\bar{X}-\bar{Y}-\left(\mu_1-\mu_2\right)}{\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_2^2}{n_2}}}<u_{\alpha/2}\right\}=1-\alpha$。得 $P\left\{\bar{X}-\bar{Y}-u_{\alpha/2}\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_2^2}{n_2}}<\mu<\bar{X}-\bar{Y}+u_{\alpha/2}\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_2^2}{n_2}}\right\}$，故 $\mu$ 的置信水平为 $1-\alpha$ 的置信区间为 $\left(\bar{X}-\bar{Y}-u_{\alpha/2}\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_2^2}{n_2}},\ \bar{X}-\bar{Y}+u_{\alpha/2}\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_2^2}{n_2}}\right)$
+    
   * $\sigma_1^1=\sigma_2^2=\sigma^2$ 未知时
     * 选取枢轴量 $t=\frac{\bar{X}-\bar{Y}-\left(\mu_1-\mu_2\right)}{S_w\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}}\sim t\left(n_1+n_2-2\right)$，其中$S_w=\sqrt{\frac{\left(n_1-1\right)S_1^2+\left(n_2-1\right)S_2^2}{n_1+n_2-2}}$
     * 给定置信水平 $1-\alpha$，即要使得 $P\left\{-t_{\alpha/2}\left(n_1+n_2-2\right)<\frac{\bar{X}-\bar{Y}-\left(\mu_1-\mu_2\right)}{S_w\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}}<t_{\alpha/2}\left(n_1+n_2-2\right)\right\}=1-\alpha$。得 $P\left\{\bar{X}-\bar{Y}-t_{\alpha/2}\left(n_1+n_2-2\right)S_w\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}<\mu<\bar{X}-\bar{Y}+t_{\alpha/2}\left(n_1+n_2-2\right)S_w\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}\right\}$，故 $\mu$ 的置信水平为 $1-\alpha$ 的置信区间为 $\left(\bar{X}-\bar{Y}-t_{\alpha/2}\left(n_1+n_2-2\right)S_w\sqrt{\frac{1}{n_1}+\frac{1}{n_2}},\ \bar{X}-\bar{Y}+t_{\alpha/2}\left(n_1+n_2-2\right)S_w\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}\right)$
+    
   * $\frac{\sigma_2^2}{\sigma_1^2}=c$ 已知时
+  
 * $\frac{\sigma_1^2}{\sigma_2^2}$ 的置信区间
 
 ### 单侧置信区间
@@ -1413,9 +1449,17 @@ $$
 
 ## *双侧假设检验与单侧假设检验：若原假设为 $H_0:\theta=\theta_0$。备择假设为 $H_1$*
 
-* 双侧检验：$H_0:\theta=\theta_0,H_1:\theta\neq\theta_0$（不等、有差异）<img src="double_side_test.png">
-* 左侧检验：$H_0:\theta\geq\theta_0,H_1:\theta<\theta_0$（降低、减少）<img src="left_side_test.png">
-* 右侧检验：$H_0:\theta\le\theta_0,H_1:\theta>\theta_0$（提高、增加）<img src="right_side_test.png" width="25%">
+* 双侧检验：$H_0:\theta=\theta_0,H_1:\theta\neq\theta_0$（不等、有差异）
+
+  <img src="double_side_test.png">
+
+* 左侧检验：$H_0:\theta\geq\theta_0,H_1:\theta<\theta_0$（降低、减少）
+
+  <img src="left_side_test.png">
+
+* 右侧检验：$H_0:\theta\le\theta_0,H_1:\theta>\theta_0$（提高、增加）
+
+  <img src="right_side_test.png">
 
 ## *正态总体参数假设检验*
 
@@ -1463,3 +1507,6 @@ $$
 ### 符号检验
 
 ### 秩和检验
+
+# 试验统计
+
