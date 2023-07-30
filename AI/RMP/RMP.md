@@ -104,6 +104,15 @@ Path planning 和 Motion planning 是有区别的
 
 ## *例子*
 
+### Holonomic robot
+
+可以依据DoF的可控性 controllability 划分为 non-holonomic or holonomic robot
+
+* holonomic：在所有的自由度上都可控，比如基于万向轮的机器人 robot built on Omni-wheels
+* Non-holonomic robot：可控自由度小于机器人自身的自由度，比如二维平面的小车自身有3个自由度 $\left\{x, y,\theta\right\}$，即平面坐标和车身朝向，但平面小车的可控自由度是2个，即加减速度，转动方向盘，不能随意的漂移运动
+
+从另一个直观通俗的角度可以理解为：如果机器人可以在N维空间中朝任意方向移动，则对于N维空间是完整性的。而机器人在N维空间中不能朝任意方向移动，则认为是非完整性约束
+
 ### Circular Mobile Robot
 
 Grid-based representation（基于网格的表示）是一种常见的构型空间表示方法。
@@ -114,13 +123,48 @@ Grid-based representation（基于网格的表示）是一种常见的构型空�
 
 基于网格的表示具有简单和直观的优点，可以处理多种形状和复杂度的环境。然而，它也存在网格分辨率的权衡，较细的网格可以提供更准确的路径规划结果，但会增加计算和存储开销，而较粗的网格可能导致路径规划的精度损失。因此，在实际应用中，需要根据具体情况选择合适的网格分辨率。
 
-
-
-
-
 图片对于可视化构型空间中的障碍物是有用的，但它们并不足以规划无碰撞运动。原因是网格仅对位于网格上的离散点编码了碰撞信息。路径不仅包括网格点，还包括连接网格点的曲线上的点
 
 ### 2-Joint Arm
+
+## *Collision Detection*
+
+常见的碰撞检测方法 - 小 Y的文章 - 知乎 <https://zhuanlan.zhihu.com/p/449795053>
+
+<https://www.cnblogs.com/sevenyuan/p/7125642.html>
+
+### Sphere 外接圆碰撞检测
+
+<img src="Sphere碰撞检测.drawio.png">
+
+* Pro：非常直观，只要多边形外接圆的圆心距离大于两者之间的中心距离就可以，这就只需要进行一次碰撞检测
+* Con：占用了很多多余的free space
+
+可以进一步划分圆来缩小占用的free space，划分的越多占用的free space越小，但同时需要的碰撞检测的次数也越多
+
+<img src="外接圆refinement.drawio.png">
+
+### AABB
+
+<img src="AABB.png">
+
+Axis Aligned Bounding Box 方法使用**与坐标轴平行**的外接矩形来分析两个物体之间的碰撞关系
+
+* 只需要比较两个矩形的上下、左右边的大小即可，非常轻便
+* 忽略了物体的旋姿态，会丢失掉一部分自由区域，适合进行粗略的碰撞检测
+
+### OBB/分离轴SAT
+
+Separating Axis Theorem 分离轴定理：若两个物体不发生碰撞，则一定存在一条直线能够将两个分体分离开，这条直线称为分离轴。具体做法就是取polygon每条边的法向量，然后将polygon投影上去。若可以找到任何一对不重叠的投影，就说明不发生碰撞
+
+<img src="SAT.png" width="70%">
+
+Oriented Bounding Box 方向包围盒
+
+* 与AABB方法相比OBB方法将姿态考虑进来，不会丢失自由空间，适合精细的碰撞检测
+* 计算复杂度提高了很多，因为旋转会涉及到大量的三角函数运算
+
+### Polygon
 
 ## *流形 Manifolds*
 
@@ -163,12 +207,6 @@ $S^n$: n-dimensional sphere in $\R^n$
 需要注意的是，嵌入维度和内在维度并不总是相等的。在某些情况下，嵌入维度可能小于内在维度，表示我们可以用更低维度的空间来表示数据。而在其他情况下，嵌入维度可能大于内在维度，表示在较低维度的表示中可能存在一些冗余信息。因此，选择合适的嵌入维度和理解数据的内在维度对于有效的数据分析和机器学习至关重要
 
 ### 可微流形
-
-
-
-### 
-
-
 
 ### $\R^n$ 中的流形嵌入 Embeddings of Manifolds
 
@@ -266,7 +304,7 @@ Bug-like 算法主要就是两个动作：Motion-to-goal和Boundary following
 
 ### 处理信息：Continuation methods
 
-# Potential Functions
+# Heuristic: Potential Functions
 
 ## *intro*
 
@@ -304,7 +342,7 @@ U(q)=\zeta\cdot d(q,q_{goal})\\\nabla U(q)\frac{\zeta}{d(q,q_{goal})}(q−q_{goa
 $$
 梯度向量按大小 $\zeta$ 指向远离目标的方向，在构型空间内除了目标点以外的所有点都有定义。我们的路径就是每个点的负梯度形成的连线
 
-选上面这种势函数在进行数值实现时，梯度下降会有很多问题，因为吸引势在原点是不连续的。因此我们倾向于选择连续可微的势函数，这样吸引势的大小随着机器人接近 $q_{goal}$ 变小。这种势函数最简单的就是随与目标的距离二次增长的，是从q开始指向远离qgoal方向的向量，大小与二者之间的距离成正比。也就是说，当机器人离目标较远时，速度较快，距离变进时，速度会变慢
+选上面这种势函数在进行数值实现时，梯度下降会有很多问题，因为吸引势在原点是不连续的。因此我们倾向于选择连续可微的势函数，这样吸引势的大小随着机器人接近 $q_{goal}$ 变小。这种势函数最简单的就是随与目标的距离二次增长的，是从q开始指向远离 $q_{goal}$ 方向的向量，大小与二者之间的距离成正比。也就是说，当机器人离目标较远时，速度较快，距离变进时，速度会变慢
 
 其中最简单的一种势函数就是二次函数，其中 $\zeta$ 为引力增益；$d(q,q_{goal})$ 为当前点 q 到目标点 $q_{goal}$ 之间的距离
 $$
@@ -462,24 +500,32 @@ CD的目标是将机器人的自由空间划分为一系列更简单的区域，
 
 <https://www.guyuehome.com/35028>
 
-之前介绍的内容本质上都是基于图搜索的路径规划算法，它们主要用于低维度空间上的路径规划问题，它在这类问题中往往具有较好的完备性，但是需要对环境进行完整的建模工作，在高维度空间中往往会出现维数灾难。为了解决这些问题，现在将介绍**基于随机采样的路径规划算法**。这类算法适用于高维度空间，它们以概率完备性（当时间接近无限时一定有解）来代替完备性，以此来提高搜索效率
+之前介绍的构型空间上建立Roadmap和分割cell/grid本质上都是基于图搜索的路径规划算法，它们主要用于低维度空间上的路径规划问题，它在这类问题中往往具有较好的完备性，但是需要对环境进行完整的建模工作，在高维度空间中往往会出现维数灾难。有一些路径规划问题已经被证明为NP-hard
 
-* 单查询方法 single-query path planning 只要找到可行路径即可，侧重快速性
-  * PRM算法
-  * EST算法
-  * RRT算法
-  * RRT-Connect算法
-* 渐进最优算法 asymptotically optimal path planning 对找到的路径进行逐步优化，慢慢达到最优，侧重最优性
-  * PRM*算法
-  * RRT*算法
+为了解决这些问题，现在将介绍**基于随机采样的路径规划算法**。这类算法适用于高维度空间，它们以概率完备性（当时间接近无限时一定有解）来代替完备性，以此来提高搜索效率
 
-### 单查询方法简介
+* 多查询方法 multi-query path planning/渐进最优算法 asymptotically optimal path planning 对找到的路径进行逐步优化，慢慢达到最优，侧重最优性
+  * Multi-query PRM
+  * PRM\*
+  * RRT\*
+* 单查询方法 single-query path planning 只要找到可行路径即可，侧重快速性。它可以利用multi-query生成的roadmap，是为了解决multi-query的低效发展的
+  * Single-query PRM
+  * RRT
+  * RRT-Connect
+
+### Multiple-query方法
+
+Application area: static environment for planning in High-dimensional C-space, full space coverage with configuration, optimized paths. 静态高纬构型空间，全构型空间覆盖
+
+### Single-query方法
 
 在路径规划领域，单查询算法是指在每次路径规划请求中只执行一次查询操作来找到一条最优路径或满足特定约束条件的路径
 
-单查询算法的主要特点是针对每个路径规划请求，算法只进行一次计算，**并输出一个路径解决方案**。这与批处理算法 Batch Algorithms 相对，后者可以一次处理多个路径规划请求，进行多次查询操作，并输出多个路径解决方案
+单查询算法的主要特点是针对每个路径规划请求，算法只进行一次计算，**并输出一个路径解决方案**。这与Multi-query相对，后者可以一次处理多个路径规划请求，进行多次查询操作，并输出多个路径解决方案，用于找到一个相对最优的路径
 
 **单查询算法的优势在于其实时性和效率**。由于每次只需进行一次查询操作，可以在给定时间内快速找到一个路径解决方案。这使得单查询算法特别适用于需要即时响应和实时路径规划的应用场景，如机器人导航、无人车路径规划
+
+## *Sampling*
 
 ## *概率路线图 PRM*
 
@@ -516,15 +562,101 @@ Input：n 为roadmap中的节点数，k为要检查的最近邻个数；Output�
    * 步骤10：对V中的每个点q，根据一定的距离范围选择k个最近邻
    * 步骤 11~15：若判断每个邻居 $q'$ 和q尚未形成路径，则将其连接形成路径，随后进行碰撞检测，若无碰撞，则保留该路径
 
+### OBPRM
+
+<https://blog.sciencenet.cn/blog-795645-648224.html>
+
+<img src="OBPRM.png" width="30%">
+
+Obstacle-based PRM 是为了更好的解决普通PRM的障碍通道狭窄问题的。如上图，看起来规划得到的路径就是为障碍物勾勒出了轮廓。机器人沿着这幅地图移动，总是不会碰到障碍物，最多就是移动到位于障碍物表面而已。障碍物表面的采样点称为接触位姿 contact configuration
+
+<img src="OBPRM寻找接触点.png">
+
+做法就是现在障碍物内找到一个碰撞位姿1，然后在任意m个方向射出射线2，然后在那个方向用二分算法不断逼近找到大致的接触点5
+
+当然除了二分之外还有很多启发算法用于寻找接触点
+
 ## *RRT*
 
-RRT算法与PRM算法十分类似，都是通过抽样来在已知的地图上建立无向图，进而通过搜索方法寻找相对最优的路径。不同点在于，**PRM算法在一开始就通过抽样在地图上构建出完整的无向图，再进行图搜索；而RRT算法则是从某个点出发一边搜索，一边抽样并建图**
+Rapidly-Exploring Random Trees RRT 快速扩展随机树算法与PRM算法十分类似，都是通过抽样来在已知的地图上建立无向图，进而通过搜索方法寻找相对最优的路径。不同点在于，**PRM算法在一开始就通过抽样在地图上构建出完整的无向图，再进行图搜索；而RRT算法则是从某个点出发一边搜索，一边抽样并建图**
 
-### 快速扩展随机树 RRT
+### Overview
 
 <img src="RRT.gif">
 
 有点类似于深度优先算法DFS
+
+1. 种下两棵树的root：Grow two trees from Init position and Goal configurations
+2. Expansion: Randomly sample nodes around existing nodes.
+3. Connection: Connect a node in the tree rooted at Init to a node in the tree rooted at the Goal.
+
+### Expansion
+
+1. Pick a node x with probability $1/w(x)$。计算的权重 $w$ 是当前节点的邻居数量，邻居数越少选上的概率越大
+2. Randomly sample k points around x. 随机选取x节点附近的k个点
+3. For each sample y, calculate $w(y)$, which gives probability $1/w(y)$. 如果y满足三个条件就把y节点加入树里
+   * has higher probability $w(y)$
+   * collision free
+   * can sees x，所谓的see就是存在a direct path without obstacles
+
+### Connection
+
+若一对节点，即init tree中的x和goal tree中的y的距离小于某个值，就把x和y连起来
+
+<img src="RRT_connection.png" width="50%">
+
+结束的条件是要么两棵树成功连接，要么达到最大expantion&connection步数
+
+## *评价RRT*
+
+### Coverage
+
+<img src="RRT_coverage.png" width="50%">
+
+好的coverage应该是milestones在整个C-space上的分布是每个milestone都可以通过一条直线直接连到一个其他的milestone上
+
+### Connectivity
+
+<img src="RRT_connectivity.png" width="50%">
+
+若有狭窄通道 narrow passages 的话connectivity很难达到
+
+### Expansiveness
+
+用Expansiveness来量化coverage和connectivity。下面先介绍一些相关的定义
+
+* Visibility set of q
+
+  <img src="VisbilitySetOfq.png" width="30%">
+
+  All configurations in F that can be connected to q by a straight-line path in F;
+
+  All configurations seen by q;
+
+* $\varepsilon$-good
+
+  <img src="epsilonGood.png" width="50%">
+
+  Every free configuration sees at least $\varepsilon$ fraction of the free space, $\varepsilon\in[0,1]$
+
+* lookout of a subset S
+
+  Subset of points in S that can see at least $\beta\in(0,1]$ fraction of $F\textbackslash S$
+
+  <img src="LookoutOfSubset.png" width="50%">
+
+  上图中左边的部分是S，右边是 $F\textbackslash S$，也就是F扣除了S的子集
+
+* $\left(\varepsilon,\alpha,\beta\right)$ -expansive: The free space F is $\left(\varepsilon,\alpha,\beta\right)$ -expansive if
+
+  * Free Space F is $\varepsilon$ -good
+  * For each subset $S$ of $F$, its $\beta$-lookout is at least $\alpha$ fraction of $S$, $\varepsilon,\alpha,\beta\in(0,1]$ 
+
+$\varepsilon,\alpha,\beta$ 度量了空间的expansiveness，越高的 $\varepsilon,\alpha,\beta$ 数值说明构建具有良好的coverage和connectivity的roadmap的成本越低
+
+Theorem 1: A roadmap of $\frac{8\ln{8/\varepsilon\alpha\gamma}}{\varepsilon\alpha}+\frac{3}{\beta}$ uniformly-sampled milestones has the correct connectivity with probability at least $1-\gamma$
+
+## *RRT的改进*
 
 ### RRT-Connected
 
@@ -532,15 +664,31 @@ RRT算法与PRM算法十分类似，都是通过抽样来在已知的地图上�
 
 算法思想非常简单，和Binary Search一样。RRT-Connect在RRT的基础上引入了双树扩展环节，分别以起点和目标点为根节点生成两棵树进行双向扩展，当两棵树建立连接时可认为路径规划成功
 
-## *渐进最优：RRT*
+### 渐进最优：RRT\*
 
 渐进最优算法在路径规划过程中会不断进行优化，逐步改进路径质量，并最终收敛到全局最优解。它们通过在搜索过程中维护路径的代价信息，利用更好的连接策略和优化算法来不断改善路径的质量和效率
 
 <img src="RRT_Star.gif">
 
-算法流程与RRT算法流程基本相同，不同之处就在于最后加入将 $X_{new}$ 加入搜素树T时父节点的选择策略
+算法流程与RRT\*算法流程基本相同，不同之处就在于最后加入将 $X_{new}$ 加入搜素树T时父节点的选择策略
 
-RRT“算法在选择父节点时会有一个重连 Rewire 过程，也就是在以 $X_{new}$ 为园心、 半径为r的邻城内，找到与 $X_{new}$ 连接后路径代价（从起点移动到 $X_{new}$ 的路径长度)最小的节点 $X_{min}$，并重新选择 $X_{min}$ 作为 $X_{new}$ 的父节点，而不是 $X_{near}$
+RRT\*算法在选择父节点时会有一个重连 Rewire 过程，也就是在以 $X_{new}$ 为园心、 半径为r的邻城内，找到与 $X_{new}$ 连接后路径代价（从起点移动到 $X_{new}$ 的路径长度)最小的节点 $X_{min}$，并重新选择 $X_{min}$ 作为 $X_{new}$ 的父节点，而不是 $X_{near}$
+
+## *Smoothing Strategy*
+
+### 平滑方法
+
+<img src="轨迹平滑.jpeg" width="40%">
+
+* Check direct connecting line X of start and end for collision（蓝色线）
+* Find most distant point to the connecting line X. Check if connections between the new connecting lines and end points to connecting line colliding X. If a line not colliding then new solution
+* repeat the process on the remaining part
+
+### Homotopic path
+
+同伦确保在路径纠正之后，空间拓扑以通常计划的相同方向被访问。It is important for a surveillance robot, which needs to observe e.g., specific walls to check for paintings.
+
+<img src="homotopic_paths.png" width="40%">
 
 # Bayesian Method
 
@@ -690,6 +838,10 @@ https://blog.shipengx.com/archives/3bb74af.html
 
 在GKI中学习了适用于离散系统滤波的HMM模型（用于离散语素的语言模型），而卡尔曼滤波器则非常适合用于**连续变化**的系统。它们的优点是占用的内存很少（除了**前一个状态**外，它们不需要保留任何历史记录），并且速度非常快，非常适合实时问题和嵌入式系统
 
+下面是关于卡尔曼滤波的精辟理解
+
+如何通俗并尽可能详细地解释卡尔曼滤波？ - Kent Zeng的回答 - 知乎 <https://www.zhihu.com/question/23971601/answer/26254459>
+
 ### Toy example of robotic
 
 假设我们造了一个很简单的小机器人，当它在移动的时候它需要知道自己的位置用来导航。我们说我们的机器人处于状态 state $\boldsymbol{x}_k=\left[\begin{matrix}p&v\end{matrix}\right]^T$，这个状态只有两个参数，一个是 position $p$， 一个是速度 $v$
@@ -790,6 +942,16 @@ $$
    h\left(\boldsymbol{X}_k\right)=\boldsymbol{H}\cdot\boldsymbol{X}_k
    $$
    
+
+### 可观测性 Observability
+
+可观测性 Observability 是指一个动态系统的性质，表示通过系统的输出观测量能够推断系统的内部状态的程度。
+
+在控制理论和状态估计中，可观测性是指通过观测量来完全或部分地确定系统状态的能力。一个系统是可观测的意味着系统的每个状态都可以通过观测量进行准确的估计。反之，如果系统具有不可观测的状态，那么这些状态无法通过观测量单独确定。
+
+可观测性的概念与系统的动态方程和观测方程密切相关。一个系统的动态方程描述了系统状态随时间的变化，而观测方程描述了观测量与系统状态之间的关系。在可观测性分析中，通常使用可观测性矩阵 Observability Matrix 来评估系统的可观测性。
+
+可观测性分析对于控制系统设计和状态估计至关重要。如果系统是可观测的，那么可以通过适当的观测器设计来估计系统的状态，从而实现状态反馈控制和状态估计。然而，如果系统具有不可观测的状态，那么可能需要重新考虑观测器的设计或添加额外的观测量来提高系统的可观测性。
 
 ### 总结
 
@@ -893,7 +1055,15 @@ $$
 
 EKF所应用的线性近似是否具有优势主要取决于两个因素：被近似的局部非线性话程度和不确定程度
 
-### 应用实例 -- 基于毫米波雷达与EKF的目标跟踪
+## *EKF-SLAM框架*
+
+<http://t.csdn.cn/mp4Ve>
+
+### 地标提取  Landmark extraction
+
+### 数据关联 Data association
+
+choose data closed to predicted position (less than a threshold), 2 measurement at 2 consecutive time step and assign measurement to the positions
 
 ## *无迹卡尔曼滤波 UKF*
 
@@ -986,9 +1156,18 @@ Sigma点卡尔曼滤波按照历史发展主要分为2种形式，下面我们�
 
 ## *SLAM中的卡尔曼滤波*
 
+### SLAM
 
+SLAM Simultaneous Localization and Mapping 是一种在未知环境中同时进行自主定位和地图构建的技术。它是一种重要的技术，被广泛应用于机器人、自动驾驶车辆和增强现实等领域。
 
+SLAM的目标是让机器人或移动设备能够在未知的环境中实现自主定位，即确定自身的位置，并同时构建环境的地图。这是一个具有挑战性的任务，因为在未知环境中，机器人需要依靠传感器数据（如激光雷达、摄像头、惯性测量单元等）来感知周围环境，同时通过处理这些数据来确定自身的位置，并在此过程中构建地图。
 
+SLAM算法通常包括以下主要步骤：
+
+1. 数据获取：机器人通过传感器获取环境数据，例如激光雷达扫描数据、图像等。
+2. 特征提取和跟踪：从传感器数据中提取特征，如地标、边缘、角点等，并通过跟踪这些特征来估计机器人的运动。
+3. 自我定位：利用传感器数据和先前的运动估计，使用滤波器、优化算法（如扩展卡尔曼滤波器、粒子滤波器等）等方法来估计机器人的位置和姿态。
+4. 地图构建：利用特征提取的数据和机器人的位置估计，构建环境的地图。这可以是二维地图、三维地图或拓扑地图等形式。
 
 ### 传感器融合 Sensor fusion
 

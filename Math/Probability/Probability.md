@@ -1041,6 +1041,35 @@ $t=\frac{y_1}{\sqrt{\left(x_1^2+\ldots x_n^2\right)/n}}$|$p\left(y\right)=\frac{
 
 ### 因子分解定理
 
+## *箱线图 Boxplot*
+
+### 箱线图的5个统计量
+
+如何深刻理解箱线图（boxplot） - jinzhao的文章 - 知乎 <https://zhuanlan.zhihu.com/p/347067055>
+
+箱线图，也称为盒须图、盒式图，是一个能够通过5个统计量来描述数据的分布的标准方式，这5个统计量分别为：最小值，第一分位，中位数，第三分位数，最大值，箱线图能够明确且简洁紧凑地展示离群点的信息，同时能够让我们了解数据是否对称，数据如何分组、数据的峰度
+
+1. 上边缘（Upper Whisker）：表示数据的最大值，位于上四分位数（上四分位数+1.5倍的四分位距离）处。
+2. 上四分位数（Upper Quartile）：数据的上四分位数，将数据分为上半部分和下半部分的中位数。
+3. 中位数（Median）：数据的中间值，将数据分为相等的两部分。
+4. 下四分位数（Lower Quartile）：数据的下四分位数，将数据分为上半部分和下半部分的中位数。
+5. 下边缘（Lower Whisker）：表示数据的最小值，位于下四分位数（下四分位数-1.5倍的四分位距离）处。
+
+### 箱线图的表示
+
+<img src="箱线图.png">
+
+IQR是中间50%数据的位置，即第25至第75个百分点的距离
+
+### 箱线图的绘制
+
+Matlab的很简单，直接用内置命令就可以了
+
+```matlab
+x = [17,29,46,71,91];
+boxplot(x)
+```
+
 # 统计模拟方法：Monte Carlo
 
 Monte Carlo 模拟：以概率统计为基础，**基于伪随机数发生器**，进行数值模拟
@@ -1181,10 +1210,22 @@ $$
   * 总体 $X$ 只有一个待估参数 $\theta$，则求 $E\left(X\right)\triangleq\bar{X}$
   * 解出 $\theta$，得矩估计量 $\hat{\theta}=\hat{\theta}\left(X_1,X_2,\ldots,X_n\right)$
   * 将 $X_1,X_2,\ldots X_n$ 用观测值代入，得矩估计值 $\hat{\theta}=\hat{\theta}\left(x_1,x_2,\ldots,x_n\right)$
+  
 * 总体 $X$ 有多个待估参数 $\theta_1,\theta_2\ldots,\theta_n$
-  * 则求 $\left\{\begin{matrix}E\left(X\right)\triangleq\bar{X}\\E\left(X^2\right)\triangleq A_2\\\ldots\\E\left(X^n\right)\triangleq A_n\\\end{matrix}\right.$
-  * 解出 $\theta$，得矩估计量 $\left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(X_1,X_2,\ldots,X_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(X_1,X_2,\ldots,X_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(X_1,X_2,\ldots,X_n\right)\\\end{matrix}\right.$
-  * 将 $X_1,X_2,\ldots X_n$ 用观测值代入，得矩估计值 $\left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(x_1,x_2,\ldots,x_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(x_1,x_2,\ldots,x_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(x_1,x_2,\ldots,x_n\right)\\\end{matrix}\right.$
+  * 则求
+    $$
+    \left\{\begin{matrix}E\left(X\right)\triangleq\bar{X}\\E\left(X^2\right)\triangleq A_2\\\ldots\\E\left(X^n\right)\triangleq A_n\\\end{matrix}\right.
+    $$
+  
+  * 解出 $\theta$，得矩估计量
+    $$
+    \left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(X_1,X_2,\ldots,X_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(X_1,X_2,\ldots,X_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(X_1,X_2,\ldots,X_n\right)\\\end{matrix}\right.
+    $$
+  
+  * 将 $X_1,X_2,\ldots X_n$ 用观测值代入，得矩估计值
+    $$
+    \left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(x_1,x_2,\ldots,x_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(x_1,x_2,\ldots,x_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(x_1,x_2,\ldots,x_n\right)\\\end{matrix}\right.
+    $$
 
 ### 计算举例
 
@@ -1390,7 +1431,11 @@ $$
 
 ### 对核函数的要求
 
-* 核函数与水平面构成图形的面积为1 $\displaystyle\int_{-\infty}^{+\infty}{K(x)dx}=\frac{1}{h}\int_{-\infty}^{+\infty}{K\left(\frac{x}{h}\right)dx}=1$
+* 核函数与水平面构成图形的面积为1
+  $$
+  \displaystyle\int_{-\infty}^{+\infty}{K(x)dx}=\frac{1}{h}\int_{-\infty}^{+\infty}{K\left(\frac{x}{h}\right)dx}=1
+  $$
+
 * 对称性 $K(x)=K(-x)$
 
 ### 带宽：决定核函数高矮胖瘦
@@ -1424,9 +1469,9 @@ $$
 
 # 假设检验 Test
 
-根据数据对已知分布中的未知参数的某种假设进行检验
-
 ## *假设检验的基本思想与概念*
+
+根据数据对已知分布中的未知参数的某种假设进行检验
 
 * 基本思想：做一次试验就出现了小概率事件，认为是不合理的
 * 方法（采用概率的反证性）：先假定原假设 $H_0$ 是成立的；在 $H_0$ 成立的情况下，看是否会导致不合理结果（就是看在一次试验中，是否出现小概率事件，即极大似然原理）。如果结果是合理的，就接收原假设 $H_0$；如不合理，则否定原假设 $H_0$，接受备择假设 $H_1$
@@ -1447,7 +1492,9 @@ $$
 * 给出拒绝域：由样本观测值，计算检验统计量的观测值
 * 做出判断
 
-## *双侧假设检验与单侧假设检验：若原假设为 $H_0:\theta=\theta_0$。备择假设为 $H_1$*
+## *双侧假设检验与单侧假设检验*
+
+若原假设为 $H_0:\theta=\theta_0$。备择假设为 $H_1$
 
 * 双侧检验：$H_0:\theta=\theta_0,H_1:\theta\neq\theta_0$（不等、有差异）
 
@@ -1507,6 +1554,4 @@ $$
 ### 符号检验
 
 ### 秩和检验
-
-# 试验统计
 

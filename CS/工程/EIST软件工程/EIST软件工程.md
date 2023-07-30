@@ -992,14 +992,54 @@ clang++ -fsanitize=memory <source_file.cpp>
 
 ### ThreadSanitizer
 
-# Software Management and Deployment
+# Software Management & Deployment
+
+## *Software Configuration Management*
+
+### SCM
+
+Software Configuration Management（软件配置管理，SCM）是指对软件开发过程中的配置项（即软件及其相关的文档、数据等）进行管理和控制的一套方法和工具。在软件开发过程中，通常会有大量的代码、文档、配置文件、库文件等不同类型的文件，这些文件可能会经常修改、更新，而且可能由多个开发人员协同进行开发。
+
+SCM的主要目标是确保软件开发过程的可控性、可复现性和可维护性。通过SCM，开发团队可以追踪和记录所有配置项的变更历史，保留不同版本的软件，便于回溯和复现过去的状态，同时避免因为团队成员之间的冲突而导致的代码混乱。
+
+### SCM支柱
+
+1. 版本控制 Version management：管理不同版本的代码和文档，记录每次变更，便于跟踪和回滚。
+2. 配置管理 Configuration management：对软件的配置进行管理，确保在不同环境下能够正确部署和运行。
+3. 变更管理 Change management：对软件的变更进行审批和控制，以确保变更的合理性和影响的可控性。
+4. 构建管理 System building：自动化构建过程，确保每次构建的一致性和可重复性。
+5. 发布管理 Release management：对软件的发布过程进行管理，确保发布版本的准确性和可靠性。
+6. 缺陷管理：跟踪和管理软件缺陷，以确保及时修复和验证。
+
+SCM通常使用一系列工具和流程来实现以上功能，例如版本控制系统（如Git、SVN）、构建工具（如Jenkins）、缺陷跟踪系统（如Jira）等。这些工具和流程帮助开发团队有效地管理和控制软件的开发和维护过程，从而提高软件开发的效率和质量。
+
+## *Build System*
+
+### 构建系统分类
+
+CMake和Makefile内容可以看 [*CMakeLists.md*](../Cmake/cmake.md)
 
 ## *Git*
 
+### 版本控制术语和概念
+
+1. Codeline/Branch： Codeline是指软件开发过程中的一个代码分支或线路，它代表了软件的一个特定版本或变体。通常，在软件开发过程中，为了满足不同的需求或开发不同的功能，开发团队可能会创建多个并行的代码线。每个Codeline可能包含了特定的功能、修复或其他改动。例如，一个Codeline可以代表一个主要版本（如v1.0）、一个开发版本（dev）、一个修复分支（hotfix）等。
+2. Baseline： Baseline是指在软件开发过程中的一个重要时间点或里程碑，用于标记一个Codeline在特定时间的状态。当软件开发到达一个稳定的阶段，或者需要进行发布或测试时，开发团队通常会将当前的Codeline标记为一个Baseline。Baseline可以看作是一个特定时刻的快照，它具有确定性，即在同一个Baseline下的代码和配置是一致的，能够被准确地复现和部署。
+3. Mainline： Mainline是指软件开发中的主要代码线路或主要分支，它通常是整个开发过程中的核心分支。Mainline包含了主要的功能和改动，并且经常用于集成不同开发者的代码。Mainline通常是一个稳定的Codeline，它作为整个开发团队的主要代码库，用于构建软件的最新版本。
+
 ### 版本控制工具分类
 
-* SVN是集中式版本管理系统，版本库是几种放在中央服务器的，而工作的时候要先从中央服务器拉取最新版本，然后工作完成后再push到中央服务器。集中式版本控制系统必须要联网才能工作，对网络带宽要求较高
-* Git是分布式版本控制系统，没有中央服务器，每个人本地就有一个完整的版本库
+* 集中式版本管理系统：版本库是几种放在中央服务器的，而工作的时候要先从中央服务器拉取最新版本，然后工作完成后再push到中央服务器。集中式版本控制系统必须要联网才能工作，对网络带宽要求较高
+  * [Subversion](www.subversion.apache.org): open source, still widely used
+  * [Perforce](https://www.perforce.com): proprietary, mostly enterprise use
+  * [Concurrent Versions Systems (CVS)](https://www.nongnu.org/cvs/) – open source, no longer recommended for new projects
+
+* 分布式版本控制系统：没有中央服务器，每个人本地就有一个完整的版本库
+  * [Git](https://git-scm.com): open source, one of the most popular DVCS
+  * [Mercurial](www.mercurial-scm.org): open source
+  * [Darcs](http://darcs.net): darcs.net – open source
+  * [BitKeeper](http://www.bitkeeper.org): started proprietary, now open source, influenced creation of Git
+
 
 ### Git的数据模型
 
@@ -1362,6 +1402,41 @@ DevOps的核心目标是通过自动化、持续集成、持续交付和持续�
 
 **没有什么所谓最好的分支模型，只有最合适公司、团队、提高开发效率的分支模型**
 
+## *Release management*
+
+### Process (general guideline)
+
+1. Change request and approval：针对新变更的文档和审查流程
+2. Release planning and design：发布范围、需求、时间表、成功标准（性能指标和度量标准）；发布计划应回答正在构建什么、发布的目标以及对企业和最终用户的价值
+3. Release building：编译和打包软件以进行部署
+4. Acceptance testing：验证功能和符合需求；包括让最终用户使用早期版本并收集他们的反馈意见
+5. Release preparation：最终准备工作，例如文档编制、与用户沟通和准备性检查；包括质量保证（Quality Assurance QA）团队的最终质量报告
+6. Release and deployment：将软件受控地部署到生产环境中
+
+### Software versioning
+
+### Software Upgrades
+
+# Monitoring
+
+## *intro*
+
+Monitoring 是持续观察和分析应用程序或系统的运行情况，以确保其在最佳性能状态下运行的过程
+
+* Metrics：可量化的测量值，提供在不同负载下系统行为的见解。例如CPU使用率、内存消耗、磁盘I/O等。**发生了什么情况？**
+* 日志记录 Logging：记录系统中发生的事件，有助于调试和理解系统行为。**发生了哪些事件？**
+* 追踪 Tracing：分析各个操作（如用户请求）在系统的不同组件中的流动情况。**问题出在哪里？**
+
+## *Metric*
+
+### Metric类型
+
+### Prometheus toolkit
+
+<img src="Prometheus_architecture.png">
+
+### PromQL
+
 ## *Logging*
 
 ### OS
@@ -1396,4 +1471,10 @@ DevOps的核心目标是通过自动化、持续集成、持续交付和持续�
 
 c++日志记录都有哪些好的开源项目？ - 叛逆者的回答 - 知乎 https://www.zhihu.com/question/37640953/answer/72889728
 
+## *Tracing*
+
+
+
 # Software Quality
+
+# Project Management

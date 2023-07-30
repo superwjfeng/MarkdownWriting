@@ -47,6 +47,56 @@
 
 除了S1和S2之外，有时候还可以听到其他的心音，如心脏瓣膜异常、心脏杂音或心律不齐等情况下可能会出现额外的心音
 
+## *血管系统*
+
+### 血压
+
+$$
+血压BP=心输出量co\times全身血管阻力PVR
+$$
+
+* 心输出量 Cardiac Output CO，其中HR受交感神经和迷走神经的调节，而SV则与前负荷、心肌收缩力与后负荷（血液排出阻力）有关
+  $$
+  CO=心率HR\times每搏输出量SV
+  $$
+
+* 全身血管阻力 PVR/总外周阻力：扩张血管减小阻力血压降低，收缩血管增大阻力血压升高
+
+交感神经对血压的调节有重要作用，治疗高血压的药物一般就是调节HR、血液量或血管直径
+
+### 全身血液循环
+
+<img src="全身血液循环.png">
+
+> 上图来自B站up主阿狸的Blog 【血管及血流】 https://www.bilibili.com/video/BV1Cr4y1U7Rb/?share_source=copy_web&vd_source=b2cbcd35d392255871deb149dc269390
+
+血量的分布：静脉是一个强大的储血系统 64%、肺 9%、小动脉和微动脉 8%、大动脉 7%、舒张期心脏 7%、毛细血管 5%
+
+血管阻力分布：小动脉和微动脉 47%、毛细血管 27%、大动脉 19%、静脉 7%
+
+### 血管系统
+
+<https://zh.wikipedia.org/zh-hans/血管>
+
+<img src="血管系统.png">
+
+### 动脉
+
+* 弹性动脉 elastic artery：弹性动脉为管径最大的动脉，通常离开心脏不远，如主动脉、胸主动脉 thoracic aorta、腹主动脉 abdominal aorta、锁骨下动脉 subclavian artery、总颈动脉 common carotid artery。其所承受的血压最大，弹性最佳，可以利用管壁的弹性推挤血液前进
+* 肌肉动脉 muscular artery：肌肉动脉的管径较弹性动脉小，多是其分枝，如股动脉 femoral artery、尺骨动脉 ulnar artery、桡骨动脉 radial artery。此时血管压力减弱，阻力增加，必须部份依靠平滑肌的收缩力量推动血液前进
+* 小动脉 arteriole：小动脉的管径在动脉中最小。一般定义为管径小于0.3毫米。如脾脏中的分隔带动脉 trabecular artery、肾脏的入球小动脉与出球小动脉 efferent glomerular artery
+
+### 微血管
+
+* 连续性微血管 continuous capillary
+* 通透性微血管 fenestrated capillary
+
+### 静脉
+
+* 小静脉 venule
+* 中静脉 middle vein
+* 大静脉 vena cava
+
 ## *心血管疾病*
 
 ### 动脉粥状硬化
@@ -62,6 +112,12 @@
 * 后果：动脉粥状硬化的严重程度取决于斑块的大小、数量和位置。当斑块堆积在血管壁内，并逐渐狭窄或完全阻塞血管时，会导致血液供应不足，引发心血管疾病，如心绞痛、心肌梗死、血栓引起的脑梗死等。
 
 ### 心律失常
+
+心律失常 Herzrhythmusstörungen bzw. Arrhythmien 是指心脏运动不规律。正常的心律称为窦性心律。神经器官控制的频率变化决定了循环系统对休息或劳累状态的适应性。平静状态下频率低于每分钟60次称为心动过缓 Bradykardie，高于每分钟100次称为心动过速 Tachykardie。如果在过低或过高的频率上再加上心律失常（不规则跳动），则称为过缓心律失常或三联心律失常 Trachyarrhythmie
+
+心律失常根据其起源部位命名。例如，窦房结综合征 Sinusknotensyndrom 起源于窦房结，而心房颤动 Vorhofflimmern 起源于心房
+
+ 并非所有心律失常都同样危险或危及生命。只有当循环功能受到严重干扰，导致无法将足够的血液泵入体内时，我们才会谈论与血液动力学相关的心律失常
 
 ### 冠心病
 
@@ -94,7 +150,7 @@
         * 收缩压大于等于160 mmHg，或
         * 舒张压大于等于100 mmHg
 2. 分类：根据血压水平，高血压被分为两类：原发性高血压 essentielle/primäre Hypertonie 和继发性高血压 sekundäre Hypertonie。绝大多数高血压患者属于原发性高血压，即原因不明的高血压。继发性高血压是由其他疾病或药物引起的，如肾脏疾病、内分泌紊乱或药物副作用等。
-3. 危险因素：高血压的发病原因复杂，可能受到遗传因素、环境因素和生活方式的影响。一些常见的危险因素包括家族史、年龄、肥胖、高盐摄入、不良的饮食习惯、缺乏体育锻炼、吸烟、饮酒过量、慢性压力和某些慢性疾病（如糖尿病、肾脏疾病等）。
+3. 病因：高血压的发病原因复杂，可能受到遗传因素、环境因素和生活方式的影响。一些常见的危险因素包括家族史、年龄、肥胖、高盐摄入、不良的饮食习惯、缺乏体育锻炼、吸烟、饮酒过量、慢性压力和某些慢性疾病（如糖尿病、肾脏疾病等）。老年人血压普遍高于年轻人的原因是随着年龄上升，血管壁变得更加僵硬和缺乏弹性，即血管适应血压的能力下降。这尤其会导致收缩压值升高。
 4. 症状：高血压通常被称为“无声的杀手”，因为大多数患者在早期没有明显的症状。长期未经控制的高血压可能导致头痛、头晕、视力模糊、胸痛、心悸、呼吸困难和疲劳等症状。
 5. 预防和管理：高血压是可以控制和管理的。生活方式的改变对于预防和治疗高血压非常重要，如控制体重、减少盐的摄入、健康饮食（例如DASH饮食）、增加体育锻炼、戒烟限酒、减少压力等。在一些情况下，医生可能会推荐药物治疗，如利尿剂、钙通道阻滞剂、血管紧张素转换酶抑制剂或血管紧张素受体拮抗剂等。
 
@@ -186,7 +242,19 @@ Temperaturabhängigkeit der elektrischen Leitfähigkeit 与温度相关的电导
 * Ohrthermometer 耳温计：耳膜与大脑温度控制中心的血液供应相连，测量时必须将测量传感器与耳膜精确对准，这对小宝宝很困难很难做到，因为他们的耳道不直
 * Stirn- oder Schläfenthermometer 前额或太阳穴温度计：颞静脉 Schläfenvene 能反映体温 - 测量结果有误，特别是在烦躁不安的儿童中 - 冷汗、前额皮肤厚度和血管收缩药物会影响测量结果
 
+普朗克黑体辐射定律 Das Planck‘sche Strahlungsgesetz 是红外测量的理论基础，它描述了黑体在不同波长和温度下的电磁辐射率
+
 <img src="热辐射与波长的关系.png" width="60%">
+$$
+M_{\lambda S}=\frac{c_1}{\lambda^5\left(\exp{\left(\frac{c_2}{\lambda T}\right)}-1\right)}
+$$
+其中的黑体常数为 $c_1=3,74177138\cdot10^{-16}[Wm^2]$ 和 $c_2=1,4387752\cdot10^4[\mu mK]$
+
+Stefan-Boltzmann-Gesetz 通过在所有波长积分，给出了可以得到黑体在某个温度下总的辐射量。其中Stefan-Boltzmann常数为 $\sigma=5,67\cdot10^{-8}[\frac{W}{m^2K^4}]$
+$$
+M=\varepsilon\cdot\sigma\cdot T^4
+$$
+
 
 ## *体重*
 
@@ -232,9 +300,35 @@ Normalgewicht laut Deutscher Gesellschaft für Ernährung
 
 ## *血压*
 
-意大利医师 ScipioneRiva-Rocci 于1896年发明了基于大气压差的血压计
+* 手动测量：auskultatorisch Messung。来源于拉丁语 "auscultare"，意为"倾听"或"聆听"。在医学中，这个词通常用于描述通过听诊器 Stethoskop 来诊断患者身体内部的声音或音响，尤其是心脏、肺部和血管等器官的声音
+* 自动测量：oszillometrische Messung。 "Oszillo"来源于拉丁语“oscillare”，意为“摆动”或“振荡”
 
-Einheit: 1 mmHg（毫米汞柱）= 133 Pascal
+### 手动：柯氏音法
+
+意大利医师 ScipioneRiva-Rocci 于1896年发明了基于大气压差的血压计。Einheit: 1 mmHg（毫米汞柱）= 133 Pascal
+
+通过将听诊器放置在患者的胸部、背部或其他部位，医生可以听到一系列特定的心脏杂音、呼吸音、血流声和其他生理声音，从而帮助判断患者的健康状况。这种听诊方法被称为 auskultatorische Untersuchung。它是医生常用的非侵入性诊断手段之一，有助于评估患者的心肺功能和血流情况
+
+> 1905年，俄国学者柯洛特柯夫发现，用臂带绑扎上臂并加压，将肱动脉血管压瘪，然后再减压，随着外压力的降低，从臂带内的听诊器中可以听到血流重新冲开血管后发出与脉搏同步的摩擦、冲击音。由于这一发现的重要性，这种摩擦、冲击音就被命名为柯氏音。-- 百度百科
+
+<img src="柯氏音法.png">
+
+柯氏音法的基本原理是利用听诊器听取在动脉中血流产生的声音变化，这些声音在充气袖带时会出现。当袖带气压稍微高于收缩压时，动脉开始重新打开，血液流动受到部分阻碍，这时会产生震动和血流产生的声音。这些声音被听诊器探测到，并被医生用来确定收缩压的数值
+
+袖带的压力从一个高值逐步降低，随着继续释放袖带气压，动脉中的血液开始恢复正常流动，声音逐渐消失。如上图所示，医生再次用听诊器听到的第一次脉搏时记录的气压值即为舒张压，当脉搏的声音又一次消失时最后听到的声音为舒张压
+
+### 血压测量的注意事项
+
+1. 坐姿：坐姿的不同可以影响心脏和动脉的位置，从而对血压测量结果产生影响。一般来说，正确的坐姿是让被测者坐直，双脚平放在地面上，背部紧贴椅背，双臂自然垂放，心情放松。如果坐姿不正确，例如背部过于弯曲或双脚悬空，可能会导致血压读数偏高
+2. 心脏与袖带的高度差：心脏高度也会对血压测量产生影响。在坐姿时，心脏的高度相对于袖带的位置可能有所变化。一般来说，将袖带放置在心脏水平位置（即心脏高度），可以获得较为准确的血压测量结果。如果袖带位置过高或过低，可能会导致血压读数不准确
+
+### 自动：振荡式测量法
+
+Oszillometrische Messung是指振荡式测量法，也称为振荡测量法。这是一种用于测量血压的方法，通常在医疗设备如电子血压计中使用
+
+震荡式测量法的原理和柯氏音法相似。这种测量方法通过对袖带中的气压进行周期性的增减，来监测动脉血压的变化。具体过程如下：在充气的袖带中，气压被逐渐增加，直到超过了动脉血压的最高值，此时动脉被完全压迫，血流停止。然后，气压被逐渐释放，当动脉压力高于袖带内的气压时，血流开始通过，产生震动，这些震动被传感器探测到。根据这些震动的特征，电子血压计计算出收缩压和舒张压的值
+
+### 长期测量
 
 ## *血氧饱和度*
 
@@ -282,7 +376,39 @@ PPG技术可用于多种应用，包括心率监测、血氧饱和度测量、�
 
 ## *Spirometrie 肺功能量计*
 
-### intro
+Spirometrie 这个词源自希腊语 "spiro"（σπιράω），意为"呼吸"或"吸入"
+
+### 关键数据量（流量–容积曲线/FV曲线）
+
+* IVC Inspiratorische Vitalkapazität 吸入肺活量
+* FVC Forcierte Vitalkapazität 用力肺活量
+* PEF Maximaler exspiratorischer Spitzenfluss
+* RV Reservevolumen 馀气量：最大呼气后肺内还剩馀的气量，该数值无法由呼吸量测定器测得
+* TLC 肺总量
+
+### 呼吸气体的测量环境
+
+* BTPS-Bedingungen (body temperature, pressure, saturated with water vapor) = Bedingungen im Inneren des Körpers:
+  * Körpertemperatur von 37 °C
+  * Druck von 760 mmHg
+  * 100 % relative Feuchtigkeit
+* ATPS-Umgebungsbedingungen (ambient temperature pressure staurated)
+* BTPS-Korrektur: Größen müssen auf BTPS korrigiert werden:
+  * inspiratorisch: 1 l Umgebungsluft entspricht ca. 1,1 l Lungenluft
+  * exspiratorisch: 1 l Lungenluft entspricht ca. 0,97 l am Sensor
+* STPD (standard temperature pressure dry)
+
+### 传感器类型
+
+* Differentialdruck-Flowmeter
+  * Pneumotachograph nach Fleisch 费式压差式呼吸流量计
+  * Pneumotachograph nach Lilly 改进的Lilly型压差式呼吸流量计
+  * Lamellen-Spirozepter
+  * Turbulenz-Flowmeter
+* Turbinen-Flowmeter
+* Heizdrahtanemometer
+* Wirbelfluss-Flowmeter
+* Ultraschall-(transit-time) Flowmeter
 
 ## *运动测量*
 
@@ -450,6 +576,10 @@ Elektromyographie 肌电图, myogen: **im Muskel (Muskeln) erzeugt oder entstand
 * 暗带中有一个较明亮的H盘 Helle-Scheibe
 * H带之间有一条细M线 Mittel-Scheibe
 
+### 抽筋 Krampf
+
+【我们的肌肉为什么会突然抽筋？】 https://www.bilibili.com/video/BV1mR4y1J71d/?share_source=copy_web&vd_source=b2cbcd35d392255871deb149dc269390
+
 ### 肌肉的运动方式
 
 肌肉运动的方式（一） - 大肌霸浩克的文章 - 知乎 https://zhuanlan.zhihu.com/p/477231124
@@ -508,7 +638,9 @@ $F_M$ Muskelkraft; $v_k$ = Kontraktionsgeschwindigkeit; $\alpha$ und $\beta$ = e
 
 > **Isometrisch** bedeutet "von gleicher Länge". Eine [Kontraktion](https://flexikon.doccheck.com/de/Kontraktion) ist isometrisch, wenn sich die Länge des [Muskels](https://flexikon.doccheck.com/de/Muskel) nicht verändert. -- DocCheck
 
-### 肌肉-关节系统
+## *关节系统 Gelenk/Joint articulation*
+
+### 关节连接类型
 
 <img src="关节.png">
 
@@ -517,6 +649,15 @@ $F_M$ Muskelkraft; $v_k$ = Kontraktionsgeschwindigkeit; $\alpha$ und $\beta$ = e
 3. Sattelgelenk 鞍状关节：如大拇指与掌骨的连接；可以在两个方向运动
 4. Scharniergelenk 屈戌/铰链关节：如膝关节
 5. Radgelenk 车轴关节：如尺桡二骨之间的关节
+
+### 关节结构
+
+<img src="关节结构.webp" width="40%">
+
+* 关节囊：约束活动，保护关节不受灰尘和细菌的侵入
+* 韧带：加固关节
+* 关节软骨：减小关节头和关节腔之间的摩擦
+* 关节滑液：减小关节摩擦、减轻关节磨损，运输营养物质
 
 ## *生物力学中的测量技术*
 
@@ -544,8 +685,8 @@ $F_M$ Muskelkraft; $v_k$ = Kontraktionsgeschwindigkeit; $\alpha$ und $\beta$ = e
 
 <img src="解剖平面.png" width="50%">
 
-* 冠状面 coronal plane：将人体纵断为左右两部分的断面。
-* 矢状面/额状面 sagittal plane：从左右方向将人体纵断为前后 (腹背) 两部分的断面。
+* 冠状面/额状面 coronal plane：从左右方向将人体纵断为前后 (腹背) 两部分的断面。
+* 矢状面 sagittal plane：将人体纵断为左右两部分的断面。
 * 横断面/水平面 transverse plane：与地面平行将人体横断为上下两部分的断面。
 
 ### 解剖学动作
@@ -670,10 +811,15 @@ $F_M$ Muskelkraft; $v_k$ = Kontraktionsgeschwindigkeit; $\alpha$ und $\beta$ = e
 
 <https://www.britannica.com/science/human-muscle-system>
 
+### 头颈部肌肉
+
+* 枕下肌群
+
 ### 胸肌
 
 <img src="肩与胸部肌肉.jpg.webp" width="70%">
 
+* 胸锁乳突肌 Sternocleidomastoid：两块位于颈部，使头部前推或转动的肌肉
 * 胸部浅层
   * pectoralis major 胸大肌
     * 成扇型，且分裂为大小不等两部分。在其窄端，两部分都附著于肱骨之上，在宽的一端，较小的部分，即clavicular head 锁骨部附于锁骨上；较大的部分，即sternocostal head 内侧部则附于胸骨和肋骨上面的软肋骨上
@@ -718,13 +864,14 @@ $F_M$ Muskelkraft; $v_k$ = Kontraktionsgeschwindigkeit; $\alpha$ und $\beta$ = e
 
 <img src="背部肌肉.jpg.webp"  width="70%">
 
-* 背部浅层
+* 背部浅层（上图左侧）
   * trapezius 斜方肌
   * latissimus dorsi 背阔肌
   * rhomboid minor 小菱形肌
   * rhomboid major 大菱形肌
-* 背部深层
+* 背部深层（上图右侧）
   * 竖脊肌群 erector spinae
+  * 肩胛提肌 levator scapulae muscle
 
 ### 肩部肌肉
 
@@ -744,6 +891,8 @@ $F_M$ Muskelkraft; $v_k$ = Kontraktionsgeschwindigkeit; $\alpha$ und $\beta$ = e
 
 * 冈上肌 supraspinatus muscle：肩关节外展
 
+  「干货」每天分享一块肌肉——冈上肌 - 健身干货学堂的文章 - 知乎 https://zhuanlan.zhihu.com/p/144812853
+
 * 冈下肌 infraspinatus：肩关节旋外
 
 ### 腿部肌肉
@@ -751,6 +900,17 @@ $F_M$ Muskelkraft; $v_k$ = Kontraktionsgeschwindigkeit; $\alpha$ und $\beta$ = e
 <img src="腿部肌肉前视图.jpg.webp" width="70%">
 
 <img src="腿部肌肉后视图.jpg.webp" width="70%">
+
+* 髂肌/胯肌 Iliacus muscle
+* 股四头肌群 Quadriceps femoris muscle
+  * 股直肌 Rectus femori muscle
+  * 股外侧肌 Vastus lateralis muscle
+  * 股内侧肌 Vastus medialis muscle
+  * 股中间肌 Vastus intermedius muscle
+* 腘绳肌群 hamstring tendon，大腿后侧的肌群
+  * 股二头肌 Biceps femoris：交叉在膝关节附近的肌腱群，主要负责控制膝盖弯曲与大腿伸展的动作
+  * 半腱肌 Semitendinosus muscle
+  * 半膜肌 Semimembranosus muscle
 
 ### 核心肌群
 
@@ -847,10 +1007,6 @@ EMG实验结果表明，不同握距的卧推对这三种肌肉的刺激效果�
 
 * 反向飞鸟/上背划船
 
-
-
-
-
 ### 股四头肌
 
 膝关节伸
@@ -921,12 +1077,224 @@ Repetition Maximum 可完成的最大重复次数
 * 恒定组：配重恒定 $\rightarrow$，次数恒定 $\rightarrow$，可以用于所有动作（尤其是换片不便或小肌群）
 * 倒金字塔：配重递减 $\downarrow$ ，次数递增 $\uparrow$，可以用于冲击重量（必须充分热身后才能开始）
 
-# Orthetik & Prothetik
+## *拉伸*
+
+### 拉伸的基础知识
+
+拉伸和热身是两个不同的概念，它们在准备身体进行运动时起着不同的作用：
+
+1. 热身（Warm-up）： 热身是指在开始实际的运动或训练前进行一系列轻度的身体活动，旨在逐渐增加心率、体温和血液流动，为身体做好准备。热身的主要目的是激活身体的生理系统，为高强度运动做好准备，并减少运动伤害的风险。常见的热身活动包括轻松跑步、跳绳、动态拉伸、旋转关节、骑自行车等。热身应该持续5到10分钟，具体时间取决于运动的强度和类型。
+2. 拉伸（Stretching）： 拉伸是一种特定的运动形式，通过延展肌肉和关节，以增加身体的灵活性和活动范围。拉伸的目的是改善肌肉的弹性和减少肌肉的紧张程度。有两种主要类型的拉伸：静态拉伸和动态拉伸。
+   * 静态拉伸：在静态拉伸中，您保持拉伸姿势，不进行快速动作，持续一段时间。这有助于缓解肌肉紧张，增加灵活性，但在高强度运动前可能会降低肌肉力量和爆发力。
+   * 动态拉伸：动态拉伸涉及模拟运动动作，通过控制运动幅度来拉伸肌肉。它在训练前可以作为一种热身活动，有助于提高心肺功能，增加血液流动，准备身体进行运动。
+
+### 什么时候拉伸
+
+拉伸（伸展运动或拉伸锻炼）的最佳时间取决于要达到的目标和身体状况。一般来说，拉伸在训练前或训练后都有不同的作用和效果：
+
+1. 拉伸在训练前： 在过去，普遍认为在进行运动或训练前进行拉伸可以预防运动伤害和提高运动表现。然而，最近的研究表明，进行静态拉伸（保持拉伸姿势，不进行快速动作）在训练前可能并不是最优选择，因为它可以降低肌肉力量和爆发力。这被称为“拉伸性能障碍”。如果您需要进行高强度的爆发性活动（如举重、短跑、跳跃等），静态拉伸可能不适合在训练前进行。
+
+   不过，动态拉伸（通过控制运动幅度进行拉伸，类似于模拟运动动作）在训练前是一个更好的选择，因为它可以提高身体的灵活性和活动范围，准备身体进行运动。动态拉伸还可以增加心肺功能，提高血液流动，为运动做好准备。
+
+2. 拉伸在训练后： 将拉伸放在训练后可以有助于恢复和放松肌肉。在训练结束后进行静态拉伸有助于缓解肌肉紧张和酸痛，并增加灵活性。这对于减少运动后的不适感和预防肌肉损伤可能是有益的。
+
+### 针对性拉伸
+
+### 缓解疼痛
+
+# Orthopädietechnik
+
+## *intro*
+
+### 医疗器械编号
+
+* 德国 Systematik der Positionsnummer im Hilfsmittelverzeichnis
+
+  <img src="PositionsnummerHilfsmittelverzeichnis.png">
+
+  Beispiel
+
+  * PG `->` 14: Inhalations-und Atemtherapie
+  * AO `->` 24: Atemweg
+  * UG `->` 07: Systeme zur Schlafapnoebehandlung
+  * AG `->` 5: Konfektionierte Maße für CPAP-Beatmungsgeräte
+  * EP `->` 034: Maske Typ X der Firma Y
+
+* 中国 医疗器械注册证编号
+
+  <img src="医疗器械注册证编号.drawio.png">
+
+  * 审批部门所在地（省、自治区、直辖市）简称。国字：境内三类和进口二、三类为“国”字，由国家食品药品监督管理局 NMPA 审批
+  * 注册形式
+    * “准”字：国内生产的医疗器械 
+    * “进”字：进口医疗器械
+    * “许”字：港澳台地区生产的医疗器械
+  * 产品管理类别
+    * 一类医疗器械：一类医疗器械是指对人体直接或间接应用的医疗器械，例如体外诊断试剂、一次性使用医疗器械、部分口腔修复器械等。这类器械使用风险较低，经过适当的质量控制和生产许可，可以在中国市场上自由销售和使用
+    * 二类医疗器械：二类医疗器械是指对人体直接或间接应用的中高风险医疗器械，包括医用影像设备、手术器械、口腔诊疗器械等。这类器械的安全性和有效性要求相对较高，需要进行临床试验和相关评价，并获得国家食品药品监督管理局的注册证书才能在中国市场上销售和使用
+    * 三类医疗器械：三类医疗器械是指对人体直接或间接应用的高风险医疗器械，如心脏起搏器、人工心脏瓣膜、植入式医疗器械等。这类器械具有较高的风险和复杂性，需要进行严格的临床试验和评估，且必须获得国家食品药品监督管理局的注册证书才能在中国市场上销售和使用
+
+### 对医疗器械的要求
+
+* Medizinisch / Biomechanisch
+  * Körperteile ersetzen (Prothetik)
+  * Den Körper stabilisieren, führen (Orthetik) 
+  * Kräfte aufnehmen & übertragen 
+  * Fehlstellungen korrigieren 
+  * Fehlende Muskulatur und Funktionen kompensieren 
+* Konstruktiv
+  * Passformgerecht mit Druck-und Entlastungsarealen 
+  * Korrekte Passteilposition 
+  * Einfache Handhabung 
+  * Stabile / flexible Bereiche 
+  * Glatte Oberflächen ggf. untersch. Shorehärten 
+  * Leichtes und unauffälliges Erscheinungsbild 
+  * Langlebig (ca. 2Jahre) 
+
+## *Fertigung*
+
+### 材料
+
+* Holz (Pappel) 硬木
+* Kork 软木
+* Leder 皮革
+* Filz 毛毡
+* Stoff 面料/织物
+* Metall (Al/CrNi 铬镍
+* Thermoplastische Kunststoffe 热塑性塑料，比如PE PP EVA PUR
+* Weichschaum 软泡沫，比如 PE EVA PUR
+* Silikone 硅胶
+* Faserverbund-werkstoffe 纤维复合材料
+
+一些缩写：PE - Polyethylen 聚乙烯；PP - Polypropylen 聚丙烯；PET - Polyethylenterephthalat 聚对苯二甲酸乙二酯；NTT - Niedertemperatur-Thermoplast 低温热塑性塑料；EVA - Ethylenvinylacetat 乙烯基乙酸酯；PUR - Polyurethan 聚氨酯；CF - Carbonfaser 碳纤维；GF - Glasfaser 光纤
+
+### 生产工艺
+
+| 材料                                                         | 生产工艺                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 纤维复合材料 Faserverbundwerkstoffe：纤维类： 碳纤维、玻璃纤维、芳纶纤维 Aramid；基体类：丙烯酸 Acryl、环氧树脂 Epoxid | 树脂浇注工艺 Gießharzverfahren                               |
+| 塑料                                                         | 深拉工艺，3D打印（SLS） Tiefziehverfahren, 3D-Druck (SLS)    |
+| 硅胶 Silikon HTV/RTV                                         | 铺设、浇注 Auflegen, Gießen                                  |
+| Metalle: Alu, Stahl, Titan                                   | 铣削、车削、磨削、弯曲、3D打印（SLM） Fräsen, Drehen, Schleifen, Biegen, 3D-Druck (SLM) |
+
+HTV: high temperature vulcanized silicone 高温硫化硅橡胶
+
+RTV: room temperature vulcanizing silicone 室温硫化硅橡胶
 
 ## *Orthetik 矫形学*
 
+### Aufgaben
+
+### Bein
+
+作用方式: Dreipunktprinzip。为防止压疮，要尽可能扩大作用压力的皮肤面积
+
+> 压疮又称压力性溃疡、褥疮，是由于局部组织长期受压，发生持续缺血、缺氧、营养不良而致组织溃烂坏死。皮肤压疮在康复治疗、护理中是一个普通性的问题。据有关文献报道，每年约有6万人死于压疮合并症 -- 百度百科
+
+<img src="矫形腿部.png">
+
+* FO
+* AFO
+* KO
+* KAFO
+* HKAFO
+
+### Rumpf 躯干
+
+<img src="矫形躯干.png">
+
+**Becken-Orthesen (SIO)**
+
+•Stabilisieren den Beckenring und limitieren den Bewegungsumfang 
+
+
+
+**Zervikal-Orthesen (CO) und Zerviko-Thorakal-Orthesen (CTO)**
+
+•Immobilisierung und Stabilisierung der Halswirbelsäule
+
+
+
+**Thorakal-Orthesen (TO)**
+
+•Unterstützen die Rumpfaufrichtung und entlasten die Brustwirbelsäule
+
+
+
+**Lumbal-Orthesen (LO/LSO)**
+
+•Bewirken eine Stellungsänderung, Entlastung oder Bewegungsbeeinflussung der Lendenwirbelsäule
+
+
+
+**Thorako-Lumbo-Sakral-Orthesen (TLSO/CTLSO)**
+
+•Aufgaben: Immobilisierung, Mobilisierung oder Entlastung und Korrektur
+
+### Arm
+
+<img src="矫形手臂.png">
+
+**Finger-Orthesen (FO)**
+
+•Finger-Extensionsorthesen: bringen Fingergelenk in gestreckte Stellung
+
+•Finger-Flexionsorthesen: bringen Fingergelenk in gebeugte Stellung
+
+
+
+**Unterarm-Hand-Orthesen (WHO)**
+
+•Können entweder nur die Finger beeinflussen und das Handgelenk ruhigstellen oder das Handgelenk als zentrales Gelenk behandeln und die Finger frei lassen
+
+**Ellenbogen-Orthesen (EO/ EWHO)** 
+
+•Wirken auf das Ellenbogengelenk/und das Handgelenk, stabilisieren dieses und schränken den Bewegungsraum in Flexion/Extension ein.
+
+
+
+**Schulter-Orthesen (SO und SEO)**
+
+•SO führen und sichern die Bewegung der Schulter
+
+•Häufig in Kombination mit Begrenzung der Bewegung im Ellenbogengelenk (Schulter-Ellenbogen-Orthesen –SEO)
+
+
+
+**Ganzarm-Orthesen (SEWO und SEWHO)**
+
+•Schließen alle großen Gelenke der oberen Extremität ein
+
 ## *Prothetik 义肢*
+
+### Untere Extremität 下肢
+
+### Obere Extremität 上肢
 
 
 
 # Moblitätshilfen
+
+一些简单的移动辅助工具
+
+* Gehstöcke 手杖
+* Rollatoren 轮式助行器
+
+## *Rollstühle 轮椅*
+
+### Lenksysteme
+
+Definition: Lenkung ist die Einrichtung zur Änderung des Geschwindigkeitsvektors in einem Fahrzeug. 转向装置是改变车辆速度矢量的装置
+
+* Direkte Lenkung 直接转向：Direkte Lenkung是指在转向系统中，通过转向操作直接传递给车轮的转向力。这种转向系统通常具有较高的转向灵敏度和响应性，使驾驶员能够更直接地感知车辆的转向反应。Direkte Lenkung通常应用于运动性能较高的车辆，如高性能轿车或赛车，以提供更敏捷的操控和更直接的驾驶感受。
+* Indirekte Lenkung 间接转向：Indirekte Lenkung是指在转向系统中，通过转向操作间接传递给车轮的转向力。这种转向系统通常采用机械或液压传动装置，通过转向柱、齿轮机构或助力转向装置将转向操作转换为车轮的转向力。Indirekte Lenkung通常应用于一般乘用车或商用车等车型，以提供稳定的驾驶感受和更容易控制车辆的转向力度。
+
+### Fahrwerk 底盘
+
+
+
+
+
+### Eigengewicht 自重
+
+## *Tragbare Roboter 可穿戴式机器人/外骨骼*
