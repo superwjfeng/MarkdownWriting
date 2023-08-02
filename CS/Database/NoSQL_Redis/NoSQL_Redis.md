@@ -2,15 +2,289 @@
 Title: NoSQL_Redis
 Author: Weijian Feng 封伟健
 ---
+在线Redis <https://try.redis.io>
+
 Mac上 `redis.conf` 的位置：`/usr/local/etc/redis.conf`
 
-# 数据类型
+# Redis介绍
 
-## *常用数据类型*
+## *简介*
 
-## *数据结构*
+Redis是一个在内存中存储数据的中间件 Middleware，通常用于作为缓存数据库
 
-# Redis 线程模型
+### Redis重要特性
+
+* 非关系性数据库 NoSql：主要通过KV键值对的方式来组织，key都是string，value则可以是string、hashes、lists、sets、sorted sets、streams等数据类型
+* 可编程性 Programmaibility：针对Redis的操作，可以直接通过简单的交互式命令操作，也可以通过一些脚本的方式来批量执行操作。Redis配套的主要脚本语言是Lua
+* 可扩展性 Extensibility：可以在Redis原有的功能基础上再进行扩展，Redis提供了一组不同语言的API，通过C/C++、Rust等语言来编写Redis扩展，本质上就是一个动态链接库。所谓的扩展性就是在Redis本身提供的数据结构之外，自定义一些数据结构
+* 持久化 Persistence：Redis会把数据从内存拷贝到硬盘上，当Redis重启的时候，就会从硬盘中加载备份，使Redis在内存中恢复到重启前的状态
+* 集群 Clustering：通过哈希槽来支持横向扩展
+* 高可用 High availability：核心是冗余/备份，比如主从、哨兵和集群都有备份
+
+### 为什么Redis这么快？
+
+* Redis是一个内存数据库，访问内存比硬盘IO快得多
+* Redis的核心功能都是比较简单的逻辑
+* 使用了epoll这种多路复用的IO方式
+* 使用单线程Reactor模型（虽然更高版本的Redis引入了多线程，但核心仍旧是单线程），减少了不必要的线程竞争开销。多线程可以提高效率的前提是处理CPU密集型/计算密集型的任务，此时使用多线程可以充分的利用CPU的多核资源。但是Redis的核心任务是操作内存中的数据结构，并不会占用很多CPU资源，或者可以说是IO密集型，在这种情况下使用多线程反而是一种负担
+* 比较争议的一种说法是Redis是使用C语言开发的，所以很快。一个典型的反例就是MySQL也是用C语言开发的
+
+注意：Redis很快是指和MySql这种关系型数据库相比的，相对于直接在内存中通过数据结构来操纵变量还是慢，这是因为Redis是一个client-server结构的程序，就算是本地访问，中间也需要经过本地环回socket
+
+### Redis的应用场景
+
+* Real-time data store 实时数据存储：适用于要求高存储效率（高实时性、低延迟、高吞吐）。比如说商业搜索引擎对性能的要求很高，在这种搜索引擎中就不会用MySql，因为速度太慢。这时候Redis这种内存数据库就派上用场了，当然是用这样的内存数据库来存储大量数据是需要不少的硬件资源的
+* Caching & session storage 作为MySql中的热点数据缓存、会话管理。热点缓存和会话都属于可以丢失的数据
+* Streaming & messaging 消息队列：基于消息队列可以实现一个网络版本的生产者&消费者模型。分布式系统中服务器和服务器之间有时也需要用到生产者消费者模型。业界中知名的消息队列有RabbitMQ、Kafka、RocketMQ等，但Redis也是提供了消息队列的功能的。若当前场景中对于消息队列的功能依赖的不是很多，并且又不想引入额外的依赖，Redis就可以作为一个选择
+  * 异步通信：消息队列支持异步通信模式，发送方将消息放入队列后即可继续处理其他任务，而不需要等待接收方立即处理。这样可以提高系统的响应性能和吞吐量
+  * 解耦合：消息队列实现了解耦合，允许不同的组件或模块之间通过发送和接收消息来通信，而不需要直接调用彼此的函数或API。这降低了系统的依赖性，使得系统更易于维护和扩展
+  * 削峰填谷：当系统面临突发的请求量或流量峰值时，消息队列可以作为缓冲区，帮助平衡系统的负载。发送方可以将消息放入队列中，接收方按照其处理能力逐渐消费消息，从而避免系统过载
+
+补充：会话管理
+
+## *Redis的重要版本*
+
+Redis5系列用
+
+## *Redis的安装与服务器管理*
+
+### 安装
+
+Debian直接通过包管理器来安装
+
+On Debian: Redis server v=7.0.11 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=c4e7f6bf175a885b; On MacOS: Redis server v=7.0.11 sha=00000000:0 malloc=libc bits=64 build=337e79498f5fefea
+
+`netstat -anp | grep redis` 来查看redis-server是否已经跑起来了，默认端口是6379
+
+此时绑定的是本地环回 `127.0.0.1:6379`，无法跨主机、跨网络访问，可以将位于 `/etc/redis` 中的配置文件的配置项修改为 `bind 0.0.0.0 ::1`，`protected-mode no`
+
+### 用 `systemctl` 来管理redis服务器
+
+`systemctl` 是一个在 Linux 系统上管理系统服务（Systemd 单位）的命令行工具。Systemd 是一种系统和服务管理器，被广泛用于现代的 Linux 发行版，如Debian、Ubuntu、CentOS、Fedora 等，服务是指在后台运行并提供基本功能（例如网络、数据库、打印、日志等）的程序
+
+`systemctl` 实际上将 service 和 chkconfig 这两个命令组合到一起
+
+```sh
+systemctl start [service_name] # 启动nfs服务
+systemctl enable [service_name] # 设置开机自启动
+systemctl disable [service_name] # 停止开机自启动
+systemctl status [service_name] # 查看服务当前状态
+systemctl restart [service_name] # 重新启动某服务
+systemctl stop [service_name] # 停止服务
+systemctl list-units --type=service # 查看所有已启动的服务
+```
+
+### Redis客户端
+
+* 使用redis自带的客户端 `redis-cli` 来连接服务器。这是最稳定的，也是最常用的客户端
+
+  ```shell
+  ❯ redis-cli
+  127.0.0.1:6379> ping
+  PONG
+  ```
+
+* 图形化界面客户端（桌面程序、web程序）：和MySql一样，依赖于Win系统，而工作中win系统连接到服务器会有诸多限制。中间可能会经历很多的跳板机 jump host、堡垒机 bastion host 和权限校验
+
+* 基于redis的api自行开发客户端，这是工作中最主要的形态
+
+## *基本全局命令*
+
+操作不同的数据结构会有不同的命令，而全局命令则是可以搭配任意一个数据结构来使用的命令
+
+### `SET`
+
+```
+SET key value [NX | XX] [GET] [EX seconds | PX milliseconds |
+  EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL]
+```
+
+虽然key和value都是string，但是不需要加引号
+
+* `EX` 用于设置超时时间，单位是秒，`PX` 同理，单位是毫秒
+* `[NX | XX]` 其中NX是若key不存在才设置，若key不存在则不设置（返回nil）；XX是若key不存在才不设置（返回nil），若key存在才设置（相当于更新key的value）
+
+`SET` 的变种有 `SETEX`、`SETPX`、`SETNX`
+
+`SET` 更新的时候会覆盖value的数据类型和ttl
+
+### `GET`
+
+ `GET` 命令输入key就能得到对应的value，若key不存在，就返回 `(nil)`
+
+> ‘Null’ and ‘nil’ are synonymous and both mean ‘zero’ or ‘nothing’ in value. The two words differ mainly by what field we use them in. We use ‘null’ mostly in maths, programming, business, and legal matters. On the other hand, we use ‘nil’ in sports and games.
+
+`GET` 只支持字符串类型的value，若value是其他类型，使用 `GET` 获取会出错
+
+`GET` 默认以十六进制来显示结果，若要得到字符显示，可以在redis-cli打开的时候加一个 `--raw` 选项让其尝试自动翻译
+
+### `MSET` & `MGET`
+
+```
+MSET key value [key value ...]
+MGET key [key ...]
+```
+
+`GET` & `SET` 一次网络传输职能针对一个对象。为提高效率，`MSET` & `MGET` 可以一次用于多个对象，复杂度都是 ***O(1)*** 
+
+使用的时候要适量，一次设置过多KV会阻塞单线程
+
+### `KEYS`
+
+```
+KEYS pattern
+```
+
+后面的pattern是一种正则通配符
+
+* `h?llo` 匹配任意一个字符
+* `h*llo` 匹配0个或者多个任意字符
+* `h[abcde]llo` 只能匹配到abcd中的排列组合
+* `h[^a]llo` 排除字符 
+
+`KEYS` 命令的时间复杂度是 ***O(N)***，因为它要遍历所有的key，因为Redis是单线程的，所以查询过程中会阻塞服务，无法给其他client提供服务。因此在生产环境中都会禁止使用 `KEYS`，尤其是 `KEYS *`
+
+### `EXISTS`
+
+```
+EXISTS key [key ...]
+```
+
+判定key是否存在，返回多个key存在的个数。Redus通过哈希表来组织key，因此复杂度为 ***O(1)*** 
+
+`EXISTS hello hello` 和2次 `EXISTS hello` 看起来效果差不多，但是是有差别的。考虑到网络IO（涉及到网卡等硬件）虽然可能会比硬盘IO快，但总是比内存漫的，因此能少IO就少IO。出于这种目的，Redis的很多命令都是支持一次就能操作多个key的
+
+### `DEL`
+
+```
+DEL key [key ...]
+```
+
+删除指定的KV对，和 `EXISTS` 一样，复杂度为 ***O(1)*** 
+
+Redis作为缓存的时候误删的影响没有MySql中那么严重，当然若是把Redis直接作为主数据库那误删影响就也大了
+
+### `EXPIRE`
+
+```
+EXPIRE key seconds [NX | XX | GT | LT]
+```
+
+`EXPIRE` 的作用是给指定过的key设置过期时间，key存活时间超出该指定指，就会被被从Redis中自动删除掉。单位是秒
+
+比如说验证码5分钟有效，或者是基于Redis实现分布式锁的时候，为了避免出现不能正确解锁的情况，通常都会在加锁的时候设置一下过期时间。所谓的使用Redis作为分布式锁，就是给Redis里写一个特殊的KV
+
+设定过期时间，必须是针对已经存在的key来设置，设置成功返回1，失败返回0
+
+### `TTL`
+
+```
+TTL key
+```
+
+查询剩余的过期时间，返回-1表示没有关联过期时间，返回-2表示key不存在
+
+### `TYPE`
+
+```
+TYPE key
+```
+
+返回key对应的value的数据类型，复杂度为 ***O(1)*** 。可能是 `none`、`string`、`list`、`set`、`zset`、`hash` 和 `stream` （Redis作为消息队列的时候，使用这个类型的value）
+
+因为对不同数据类型的value的操作命令是不同的，所以在操作之前用 `TYPE` 来查看一下数据类型是很有帮助的
+
+### `OBJECT encoding`
+
+查询数据类型的编码方式
+
+### :warning: 删库 `FLUSHALL`
+
+`FLUSHALL` 可以把Redis上所有的KV全部带走，在公司的生产环境数据库中绝对不能使用！！！
+
+# 数据类型 & 内部编码
+
+## *总结*
+
+有序集合：除了存储member之外，还需要存储一个score（权重、分数）
+
+### 自适应的编码方式
+
+Redis底层在实现上述数据结构的时候，会在源码层面针对上述实现进行特定的优化，来达到节省时间/空间的效果。即Redis内部具体实现的数据结构，或者说编码方式是与标准数据结构有差异的，但无论是如何实现的，都提供特定的复杂度承诺
+
+作为程序员去记住到底在什么情况下哪种数据类型用什么编码方式意义不大。比如说有种说法是若字符串长度小于39字节就使用embstr，超过39字节就使用raw。首先这些数字都是可以自己配置的，其实数字到底是怎么来的，为什么要这么设置也是有比较难考证的原因的，去细究意义不大
+
+如果我们真要去改动这些数字的话，比如说像平衡树的链表长度达到某个数变成红黑树，或者负载因子达到某个数就触发扩容一样，我们需要结合具体的场景，以测试试验的结果为依据来改动出一个更合适的数值
+
+## *string*
+
+### 内部编码
+
+Raw：最近本的字符串，底层就是一个C++的char数组或者Java的byte数组（Java的char是两个字节的）
+
+Redis通常也可以用来实现
+
+当value是一个整数的时候，此时Redis可能会直接使用int来保存
+
+embstr是针对短字符串进行的特殊优化
+
+Redis会自动适应特定的编码方式，程序员在使用Redis的时候一般感知不到
+
+
+
+不仅仅可以存储文本数据，还可以是整数、普通的文本字符串、JSON、XML、二进制数据（图片、视频、音频等）。图片、视频、音频的体积可能会比较大，Redis对于单个string类型限制的最大大小是512MB
+
+MySql有指定的默认字符集，比如说指定拉丁字符集，输入中文就会失败。Redis则是存的是什么就是什么，比如存的是GBK，拿出来就是GBK
+
+### 使用场景
+
+### 计数命令
+
+* `incr`：针对value + 1
+  * 效果是 `++i`，此时key对应的value必须是64位/8字节表示的整数，相当于C中的long long
+  * 若操作的key此时不存在，就会把这个key的value当作0来使用，因此结果是1
+  * `incr` 加减正负数都可以，加一个负数的效果跟 `decr` 一样
+* `incrby`：针对value + n
+* `decr`：针对value - 1
+* `decrby`：针对value - n
+* `incrbyfloat`：针对value +/- 小数
+
+### 字符串的拼接、修改
+
+* `append` 追加
+  * 如果 key 已经存在并且是一个 string，命令会将 value 追加到原有 string 的后边。如果 key 不存在，则效果等同于 `SET` 命令
+  * 返回的是长度，其单位是字节。Redis的字符串不会对字符编码做任何处理，也就是说Redis是不认识字符的，只认识字节。具体用什么编码方式由输入终端决定
+* `getrange` 找子串
+* `setrange`
+* `setlen`
+
+### 其他命令
+
+## *hash*
+
+Hashtable：最基本的哈希表。注意：不是Java标准库中的哈希表实现，即Java的HashTable，不过Redis的Hashtable的实现思路和Java标准库中的也差不多
+
+Ziplist：压缩列表，在一些情况下，进一步压缩空间。当哈希表里面元素比较少的时候可能会优化成ziplist
+
+## *list*
+
+和hash一样，linkedlist是最普通的链表，ziplist：压缩列表
+
+Quciklist：Redis3.2开始，引入的新的实现方式。quicklist代替了linkedlist和ziplist，它同时兼顾了linkedlist和ziplist的优点。具体实现大概是quicklist就是一个链表，每个元素又是一个ziplist，这样能够折衷空间和效率。quicklist比较类似于C++中的 `std::deque`
+
+## *set*
+
+Hashtable或者针对整数的特殊优化intset
+
+## *zset*
+
+ziplist 压缩列表和skiplist 跳表，从跳表上查询元素的复杂度是 ***O(logN)*** ，达到了二叉平衡搜索树的效果
+
+
+
+
+
+# Redis 单线程模型
 
 ## *单线程*
 
@@ -25,7 +299,7 @@ Mac上 `redis.conf` 的位置：`/usr/local/etc/redis.conf`
 ```
 
 * Redis 2.6版本及之前：Redis在启动的时候，会启动后台线程BIO来执行除了写数据之外的关闭文件、日志持久化等很费时的操作
-* Redis 4.0版本之后：新增一个新的后台线程，用来异步释放 Redis 内存，也就是 lazyfree 线程。比如执行 unlink key / flushdb async / flushall async 等命令，会把这些删除操作交给后台线程来执行。大Key的内存清理是很费时间的
+* Redis 4.0版本之后：新增一个新的后台线程，用来异步释放 Redis 内存，也就是 lazyfree 线程。比如执行 unlink key / flushdb async / flushall async 等命令，会把这些 删除操作交给后台线程来执行。大Key的内存清理是很费时间的
 
 BIO后台线程是一个生产者、消费者模型，其中关闭文件、AOF 刷盘、释放内存这三个任务都有各自的任务队列
 
@@ -41,6 +315,8 @@ Redis官方Benchmarking结果显示，单线程的Redis吞吐量可以达到10w/
 * **非阻塞 I/O**：Redis 使用了非阻塞的 I/O 模型，通过使用多路复用技术（如 epoll、kqueue 等）实现高效的事件处理。这使得 Redis 在处理大量并发连接时能够高效地进行 I/O 操作，提高了系统的整体性能
 * **单线程避免锁竞争**：由于 Redis 是单线程的，所以避免了多线程环境下的锁竞争问题。在多线程环境中，多个线程同时访问共享数据时需要进行加锁操作，而加锁操作会引入额外的开销和竞争。而 Redis 单线程模型下不存在锁竞争，可以充分利用 CPU 资源
 * **精简的功能集**：Redis 专注于提供高效的键值存储和数据结构操作，避免了复杂的功能和性能开销。相比于传统的关系型数据库，Redis 去除了很多复杂的特性，如事务、复杂的查询语言等，从而减少了系统的复杂性和开销，使得其更加高效
+
+Redis能够使用单线程模型很好的工作的原因主要在于Redis的核心业务逻辑都是短平快的，不太消耗CPU资源也就不太吃多核了。这是一种特殊情况，若是CPU密集型的程序当然就不能这么干了
 
 需要注意的是，Redis 单线程的快速性并不适用于所有场景。当系统的负载较高或需要进行复杂的计算时，单个 Redis 实例可能会成为性能瓶颈。在这种情况下，可以通过使用 Redis 集群、主从复制等技术手段来进行水平扩展，以满足高并发和大规模数据存储的需求
 
@@ -83,6 +359,14 @@ int main(int argc, char **argv) {
 # Redis的事务
 
 <https://redisbook.readthedocs.io/en/latest/feature/transaction.html>
+
+`MULTI`
+
+`DISCARD`
+
+`EXEC`
+
+`WATCH`
 
 # 持久化
 
@@ -185,6 +469,43 @@ RDB 文件的**加载**工作则是在服务器启动时**自动执行**的，Re
 数据库都是直接和硬盘打交道的，也就是说要进行大量慢速IO。这也导致数据库往往会成为整个系统的瓶颈，当大量IO到来时，数据库很容易就崩溃了。为了避免这种情况出现的概率，不让用户直接去访问数据库进行IO，一般都会用Redis作为缓存使用
 
 因为Redis是内存数据库，我们可以将数据库的数据直接缓存在Redis中，相当于把数据缓存在内存，内存的读写速度比硬盘快好几个数量级，这样就大大提高了系统性能
+
+## *key过期策略*
+
+经典面试题：一个Redis-server中可能同时存在很多key，这些key中可能有很大一部分都有过期时间，此时Redis服务器怎么知道哪些Key已经过期要被删除，哪些Key还没过期？
+
+若直接遍历所有Key显然是行不通的，效率非常低
+
+### 两种删除策略
+
+* 惰性删除 lazy-free：假设某个key已经到过期时间了，但是暂时还没有删除它，此时key还存在。紧接着后面一次访问用到了这个key，于是这次访问就会让Redis服务器出发删除key的操作，同时返回一个nil
+* 定期删除：每次抽取一部分验证过期时间，保证抽取检查的过程足够快，不会阻塞过长时间
+
+尽管有上述两种策略结合，但整体的效果一般，仍然可能会有很多过期的key残留下来，没有及时删除掉。Redis为了对上述进行补充，还提供了一系列的内存淘汰策略
+
+### 没有采用定时删除
+
+Redis中并没有采取定时器的方式来实现过期key删除，若有多个key过期，也可以通过一个基于优先级队列或基于时间轮的高效定时器来处理多个key
+
+很难考证为什么Redis没有采取定时器实现，有一种可能的解释是基于定时器的实现要引入多线程，而Redis的早期版本就奠定了单线程的基调，引入多线程就破坏了整体设计
+
+## *补充：高效定时器的实现*
+
+### 基于优先级队列/堆
+
+* 在Redis过期key的场景中，过期时间越早，优先级越高，越早出队列
+* 为优先级队列定时器分配一个线程，让这个线程去扫描队首元素是否过期。不能检查的太频繁，否则浪费时间片，此时做法就是可以根据当前时刻和队首元素的过期时间，设置一个等待时间，挂起线程，当时间到了再唤醒线程
+* 新任务添加的时候，唤醒一下刚才的线程，重新检查一下队首元素，再根据时间差距重新调整阻塞时间即可
+
+### 时间轮
+
+<img src="时间轮队列.drawio.png" width="50%">
+
+每个小段上都挂着一个链表，每个链表元素都代表一个要执行的任务，比如说指向一个函数指针handler
+
+具体划分时间的粒度，是根据任务来设置的。每个格子是多少时间，一共多少个格子都是需要根据实际任务来灵活调整的
+
+取模确定放的位置，不断循环，等到了的时候尝试执行任务。这是因为取模存放可能放的是一个过期时间很长的任务，所以要看一下到底到期没有
 
 ## *缓存失效*
 
@@ -384,3 +705,5 @@ Redis Cluster 是一种无主模式 Leaderless 的无主分布式存储方案，
 ### 哈希槽 vs. 一致性哈希
 
 一致性哈希是创建虚拟节点来实现节点宕机后的数据转移并保证数据的安全性和集群的可用性的。redis cluster是采用master节点有多个slave节点机制来保证数据的完整性的,master节点写入数据，slave节点同步数据。当master节点挂机后，slave节点会通过选举机制选举出一个节点变成master节点，实现高可用。**但是这里有一点需要考虑，如果master节点存在热点缓存，某一个时刻某个key的访问急剧增高，这时该mater节点可能操劳过度而死，随后从节点选举为主节点后，同样宕机，一次类推，造成缓存雪崩**
+
+# Lua脚本

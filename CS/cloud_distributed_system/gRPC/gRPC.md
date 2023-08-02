@@ -210,7 +210,7 @@ public class HelloServiceImpl extends HelloServiceGrpc.HelloServiceImplBase {
 
 stub的工作原理通常涉及序列化和反序列化过程，将方法调用和参数打包成网络传输格式，并在接收方将其解析回原始形式
 
-在许多RPC框架中，Stub通常是通过使用接口定义语言（IDL）来生成的。IDL描述了可用的方法和参数，并根据IDL生成相应的客户端和服务器代码。这种自动生成Stub的方式使得客户端和服务器能够在不了解底层网络协议的情况下进行远程方法调用
+在许多RPC框架中，stub通常是通过使用接口定义语言（IDL）来生成的。IDL描述了可用的方法和参数，并根据IDL生成相应的客户端和服务器代码。这种自动生成Stub的方式使得客户端和服务器能够在不了解底层网络协议的情况下进行远程方法调用
 
 ### gRPC 代理方法 stub
 

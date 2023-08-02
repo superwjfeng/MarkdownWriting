@@ -914,17 +914,20 @@ De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定
 * 大数定律只告诉我们当数据样本点趋向无穷大时样本点的分布趋向稳定，是一种理论基础，但无法进行实际的计算
 * 在给定条件下，中心极限定理不仅保证其概率的极限是1，同时还给出了概率的近似表达式，可见中心极限定理的结论更为精确
 
-# 统计量及其分布
+# 统计基础
 
 ## *总体与样本*
 
-* 总体 $X$ 与个体
-* 样本：对总体 $X$ 进行抽样操作，得到相互独立的简单随机样本 $\left\{X_1,X_2,\ldots,X_n\right\}$
-  * $n$ 称为样本容量
-  * 样本容量有限的称为有限总体，无限的称为无限总体
-  * $\left\{x_1,x_2,\ldots,x_n\right\}$ 称为样本观测值
+* 总体 population $X$ 与个体 individual
 
-## *样本数据的整理与表示*
+  总体是指我们感兴趣的全体个体、对象或观察值的集合。它是我们想要从中得出结论或进行推断的全部群体。总体可以是**有限**的（例如，所有在某个国家的公民）或**无限**的（例如，所有可能的骰子投掷结果）。然而，由于实际情况下通常无法完全获取整个总体的数据，我们常常依赖于从总体中抽取一部分样本来进行研究
+
+* 样本 sample：对总体 $X$ 进行抽样操作，得到相互独立的简单随机样本 $\left\{X_1,X_2,\ldots,X_n\right\}$
+  * $n$ 称为样本容量，$\left\{x_1,x_2,\ldots,x_n\right\}$ 称为样本观测值
+  * 样本是总体的一个子集，它是从总体中抽取出来的一部分数据。样本通常是总体的一个部分，旨在代表总体的特征。通过对样本进行研究和分析，我们希望能够推断出有关总体的信息，而无需对整个总体进行研究
+  * 样本的选择要符合随机性原则，即每个个体都有相同的机会被选入样本，以确保样本能够准确地代表总体。合理的样本选取方法可以避免样本偏差，从而使得样本能够对总体进行有效的推断
+
+### 样本数据的整理与表示
 
 * 经验分布函数与格里纹科定理 Glivenko-Cantelli theorem/Fundamental theorem of statistics：当n相当大时，经验分布函数是总体分布函数 $F(x)$ 的一个良好近似。该定理是经典统计学中一切统计推断的依据
 * 频数频率分布表
@@ -934,34 +937,118 @@ De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定
 
 ## *统计量及其分布*
 
-### 统计量与抽样分布
+### 样本函数
 
-设 $X_1,X_2,\ldots,X_n$ 为取自某总体的样本，若样本函数 $T=T(x_1,x_2,\ldots,x_n)$ 中不含有任何未知参数，则称T为统计量，统计量的分布称为抽样分布。引进统计量的目的是为了进行统计推断，若统计量中仍含有未知参数，就无法依靠样本观测值求出未知参数的估计值，因而失去利用统计量估计未知参数的意义
+样本是来自总体的，因此样本中包含着总体的信息，**样本函数 sample statistic** 是人为构造的用来反映总体特征的函数。不同的样本函数反映了总体的不同特征
+
+设 $X_1,X_2,\ldots,X_n$ 为取自某总体的样本，若样本函数 $T=T(x_1,x_2,\ldots,x_n)$ 中**不含有任何未知参数，则称T为统计量。统计量由样本决定，因此统计量因样本而异。对于同一总体，抽取不同的样本，统计量就不同，从而统计量也是一个随机变量，统计量的分布称为抽样分布**引进统计量的目的是为了进行统计推断，若统计量中仍含有未知参数，就无法依靠样本观测值求出未知参数的估计值，因而失去利用统计量估计未知参数的意义
+
+
 
 ### 统计推断的一般步骤
 
 <img src="stat_infer.jpg">
 
+统计推断 statistical inference 是统计学中的一个重要分支，它用于从样本数据中得出关于总体的结论。统计推断的目标是基于样本数据，对总体的未知参数进行估计、检验假设和预测未来事件
+
+统计推断主要有两个方面：
+
+1. **参数估计 Parameter Estimation：** 统计推断中的参数估计是利用样本数据来估计总体的未知参数。例如，我们可以利用样本均值来估计总体均值，利用样本方差来估计总体方差等。参数估计通过样本函数计算得出点估计值，同时还可以计算出参数的置信区间，以提供参数估计的精度和可信程度
+2. **假设检验 Hypothesis Testing：** 假设检验是用于检验关于总体参数的假设是否成立。我们提出一个原假设（null hypothesis）和一个备择假设（alternative hypothesis），然后利用样本数据来推断是否拒绝原假设。假设检验使用样本函数计算得出检验统计量，并与特定的概率分布进行比较，以确定结果是否显著
+
+统计推断在实际应用中非常重要，因为很多情况下我们无法获得整个总体的数据，而只能通过样本来了解总体的特征。通过合理的样本选取和统计推断方法，我们可以在样本数据中获得对总体的有效结论，并在一定程度上预测未知情况
+
 ### 样本均值及其抽样分布
 
-* 设 $x_1,x_2,\ldots x_n$ 为取自某总体的样本，其算术平均值称为样本均值 $\bar{x}=\frac{x_1+x_2+\ldots+x_n}{n}=\frac{1}{n}\sum\limits_{i=1}^{n}x_i$
+* 设 $x_1,x_2,\ldots x_n$ 为取自某总体的样本，其算术平均值称为样本均值
+  $$
+  \bar{x}=\frac{x_1+x_2+\ldots+x_n}{n}=\frac{1}{n}\sum\limits_{i=1}^{n}x_i
+  $$
+
 * 在分组样本场合，样本均值的近似公式为 $\bar{x}=\frac{x_1f_1+x_2f_2+\ldots+x_nf_n}{n}$，其中k为组数，$x_i$ 为第i组的组中值，$f_i$ 为第i组的频数
-* 若把样本中的数据与样本均值之差称为偏差，则样本所有偏差只和为0，即 $\sum\limits_{i=1}^{n}\left(x_i-\bar{x}\right)=0$
+
+* 若把样本中的数据与样本均值之差 $x_i-\bar{x}$ 称为偏差，则样本所有偏差只和为0，即 $\sum\limits_{i=1}^{n}\left(x_i-\bar{x}\right)=0$
+
 * 数据观测值与均值的偏差平方和最小，即在形如 $\sum\left(x_i-c\right)^2$ 的函数中，$\sum\left(x_i-\bar{x}\right)^2$ 最小，其中c为任意给定常数
+
 * 设取自某总体的独立同分布样本 $x_1,x_2,\ldots x_n，\bar{x}$ 为其样本均值
-  * 若总体分布为 $N\left(\mu,\sigma^2\right)$，可得知 $\bar{x}$ 的精确分布为 $N\left(\mu,\frac{\sigma^2}{n}\right)$。证：由卷积公式得出的正态分布可加性可知 $x_1,x_2,\ldots x_n\sim N\left(\mu,\sigma^2\right)\rightarrow x_1+x_2+\ldots+x_n\sim N\left(n\mu,n\sigma^2\right)\rightarrow\bar{x}\sim N\left(\mu,\frac{\sigma^2}{n}\right)$
+  * 若总体分布为 $N\left(\mu,\sigma^2\right)$，可得知 $\bar{x}$ 的精确分布为 $N\left(\mu,\frac{\sigma^2}{n}\right)$。证：由卷积公式得出的正态分布可加性可知
+    $$
+    x_1,x_2,\ldots x_n\sim N\left(\mu,\sigma^2\right)\rightarrow x_1+x_2+\ldots+x_n\sim N\left(n\mu,n\sigma^2\right)\rightarrow\bar{x}\sim N\left(\mu,\frac{\sigma^2}{n}\right)
+    $$
+  
   * 若总体分布未知或不是正态分布，但有 $E\left(x\right)=\mu,Var\left(x\right)=\sigma^2$，则n较大时根据Linderberg-Levy中心极限定理可知 $\bar{x}$ 的渐进分布（渐进分布指n较大时的分布）为 $N\left(\mu,\frac{\sigma^2}{n}\right)$，记为 $\bar{x}\sim N\left(\mu,\frac{\sigma^2}{n}\right)$
 
-### 样本方差与标准差
+### 补充：渐进分布
 
-* 设 $x_1,x_2,\ldots x_n$ 为取自某总体的样本，则它关于样本均值 $\bar{x}$ 的平均偏差平方和 $s_\ast^2=\frac{1}{n}\sum\limits_{i=1}^{n}\left(x_i-\bar{x}\right)^2$ 称为样本方差。当n不大时，常用无偏方差 $s_\ast^2=\frac{1}{n-1}\sum\limits_{i=1}^{n}\left(x_i-\bar{x}\right)^2=\frac{1}{n-1}\left(\sum\limits_{i=1}^{n}X_i^2-n{\bar{X}}^2\right)$ 代替。反映了全体样本 $X_1,X_2,\ldots,X_n$ 与样本中心的偏离程度，反映了全体样本的分散程度
-* n-1称为无偏方差的自由度，其含义是在 $\bar{x}$ 确定后，n个偏差 $x_1-\bar{x},x_2-\bar{x},\ldots,x_n-\bar{x}$ 中只有 n-1个偏差可以自由变动，而第n个则不能自由取值。样本方差要除以数据的自由度才能得到无偏估计
-* 之所以有偏的原因的原因是不能取到总体的所有样本，如果此时仍然除n，将会产生偏差
+渐进分布 asymptotic distribution 它涉及到样本大小逐渐变大时，样本统计量的分布趋向于一个特定的分布
+
+在大样本理论中，我们常常假设样本大小足够大，这种情况下，一些样本统计量的分布将收敛到一个特定的概率分布，这个概率分布被称为渐进分布
+
+具体来说，假设我们有一个样本统计量（例如样本均值、样本比例等），当样本大小逐渐增大时，这个样本统计量的分布将逐渐接近于一个特定的概率分布。通常，这个渐进分布与样本大小有关，当样本大小趋向于无穷大时，渐进分布将变得更加精确
+
+渐进分布在大样本理论和统计推断中扮演着重要角色，它允许我们在样本大小足够大时，利用概率分布的性质来进行统计推断。例如，大样本下的样本均值在满足一定条件时，会趋近于正态分布。这个性质使得我们可以使用正态分布的性质来进行参数估计、假设检验等统计推断操作，从而简化了计算和分析的复杂性
+
+需要注意的是，渐进分布仅在样本大小足够大时成立，对于较小的样本，渐进分布的近似性可能不太准确。因此，在使用渐进分布进行统计推断时，需要保证样本大小足够大，以确保渐进分布的逼近性和准确性
+
+### 样本方差 & 标准差
+
+* 设 $x_1,x_2,\ldots x_n$ 为取自某总体的样本，则它关于样本均值 $\bar{x}$ 的平均偏差平方和 $s_\ast^2=\frac{1}{n}\sum\limits_{i=1}^{n}\left(x_i-\bar{x}\right)^2$ 称为样本方差。当样本容量n不大时，应该优先使用下面的无偏方差 unbiased variance 代替
+  $$
+  s_\ast^2=\frac{1}{n-1}\sum\limits_{i=1}^{n}\left(x_i-\bar{x}\right)^2=\frac{1}{n-1}\left(\sum\limits_{i=1}^{n}X_i^2-n{\bar{X}}^2\right)
+  $$
+  反映了全体样本 $X_1,X_2,\ldots,X_n$ 与样本中心的偏离程度，反映了全体样本的分散程度
+
+* n-1称为无偏方差的自由度 DoF，其含义是在 $\bar{x}$ 确定后，n个偏差 $x_1-\bar{x},x_2-\bar{x},\ldots,x_n-\bar{x}$ 中只有 n-1个偏差可以自由变动，而第n个则不能自由取值。样本方差要除以数据的自由度才能得到无偏估计
+
+### 自由度
+
+在统计学中，自由度是用于描述样本数据中独立或自由变动的数量，可以记为**样本容量减去限制等式的个数**。下面引用一个很好的回答：如何理解统计学中「自由度」这个概念？ - DeviliveD的回答 - 知乎 <https://www.zhihu.com/question/20983193/answer/28228799>
+
+> 假设你现在手头有3个样本，$X_1,X_2, X_3$。因为样本具有随机性，所以它们取值不定。但是假设出于某种原因，我们需要让样本均值固定，比如说，$\bar{X}=5$，那么这时真正取值自由，”有随机性“的样本只有2个。试想，如果 $\bar{X}=5$,那么每选取一组 $X_1,X_2$ 的取值，$X_3$ 将不得不等于 $15-X_1 - X_2$.对于第三个样本来说，这种“不得不”就可以理解为被剥夺了一个自由度。所以就这个例子而言，3个样本最终"自由"的只有其中的2个。不失一般性，$n$个样本，留出一个自由度给固定的均值，剩下的自由度即为 $n-1$。
+
+在不同的统计分析中，自由度有不同的含义。两个常见的场景是：
+
+1. **样本方差的自由度：** 当计算样本方差时，自由度等于样本中观测值的个数减去1，即 n-1，其中 n 是样本大小。这是因为在计算样本方差时，我们需要使用样本均值来估计总体均值，而样本均值的计算消耗了一个自由度。
+2. **t检验和F检验的自由度：** 在进行t检验和F检验时，自由度用于确定t分布和F分布的概率分布表的查找。对于独立样本t检验，自由度等于两个样本大小之和减去2（即"n1 + n2 - 2"）；对于配对样本t检验，自由度等于样本大小减去1（即"n - 1"）。对于F检验，自由度通常有两部分，分别对应于分子和分母的自由度，用"F(df1, df2)"表示。
+
+自由度的概念在统计推断中非常重要，它决定了在统计分析中使用的概率分布表的选择，从而帮助我们计算假设检验的P值或者确定置信区间的范围
+
+### 无偏估计和有偏估计
+
+* **无偏性 unbiasedness**：设 $X_1,X_2,\dots,X_n$ 是总体 $X$ 的一个样本，$\theta\in\Theta$ 是包含在总体 $X$ 的分布中的待估参数，其中 $\Theta$ 是 $\theta$ 的取值范围。若估计量 $\hat{\theta}=\hat{\theta}(X_1,X_2,\dots,X_n)$ 的数学期望 $E(\hat\theta) $ 存在，且对于任意 $\theta\in\Theta$ 有 $E(\hat{\theta})=\theta$，则称 $\hat{\theta}$ 是 $\theta$ 的一个无偏估计量
+* **有效性 efficiency**：对于按不同的估算量 $\hat\theta_1, \hat\theta_2$ 进行多次取样运算，可以得到两组值，方差较小者对应的 $\hat\theta$ 称为更有效
+* **相合性 consistency**：相合性指的是随着样本容量不断增大 $\lim\limits_{n\rightarrow\infty}{n}$ ，估计量 $\hat{\theta}$ 也会稳定于真值 $\theta$，即 $\hat{\theta}(X_1,X_2,\dots,X_n)$ 依概率收敛于 $\theta$
+
+无偏估计并不一定比有偏估计更加"有效"，因为所谓估算有效是指更加靠近真实值，这个靠近就是通过方差 $S^2$ 来体现出来，如果统计量估算值虽然有偏，但是更加靠近真实值，那么也是更加有效地。下面左图是无偏的，结果围绕"真实值"，右侧是有偏的，结果偏向于"真实值"一侧，但是毫无疑问有偏的效果更好一些，因为更加接近真实值
+
+<img src="无偏性和有效性.png">
+
+对于小样本容量和大样本容量，都应该优先考虑无偏估计。特别是当无偏估计满足相合性时，它在更大程度上能够提供可靠的估计结果
+
+* **小样本容量：**在小样本容量情况下，样本中的数据点数量较少，通常是指样本大小小于30。在这种情况下，由于样本规模较小，估计量的方差较大，因此估计结果可能比较不稳定。此时，我们更希望得到偏差较小的估计结果，以尽量减少估计值与总体参数真实值之间的偏差。因此，对于小样本容量，应优先选择无偏估计，这样可以在偏差较小的前提下获得较为准确的估计
+* **大样本容量：**在大样本容量情况下，样本中的数据点数量较大，通常是指样本大小大于30。在这种情况下，由于样本规模较大，估计量的方差相对较小，估计结果更为稳定。此时，偏差对估计结果的影响可能相对较小。在大样本容量情况下，我们更关心估计结果的精确性和效率，即希望获得方差较小的估计结果。因此，对于大样本容量，可以考虑无偏估计或有偏估计，**尤其是如果有偏估计能够在计算上提供更高的效率或简化计算过程**，有偏估计也是一个可选的选择
 
 ### 使用MLE证明样本均值和样本方差的无偏/有偏性
 
+<http://t.csdn.cn/GFHVI>
+
 * 样本均值：$E[\mu_{MLE}]$
+
 * 样本方差
+  $$
+  \sigma_{MLE}^2=\frac{1}{N}\sum\limits_{i=1}^{N}{\left(x_i-\mu_{MLE}\right)^2}=\frac{1}{N}\sum\limits_{i=1}^{N}{\left(x_i^2-2x_i\mu_{MLE}+\mu_{MLE}^2\right)}=\frac{1}{N}\sum\limits_{i=1}^{N}{x_i^2}+\frac{1}{N}\sum\limits_{i=1}^{N}{\mu_{MLE}^2}-2\mu_{MLE}\frac{1}{N}\sum\limits_{i=1}^{N}{x_i}
+  $$
+  
+  $$
+  E\left[\sigma_{MLE}^2\right]=\sigma^2-\frac{1}{N}\sigma^2=\frac{N-1}{N}\sigma^2
+  $$
+  方差的极大似然估计值的期望不等于真实值，所以是有偏的，为了变成无偏，需要进行修正
+  $$
+  \bar{\sigma}^2=\frac{N}{N-1}\sigma_{MLE}^2=\frac{1}{N-1}\sum\limits_{i=1}^{N}{\left(x_i-\mu_{MLE}\right)^2}
+  $$
+
+均值能够保持比较好的无偏性是因为均值计算过程本质还是一个线性过程，这个就是无偏；但是对于方差而言并不是线性模型，所以有偏
 
 ### 样本矩及其函数
 
@@ -973,13 +1060,10 @@ De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定
 
 ### 次序统计量及其分布
 
-* 定义
+次序统计量 sequential order statistics 与样本数据的次序（排序）相关。次序统计量是对样本数据进行排序后得到的统计量，根据排序的位置和取值来描述样本中的特征。常见的次序统计量包括最小值、最大值、中位数等
+
 * 单个次序统计量的分布
 * 多个次序统计量及其函数的分布
-
-### 样本分位数与中位数
-
-### 五数概括与箱线图
 
 ## *三大抽样分布*
 
@@ -1005,16 +1089,20 @@ De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定
   * $\bar{x}\sim N\left(\mu,\frac{\sigma^2}{n}\right)$
   * $\frac{\left(n-1\right)s^2}{\sigma^2}\sim\chi^2\left(n-1\right)$
 
-### F分布
+### <span id="F-分布">F-分布</span>
 
 * 设 $X\sim\chi^2\left(n_1\right)，Y\sim\chi^2\left(n_2\right)$，且 $X,Y$ 相互独立，则称随机变量 $F=\frac{X/n_1}{Y/n_2}$ 服从第一自由度为 $n_1$，第二自由度为 $n_2$（或自由度为 $(n_1,n_2)$）的F分布，记作 $F\sim F(n_1,n_2)$
   * 这里的自由度源于 $\chi^2\left(n_1\right)，\chi^2\left(n_2\right)$ 的自由度
+  
   * 若 $F\sim F\left(n_1,n_2\right)$，则 $\frac{1}{F}\sim F\left(n_2,n_1\right)$
-  * <img src="F_dist.png">
+  
+    <img src="F_dist.png">
+  
   * $p\left(y\right)=\frac{\Gamma\left(\frac{m+n}{2}\right)\left(\frac{m}{n}\right)^\frac{m}{2}}{\Gamma\left(\frac{m}{2}\right)\Gamma\left(\frac{n}{2}\right)}y^{\frac{m}{2}-1}\left(1+\frac{m}{n}y\right)^{-\frac{m+n}{2}}$
+  
   * F分布的上 $\alpha$ 分位点：$P\left\{F>F_\alpha\left(n_1,n_2\right)\right\}=\int_{F_\alpha\left(n_1,n_2\right)}^{+\infty}f\left(x\right)dx=\alpha$
 
-### t分布/ Student’s t-distribution：小样本统计学
+### <span id="t-分布">t-分布</span>/ Student’s t-distribution：小样本统计学
 
 * 设 $X\sim N\left(0,1\right),Y\sim\chi^2\left(n\right)$，且 $X$ 与 $Y$ 独立，则称随机变量 $t=\frac{X}{\sqrt{Y/n}}$ 服从自由度为n的t分布，记作 $t\sim t\left(n\right)$
   * 这里的自由度源于 $\chi^2(n)$ 的自由度
@@ -1353,23 +1441,38 @@ Bayes学派的基本观点是：任一未知量 $\theta$ 都可看做随机变�
 
 * $\sigma^2$ 已知时求 $\mu$ 的置信区间
   * 选取枢轴量 $u=\frac{\bar{X}-\mu}{\sigma/\sqrt n}\sim N(0,1)$
+  
   * 给定置信水平 $1-\alpha$，即要使得 $P\left\{-u_{\alpha/2}<\frac{\bar{X}-\mu}{\sigma/\sqrt n}<u_{\alpha/2}\right\}=1-\alpha$
-  * <img src="single_norm_givenSigma_est.png">
+  
+    <img src="single_norm_givenSigma_est.png">
+  
   * 得 $P\left\{\bar{x}-u_{\alpha/2}\frac{\sigma}{\sqrt n}<\mu<\bar{x}+u_{\alpha/2}\frac{\sigma}{\sqrt n}\right\}$，故 $\mu$ 的置信水平为 $1-\alpha$ 的置信区间为 $\left(\bar{x}-u_{\alpha/2}\frac{\sigma}{\sqrt n},\bar{x}+u_{\alpha/2}\frac{\sigma}{\sqrt n}\right)$
+  
 * $\sigma^2$ 未知时求 $\mu$ 的置信区间
   * 选取枢轴量 $t=\frac{\bar{X}-\mu}{S/\sqrt n}\sim t\left(n-1\right)$
+  
   * 给定置信水平 $1-\alpha$，即要使得 $P\left\{-t_{\alpha/2}\left(n-1\right)<\frac{\bar{X}-\mu}{S/\sqrt n}<t_{\alpha/2}\left(n-1\right)\right\}=1-\alpha$
-  * <img src="single_norm_nogivenSigma_est.png">
+  
+    <img src="single_norm_nogivenSigma_est.png">
+  
   * 得 $P\left\{\bar{x}--t_{\alpha/2}\left(n-1\right)\frac{S}{\sqrt n}<\mu<\bar{x}+t_{\alpha/2}\left(n-1\right)\frac{S}{\sqrt n}\right\}$，故 $\mu$ 的置信水平为 $1-\alpha$ 的置信区间为 $\left(\bar{x}-t_{\alpha/2}\left(n-1\right)\frac{S}{\sqrt n},\bar{x}+t_{\alpha/2}\left(n-1\right)\frac{S}{\sqrt n}\right)$
+  
 * $\mu$ 已知求 $\sigma^2$ 的置信区间
   * 选取枢轴量 $\chi^2=\sum_{i=1}^{n}\left(\frac{X_i-\mu}{\sigma}\right)^2\sim\chi^2\left(n\right)$
+  
   * 给定置信水平 $1-\alpha$，即要使得 $P\left\{\chi_{1-\frac{\alpha}{2}}^2\left(n\right)<\frac{1}{\sigma^2}\sum_{i=1}^{n}\left(X_i-\mu\right)^2<\chi_{\frac{\alpha}{2}}^2\left(n\right)\right\}=1-\alpha$
-  * <img src="single_norm_givenMu_est.png">
+  
+    <img src="single_norm_givenMu_est.png">
+  
   * 得 $P\left\{\frac{\sum_{i=1}^{n}\left(X_i-\mu\right)^2}{\chi_{\frac{\alpha}{2}}^2\left(n\right)}<\sigma^2<\frac{\sum_{i=1}^{n}\left(X_i-\mu\right)^2}{\chi_{1-\frac{\alpha}{2}}^2\left(n\right)}\right\}$，故 $\sigma^2$ 的置信水平为 $1-\alpha$ 的置信区间为 $\left(\frac{\sum_{i=1}^{n}\left(X_i-\mu\right)^2}{\chi_{\frac{\alpha}{2}}^2\left(n\right)},\ \frac{\sum_{i=1}^{n}\left(X_i-\mu\right)^2}{\chi_{1-\frac{\alpha}{2}}^2\left(n\right)}\right)$
+  
 * $\mu$ 未知求 $\sigma^2$ 的置信区间
   * 选取枢轴量 $\chi^2=\frac{\left(n-1\right)S^2}{\sigma^2}\sim\chi^2\left(n-1\right)$
+  
   * 给定置信水平 $1-\alpha$，即要使得 $P\left\{\chi_{1-\frac{\alpha}{2}}^2\left(n-1\right)<\frac{\left(n-1\right)S^2}{\sigma^2}<\chi_{\frac{\alpha}{2}}^2\left(n-1\right)\right\}=1-\alpha$
-  * <img src="single_norm_nogivenMu_est.png">
+  
+    <img src="single_norm_nogivenMu_est.png">
+  
   * 得 $P\left\{\frac{\left(n-1\right)S^2}{\chi_{\frac{\alpha}{2}}^2\left(n-1\right)}<\sigma^2<\frac{\left(n-1\right)S^2}{\chi_{1-\frac{\alpha}{2}}^2\left(n-1\right)}\right\}$，故 $\sigma^2$ 的置信水平为 $1-\alpha$ 的置信区间为 $\left(\frac{\left(n-1\right)S^2}{\chi_{\frac{\alpha}{2}}^2\left(n-1\right)},\ \frac{\left(n-1\right)S^2}{\chi_{1-\frac{\alpha}{2}}^2\left(n-1\right)}\right)$
 
 ### 大样本置信区间
@@ -1521,7 +1624,9 @@ $$
 
 ### 成对数据检验
 
-### 正态总体方差的检验：均值 $\mu$ 已知，方差 $\sigma^2$ 的假设检验--$\chi^2$检验
+### 正态总体方差的检验
+
+均值 $\mu$ 已知，方差 $\sigma^2$ 的假设检验--$\chi^2$检验
 
 ## *其他分布参数的假设检验*
 
@@ -1547,11 +1652,19 @@ $$
 
 ### EP检验
 
-## *非参数检验：在总体分布未知情形下，依据样本，对总体分布的某种假设作出真伪判断*
+## *非参数检验*
+
+在总体分布未知情形下，依据样本，对总体分布的某种假设作出真伪判断
 
 ### 游程检验
 
 ### 符号检验
 
 ### 秩和检验
+
+## *t-检验*
+
+当我们需要对样本数据进行统计推断时，t检验（t-test）和F检验（F-test）是两种常用的假设检验方法
+
+## *F-检验*
 
