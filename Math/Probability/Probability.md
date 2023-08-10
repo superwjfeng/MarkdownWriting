@@ -1007,6 +1007,8 @@ De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定
 
 > 假设你现在手头有3个样本，$X_1,X_2, X_3$。因为样本具有随机性，所以它们取值不定。但是假设出于某种原因，我们需要让样本均值固定，比如说，$\bar{X}=5$，那么这时真正取值自由，”有随机性“的样本只有2个。试想，如果 $\bar{X}=5$,那么每选取一组 $X_1,X_2$ 的取值，$X_3$ 将不得不等于 $15-X_1 - X_2$.对于第三个样本来说，这种“不得不”就可以理解为被剥夺了一个自由度。所以就这个例子而言，3个样本最终"自由"的只有其中的2个。不失一般性，$n$个样本，留出一个自由度给固定的均值，剩下的自由度即为 $n-1$。
 
+**每引入一个统计量，就会降低一个自由度**
+
 在不同的统计分析中，自由度有不同的含义。两个常见的场景是：
 
 1. **样本方差的自由度：** 当计算样本方差时，自由度等于样本中观测值的个数减去1，即 n-1，其中 n 是样本大小。这是因为在计算样本方差时，我们需要使用样本均值来估计总体均值，而样本均值的计算消耗了一个自由度。
@@ -1080,9 +1082,15 @@ De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定
   
 * 性质
   * 若 $\chi^2\sim\chi^2(n)$，则 $E\left(\chi^2\right)=n，Var\left(\chi^2\right)=2n$
+  
   * $\chi^2$ 分布的可加性：若 $X\sim\chi^2\left(n_1\right)$，$Y\sim\chi^2\left(n_2\right)$，且 $X,Y$ 相互独立，则 $X+Y\sim\chi^2(n_1+n_2)$
+  
   * 若 $\chi^2\sim\chi^2(n)$，则对任意实数x，$\lim\limits_{n\rightarrow\infty}{P\left\{\frac{\chi^2\left(n\right)-n}{\sqrt{2n}}\le x\right\}}=\int_{-\infty}^{x}{\frac{1}{\sqrt{2\pi}}e^{-\frac{t^2}{2}}dt}$，即当n充分大时，$\frac{\chi^2\left(n\right)-n}{\sqrt{2n}}$ 近似服从 $N\left(0,1\right)$，也即当n充分大时，$\chi^2\left(n\right)$ 近似服从 $N\left(n,2n\right)$
-  * $\chi^2$ 分布的上 $\alpha$ 分位数：$P\left\{\chi^2>\chi_\alpha^2\left(n\right)\right\}=\int_{\chi_\alpha^2\left(n\right)}^{+\infty}f\left(x\right)dx=\alpha$
+  
+  * $\chi^2$ 分布的上 $\alpha$ 分位数
+    $$
+    P\left\{\chi^2>\chi_\alpha^2\left(n\right)\right\}=\int_{\chi_\alpha^2\left(n\right)}^{+\infty}f\left(x\right)dx=\alpha
+    $$
   
 * 设 $x_1,\ldots,x_n$ 是来自正态总体 $N\left(\mu,\sigma^2\right)$ 的样本，其样本均值和样本方差分别为 $\bar{x}=\frac{1}{n}\sum\limits_{i=1}^{n}x_i$ 和 $s^2=\frac{1}{n-1}\sum\limits_{i=1}^{n}\left(x_i-\bar{x}\right)^2$
   * $\bar{x}\ \&\ s^2$ 相互独立
@@ -1097,10 +1105,14 @@ De Moivre-Laplace中心极限定理是概率论历史上第一个中心极限定
   * 若 $F\sim F\left(n_1,n_2\right)$，则 $\frac{1}{F}\sim F\left(n_2,n_1\right)$
   
     <img src="F_dist.png">
+    $$
+    p\left(y\right)=\frac{\Gamma\left(\frac{m+n}{2}\right)\left(\frac{m}{n}\right)^\frac{m}{2}}{\Gamma\left(\frac{m}{2}\right)\Gamma\left(\frac{n}{2}\right)}y^{\frac{m}{2}-1}\left(1+\frac{m}{n}y\right)^{-\frac{m+n}{2}}
+    $$
   
-  * $p\left(y\right)=\frac{\Gamma\left(\frac{m+n}{2}\right)\left(\frac{m}{n}\right)^\frac{m}{2}}{\Gamma\left(\frac{m}{2}\right)\Gamma\left(\frac{n}{2}\right)}y^{\frac{m}{2}-1}\left(1+\frac{m}{n}y\right)^{-\frac{m+n}{2}}$
-  
-  * F分布的上 $\alpha$ 分位点：$P\left\{F>F_\alpha\left(n_1,n_2\right)\right\}=\int_{F_\alpha\left(n_1,n_2\right)}^{+\infty}f\left(x\right)dx=\alpha$
+  * F分布的上 $\alpha$ 分位点
+    $$
+    P\left\{F>F_\alpha\left(n_1,n_2\right)\right\}=\int_{F_\alpha\left(n_1,n_2\right)}^{+\infty}f\left(x\right)dx=\alpha
+    $$
 
 ### <span id="t-分布">t-分布</span>/ Student’s t-distribution：小样本统计学
 
@@ -1358,10 +1370,16 @@ $$
   * 取对数 $\ln{L}$ 来将连乘转换为连加，方便求导
   * 对 $\theta$ 求导，$\frac{d\ln{L}}{d\theta}$
   * 判断该导数是否有解，若有解，即其解为所求MLE，否则，MLE位于边界上
+  
 * 有多个待估参数
   * 构造似然函数：$L(\theta_1,\theta_2,\ldots\theta_r)=\prod\limits_{i=1}^{n}f(x_i|\theta_1,\theta_2,\ldots,\theta_m)$ 或 $\prod\limits_{i=1}^{n}p(x_i|\theta_1,\theta_2,\ldots,\theta_m)$
+  
   * 取对数，求导数（偏导），令导数（偏导）=0，得方程（组）$\frac{\partial L\left(\theta_1,\theta_2,\ldots\theta_r\right)}{\partial\theta_i}=0,\ \left(i=1,2,\ldots,r\right)$
-  * 解方程（组），得 $\theta_1,\theta_2,\ldots\theta_r$ 的最大似然估计值和最大似然估计量分别为 $\left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(x_1,x_2,\ldots,x_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(x_1,x_2,\ldots,x_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(x_1,x_2,\ldots,x_n\right)\\\end{matrix}\right.$ 和 $\left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(X_1,X_2,\ldots,X_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(X_1,X_2,\ldots,X_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(X_1,X_2,\ldots,X_n\right)\\\end{matrix}\right.$
+  
+  * 解方程（组），得 $\theta_1,\theta_2,\ldots\theta_r$ 的最大似然估计值分别为
+    $$
+    \left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(x_1,x_2,\ldots,x_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(x_1,x_2,\ldots,x_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(x_1,x_2,\ldots,x_n\right)\\\end{matrix}\right.\ and\ \left\{\begin{matrix}{\hat{\theta}}_1={\hat{\theta}}_1\left(X_1,X_2,\ldots,X_n\right)\\{\hat{\theta}}_2={\hat{\theta}}_2\left(X_1,X_2,\ldots,X_n\right)\\...\\{\hat{\theta}}_n={\hat{\theta}}_n\left(X_1,X_2,\ldots,X_n\right)\\\end{matrix}\right.
+    $$
 
 ### 注意点
 
@@ -1412,6 +1430,8 @@ Bayes学派的基本观点是：任一未知量 $\theta$ 都可看做随机变�
 设 $\theta$ 是总体分布 $p(x;\theta)$ 中的参数，$\pi(\theta)$ 是其先验分布，若对任意来自 $p(x;\theta)$ 的样本观测值得到的后验分布 $\pi(\theta|X)$ 与 $\pi(\theta)$ 属于同一个分布族，则称该分布族是 $\theta$ 的共轭先验分布（族）
 
 ## *区间估计*
+
+区间估计 interval estimate 是**已知总体方差，估计均值**
 
 ### 区间估计的概念
 
@@ -1572,85 +1592,129 @@ $$
 
 # 假设检验 Test
 
+<https://www.cnblogs.com/minks/p/4753009.html>
+
 ## *假设检验的基本思想与概念*
+
+**假设检验是把从样本得到的估计的统计参数推论至总体时犯错的概率**
+
+### 一些定义
+
+假设是对总体或样本的某种特征或性质所作的陈述或猜测 Hypothese: Aussage über einen oder mehrere Parameter der Grundgesamtheit
+
+1. 零假设 Nullhypothese $H_0$：也称为原假设。它通常表述为对研究问题的无效或无影响的假设。例如，$H_0$ 假设可能是“两组样本的平均值相等”或“治疗组的效果与对照组相同”
+2. 对立假设 Alternativhypothese $H_1$：也称为备择假设。**它是对零假设的反面假设**，通常表述为对研究问题的有效或有影响的假设。例如，H1假设可能是“两组样本的平均值不相等”或“治疗组的效果优于对照组”
+
+### 基本思想
 
 根据数据对已知分布中的未知参数的某种假设进行检验
 
 * 基本思想：做一次试验就出现了小概率事件，认为是不合理的
 * 方法（采用概率的反证性）：先假定原假设 $H_0$ 是成立的；在 $H_0$ 成立的情况下，看是否会导致不合理结果（就是看在一次试验中，是否出现小概率事件，即极大似然原理）。如果结果是合理的，就接收原假设 $H_0$；如不合理，则否定原假设 $H_0$，接受备择假设 $H_1$
 
-## *假设检验的一般步骤*
+## *假设检验的方法*
+
+### 一般过程
 
 * 建立假设：根据题意合理地建立原假设 $H_0$ 和对立假设/备选假设 $H_1$。原假设于备选假设一般是选择相互对立的，两者有且只有一个正确，一旦否定了原假设 $H_0$，也就接受了备选假设 $H_1$
-  * 把“着重考察的假设”确定为原假设
-  * 把“支持旧方法的假设”确定为原假设
+  * $H_0$ 假设是最初的假设，它通常表述为“没有效应”、“无差异”或“无显著差异”。**它是我们希望证伪的假设**。在建立 $H_0$ 假设时，要考虑问题的研究背景和实际含义。例如，对于药物疗效比较，$H_0$ 假设可以是“两种药物的平均疗效相同”
+  * $H_1$ 假设是与 $H_0$ 假设相对立的假设，也称为对立假设或备择假设。**它表述了你希望证明的效应或差异**。在建立 $H_1$ 假设时，要明确你期望的结果。例如，对于药物疗效比较，$H_1$ 假设可以是“药物A的平均疗效优于药物B”。
   * 把等号放在原假设里
 * 选择检验统计量，给出拒绝域形式：选择适当的检验统计量，要求在 $H_0$ 为真时，该统计量的分布是确定和已知的
 * Choose significant level 选择显著性水平：给定显著性水平 $\alpha$，查概率分布表，确定拒绝域
   * 假设检验的两类错误
-    * 第一类错误和第二类错误/拒真错误和取伪错误
-    * 想少犯第一类错误，就要使得 $H_0$ 为真却落入拒绝域的概率减小，直接的做法就是缩小拒绝域，这会导致 $H_0$ 不真却没有落入拒绝域的概率增加，从而增加了犯第二类错误的概率；反过来，要少犯第二类错误，就要扩大拒绝域，从而会增大第一类错误
-    * 通常认为 $H_0$ 是比较重要的假设，在进行假设检验时，采取的原则是控制第一类错误的概率，即给定显著水平 $\alpha$，$\alpha$ 通常取0.01, 0.05, 0.1
   * 势函数/功效函数 Power function
 * 给出拒绝域：由样本观测值，计算检验统计量的观测值
 * 做出判断
 
-## *双侧假设检验与单侧假设检验*
+### 双侧假设检验与单侧假设检验
 
 若原假设为 $H_0:\theta=\theta_0$。备择假设为 $H_1$
 
-* 双侧检验：$H_0:\theta=\theta_0,H_1:\theta\neq\theta_0$（不等、有差异）
+* 双侧检验 zweiseitig：$H_0:\theta=\theta_0,H_1:\theta\neq\theta_0$（不等、有差异）
 
   <img src="double_side_test.png">
 
-* 左侧检验：$H_0:\theta\geq\theta_0,H_1:\theta<\theta_0$（降低、减少）
+* 左侧检验 linksseitig：$H_0:\theta\geq\theta_0,H_1:\theta<\theta_0$（降低、减少）
 
   <img src="left_side_test.png">
 
-* 右侧检验：$H_0:\theta\le\theta_0,H_1:\theta>\theta_0$（提高、增加）
+* 右侧检验 rechtsseitig：$H_0:\theta\le\theta_0,H_1:\theta>\theta_0$（提高、增加）
 
   <img src="right_side_test.png">
+  
+### 显著性水平
 
-## *正态总体参数假设检验*
+对于p值（p-value）和显著性水平的理解 - 乐活的文章 - 知乎 <https://zhuanlan.zhihu.com/p/52476581>
 
-### 单个正态总体均值的检验
+显著性水平 Signifikanzniveau/Irrtumswahrscheinlichkeit 通常用 $\alpha$ 表示，是在进行假设检验时事先设定的一个阈值。它表示我们在进行假设检验时允许的错误率，即犯第一类错误的概率。第一类错误是指拒绝了 $H_0$ 假设，而实际上 $H_0$ 假设是正确的。常见的显著性水平通常设置为0.05，0.01，0.1
 
-* 方差 $\sigma^2$ 已知，均值 $\mu$ 假设检验—u检验（构建的枢轴量满足正态分布的称为u）
-* 方差 $\sigma^2$ 未知，均值 $\mu$ 假设检验—t检验（构建的枢轴量满足t分布的称为t）
+### 假设检验的两类错误
 
-### 假设检验与置信区间的关系
+* 第一类错误和显著性水平之间有关系：如果我们设定显著性水平为0.05，意味着我们允许有5%的概率犯第一类错误，即拒绝了 $H_0$ 假设，而实际上 $H_0$ 假设是正确的。较小的显著性水平意味着我们更加谨慎地要求证据来拒绝 $H_0$ 假设，从而降低犯第一类错误的概率。而较大的显著性水平意味着我们更容易接受对立假设，但也增加了犯第一类错误的概率
+* 第二类错误是指接受了 $H_0$ 假设，而实际上 $H_0$ 假设是错误的。它与统计功效（Power）有关，统计功效是拒绝错误地接受 $H_0$ 假设的概率。第一类错误和第二类错误之间存在一种权衡关系：当我们降低显著性水平，减少了犯第一类错误的概率，但可能增加了犯第二类错误的概率，也就是较小的显著性水平可能导致统计功效较低
 
-### 两个正态总体均值差的检验
+想少犯第一类错误，就要使得 $H_0$ 为真却落入拒绝域的概率减小，直接的做法就是缩小拒绝域，这会导致 $H_0$ 不真却没有落入拒绝域的概率增加，从而增加了犯第二类错误的概率；反过来，要少犯第二类错误，就要扩大拒绝域，从而会增大第一类错误
 
-### 成对数据检验
+**通常认为 $H_0$ 是比较重要的假设，在进行假设检验时，采取的原则是控制第一类错误的概率**，因此给定显著水平 $\alpha$，$\alpha$ 通常取0.01, 0.05, 0.1
 
-### 正态总体方差的检验
+## *t-检验：对样本均值检验*
+
+当我们需要对样本数据进行统计推断时，t检验（t-test）和F检验（F-test）是两种常用的假设检验方法
+
+一文详解t检验 - CoffeeCat的文章 - 知乎 <https://zhuanlan.zhihu.com/p/138711532>
+
+### t-检验的历史
+
+t检验的历史可以追溯到19世纪初，由英国统计学家 William Sealy Gosset 在1908年首次提出。然而，由于他在Guinness酿酒厂工作，根据公司政策无法将自己的研究成果发表在自己的名字下，因此他使用了笔名“学生”（Student）发表了这一方法，所以该方法也被称为学生t检验
+
+W.S Gosset是一位在统计学和数学领域有很高造诣的科学家，他致力于解决酿酒厂在生产过程中的一些质量控制问题。在酿酒厂的工作中，他面临了一个普遍的问题，即小样本量的情况下如何比较两个样本的均值。而当时已有的方法，如普遍使用的z检验，对于小样本量并不适用，因为它假设样本来自正态分布并需要已知总体方差
+
+W.S Gosset通过引入一个新的统计量t来解决这个问题。这个t统计量基于样本均值和样本标准差的计算，**允许在小样本量情况下进行假设检验**。他的方法解决了小样本量问题，同时也将对总体方差的依赖减少到只需要对样本方差的估计。这一方法的应用对于工业界和科学研究具有重要意义，尤其在小样本量的情况下
+
+学生t检验很快得到了广泛的认可和应用，并成为统计学中最常用的方法之一。它被用于众多领域，包括医学、社会科学、经济学等，帮助研究者比较不同组之间的均值差异，并做出统计推断。随着时间的推移，t检验的改进和变种也被提出，以适应更复杂的问题和数据类型，但学生t检验作为最早且最基础的版本，仍然被广泛使用
+
+### t-检验的用途
+
+* 单样本均值检验 one sample t-test/Einstichproben t-Test：用于检验**总体方差未知、正态数据或近似正态的单样本的均值**是否与已知的总体均值相等
+* 两独立样本均值检验 two sample t-test/Zweistichproben t-Test：用于检验**两对独立的正态数据或近似正态的样本的均值是否相等**，这里可根据总体方差是否
+  相等分类讨论
+* 配对样本均值检验 dependent t-test for paired samples：用于检验一对配对样本的均值的差是否等于某一个值
+* 回归系数的显著性检验 t-test for regression coefficient significance：用于检验回归模型的解释变量对被解释变量是否有显著影响
+
+### 单样本均值检验
+
+
+
+### 两独立样本均值检验
+
+
+
+## *F-检验：对样本方差检验*
+
+### F-检验的用途
+
+一文详解F检验 - CoffeeCat的文章 - 知乎 <https://zhuanlan.zhihu.com/p/139151375>
+
+* 方差齐性检验 F-test of equality of variances
+* 方差回归 Analysis of Variance ANOVA
+* 线性回归方程整体的显著性检验
+
+## *$\chi^2$ 检验*
 
 均值 $\mu$ 已知，方差 $\sigma^2$ 的假设检验--$\chi^2$检验
 
-## *其他分布参数的假设检验*
+$\chi^2$ 分布是三大抽样分布中历史最悠久的
 
-### 指数分布参数的假设检验
+### $\chi^2$ 检验的用途
 
-### 比率p的检验
+1. Pearson's chi squared test (Pearson卡方检验）
+2. Yates's correction for continuity（耶茨的连续性修正）
+3. Fisher's exact test (Fisher确切概率法）
+4. McNemar's test (McNemar检验）
+5. Cochran-Mantel-Haenszel test (CMH检验）
+6. Chi-square goodness of fit test （卡方拟合优度检验）
 
-### 大样本检验
-
-## *似然比检验与分布拟合检验*
-
-### 正态概率图
-
-### W检验
-
-### EP检验
-
-## *正态性检验*
-
-### 正态概率图
-
-### W检验
-
-### EP检验
 
 ## *非参数检验*
 
@@ -1661,10 +1725,3 @@ $$
 ### 符号检验
 
 ### 秩和检验
-
-## *t-检验*
-
-当我们需要对样本数据进行统计推断时，t检验（t-test）和F检验（F-test）是两种常用的假设检验方法
-
-## *F-检验*
-
