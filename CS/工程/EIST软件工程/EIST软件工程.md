@@ -1264,7 +1264,7 @@ merge冲突需要手动解决，并且**merge后一定要再进行一次commit**
 
 * `git remote -v`：列出远端
 
-* `git remote add <name> <url>`：添加一个远端
+* `git remote add <name> <url>`：**添加一个远端**，其中 `<name>` 一般就是origin
 
 * `git push <remote repo> <local branch>:<remote branch>`：将本地的某一个分支传送至远端的某一个分支并更新远端引用
 

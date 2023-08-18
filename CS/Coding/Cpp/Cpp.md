@@ -4274,14 +4274,11 @@ struct pair
 
 ### set
 
-`lower_bound(val)` 返回的是 >= val的
-`upper_bound(val)` 返回的是 > val的
+`lower_bound(val)` 返回的是 >= val的；`upper_bound(val)` 返回的是 > val的。multiset：允许键值冗余
 
-* multiset：允许键值冗余
-
-find返回的是中序第一个找到的key
-
-erase删除的是所有的符合项
+* `find(key)`返回的是中序第一个找到的key
+* `erase(key)`删除的是所有的符合项
+* `count(key)`返回key对应项的个数，若不允许冗余，则返回0或1，可以用来判断是否存在
 
 ### map
 
