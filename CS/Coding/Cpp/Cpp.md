@@ -2968,7 +2968,7 @@ string是一个特殊的顺序表，与顺序表的不同之处是它的操作�
 
 ### string类介绍
 
-> `std::string`. Strings are objects that represent sequences of characters. String是一个char类型的动态增长数组
+> `std::string`. Strings are objects that represent sequences of characters. String是一xi个char类型的动态增长数组
 
 ### 常见构造
 
