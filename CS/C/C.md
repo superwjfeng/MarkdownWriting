@@ -956,7 +956,7 @@ size_t my_strlen(const char* str) //因为这个函数不会修改str，const增
 
 ### 长度不受限制的字符串函数
 
-* strcpy()函数 O(N)
+* `strcpy()` 函数 ***O(N)***
 
     ```c
     char* my_strcpy(char* dest, const char* src)
@@ -969,12 +969,12 @@ size_t my_strlen(const char* str) //因为这个函数不会修改str，const增
     }
     ```
 
-  * src必须以'\0'结束，strcpy()中的'\0'拷贝到dest
+  * src必须以'\0'结束，`strcpy()` 中的'\0'拷贝到dest
   * src只用于读取不修改，因此设为const src以增强其鲁棒性
   * dest必须足够大，以确保能存放字符串，放不下会报错 `- Stack around the variable 'dest' was corrupted. 栈空间损坏`
   * dest不能是常量字符串，必须是新开的栈空间
   * 返回是 `char*` 是为了实现链式访问，如 `printf("%s\n", my_strcpy(dest, src));`，如果返回是void则不能链式访问
-* strcat()函数 将src追加到dest后面 -- 先找尾再拷贝，效率较低
+* `strcat()` 函数 将src追加到dest后面 -- 先找尾再拷贝，效率较低
 
     ```c
     char* my_strcat(char* dest, const char* src)
@@ -1009,7 +1009,7 @@ size_t my_strlen(const char* str) //因为这个函数不会修改str，const增
   * dest从'\0'开始被src首字符开始覆盖，src的'\0'也被一同拷贝
   * 设计思路：先用strlen找到dest'\0'的位置（即开始拷贝的位置），然后用strcpy将src拷贝到dest之前找到的位置
   * 用my_strcat函数，字符串自己给自己追加的时候会造成死循环，某些C语言库中的strcat函数解决了这个问题
-* strcmp()函数
+* `strcmp()` 函数
 
     ```c
     int my_strcmp(const char* s1, const char* s2)
@@ -1103,7 +1103,7 @@ size_t my_strlen(const char* str) //因为这个函数不会修改str，const增
   * sep参数是个字符串，定义了用作分隔符的字符集合
   * strToken为一个字符串，里面包含了0个或者多个被sep分割的字符串段
   * strtok函数的第一个参数
-  * strtok()找到str中的下一个标记，并将其用'\0'结尾，返回一个指向这个标记的指针。strtok()会改变被操作的字符串，所以在使用strtok函数切分的字符串一般都是临时拷贝的内容并且可修改
+  * `strtok()` 找到str中的下一个标记，并将其用'\0'结尾，返回一个指向这个标记的指针。`strtok()` 会改变被操作的字符串，所以在使用strtok函数切分的字符串一般都是临时拷贝的内容并且可修改
   * strtok函数的第一个参数不为NULL时，函数将找到str中第一标记，strtok函数将保存它在字符串中的位置；strtok函数的第一个参数为NULL时，函数将在同一个字符串中被保存的位置开始，查找下一个标记
 
     ```c
