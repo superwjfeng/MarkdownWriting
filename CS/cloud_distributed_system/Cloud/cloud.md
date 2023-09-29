@@ -462,7 +462,7 @@ containerd实现CRI，成为CRI的事实标准
 
 ## *Introduction*
 
-### Benefits of Cloud Computing
+### 云计算的优势
 
 > 云计算就是通过 Internet（以下统称“云”）提供计算服务（包括服务器、存储、数据库、网络、软件、分析和智能），以提供快速创新、弹性资源和规模经济。对于云服务，通常你只需使用多少支付多少，从而帮助降低运营成本，使基础设施更有效地运行，并能根据业务需求的变化调整对服务的使用 -- Microsoft Azure https://azure.microsoft.com/zh-cn/resources/cloud-computing-dictionary/what-is-cloud-computing
 
@@ -502,6 +502,8 @@ containerd实现CRI，成为CRI的事实标准
 
   * Salesforce, Microsoft Office 365, Google Workspace
   * Mail/Office tools, Customer relationship management CRM, Enterprise resource planning ERP
+
+## *虚拟化*
 
 ### 虚拟化层次
 

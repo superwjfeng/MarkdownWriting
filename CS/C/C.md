@@ -633,41 +633,35 @@ int* arr[3] = { data1, data2, data3 }; // 指针数组是一个数组，不是�
 
     ```c
     // 这种方式并不好，多次解引用兜了一个大圈子
-    void print1(int(*p)[10], int sz)
-    {
+    void print1(int(*p)[10], int sz) {
         for (int i = 0; i < sz; i++)
             printf("%d ", *(*p + i)); // 对数组指针解引用得到的就是数组名，也就是首元素的地址
         printf("\n");
     }
-
+    
     // 直接遍历加法
-    void print2(int* arr, int sz)
-    {
+    void print2(int* arr, int sz) {
         for (int i = 0; i < sz; i++)
             printf("%d ", arr + i); // 对数组指针解引用得到的就是数组名，也就是首元素的地址
         printf("\n");
     }
-
-    int main()
-    {
+    
+    int main() {
         int arr[10] = { 1,2,3,4,5,6,7,8,9,10 };
         int sz = sizeof(arr) / sizeof(int);
         print1(&arr, sz);
         print2(arr, sz)
-
+    
         return 0;
     }
     ```
-
+    
 * 数组指针可以用在二维数组的传参中
 
     ```c
-    void print(int(*p)[5], int row, int col)
-    {
-        for (int i = 0; i < row; i++)
-        {
-            for (int j = 0; j < col; j++)
-            {
+    void print(int(*p)[5], int row, int col) {
+        for (int i = 0; i < row; i++) {
+            for (int j = 0; j < col; j++) {
                 // p+i是指向第i行的
                 // *(p+i)相当于是拿到指向第i行的，也就是相当于第i行的首元素
                 // 实际上 p[i][j]也是转换成这种形式的解引用进行计算的
@@ -677,8 +671,7 @@ int* arr[3] = { data1, data2, data3 }; // 指针数组是一个数组，不是�
         }
     }
     
-    int main()
-    {
+    int main() {
         int arr[3][5] = { {1,2,3,4,5},{2,3,4,5,6},{3,4,5,6,7} };
         int row = sizeof(arr) / sizeof(arr[0]);
         int col = sizeof(arr[0]) / sizeof(int);

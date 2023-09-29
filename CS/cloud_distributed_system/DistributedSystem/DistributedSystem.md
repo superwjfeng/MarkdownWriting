@@ -1080,17 +1080,32 @@ Configuration 是成员变更中一个非常重要的概念，它描述了集群
 * TiKV：TiKV 是 TiDB（分布式关系型数据库）的分布式存储引擎，它使用 Raft 算法来实现分布式复制和一致性。TiKV 提供了强一致性的分布式数据存储能力
 * Kafka：Kafka 是一个高吞吐量的分布式消息队列系统，它使用了一种基于 Raft 的副本管理协议，称为 Kafka Raft Metadata Protocol（KRaft）。KRaft 用于管理 Kafka 的元数据副本，确保高可用性和一致性
 
-# 应用
+# 分布式文件系统
 
-## *gRPC*
+## *NFS*
 
-## *MapReduce*
+别把 NFS 跟 NFC Near Field Communication 近场通信 搞混了 : )
 
-## *Pig*
+## *Hadoop*
 
-## *Leases*
+<https://hadoop.apache.org>
+
+Hadoop是一个开源的分布式计算框架，用于实现和执行MapReduce模型。它包括了Hadoop分布式文件系统（HDFS）和Hadoop MapReduce两个主要组件
+
+* HDFS用于存储大规模数据集，并将其分布在多台计算机上，以确保数据的可用性和冗余
+* Hadoop MapReduce用于编写、运行和管理MapReduce作业，充分利用HDFS中的数据
 
 ## *GFS*
+
+<https://www.open-open.com/lib/view/open1328763454608.html>
+
+* GFS是Google开发的分布式文件系统，旨在用于存储大规模的数据。它设计用于可扩展性、高可用性和容错性
+* GFS采用了分块存储的方式，将文件分成固定大小的块，并在多个服务器上复制这些块以提高可用性。它还使用主从体系结构来协调数据访问和元数据管理
+* GFS的设计灵感和MapReduce一样，旨在支持大规模数据处理任务。这两者共同为Google处理大数据提供了强大的基础设施
+
+# 分布式组件
+
+## *Lease*
 
 ## *zookeeper*
 
@@ -1119,6 +1134,8 @@ Zab将一个Leader的周期称为epoch
 Zab的心跳方向为Follower至Leader
 
 ## *BigTable*
+
+<https://www.open-open.com/lib/view/open1328763508092.html>
 
 1. Chubby: Chubby是Google开发的分布式锁服务，用于协调分布式系统中的各个节点。它提供了分布式锁、命名服务和分布式协议等功能，用于确保分布式系统的一致性和可靠性。Chubby常被用作Google内部的基础设施，例如Bigtable和其他分布式系统。
 2. ZooKeeper: ZooKeeper是Apache开发的分布式协调服务，类似于Chubby。它提供了分布式锁、配置管理、命名服务和分布式协调等功能，用于协调和管理分布式系统中的节点。ZooKeeper广泛应用于各种分布式系统，包括Hadoop、HBase和Kafka等。
