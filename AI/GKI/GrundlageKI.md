@@ -163,7 +163,7 @@
 * Performance of BFS
   * BFS的图搜索一定是完备的；若 ***b*** 是有限的，那么BFS的树搜索也是完备的；因为每一步的 path cost 都相等，所以总的cost是一个常数，因此是optimal
   * 最坏情况下，每一个node都有 ***b*** 个字节点，那么BFS的空间复杂度和时间复杂度都为 $b+b^2+b^3+\cdots+b^d=\mathcal{O}(b^d)$
-* BFS中是一种以时间换空间的方法，具有完备性。虽然可以找到最优的路径，但大量的enqueue、dequeue操作使算法消耗很大
+* BFS是一种以空间换时间的方法，具有完备性。虽然可以找到最优的路径，但大量的enqueue、dequeue操作使算法消耗很大
 
 ### 带权图的BFS -- Uniform cost search/Dijkstra算法/一致代价搜索 UCS
 

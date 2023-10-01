@@ -95,14 +95,14 @@ namespace wjF {
 
 * 命名空间嵌套
 
-```cpp
-namespace N1 {
-    // 各种定义...
-    namespace N2 {
-            // 各种定义...
-    }
-}
-```
+  ```cpp
+  namespace N1 {
+      // 各种定义...
+      namespace N2 {
+              // 各种定义...
+      }
+  }
+  ```
 
 * 同一个工程中允许多个相同名称的命名空间，编译器最后会合成为同一个命名空间
 
@@ -110,28 +110,26 @@ namespace N1 {
 
 * 不展开，加命名空间/指定空间访问
 
-```cpp
-// 指定空间访问的操作符为 ::
-std::cout << "Hello World!" << std::endl; 
-```
+  ```cpp
+  // 指定空间访问的操作符为 ::
+  std::cout << "Hello World!" << std::endl; 
+  ```
 
 * 部分展开
 
-```cpp
-using std::cout;
-using std::endl;
-std::cout << "Hello World!" << std::endl; 
-```
+  ```cpp
+  using std::cout;
+  using std::endl;
+  std::cout << "Hello World!" << std::endl; 
+  ```
 
-* 完全展开
+* l完全展开 using-directive
 
-```cpp
-using namespace std;
-```
+  ```cpp
+  using namespace std;
+  ```
 
-* 建议
-  * 项目中，尽量不要展开std库。可以指定空间访问+展开常用
-  * 日常练习可以展开
+* 建议：项目中，尽量不要展开std库。可以指定空间访问+展开常用的；日常练习可以展开
 
 ## *缺省参数/默认参数 Default Parameter*
 
@@ -141,11 +139,11 @@ using namespace std;
 
 * 半缺省参数必须是位于左边，且不能间隔着给
 
-```cpp
-void Func(int a, int b, int c=30); // 正确
-void Func(int a=10, int b=20, int c); // 错误，必须是在左边
-void Func(int a, int b=20, int c); // 错误，不能间隔着给
-```
+  ```cpp
+  void Func(int a, int b, int c=30); // 正确
+  void Func(int a=10, int b=20, int c); // 错误，必须是在左边
+  void Func(int a, int b=20, int c); // 错误，不能间隔着给
+  ```
 
 * 缺省参数不能在函数声明和定义中同时出现。当分离定义时，以声明为准，因为在汇编形成符号表时以声明中的定义为准
 
@@ -169,19 +167,19 @@ void Func(int a, int b=20, int c); // 错误，不能间隔着给
 
 * 全缺省参数
 
-```cpp
-void Func(int a=10, int b=20, int c=30);
-```
+  ```cpp
+  void Func(int a=10, int b=20, int c=30);
+  ```
 
 * 半缺省参数
 
-```cpp
-void Func(int a, int b=20, int c=30);
-```
+  ```cpp
+  void Func(int a, int b=20, int c=30);
+  ```
 
-### 声明问题
+### 缺省参数声明的问题
 
-在给定的namespace种一个形参只能被赋予一次默认实参，因此函数的后续声明只能为之前没有默认值的形参添加默认实参，而且该形参右侧的所有形参必须都有默认值
+在给定的namespace中一个形参只能被赋予一次默认实参，因此函数的后续声明只能为之前没有默认值的形参添加默认实参，而且该形参右侧的所有形参必须都有默认值
 
 通常应该在函数声明中指定默认实参，并将该声明放在头文件中
 
@@ -213,7 +211,7 @@ void Func(int a, int b=20, int c=30);
     int func(double a, int b);
     ```
 
-    * 注意：**只有返回值不同是不构成函数重载的**，因为编译器是根据传递的实参类型推断想要的是哪个函数，所以若只有返回类型不同则无法识别
+    注意：**只有返回值不同是不构成函数重载的**，因为编译器是根据传递的实参类型推断想要的是哪个函数，所以若只有返回类型不同则无法识别
 
 ### 函数匹配
 
@@ -223,7 +221,7 @@ void Func(int a, int b=20, int c=30);
 * 无匹配错误 no match
 * 二义性调用 ambiguous call
 
-### C++支持函数重载的原理 -- 符号修饰Name-decoration/符号改编 Name-mangling
+### C++支持函数重载的原理 -- 符号修饰 Name-decoration/符号改编 Name-mangling
 
 只有声明的函数或变量在本目标文件中是没有分配虚拟地址的，只有在定义之后才会分配内存地址。在编译器的链接过程中，会去找总符号表（同名的cpp文件和其头文件生成一份符号表），里面记录着不同函数的地址。只有声明的函数可以通过定义文件的符号表找到自己的地址，若没有找到就会报链接错误（编译阶段只报语法错误）
 
@@ -243,8 +241,6 @@ Func(int, double)
 ### C和C++互相调用库 `extern "C"`
 
 * 生成静态库.lib和动态库.dll
-
-  
 
 * C++调用C库
   * C++中在调用C的头文件时使用 `extern "C"`：告诉C++的编译器，这里面的函数使用C的库实现的，用C的规则去链接查找它们
@@ -291,7 +287,7 @@ void *memset(void *, int, size_t);
 
 * 引用在定义时必须初始化
 * 一个变量可以有多个引用
-* 引用一旦已经引用了一个实体后，不能再引用其他实体
+* 某个引用一旦已经引用了一个实体后，不能再引用其他实体
 * 除了const和类以外，其他的引用必须严格类型匹配
 
 ```cpp
@@ -306,11 +302,9 @@ b = x; // 将会同时赋值给b和a，因为b和a是同一个地址
 
 ### <span id="lvalue">使用场景</span>
 
-* 函数传参
+* 函数传参：**函数传参本质上和变量的初始化过程是一样的**，都是把一个右值传给左值
   
-  **函数传参本质上和变量的初始化过程是一样的**，都是把一个右值传给左值
-  
-  * 传值传参 passed by value 需要拷贝。C中常用指针来传递参数，从而使用输出的目的，但是比如在链表中要改变指针自身的时候要传二级指针就很麻烦
+  * 传值传参 passed by value 需要拷贝。C中常用指针来传递参数，从而达到修改输出的目的，但是比如在链表中要修改指针自身的时候要传二级指针就很麻烦
   
   * 引用传参 passed by reference/传引用调用 called by reference
   
@@ -333,9 +327,9 @@ b = x; // 将会同时赋值给b和a，因为b和a是同一个地址
   
 * 做返回值
   * 传值返回（见C语言中的函数栈帧），小对象放寄存器，大对象放上层栈帧
-    > 做法是将return的值装载到一个寄存器中，并将寄存器中保存的值给原函数中的接收变量。如果是将临时变量z设置为静态变量z，即 static int z。那么z会被保存到静态区中，并不会被销毁。但编译器仍然会选择将z的值加入到寄存器中生成临时拷贝后返回给上层
+    > 做法是将return的值装载到一个寄存器中，并将寄存器中保存的值给原函数中的接收变量。如果是将临时变量z设置为静态变量z，即 `static int z`。那么z会被保存到静态区中，并不会被销毁。但编译器仍然会选择将z的值加入到寄存器中生成临时拷贝后返回给上层
   * 传引用返回的问题
-    * ret的结果是未定义的，栈帧调用结束时，系统会清理栈帧并置成随机值，那么这里ret的结果就是随机值。因此该程序使用引用返回本质是不对的，越界后结果没有保证。因此传引用返回的前提是**出了函数作用域，返回对象就销毁了，那么一定不能用引用返回，一定要用传值返回**。
+    * 若要return一个在函数栈帧中新开辟的变量，则return的结果是未定义的。因为栈帧调用结束时，系统会清理栈帧并置成随机值，那么这里ret的结果就是随机值。因此该程序使用引用返回本质是不对的，越界后结果没有保证。因此传引用返回的前提是**出了函数作用域，返回对象就销毁了，那么一定不能用引用返回，一定要用传值返回**
     * 修改方式
       * 将Count中的int放到静态区中，这样Count调用结束，栈帧销毁后，静态区中的int也不会被销毁
       * malloc出来的内存是在堆上也不会被销毁，因此传引用返回可以应用到顺序表等数据结构中提高效率
@@ -405,8 +399,8 @@ A& func4() {
 
 * 中间临时量 temporary object 问题，具体看《程序员的自我修养--链接、装载与库》10.2.3函数返回值传递机制
   
-  * 函数的返回对于1-8字节的小对象，直接通过eax寄存器存放的临时量返回。注意这个临时对象编译器默认将其设置为const
-  * 对于大于8字节的大对象，会在上层栈帧开辟temp空间进行返回
+  * 函数的返回对于1-8字节的小对象，直接通过eax寄存器存放的临时量返回。注意：**这个临时对象编译器默认将其设置为const，即临时变量具有常性**
+  * 对于大于8字节的大对象，会在上层栈帧开辟temp空间返回
   
 * 输入
 
@@ -455,7 +449,7 @@ ret2 = func(y); //这时候就不会优化的
 
 ## *内联函数 Inline*
 
-* 定义：以 `inline` 修饰的函数叫做内联函数，编译时C++编译器会在调用内联函数的地方展开，没有函数调用建立栈帧的开销，而是直接替换成了一些机器代码，因此内联函数提升程序运行的效率
+* 定义：以 `inline` 修饰的函数叫做内联函数，编译时C++编译器会在调用内联函数的地方展开，**没有函数调用建立栈帧的开销**，而是直接替换成了一些机器代码，因此内联函数提升程序运行的效率
 * 使用场景：堆排序和快速排序中需要被频繁调用的Swap函数
 
 ### C语言中用宏函数来避免建立和销毁栈帧
@@ -792,17 +786,15 @@ private:
 ```
 
 * 分类
-  * public 公有
-  * protected 保护
-  * private 私有
+  * public 公有：可以被任意实体访问
+  * protected 保护：只允许子类及本类的成员函数访问
+  * private 私有：只允许本类的成员函数访问
 * 访问限定符的说明
-  * public修饰的成员在类外可以直接访问
-  * protected和private修饰的成员在类外不能直接被访问
   * 访问权限作用域从该访问限定符出现的未知开始直到下一个访问限定符出现时为止
   * 若后面没有访问限定符，作用域就到 `}` 为止
   * 三者都是只对类作用域外有效，即类内无论是什么限定符都可以互相取
   * struct定义的类默认访问权限是public，而class定义的类默认访问权限则是private
-* C++中struct和class的区别：C++需要兼容C语言，所以C++中struct可以当成结构体使用。但C++中的struct既可以定义变量，也可以定义函数。因此C++中将struct升级成了class。区别是struct定义的类默认访问权限是public，而class定义的类默认访问权限则是private。
+* C++中struct和class的区别：C++需要兼容C语言，所以C++中struct可以当成结构体使用。但C++中的struct既可以定义变量，也可以定义函数。因此C++中将struct升级成了class。区别是**struct定义的类默认访问权限是public，而class定义的类默认访问权限则是private**
 
 ### 封装 Encapsulation
 
@@ -984,7 +976,7 @@ int main() {
 }
 ```
 
-* `Date* const this` this指针是一个指针常量，指针本身不能被修改，但可以修改指针指向的内容。当传入一个const Date d2 常变量时，权限就被放大了
+* `Date* const this` this指针是一个指针常量，指针本身不能被修改，但可以修改指针指向的内容。当将一个不可修改的const Date d2 常变量传给一个可以通过this指针修改的 `Date* const this` 时，权限就被放大了
 
 * `d2 < d1`，因为 `<` 运算符重载时，第一个参数是this指针常量，和上面的错误是一样的，都是权限放大
 
@@ -2186,7 +2178,7 @@ int main() {
 }
 ```
 
-### 指针、常量和类型别名
+### m指针、常量和类型别名
 
 ## *const与函数*
 
@@ -2885,6 +2877,8 @@ bool Greater<Date*>(Date* left, Date* right) {
 
 ## *STL*
 
+<http://c.biancheng.net/stl/stl_basic/>
+
 Standard Template Library 标准模板库是C++标准库 `std` 的重要组成部分，其不仅是一个可复用的组件库，而且是一个包含数据结构的软件框架
 
 ### STL版本
@@ -2894,39 +2888,24 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
 ### STL六大组件
 
 * Container 容器：容器就是各种常用的数据结构用C++实现，C++可以提供但C语言不能提供的原因主要是得益于C++提供了模板这种泛型编程方式
-  * 序列式容器 Sequential container：底层为线性序列的数据结构，里面存储的是元素本身
-    * string
-    * vector
-    * list
-    * deque
-  * 关联式容器 Associative container：存储的是 `<key, value>` 结构的键值对
-    * map
-    * set
-    * multimap
-    * multiset
+  * 序列式容器 Sequential container：底层为线性序列的数据结构，里面存储的是元素本身。string、vector、list、deque，具体见下
+  * 关联式容器 Associative container：存储的是 `<key, value>` 结构的键值对。map、set、multimap、multiset，具体见下
   * c++11新增了array静态数组容器，和普通数组的主要区别在于对越界的检查更加严格，因为 `array[]` 的本质是函数调用 -- 运算符重载
+  
 * Iterator 迭代器：迭代器再不暴露底层实现细节的情况下，提供了统一的方式（即从上层角度看，行为和指针一样）去访问容器。屏蔽底层实现细节，体现了封装的价值和力量。迭代器被认为是algorithm和container的粘合剂，因为algorithm要通过迭代器来影响container
 
     <img src="迭代器初探.png" width="60%">
 
-  * iterator
-  * const_iterator
-  * reverse_iterator
-  * const_reverse_iterator
-* Functor 仿函数
-  * greator
-  * less ...
-* Algorithm 算法
-  * find
-  * swap
-  * reverse
-  * sort
-  * merge ...
+  * 迭代器按方向和是否能修改对象分类：iterator、const_iterator、reverse_iterator、const_reverse_iterator
+  * [迭代器按功能分类](#迭代器按功能分类)
+  
+* Functor 仿函数：greater、less ...。定义在 `<functional>` 中，里面是一些模版类，用来声明内建的函数对象
+  
+* Algorithm 算法：find、swap、reverse、sort、merge ...
+  
 * Allocator 空间配置器
-* Adapter 适配器/配接器：对容器进行复用
-  * stack
-  * queue
-  * priority_queue
+
+* Adapter 适配器/配接器：对容器进行复用。复用deque的stack、queue、priority_queue
 
 ### STL缺陷
 
@@ -2935,34 +2914,192 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
 * 极度追求效率，导致内部比较复杂，如类型萃取，迭代器萃取
 * STL的使用会有代码膨胀的问题
 
-### 常用 `<algorithm>` 库函数笔记
-
-封装了容器通用的函数模板
-
-* find
-    > Returns an iterator to the first element in the range [first,last) that compares equal to val. If no such element is found, the function returns last.
-* reverse：注意reverse范围左闭右开不包括last
-    > Reverses the order of the elements in the range [first,last).
-* sort
-  * sort要使用随机迭代器，也就是vector那种支持随机访问的迭代器
-  * sort的底层是不稳定快排，若要保证稳定性需要用 `stable_sort`
-
 ### 常用容器对比
 
-| 容器          | vector | list | deque | set  | multiset | map  | multimap |
-| ------------- | ------ | ---- | ----- | ---- | -------- | ---- | -------- |
-| 元素类型      | 值     | 值   | 值    | 值   | 值       | KV   | KV       |
-| 可重复？      | ✅      | ❌    |       |      |          |      |          |
-| 可随机存取？  |        |      |       |      |          |      |          |
-| 迭代器类型    |        |      |       |      |          |      |          |
-| 元素搜索速度  |        |      |       |      |          |      |          |
-| 快速插入      |        |      |       |      |          |      |          |
-| 释放          |        |      |       |      |          |      |          |
-| 允许reserve？ |        |      |       |      |          |      |          |
+<http://t.csdn.cn/SoSD9>
+
+| 容器          | string             |    vector    |       list       |        deque         |  set   | multiset |  map   | multimap |
+| ------------- | ------------------ | :----------: | :--------------: | :------------------: | :----: | :------: | :----: | :------: |
+| 数据结构      | 动态开辟的char数组 | 动态开辟数组 | 带头双向循环列表 | 二维数组：分段buffer | 红黑树 |  红黑树  | 红黑树 |  红黑树  |
+| 元素类型      | 值                 |      值      |        值        |          值          |   值   |    值    |   KV   |    KV    |
+| 可重复？      | ✅                  |      ✅       |        ✅         |          ✅           |   ❌    |    ✅     |   ❌    |    ✅     |
+| 可随机访问    | ✅                  |      ✅       |        ❌         |          ✅           |   ❌    |    ❌     |   ❌    |    ❌     |
+| 迭代器类型    | 随机存取           |   随机存取   |       双向       |       随机存取       |  前向  |   前向   |  前向  |   前向   |
+| 元素搜索速度  | 慢                 |      慢      |      非常慢      |          慢          |   快   |    快    |   快   |    快    |
+| 快速插入删除  | 尾端               |     尾插     |     任何位置     |         头尾         |        |          |        |          |
+| 允许reserve？ | 式                 |      是      |        否        |                      |        |          |        |          |
+
+* 序列容器
+  * vector
+    * vector是动态开辟的数组，它在堆中分配连续的内容。记录了尾部的地址，所以尾插、尾删很快，在中间和开始处添加、删除元素操作需要挪动数据，若数据是结构或类，那么移动的同时还会进行构造和析构操作，所以在中间或头上的操作性能不高
+    * vecotr应对对任何元素的访问都是***O(1)***，所以**vector常用来保存需要经常进行随机访问的内容，井且不需要经常对中间元素进行添加、删除操作**
+  * string：string和vector一样也是一个动态开辟数组，但它里面只放了char，是C++对字符串的封装，实现了很多字符串的操作接口，用起来很方便
+  * list
+    * list是一个允许常数时间插入和删除的顺序容器，支持双向迭代器
+    * list在任何地方添加、删除元素的性能都很高，它不需要移动内存块（vector与list的区别主要就是顺序存储与链式存储的区别）。当然也不需要
+      对每个元素都进行构造与析构，所以常用来做随机操作容器，但是访问list里面的元素时位于开头和最后的访问最快。访问其它元素都是***O(N)***，因为要顺序查找。因此如果需要经常随机访问的话，还是使用vector比较好
+  * deque
+    * 双端队列融合了vector和list的优点，既支持list的任意位置插入删除，又支持vector的下标随机访问
+    * 但是因为deque实现随机访问的机制比较复杂，其实插入删除和随机访问都没有做好（不过随机访问的效率也很高了！）。所以相比vector和list，deque非常适合做头尾的插入删除；但如果是中间插入删除多用list，而随机访问多用vector
+    * 通过复用deque得到的适配器 adapter 有 stack、queue、priority_queue
+* 关联容器
+  * set & map：红黑树结构，有序，不允许重复的key
+  * unordered_set & unordered_map：哈希结构，无序，不允许重复的key
+  * multiset & multimap：红黑树结构，有序，允许重复的key
+* 其他：array、bitset
+
+### 常用构造函数
+
+具体的内容可以看 <https://cplusplus.com> 和STL的Cheat sheet，这里只是做一些常用容器的构造器的解释。以vector为例
+
+* 空构造 empty constructor (default constructor)
+
+  ```cpp
+  explicit vector (const allocator_type& alloc = allocator_type());
+  std::vector<int> first;                                         // empty vector of ints
+  ```
+
+* 填充构造 fill constructor
+
+  ```cpp
+  explicit vector (size_type n);
+  vector (size_type n, const value_type& val, const allocator_type& alloc = allocator_type());
+  std::vector<int> second(6, 100);                                // 6 ints with value 100
+  ```
+
+* 范围构造 range constructor
+
+  ```cpp
+  template <class InputIterator> vector (InputIterator first, InputIterator last, const allocator_type& alloc = allocator_type());
+  std::vector<int> third (second.begin(), second.end());          // iterating through second
+  ```
+
+* 拷贝构造 copy constructor
+
+  ```cpp
+  vector (const vector& x);
+  vector (const vector& x, const allocator_type& alloc);         
+  std::vector<int> fourth (third)                                 // a copy of third
+  ```
+
+* 移动构造 move constructor
+
+  ```cpp
+  vector (vector&& x);
+  vector (vector&& x, const allocator_type& alloc);
+  ```
+
+* 初始化列表 initializer list
+
+  ```cpp
+  vector (initializer_list<value_type> il, const allocator_type& alloc = allocator_type());
+  std::vector<int> a{1, 2, 3, 4, 5};
+  std::vector<int> a = {1, 2, 3, 4, 5};
+  ```
+
+### 常用API
+
+具体的内容可以看 <https://cplusplus.com> 和STL的Cheat sheet，这里只是做一些常用容器的API的解释。下面的API是不同的容器的，注意判别到底哪些容器有哪些API
+
+注意：C++没有从给定一个元素的key返回下标的方法
+
+* 容量相关
+  * `size()`：返回有效数据的数量，除了 `forward_list` 之外的所有容器都有这个方法 
+  * `max_size()`：返回容器在当前系统和库实现中可能达到的最大元素数量的值，它可以帮助程序员在设计代码时，考虑到容器可能的最大规模，从而更好地规划内存和资源的使用
+  * `capacity()` ：开出的来动态数组大小，只有vector有
+  * `reserve(n)`：预分配空间，不初始化，vector和unordered系列有
+  * `resize(n, val)`：重新分配空间 + 初始化，顺序容器有
+  * `shrink_to_fit()`：缩小capacity到和size相同
+* Element access
+  * `[]` & `at(n)`：返回位置n的数据，`at` 有范围检查，越界会报 `std::out_of_range` 异常，`[]` 不检查越界，越界会导致未定义行为
+  * `front()` & `back()`：返回头、尾元素的引用
+* Modifier
+  * `push_back()`
+  * `pop_back()`
+  * `insert(pos, n)`
+  * `erase(pos)`
+  * `swap()`
+  * `clear()`：清空所有元素
+  * `emplace(pos, args)`：直接构造并插入，目的是在不额外复制或移动对象的情况下，直接在容器内部构造对象，从而避免了额外的拷贝开销
+  * `emplace_back()`
+
+## *常用 `<algorithm>` 库函数*
+
+### `<algorithm>` 库
+
+STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 知乎 <https://zhuanlan.zhihu.com/p/426355690>
+
+`<algorithm>` 是所有STL头文件中最大的一个，范围涉及比较、交换、查找、遍历、复制、修改的函数模版
+
+注意 `<algorithm>` 里面定义的通用函数模版和容器自身的方法名字可能一样，比如 `std::find()`、`std::swap()` 等等，注意判别
+
+这些函数都定义在std命名空间中，若没展开std命名空间则都需要加 `std::`，下面为了方便起见都省略了
+
+### 查找
+
+* `find`：查找指定元素，找到则返回指定元素的迭代器，找不到则返回结束迭代器
+
+  ```cpp
+  template <class InputIterator, class T>
+  InputIterator find (InputIterator first, InputIterator last, const T& val);
+  ```
+
+  > Returns an iterator to the first element in the range [first,last) that compares equal to val. If no such element is found, the function returns last.
+
+* `find_if`：和find相比多了一个用于判断的仿函数
+
+* `adjacent_find`：查找相邻的重复元素。返回**第一个**相邻重复的位置的迭代器
+
+* `binary_search`：通过二分查找来查找制定的元素是否存在，返回bool，复杂度***O(logN)***
+
+* `count`：统计元素个数。返回一个int型数据
+
+* `count_if`
+
+* `max_element` & `min_element`：获取容器中最大、最小值的pos迭代器
+
+* `distance`：返回两个迭代器之间的距离
+
+* `lower_bound` & `upper_bound`
+
+### 排序
+
+* `reverse`：注意reverse范围左闭右开不包括last
+
+  > Reverses the order of the elements in the range [first,last).
+
+* `sort`：在原容器上排序，默认升序，可以通过仿函数自定义
+
+  ```cpp
+  template <class RandomAccessIterator> void sort (RandomAccessIterator first, RandomAccessIterator last);
+  template <class RandomAccessIterator, class Compare> void sort (RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+  ```
+
+  * sort要使用随机迭代器，也就是vector、array、deque那种支持***O(1)***随机访问的迭代器
+  * sort的底层是不稳定快排，也就是说若有相同的元素，sort不保证不改变它们原来的顺序，若要保证稳定性需要用 `stable_sort`
+  * sort在排序时需要交换容器中元素的存储位置。此时若容器中存储的是自定义的类对象，则该类的内部必须提供移动构造函数和移动赋值运算符
+
+* `partial_sort(first, middle, last)`
+
+  * 从 `[first,last)` 范围内，筛选出 `middle-first` 个最小的元素并排序存放在 `[first，middle)` 区间中
+  * `partial_sort_copy`：范围排序并copy放到新的里
+
+* `is_sorted(first, last)`：判断 `[first, last)` 范围内是否已经排好序，默认检测是否按升序排序
+
+* `random_shuffle`：随机打乱指定范围内的元素顺序
+
+* `merge`：将两个容器元素合并，并存储到另一容器中。前提是两个容器必须是有序的
+
+### 拷贝 & 替换
+
+* `swap`：[swap存在一些问题](#swap的问题)
+* `replace`
+* `replace_if`
+* `copy`
 
 # string
 
-string是一个特殊的顺序表，与顺序表的不同之处是它的操作对象是字符，并且最后一个数据默认是\0
+string是一个特殊的动态数组，与普通动态数组的不同之处是它的操作对象是字符，并且最后一个数据默认是 `\0`
 
 ## *标准库中的string常用接口*
 
@@ -3038,9 +3175,11 @@ void PrintString(const string& str) {
 * `insert` 效率很低
 * `find` 和 `rfind`：返回 size_t，返回第一个/最后一个找到的位置，找不到则返回 `npos`，这时会解释为一个非常大的数，这是因为默认不存在这么大的字符串
 * `substr` 从pos位置开始取n个字节长度的子串
-* `c_str`：用来兼容C字符串，C不支持string类型
+* `c_str`：用来兼容C字符串，C不支持string类型。比如说 `printf()` 无法直接输出string，可借助 `c_str()` 来输出`
 
     ```cpp
+    printf("%s", s.c_str()); // print string
+    
     string filename("test.cpp");
     FILE* fout = fopen(filename.c_str(), "r");
     assert(fout);
@@ -3129,7 +3268,7 @@ String(const char* str="") //隐含了一个\0
 }
 ```
 
-strlen()是一个O(N)的函数，可以进一步改造
+`strlen()` 是一个***O(N)***的函数，可以进一步改造
 
 ### 错误写法三
 
@@ -3149,7 +3288,7 @@ private:
 }
 ```
 
-这么写是错误的，因为初始化顺序是按照声明的顺序来，若这么写初始化列表_size，_capacity都是随机值。若更改声明的顺序会产生很多的维护问题
+这么写是错误的，因为初始化顺序是按照声明的顺序来，若这么写初始化列表\_size，\_capacity都是随机值。若更改声明的顺序会产生很多的维护问题
 
 ### 正确写法三
 
@@ -3401,7 +3540,7 @@ string& operator=(const string& s) {
   ```cpp
   void swap(string& tmp) {
       std::swap(_str, tmp._str); // sdt::表明调用的是std库中的swap，否则编译器会优先调用局部域中的swap（也就是自己变成迭代了）
-      sdt::swap(_size, tmp._size);
+      std::swap(_size, tmp._size);
       std::swap(_capacity, tmp._capacity);
   }
   
@@ -3438,9 +3577,9 @@ string& operator=(const string& s) {
     }
     ```
 
-### swap的问题 
+### <span id="swap的问题">swap的问题</span>
 
-<img src="swapRef.png" width="60%">
+<img src="swapRef.png" width="80%">
 
 std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次赋值），因为需要借助中间变量。对于简单的内置变量当然无所谓，但若是一个很大的类或结构体那效率就很低了。所以可以自己写swap，通过复用库里的`std::swap`来交换一些开销小的内容
 
@@ -3459,7 +3598,7 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
 
 ### 引用计数+写时拷贝
 
-# vector和list
+# vector & list
 
 ## *vector 顺序表*
 
@@ -3734,10 +3873,22 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
 
 ### list的反向迭代器，采用适配器（复用）的方向进行设计
 
-* 迭代器按功能分类
-  * forward_iterator：只支持++，不支持--：比如forward_list、unordered_map、unordered_set
-  * bidirectional_iterator：既支持++，也支持--：比如list、map、set
-  * random_access_iterator：不仅支持++--，还支持+-，比如vector、deque
+* <span id="迭代器按功能分类">迭代器按功能分类</span>
+  
+  前两种迭代器是通用的，而后三种则是不同容器的迭代器，与容器的实现方式有关，比如vector的迭代器封装的是数组元素的指针，因为动态数组是连续的，可以通过硬件达成***O(1)***的直接寻址。而链表的元素地址不是连续的，查找的时候需要线性复杂度，所以不能***O(1)***实现+-（不是不能实现！）
+  
+  * `InputIterator`：输入迭代器，允许按顺序遍历容器中的元素，但每个元素只能被遍历一次。这种类型的迭代器通常用于只读操作，如遍历集合并读取其中的元素
+  
+  * `OutputIterator`：输出迭代器，允许按顺序将值写入容器中，但与 `InputIterator`不同，它并不关心从容器读取值的操作。这种类型的迭代器通常用于只写操作，如通过迭代器将数据写入某个容器
+  
+  * `ForwardIterator`：只支持++，不支持--：比如forward_list、unordered_map、unordered_set
+  
+  * `BidirectionalIterator`：既支持++，也支持--：比如list、map、set
+  
+  * `RandomAccessIterator`：不仅支持++--，还支持+-，支持***O(1)***复杂度对元素的随机访问。比如vector、deque
+  
+    <img src="迭代器类型.drawio.png" width="50%">
+  
 * 实现方法
   * 普通思维：拷贝一份正向迭代器，对其进行修改
   * STL的设计：对iterator进行复用。反向迭代器里封装的是正向迭代器，正向迭代器里封装的是指针或节点
@@ -3768,7 +3919,7 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
 
 * 只要实现了正向迭代器，那么 `reverse_iterator` 可以复用到其他的容器上，除了 `forward_list`，`unordered_map` 和 `unordered_set` 不能被复用，因为这些容器的迭代器不支持 `--`
 
-# stack & queue 栈和队列
+# stack & queue
 
 ## *deque容器*
 
@@ -3851,8 +4002,9 @@ queue 和 stack 一样都是默认复用 deque 的适配器
 
 <img src="priorityQueueDef.png">
 
-* `priority_queue` 可以实现最大值/最小值在队头。仿函数Compare默认为`std::less`，大数优先，T要支持 `operator<()`；Compare为`std::greater`时为小数优先，T要支持 `operator>()`
-* `priority_queue` 的底层是堆，但用vector来控制下标
+* `priority_queue` 可以实现最大值/最小值在队头，通过建堆来实现
+* 仿函数Compare默认为`std::less`，大数优先，即默认降序。T要支持 `operator<()`；Compare为`std::greater`时为小数优先，T要支持 `operator>()`
+* 虽然 `priority_queue` 的底层是堆，但用它复用的容器来控制下标
 * `priority_queue` 的默认容器为vector，这是因为要进行大量的下标随机访问，用deque或list都不好
 
 # 继承 Inheritance
@@ -4274,7 +4426,28 @@ struct pair
 
 ### set
 
-`lower_bound(val)` 返回的是 >= val的；`upper_bound(val)` 返回的是 > val的。multiset：允许键值冗余
+和vector不同， 当我们需要存储一组元素并且需要保持元素的唯一性时，我们可以使用`std::set`。这里有一个例子，假设我们正在开发一个程序来统计一篇文章中出现了多少个不同的单词
+
+```cpp
+std::string article = "This is a sample article for demonstrating std::set in C++ programming. "
+                      "It shows how to count the number of unique words in an article.";
+
+std::set<std::string> uniqueWords;
+std::istringstream iss(article);
+std::string word;
+
+// 分割文章中的单词并插入到 std::set 中
+while (iss >> word) {
+    // 清除单词中的标点符号
+    word.erase(std::remove_if(word.begin(), word.end(), ::ispunct), word.end());
+    uniqueWords.insert(word);
+}
+std::cout << "Number of unique words in the article: " << uniqueWords.size() << std::endl;
+```
+
+**set是没有 `operator[]` 随机访问的，也就是说不能通过key来找到下标**
+
+`lower_bound(val)` 返回的是 >= val的；`upper_bound(val)` 返回的是 > val的
 
 * `find(key)`返回的是中序第一个找到的key
 * `erase(key)`删除的是所有的符合项
@@ -4300,7 +4473,10 @@ struct pair
     ```
 
 * at相比于operator[]就只是查找+修改，若找不到就抛_out_of_range_exce的异常，这和python字典的功能相同
-* multimap允许键值冗余，没有operator[]
+
+### multiset & multimap
+
+Multiset & multimap允许键值冗余，没有operator[]，只能通过find来找
 
 ## *set和map的模拟实现*
 
@@ -4408,9 +4584,8 @@ struct MapKeyOfT
 
 * unordered系列容器是C++11新增的，其底层是Hash。在java中叫做 TreeMap/TreeSet & HashMap/HashSet
 * 大量数据的增删查改用unordered系列效率更高，特别是查找，因此提供了该系列容器
-* 与map/set的区别
+* 与map/set的区别：map和set遍历是有序的，unordered系列是无序的
 
-  * map和set遍历是有序的，unordered系列是无序的
 * map和set是双向迭代器，unordered系列是单向迭代器
 
 ### 用底层哈希桶进行封装

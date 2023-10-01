@@ -34,47 +34,67 @@ int main()
 
 ## *C语言数据类型*
 
-### C语言数据类型
-
 * 基本内置类型 Bulit-in type
-* int类型
-* 其他整数类型 short, long
-* 使用字符：char类型
-  * char类型用于存储字符，但由于在计算机中使用ASCII码来存储字符，因此char实际上是整型。每个char占用一个bit位
-  * 用单引号括起来的单个字符被称为字符常量 character constant `char grade ='A'`
-  * C语言语法中没有规定char是有符号还是无符号，但为了保持统一，大部分编译器（包括vscode）中char都是**有符号**的
-  * char是signed char还是unsigned char是取决于编译器的，C标准中没有规定，但大部分编译器中都是signed char
-  * 编码规则（详见收藏的博客）
+
+  * int类型
+
+  * 其他整数类型 short, long
+
+  * 使用字符：char类型
+
+    * char类型用于存储字符，但由于在计算机中使用ASCII码来存储字符，因此char实际上是整型。每个char占用一个bit位
+    
+    * 用单引号括起来的单个字符被称为字符常量 character constant `char grade ='A'`
+    
+    * C语言语法中没有规定char是有符号还是无符号（**char是未定义行为**），但为了保持统一，大部分编译器（包括vscode）中char都是**有符号**的。虽然如此，因为是未定义行为，所以最好还是不要直接使用char来存储数据，要么用signed char，要么用unsigned char，这两个是C标准明确定义的
+    
+    * 编码规则（详见收藏的博客）
+    
     * ASCII码
       * 65D-90D 大写字母；97D-122D 小写字母
       * 0D NULL；32D 空格；48D-57D 1-9
+      
     * GBK码 汉字内码扩展规范：一个汉字占用两个字节
+    
     * UTF-8：Unicode的一种规范，Ascii码字符仍不变，占用和标准Ascii编码一样的一个字节，一个汉字占用三个字节
+    
     * Windows中自适应的ANSI编码系统
-  * 转义序列 escape sequence
+    
+    * 转义序列 escape sequence
+    
+      ```
+      转义序列|含义
+      :-|:-
+      \a|警报(ANSIC)
+      \b|退格
+      \f|换页
+      \n|换行
+      \r|回车
+      \t|水平制表符
+      \v|垂直制表符
+      \\\ |反斜杠
+      \\'|单引号
+      \\"|单引号
+      \?|问号
+      \0oo|八进制
+      \xhh|十六进制
+      ```
 
-    转义序列|含义
-    :-|:-
-    \a|警报(ANSIC)
-    \b|退格
-    \f|换页
-    \n|换行
-    \r|回车
-    \t|水平制表符
-    \v|垂直制表符
-    \\\ |反斜杠
-    \\'|单引号
-    \\"|单引号
-    \?|问号
-    \0oo|八进制
-    \xhh|十六进制
+  * float、double和long double
 
-* _Bool类型
+  * 负数和虚数类型
+
+  * bool类型：C99引入了 `_Bool`，通常都用bool作为别名
+
 * 可移植类型：stdint.h和inttypes.h
-* float、double和long double
-* 负数和虚数类型
+
 * 其他类型
-* 类型大小：`sizeof` 是C语言的内置运算符，以字节位单位给出指定类型的大小，C99和C11提供%zd转换说明匹配 `sizeof` 的返回类型。注意，`sizeof` 返回的是 `size_t` 无符号整型：为什么要使用 `size_t`？<https://jeremybai.github.io/blog/2014/09/10/size-t>，主要是考虑到可移植性和效率问题（C Primer Plus P84）
+
+  * `size_t`：类型大小 `sizeof` 是C语言的内置运算符，以字节位单位给出指定类型的大小，C99和C11提供%zd转换说明匹配 `sizeof` 的返回类型。注意，`sizeof` 返回的是 `size_t` 无符号整型：为什么要使用 `size_t`？<https://jeremybai.github.io/blog/2014/09/10/size-t>，主要是考虑到可移植性和效率问题（C Primer Plus P84）
+  * `ptrdiff_t`
+  * 独立于平台的控制宽度的整数类型
+  * 特定于平台的整数类型
+
 
 ## *字符串和格式化输入/输出 (C Primer Plus 第4章)*
 
@@ -99,12 +119,13 @@ int main()
         * `strlen("abc\\123n")=6`
         * `strlen("abc\\x23n")=6`
 
-### 格式化输入输出I/O函数：printf()和scanf()
+### 格式化输入输出I/O函数：`printf()` 和 `scanf()`
 
-* printf()函数
+* `printf()` 函数
+  
   * 转换说明 Conversion specification：格式字符串中的转换说明一定要与后面的每个项相匹配，若忘记这个基本要求会导致严重的后果；若没有匹配项，则根据系统和编译器不同结果也不同
     * 转换说明表格
-
+  
         转换说明|输出
         :-|:-
         %a和%A|浮点数、十六进制数和p计数法
@@ -120,9 +141,9 @@ int main()
         %u|无符号十进制整数
         %x和%X|无符号十六进制整数，使用十六进制数0f和0F
         %%|打印一个百分号
-
-    * printf()的转换说明修饰符
-
+  
+    * `printf()` 的转换说明修饰符
+  
         修饰符|含义
         :-|:-
         标记|见下表
@@ -137,9 +158,9 @@ int main()
         L|和浮点转换一起使用，表示long double类型的值
         t|和整形转换一起使用，表示ptrdiff_t类型的值（C99）
         z|和整形转换一起使用，表示size_t类型的值（C99）
-
-    * printf()中的标记
-
+  
+    * `printf()` 中的标记
+  
         标记|含义
         :-|:-
         -|待打印项左对齐（默认为右对齐）
@@ -147,13 +168,13 @@ int main()
         空格|有符号值为正，则在值前面显示前导空格（不显示任何符号），若为负，则在值前面显示减号
         #|把结果转换为另一种形式，若是%o，则以0开始；若是%x或%X，则以0x或0X开始
         0|用前导0代替空格填充字段宽度
-
+  
   * 转换说明的意义：把给定的值翻译成要求的值并打印出来。程序把传入的值根据其类型按照一定方式放入内存，printf()函数根据转换说明（不是根据变量类型）从内存中读取值，并不会改变内存中的数据，只是一种翻译方式
     * 使用不匹配的转换说明将造成严重的后果，例如%lf用成了%f
     * `printf()` 和 `scanf()` 中对于浮点数的处理是不同的：**`printf()` 中没有float的转换类型，所有的float都会被强制转换为double，因此统一用%f，%Lf用于long double。而在 `scanf()` 中%f为float型，%lf为double型**
   * `printf()` **返回打印字符的个数**，如果有输出错误，则返回一个负值
   * 打印长字符串和数字不需要转换说明
-
+  
 * `scanf()` 函数
   
   * 参数需要传入指针
@@ -163,9 +184,9 @@ int main()
   * 格式字符串中的普通字符：除空格字符外的普通字符必须与输入字符串严格匹配。如`scanf("%d,%d"，&a, &b)`意味着必须使用逗号
   * scanf()的返回值：返回成功读取的项数，如果没有读到数输入错误返回0，如果退出则返回EOF
 
-### getchar()和putchar()
+### `getchar()` & `putchar()`
 
-1. 这两个函数只用于处理字符，所以它们比更通用的scanf()和printf()函数更快、更简洁，同时它们也不需要转换说明。
+1. 这两个函数只用于处理字符，所以它们比更通用的 `scanf()` 和 `printf()` 函数更快、更简洁，同时它们也不需要转换说明
 2. ctype.h系列的字符函数
 
 ## *运算符、表达式和语句*
@@ -195,9 +216,9 @@ int main()
     * 不能创建临时变量实现两个数的交换（这个方法速度很快，但只能作用于整数）
   
         ```c
-        a = a^b;
-        b = a^b; // b == a^b^b == a
-        a = a^b; // a == a^b^a^b^b == b
+        a = a ^ b;
+        b = a ^ b; // b == a^b^b == a
+        a = a ^ b; // a == a^b^a^b^b == b
         ```
   
     * 找单身狗问题：一个数组中只有一个数字出现了一次，其他都出现了两次，找出这个数字。利用第二条性质
@@ -253,6 +274,26 @@ int main()
 
 * 下标引用、函数调用和结构成员：`[] () . ->`
 
+
+### 舍入问题
+
+C语言的整数除法是向零舍入的，也就是说余数若是正数就向下舍入，余数若是负数就向下舍入
+
+在支持IEEE浮点数标准的机器上默认向偶数舍入的，但是C语言标准并没有规定机器必须使用IEEE浮点数标准
+
+`<math.h>` 还提供了一些函数实现其他的舍入功能
+
+* `round()`：将传入的小数四舍五入为最接近的整数
+* `floor()`：将传入的小数向下取整为最接近的整数
+* `ceil()`：将传入的小数向上取整为最接近的整数
+
+一种常用的四舍五入的写法是将小数加上0.5，然后将其强转为整数
+
+```c
+float num = 2.6;
+int result = (int)(num + 0.5);
+```
+
 ### 优先级 Operator Precedence
 
 * 只有对所有编译器唯一确定运算顺序的运算才是正确的，在一个语句里用太多的自加自减会引起混乱。仅仅有操作符的优先级和结合性是无法唯一确定某些表达式的计算路径的
@@ -261,13 +302,32 @@ int main()
 ### 类型转换 Type Conversion
 
 * 自动类型转换/隐式类型转换 implicit conversion：编译器在编译阶段自动进行，能转就转，不能转就编译失败，**类型转换的特征是会产生临时变量**
-  * 算术转换（长度大于int）arithmetic conversion：若操作符的各个操作数属于不同的类型，那么编译器会自动按照类型转换从低到高顺序的进行算术转换：long double, double, float, unsignedlong long, long long, unsigned long, long, unsigned int, int。算术转换时内存中二进制表示的值没有变，只是计算机解释值的方式变了。隐式类型的转换各种赋值操作符的两侧（`>=` 这种也是），这里有一个经典的错误可以看Cpp.md的string类模拟实现部分的insert部分
-  * 整型提升（长度小于等于int）integral promotion：当传参和计算时，char和short被转换为int，float转换为double：整型提升是按照变量的数据类型的符号位来提升的
+  * 算术转换（长度大于int）arithmetic conversion
+  
+    * 转换级别 conversion rank若操作符的各个操作数属于不同的类型，那么编译器会自动按照类型转换从低到高顺序的进行算术转换
+  
+      * 无符号数的rank不低于其对应的有符号数，因此如果是同级别的有符号整型和无符号整型碰在一起，要把有符号整型隐式转换为无符号整型
+      * `char/signed char/unsigned char ` 是同级别的
+      * bool型的rank是最低的
+      * 浮点数的rank高于整型
+  
+      ```
+      bool -> char/signed char/unsigned char -> short -> unsigned short -> int -> unsigned int -> long -> unsinged long -> long long -> unsigned long long -> float -> double -> long double
+      ```
+  
+    * 算术转换时内存中二进制表示的值没有变，只是计算机解释值的方式变了。隐式类型的转换各种赋值操作符的两侧（`>=` 这种也是），这里有一个经典的错误可以看Cpp.md的string类模拟实现部分的insert部分
+  
+  * 整型提升（长度小于等于int）integer promotion：整型提升是按照变量的数据类型的符号位来提升的
+  
+    整数提升保留值，其中包括符号。如果在所有的原始值中，较小的类型可以被表示为一个int，那么
+  
     * 有符号数
       * 负数的整型提升：高位补充1
       * 正数的整型提升：高位补充0
     * 无符号数：高位补充0
+  
   * 截断：前面的都是属于小范围类型转换为大范围类型，截断是当大范围类型转换为小范围类型
+  
   * 其他隐式类型转换
     * 数组名自动转换为指向数组首元素的指针（除sizeof外）
     * 指针转换
@@ -582,41 +642,35 @@ int* arr[3] = { data1, data2, data3 }; // 指针数组是一个数组，不是�
 
     ```c
     // 这种方式并不好，多次解引用兜了一个大圈子
-    void print1(int(*p)[10], int sz)
-    {
+    void print1(int(*p)[10], int sz) {
         for (int i = 0; i < sz; i++)
             printf("%d ", *(*p + i)); // 对数组指针解引用得到的就是数组名，也就是首元素的地址
         printf("\n");
     }
-
+    
     // 直接遍历加法
-    void print2(int* arr, int sz)
-    {
+    void print2(int* arr, int sz) {
         for (int i = 0; i < sz; i++)
             printf("%d ", arr + i); // 对数组指针解引用得到的就是数组名，也就是首元素的地址
         printf("\n");
     }
-
-    int main()
-    {
+    
+    int main() {
         int arr[10] = { 1,2,3,4,5,6,7,8,9,10 };
         int sz = sizeof(arr) / sizeof(int);
         print1(&arr, sz);
         print2(arr, sz)
-
+    
         return 0;
     }
     ```
-
+    
 * 数组指针可以用在二维数组的传参中
 
     ```c
-    void print(int(*p)[5], int row, int col)
-    {
-        for (int i = 0; i < row; i++)
-        {
-            for (int j = 0; j < col; j++)
-            {
+    void print(int(*p)[5], int row, int col) {
+        for (int i = 0; i < row; i++) {
+            for (int j = 0; j < col; j++) {
                 // p+i是指向第i行的
                 // *(p+i)相当于是拿到指向第i行的，也就是相当于第i行的首元素
                 // 实际上 p[i][j]也是转换成这种形式的解引用进行计算的
@@ -626,8 +680,7 @@ int* arr[3] = { data1, data2, data3 }; // 指针数组是一个数组，不是�
         }
     }
     
-    int main()
-    {
+    int main() {
         int arr[3][5] = { {1,2,3,4,5},{2,3,4,5,6},{3,4,5,6,7} };
         int row = sizeof(arr) / sizeof(arr[0]);
         int col = sizeof(arr[0]) / sizeof(int);
@@ -790,6 +843,9 @@ void va_copy(va_list dest, va_list src);
     <img src="块作用域的静态变量.png">
 
 * 内部链接的静态变量：也可以用 `staic` 将全局变量声明为具有内部链接的静态变量，只能被当前文件使用，从而避免重复定义冲突。这样定义会使每个对象文件中的统一变量/函数具有不同的地址
+
+    补充：C++中也可以用匿名命名空间来获得内部链接的效果。当将变量、函数、类等限定在一个匿名命名空间内，使得它们在当前文件（编译单元）中是唯一可见的
+
 * 外部链接的静态变量（即全局变量）：拥有文件作用域的变量自动拥有静态存储期。直接定义在函数外面就可以，所以也成为外部变量 external variable
 
 ### 声明和定义 declearation and definition
@@ -906,15 +962,15 @@ int main()
 ## *字符串输入*
 
 * 分配空间：必须为输入的字符串提供足够的空间。和直接存储字符串不同，存储输入的字符串时编译器不会自动计算字符串的长度
-* <span id="gets">gets()函数 `char* gets(char* buffer);`</span>
+* <span id="gets">`gets()` 函数 `char* gets(char* buffer);`</span>
   * 读取整行输入，直至遇到换行符，然后丢弃换行符，存储其余字符，并在这些字符的末尾添加一个\0使其称为一个C字符串
   * gets()函数只有一个参数，是无法判断输入的内容是否放的进数组中的，容易产生缓冲区溢出，利用其甚至可以造成系统安全上的漏洞，因此不建议使用
-* gets()的替代品
-  * 单字符IO：getchar()
-  * fgets() `char* fgets(char* string, int n, FILE* stream );`
-  * fgets()被设计用于处理文件输入
-  * fgets()第二个参数用于控制读入字符的最大数量
-  * 与gets()丢弃换行符不同，fgets()会保留换行符，因此要与fputs()配对使用
+* `gets()` 的替代品
+  * 单字符IO：`getchar()`
+  * `fgets()`  `char* fgets(char* string, int n, FILE* stream );`
+  * `fgets()` 被设计用于处理文件输入
+  * `fgets()` 第二个参数用于控制读入字符的最大数量
+  * 与 `gets()` 丢弃换行符不同，`fgets()` 会保留换行符，因此要与 `fputs()` 配对使用
 * gets_s()
 * sget_s()
 * scanf()函数：scanf()使用%s来读取字符串，但它读到空白字符就停止了，因此scanf()更像是用来读取一个单词，而非一整句话。scanf()的典型用法就是读取并转换混合数据类型为某种标准形式
@@ -929,7 +985,7 @@ int main()
 
 ## *字符串函数 (C Primer Plus 第11章)*
 
-### 求字符串长度：strlen()函数 O(N)
+### 求字符串长度：`strlen()` 函数 *O(N)*
 
 ```c
 size_t my_strlen(const char* str) //因为这个函数不会修改str，const增加鲁棒性
@@ -1484,8 +1540,6 @@ enum Color // 颜色
 * 联合的大小至少是最大成员的大小
 * 当最大成员大小不是最大对齐数的整数倍的时候，就要对齐到最大对齐数的整数倍
 
-## *自定义类型的汇编代码*
-
 # 动态内存管理
 
 ## *为什么存在动态内存分配*
@@ -1624,7 +1678,7 @@ int* p = &a;
 free(p);
 ```
 
-### 使用free()释放一块动态内存的一部分
+### 使用 `free()` 释放一块动态内存的一部分
 
 ```c
 int* p = (int*)malloc(40);
@@ -1664,24 +1718,18 @@ int main() {
 
 * 结构中的柔性数组成员前面必须至少有一个其他成员，且柔性数组一定要放在结构体最后
 * `sizeof` 返回的这种结构大小不包括柔性数组的内存
-* 包含柔性数组成员的结构用malloc()进行内存的动态分配，并且分配的内存应该大于结构的大小，以适应柔性数组的预期大小
+* 包含柔性数组成员的结构用 `malloc()` 进行内存的动态分配，并且分配的内存应该大于结构的大小，以适应柔性数组的预期大小
 
 ```c
-#include <stdio.h> 
-#include <stdlib.h>
-
-struct S
-{
+struct S {
     int num;
     int arr[];
 }
 
-int main()
-{
+int main() {
     //柔性数组用malloc()初始化
     struct S* ps = (struct S*)malloc(sizeof(struct S) + 40);
-    if (ps == NULL)
-    {
+    if (ps == NULL) 
         perror("malloc\n");
         return 1;
     }
@@ -1696,8 +1744,7 @@ int main()
 
     //realloc()扩容
     struct S* ptr = (struct S*)realloc(ps, (sizeof(struct S) + 80));
-    if (ptr == NULL)
-    {
+    if (ptr == NULL) 
         perror("realloc\n");
         return 1;
     }
@@ -1733,7 +1780,7 @@ int main()
 
 ### 翻译环境
 
-<img src="多文件编译.png">
+<img src="多文件编译.drawio.png" width="70%">
 
 * 组成一个程序的每个源文件通过编译过程分别转换为目标代码 Object Code
 * 每个目标文件有链接器 Linker 捆绑在一起，形成一个单一而完整的可执行程序 .exe
@@ -2325,7 +2372,7 @@ typedef struct
 
 使用链接器，**可以直接引用其他模块的函数和全局变量而无须知道它们的地址**。对于没有见过的符号会直接给全0，真正的虚拟地址等之后链接器给出。每个要被修正的地方叫做一个重定位入口 Relocation entry
 
-头文件并不参加链接和编译。编译器第一步要做的就是简单的把头文件在包含它的源文件中展开，也就是头文件里面有什么内容，通通把它移到包含这个头文件的源文件里
+**头文件并不参加链接和编译**。编译器第一步要做的就是简单的把头文件在包含它的源文件中展开，也就是头文件里面有什么内容，通通把它移到包含这个头文件的源文件里
 
 ## *内容详解*
 
@@ -2774,3 +2821,42 @@ C语言的标准库非常轻量，仅仅包含了数学函数、字符/字符串
 ## *glibc C++ 全局构造/析构的实现*
 
 ## *IO*
+
+# C语言 & 汇编混编
+
+将C语言 & 汇编混编有两种方式
+
+1. 编写完整的函数放入一个独立的汇编代码文件中，用汇编器和链接器把它和C语言汇编后的目标文件合并起来
+2. 使用GCC的内联汇编 inline assembly 特性，用asm伪指令可以在C程序中包含简短的汇编代码
+
+## *内联汇编的语法*
+
+<https://vader.blog.csdn.net/article/details/123017796>
+
+C语言的内嵌汇编 - KunQAQrz的文章 - 知乎 <https://zhuanlan.zhihu.com/p/348372132>
+
+```c
+asm volatile( /* volatile : 可选，禁止编译器对汇编代码进行优化 */
+  "汇编指令"   /* 汇编指令间使用'\n'分隔 */
+  :"=约束符"(输出参数)
+  :"约束符"(输入参数)
+  :保留列表
+)
+```
+
+## *约束*
+
+### 常用的约束符
+
+约束符 constraint character 用于指定操作数的约束，以告诉编译器如何处理这些操作数。这些限制符通常以 `%` 开始，后面跟着一个数字或字母。以下是一些常用的内联汇编约束符号
+
+### 约束修饰符
+
+约束修饰符 constraint modifier character 用于更精确的控制约束符
+
+* `=`
+* `+`
+* `&`
+* `%`
+
+### 示例代码
