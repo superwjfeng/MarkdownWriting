@@ -2764,7 +2764,7 @@ typedef struct
 名义上main函数的声明为如下
 
 ```c
-int main(int argc, char* argv[]);
+int main(int argc, char **argv[]);
 ```
 
 程序开始执行main的时候，全局变量的初始化过程已经结束了，main的两个参数argc和argv也已经传入。因此main并不是真正的程序入口。这一点从[静态链接示例 ](#静态链接示例)就可以看出来，main的指令里并没有处理全局变量的内容
@@ -2779,6 +2779,8 @@ int main(int argc, char* argv[]);
 ### glibc的 `_start` 的静态/可执行文件链接的实现
 
 `_start -> __libc_start_main -> main -> exit -> _exit`
+
+为什么是二级指针 `char **argv[]`？因为每个 `argv[i]` 本身是一个字符指针，表示命令行参数中的一个字符串，所以 `argv` 是一个二级指针
 
 ### 运行库与IO
 

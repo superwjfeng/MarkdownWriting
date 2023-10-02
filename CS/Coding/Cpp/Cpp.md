@@ -2201,10 +2201,6 @@ int main() {
   const char* str = GetString(); // 正确
   ```
 
-### Tips：尽量使用常量引用做形参
-
-const类型的左值可以用来接受const或者非const，所以比较保险；但反过来非const就无法接受const了，因为有权限放大
-
 ### const与函数重载
 
 若参数只有const区别，不会构成函数重载
@@ -2224,6 +2220,8 @@ void test(const int *x) {}; //正确
 当传递一个非常量对象或者指向非常量对象的指针时，编译器会优先选用非常量版本的函数
 
 ### constexpr函数
+
+constexpr是C++11标准引入的关键字
 
 * 函数的返回类型及所有形参的类型都得是字面值类型（即算数类型、引用、指针等编译时确定的值）
 
@@ -5570,3 +5568,21 @@ std::shared_ptr<Node> n2(new Node);
 std::shared_ptr<int> n3(new int[5], [](int* ptr) {delete[] ptr; });
 std::shared_ptr<int> n4((int*)malloc(sizeof(12)), [](int* ptr) {free(ptr); });
 ```
+
+# 标准库特殊设施
+
+## *tuple类型*
+
+## *BITSET类型*
+
+## *正则表达式*
+
+C++对正则表达式的支持是在C++11标准中引入的。正则表达式库是C++11标准库的一部分，它为C++程序员提供了一种强大的方式来处理文本模式匹配和处理。这个标准引入了 `<regex>` 头文件以及与正则表达式相关的类和函数，使得在C++中使用正则表达式变得更加方便和高效
+
+### Regex 迭代器
+
+## *随机数*
+
+### 随机数引擎和分布
+
+### 其他随机数分布
