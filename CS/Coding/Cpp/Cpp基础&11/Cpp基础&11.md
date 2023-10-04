@@ -565,168 +565,7 @@ C++通过以下方式来支持RTTI
 * `dynamic_cast` 运算符：父类的指针是指向父类对象还是子类对象
 * `decltype` 运算符：推导一个对象类型，这个类型可以用来定义另一个对象
 
-## *C++的IO流*
-
-### C语言的IO函数
-
-* `scanf()/printf()` 处理终端/控制台IO
-* `fscanf()/fprintf()` 处理文件IO
-* `sscanf()/sprintf()` 处理字符串IO
-
-C语言是面向对象的，只能指针内置类型
-
-### C++IO流设计
-
-什么是流 Stream？流是对有序连续且具有方向性的数据的抽象描述。C++流是指信息从外设向计算机内存或从内存流出到外设的过程
-
-为了实现这种流动，C++实现了如下的标准IO库继承体系，其中 `ios` 为基类，其他类都是直接或间接派生于它
-
-<img src="IO_Libraray.png" width="80%">
-
-* `<istream>` 和 `<iostream>` 类处理控制台终端
-* `<fstream>` 类处理文件
-* `<sstream>` 类处理字符串缓冲区
-* C++暂时还不支持网络流的IO库
-
-### C++标准IO流
-
-C++标准库提供给了4个**全局流对象** `cin`，`cout`，`cerr`，`clog`。从下图可以看到 `std::cin` 是一个 `istream` 类的全局流对象
-
-<img src="cin对象.png">
-
-C++对这部分的设计并不是特别好，因此这几个对象在输出上基本没有区别，只是应用该场景略有不同
-
-使用 `cin` 进行标准输入即数据通过键盘输入到程序中；使用 `cout` 进行标准输出，即数据从内存流向控制台(显示器)；使用 `cerr` 用来进行标准错误的输出；使用 `clog` 进行日志的输出
-
-* `cin` 为缓冲流，相当于是一个 `char buff[N]`对象，键盘输入的数据保存在缓冲区中，当要提取时，是从缓冲区中
-
-* 空格和回车都可以作为数据之间的分隔符，所以多个数据可以在一行输入，也可以分行输入。但若是字符型和字符串，则空格（ASCII码为32）无法用 `cin` 输入。字符串中也不能有空哦个，回车符也无法读入
-
-  ```cpp
-  // 2022 11 28
-  // 输入多个值，默认都是用空格或者换行分割
-  int year, month, day;
-  cin >> year >> month >> day;
-  scanf("%d%d%d", &year, &month, &day);
-  scanf("%d %d %d", &year, &month, &day); //不需要去加空格
-  
-  //20221128 无空格
-  scanf("%4d%2d%2d", &year, &month, &day); //scanf可以通过加宽度直接处理
-  //cin在这种情况下反而会比较麻烦
-  string str;
-  cin >> str;
-  year = stoi(str.substr(0, 4));
-  month = stoi(str.substr(4, 2));
-  day = stoi(str.substr(6, 2));
-  ```
-
-* `cin, cout` 可以直接输入和输出内置类型数据，因为标准库已经将所有内置类型的输入和输出全部重载了
-
-  <img src="ostream.png" width="80%">
-
-* 对于自定义类型，可以重载运算符 `<<` 和 `>>`
-
-  <img src="流输入运算符重载.png">
-
-  如上图是对string类的 `>>` 运算符重载，意思是支持了 `istream& is` 和 `string& str` 之间的 `>>` 运算
-
-  这部分可以参考Date类中的 `<<` 重载
-
-* OJ中的输入与输出
-
-  ```cpp
-  // 单个元素循环输入
-  while(cin>>a) {
-      // ...
-  }
-  // 多个元素循环输入
-  while(c>>a>>b>>c) {
-  	// ...
-  }
-  // 整行接收
-  while(cin>>str) {
-  	// ...
-  }
-  ```
-
-  OJ中有时候可能会出现用 cin 和 cout 效率过不了的问题，可以考虑采用 `printf` 和 `scanf`。这是因为C++为了要兼容C语言，内部需要采取和C语言输入输出函数同步顺序的一些处理，因此可能会导致效率的下降
-
-  因此还是建议在OJ中用 `printf` 和 `scanf`
-
-### `istream` 类型对象转换为逻辑条件判断值
-
-考虑有多组测试用例的情况，比如上面的代码中输入多组日期，那么要用
-
-```cpp
-char buff[128];
-while (scanf("%s", buff) != EOF) {}
-// or
-while (cin >> str) {} //如何实现逻辑判断？
-```
-
-对于 `scanf()` 而言，这是一个函数调用，返回的是接收到的值的数目，因此很好理解，若写入失败（满了）或按 `ctrl+z`，就返回EOF，ASCII码中 `EOF==0`，因此while循环会被终止，可是 cin 是一个全局流对象，为什么它也等价于一个逻辑值，从而可以作为while循环的判断条件呢？
-
-内置类型是可以隐式类型转换成自定义类型的，编译器会自动调构造和拷贝构造（有些编译器自动优化为只有自定义），反过来自定义类型也可以转换为内置类型，但是此时需要显式重载 `operator TYPE()`，比如重载 `operator bool()` 将自定义类型转换成bool内置类型
-
-`cin >> str` 的返回值是 `istream` 对象，因此在istream类内部实现了 `operator bool()` ，因此当 `while (istream& obj)` 可以进行逻辑判断
-
-`operator bool()` 全部是复用的ios基类的实现
-
-### C++文件IO流
-
-C++用文件IO流的使用步骤
-
-1. 定义一个文件流对象
-   * `std::ifstream` 只输入用
-   * `std::ofstream` 只输出
-   * `std::fstream` 既输入又输出
-2. 使用文件流对象的成员函数打开一个磁盘文件，使得文件流对象和磁盘文件之间建立联系
-3. 使用提取和插入运算符对文件进行读写操作，或使用成员函数进行读写
-4. 关闭文件 `close()`
-
-打开模式，注意**C++根据文件内容的数据格式分为二进制文件和文本文件**
-
-* `std::ios::in` 读
-* `std::ios::out` 写
-* `std::ios::app` 追加
-* `std::ios::binary` 二进制流
-* `std::ios::ate`输出在末尾
-* `std::ios::trunc` 截断
-
-一个`std::fstream` 的demo
-
-```c++
-#include <iostream>
-#include <fstream>
-
-int main()
-{
-    std::fstream file("data.txt", std::ios::in | std::ios::out | std::ios::app); // 打开文件
-
-    if (file.is_open()) { // 确保文件成功打开
-        file << "Hello, World!" << std::endl; // 写入数据到文件
-        file.seekg(0); // 将文件指针移动到文件开头
-
-        std::string line;
-        while (std::getline(file, line)) { // 读取文件内容
-            std::cout << line << std::endl; // 输出每行内容
-        }
-        file.close(); // 关闭文件
-    } else {
-        std::cout << "Failed to open the file." << std::endl;
-    }
-
-    return 0;
-}
-```
-
-
-
-### stringstream
-
-istringstream、ostringstream 和 stringstream，分别用来进行流的输入、输出和输入输出操作
-
-# 类与对象（上）-- 类成员
+# 类成员
 
 ## *类的定义 & 实例化*
 
@@ -1230,7 +1069,7 @@ private:
   * 友元关系不能传递
   * 友元关系不能继承
 
-# 类与对象（中）-- 默认成员函数
+# 构造函数
 
 ## *类的6个默认成员函数*
 
@@ -1470,9 +1309,112 @@ int main() {
 
 ### 委托构造
 
-C++11的新特性：委托构造 delegating constructor 调用类的其他构造函数
+C++11的新特性：委托构造 delegating constructor 调用所属类的其他构造函数来执行它自己的初始化过程。这个特性使得构造函数之间可以相互协作，共享公共的初始化逻辑
+
+```c++
+class Sales_data { 
+public:     
+    // nondelegating constructor initializes members from corresponding arguments
+    Sales_data(std::string s, unsigned cnt, double price) : 
+        bookNo(s), units_sold(cnt), revenue(cnt*price) 
+    {} 
+    // remaining constructors all delegate to another constructor
+    Sales_data() : Sales_data("", 0, 0) {}
+    Sales_data(std::string s) : Sales_data(s, 0,0) {}
+    Sales_data(std::istream &is) : Sales_data() { read(is, *this); }     // other members as before 
+};
+```
 
 ### constexpr构造函数
+
+## *类的类型转换*
+
+转换构造函数 converting constructor 用于**将其他类型转换为类的对象**，转换构造函数没有返回类型
+
+类型转换运算符 converting operator 用于**将类的对象转换为其他类型**，类型转换运算符具有返回类型
+
+### 转换构造函数
+
+构造函数不仅可以构造与初始化对象，对于**单个参数**或者**除第一个参数无默认值其余均有默认值**的构造函数，还具有类型转换的作用。把这种特殊的构造函数称为**转换构造函数 converting constructor**
+
+**内置类型是可以隐式类型转换成自定义类型的**，编译器会自动调构造和拷贝构造（有些编译器自动优化为只有自定义）
+
+* 转换构造函数是一种特殊的构造函数，用于将其他类型的对象转换为类的对象
+* 它被用于隐式地执行类型转换，当需要将一个对象从一种类型转换为另一种类型时，编译器会自动调用适当的转换构造函数
+* 转换构造函数在类内声明，没有返回类型，并且以类名作为函数名
+* 虽然不可以指定返回类型，但是会**隐式返回一个当前类**
+
+```cpp
+class MyInt {
+public:
+    MyInt(int value) : m_value(value) {}  // 转换构造函数将 int 类型转换为 MyInt 类型
+    // ...
+private:
+    int m_value;
+};
+
+int main() {
+    int num = 42;
+    MyInt myNum = num;  // 隐式调用转换构造函数将 int 类型转换为 MyInt 类型
+    // ...
+}
+```
+
+### 类型转换运算符
+
+```cpp
+operator CONVERTE_TYPE() const;
+```
+
+* 类型转换运算符 converting operator 是一种特殊的成员函数，用于将类的对象转换为其他类型
+* 它被用于隐式或显式地执行类型转换，当需要将一个对象从一种类型转换为另一种类型时，编译器会自动调用适当的类型转换运算符
+* 类型转换运算符在类内声明，以 `operator` 关键字开头，后面跟着要转换的目标类型
+* 类型转换运算符有返回类型，用于表示转换结果
+* 类型转换运算符通常不应该改变待转换对象的内容，所以一般要被定义为const成员
+
+```cpp
+class MyDouble {
+public:
+    operator double() const { return m_value; }  // 类型转换运算符将 MyDouble 类型转换为 double 类型
+    // ...
+private:
+    double m_value;
+};
+
+int main() {
+    MyDouble myNum(3.14);
+    double num = myNum;  // 隐式调用类型转换运算符将 MyDouble 类型转换为 double 类型
+    // ...
+}
+```
+
+注意：`Date d1(2022);` 和 `Date d2 = 2022;` 虽然结果是一样的，但过程并不一样，前者是直接调用构造函数，而后者包含了先构造（创建临时变量）和拷贝构造（隐式类型转换）以及编译器的优化
+
+### <span id="隐式调用">什么是隐式调用 implicit call</span>
+
+隐式调用指的是**编译器自动执行的函数调用，而无需显式地在代码中指定函数名和参数**。它是通过一定的规则和转换机制来进行的，以便在需要的地方自动进行类型转换和函数调用
+
+隐式调用可以发生在多种情况下，其中包括
+
+1. **隐式类型转换**：当参数的类型与函数的参数类型不完全匹配时，编译器可以根据一组转换规则自动进行类型转换，以便使函数调用成为可能。例如，将一个整数传递给一个接受浮点数参数的函数，编译器可以隐式地将整数转换为浮点数
+2. **拷贝构造函数的隐式调用**：当通过赋值操作符、函数返回值或者函数参数传递对象时，编译器会隐式调用拷贝构造函数来创建对象的副本。这样可以使得对象在不同的代码段中进行传递和复制
+3. **隐式转换构造函数的调用**：当创建一个对象时，编译器会根据参数的类型选择适当的构造函数进行调用。如果构造函数具有一个参数且不是 `explicit` 的，那么编译器可以隐式地调用这个构造函数，以便根据参数类型创建对象
+
+### `explicit` 关键字：禁止单参数类的隐式类型转换
+
+隐式类型转换往往给用户带来的不是帮助，而是各种bug。比如说若常用的string类的自动转换和转换为bool型的隐式类型转换经常会带来一些问题
+
+因此可以通过 `explicit` 关键字来禁止这种**单参数**的隐式类型转换。只有在用户知道自己在做什么，也就是说用 `static_cast<>` 显示的给出类型转换时转换才会发生
+
+`explicit` 只能用于有一个实参的构造函数，需要多个实参的构造函数不能用于执行隐式转换，所以无须将这些构造函数指定为 `explicit`
+
+拷贝构造是一个实参的引用，拷贝构造函数本质上也是一个单参数的构造函数，所以当用explicit禁止了**某种参数类型**的单参数构造的时候也禁止了**这种参数类型的**拷贝构造的隐式调用
+
+### 匿名对象 Anonymous object 及其单参数构造函数
+
+`Date(2000);` 生命周期只有这一行
+
+可以在有仿函数参数的函数模板中使用
 
 ## *析构函数 Destructor*
 
@@ -1537,6 +1479,8 @@ C++11的新特性：委托构造 delegating constructor 调用类的其他构造
     
     在析构函数 `~Stack()` 中打印了一下，可以发现在自定义类型Stack中调用了两次析构函数
 * 若类中没有动态开辟内存时，析构函数可以不写，直接使用编译器生成的默认析构函数；由动态开辟内存时则一定要写，否则会造成内存泄漏
+
+# 拷贝控制操作
 
 ## *拷贝构造函数 Copy constructor*
 
@@ -1702,7 +1646,7 @@ const Date* Date::operator&() const {
 }
 ```
 
-# 类与对象（下）-- 特殊类
+# 运算符重载 & 特殊类
 
 ## *运算符重载*
 
@@ -1798,95 +1742,6 @@ inline istream& operator>>(istream& in, Date& d) {
 * 因为是针对`istream` 和 `ostream` 类运算符重载，所以第一个参数必须是 `istream& in` 和 `ostream& out`，所以这个重载不能写在Date类里面，因为在Date里的话默认第一个参数是this指针，因此一定要在Date类外实现
 * 在Date类外实习的话又会产生取不到私有的 `_year` 等Date类成员的问题
 * 所以最后的解决方案是将重载函数设置为Date类的友元，以便让其取到Date类成员
-
-## *类的类型转换*
-
-转换构造函数 converting constructor 用于**将其他类型转换为类的对象**，转换构造函数没有返回类型
-
-类型转换运算符 converting operator 用于**将类的对象转换为其他类型**，类型转换运算符具有返回类型
-
-### 转换构造函数
-
-构造函数不仅可以构造与初始化对象，对于**单个参数**或者**除第一个参数无默认值其余均有默认值**的构造函数，还具有类型转换的作用。把这种特殊的构造函数称为**转换构造函数 converting constructor**
-
-**内置类型是可以隐式类型转换成自定义类型的**，编译器会自动调构造和拷贝构造（有些编译器自动优化为只有自定义）
-
-* 转换构造函数是一种特殊的构造函数，用于将其他类型的对象转换为类的对象
-* 它被用于隐式地执行类型转换，当需要将一个对象从一种类型转换为另一种类型时，编译器会自动调用适当的转换构造函数
-* 转换构造函数在类内声明，没有返回类型，并且以类名作为函数名
-* 虽然不可以指定返回类型，但是会隐式返回一个当前类
-
-```cpp
-class MyInt {
-public:
-    MyInt(int value) : m_value(value) {}  // 转换构造函数将 int 类型转换为 MyInt 类型
-    // ...
-private:
-    int m_value;
-};
-
-int main() {
-    int num = 42;
-    MyInt myNum = num;  // 隐式调用转换构造函数将 int 类型转换为 MyInt 类型
-    // ...
-}
-```
-
-### 类型转换运算符
-
-```cpp
-operator CONVERTE_TYPE() const;
-```
-
-* 类型转换运算符 converting operator 是一种特殊的成员函数，用于将类的对象转换为其他类型
-* 它被用于隐式或显式地执行类型转换，当需要将一个对象从一种类型转换为另一种类型时，编译器会自动调用适当的类型转换运算符
-* 类型转换运算符在类内声明，以 `operator` 关键字开头，后面跟着要转换的目标类型
-* 类型转换运算符有返回类型，用于表示转换结果
-* 类型转换运算符通常不应该改变待转换对象的内容，所以一般要被定义为const成员
-
-```cpp
-class MyDouble {
-public:
-    operator double() const { return m_value; }  // 类型转换运算符将 MyDouble 类型转换为 double 类型
-    // ...
-private:
-    double m_value;
-};
-
-int main() {
-    MyDouble myNum(3.14);
-    double num = myNum;  // 隐式调用类型转换运算符将 MyDouble 类型转换为 double 类型
-    // ...
-}
-```
-
-注意：`Date d1(2022);` 和 `Date d2 = 2022;` 虽然结果是一样的，但过程并不一样，前者是直接调用构造函数，而后者包含了先构造（创建临时变量）和拷贝构造（隐式类型转换）以及编译器的优化
-
-### <span id="隐式调用">什么是隐式调用 implicit call</span>
-
-隐式调用指的是**编译器自动执行的函数调用，而无需显式地在代码中指定函数名和参数**。它是通过一定的规则和转换机制来进行的，以便在需要的地方自动进行类型转换和函数调用
-
-隐式调用可以发生在多种情况下，其中包括
-
-1. **隐式类型转换**：当参数的类型与函数的参数类型不完全匹配时，编译器可以根据一组转换规则自动进行类型转换，以便使函数调用成为可能。例如，将一个整数传递给一个接受浮点数参数的函数，编译器可以隐式地将整数转换为浮点数
-2. **拷贝构造函数的隐式调用**：当通过赋值操作符、函数返回值或者函数参数传递对象时，编译器会隐式调用拷贝构造函数来创建对象的副本。这样可以使得对象在不同的代码段中进行传递和复制
-3. **隐式转换构造函数的调用**：当创建一个对象时，编译器会根据参数的类型选择适当的构造函数进行调用。如果构造函数具有一个参数且不是 `explicit` 的，那么编译器可以隐式地调用这个构造函数，以便根据参数类型创建对象
-
-### `explicit` 关键字：禁止单参数类的隐式类型转换
-
-隐式类型转换往往给用户带来的不是帮助，而是各种bug。比如说若常用的string类的自动转换和转换为bool型的隐式类型转换经常会带来一些问题
-
-因此可以通过 `explicit` 关键字来禁止这种**单参数**的隐式类型转换。只有在用户知道自己在做什么，也就是说用 `static_cast<>` 显示的给出类型转换时转换才会发生
-
-`explicit` 只能用于有一个实参的构造函数，需要多个实参的构造函数不能用于执行隐式转换，所以无须将这些构造函数指定为 `explicit`
-
-拷贝构造是一个实参的引用，拷贝构造函数本质上也是一个单参数的构造函数，所以当用explicit禁止了**某种参数类型**的单参数构造的时候也禁止了**这种参数类型的**拷贝构造的隐式调用
-
-### 匿名对象 Anonymous object 及其单参数构造函数
-
-`Date(2000);` 生命周期只有这一行
-
-可以在有仿函数参数的函数模板中使用
 
 ## *聚合类*
 
@@ -2390,6 +2245,222 @@ inline和constexpr的多个定义要完全一致，所以一般都直接在头�
 ## *const与类*
 
 在[const成员函数](#const成员函数)里有说明了
+
+# C++的IO流
+
+## *IO类关系总览*
+
+### C语言的IO函数
+
+* `scanf()/printf()` 处理终端/控制台IO
+* `fscanf()/fprintf()` 处理文件IO
+* `sscanf()/sprintf()` 处理字符串IO
+
+C语言是面向对象的，只能指针内置类型
+
+### C++IO流设计
+
+什么是流 Stream？流是对有序连续且具有方向性的数据的抽象描述。C++流是指信息从外设向计算机内存或从内存流出到外设的过程
+
+为了实现这种流动，C++实现了如下的标准IO库继承体系，其中 `ios` 为基类，其他类都是直接或间接派生于它
+
+<img src="IO_Libraray.png" width="80%">
+
+* `<istream>` 和 `<iostream>` 类处理控制台终端
+* `<fstream>` 类处理文件
+* `<sstream>` 类处理字符串缓冲区
+* C++暂时还不支持网络流的IO库
+
+### C++标准IO流
+
+C++标准库提供给了4个**全局流对象** `cin`，`cout`，`cerr`，`clog`。从下图可以看到 `std::cin` 是一个 `istream` 类的全局流对象
+
+<img src="cin对象.png">
+
+C++对这部分的设计并不是特别好，因此这几个对象在输出上基本没有区别，只是应用该场景略有不同
+
+使用 `cin` 进行标准输入即数据通过键盘输入到程序中；使用 `cout` 进行标准输出，即数据从内存流向控制台(显示器)；使用 `cerr` 用来进行标准错误的输出；使用 `clog` 进行日志的输出
+
+* `cin` 为缓冲流，相当于是一个 `char buff[N]`对象，键盘输入的数据保存在缓冲区中，当要提取时，是从缓冲区中
+
+* 空格和回车都可以作为数据之间的分隔符，所以多个数据可以在一行输入，也可以分行输入。但若是字符型和字符串，则空格（ASCII码为32）无法用 `cin` 输入。字符串中也不能有空哦个，回车符也无法读入
+
+  ```cpp
+  // 2022 11 28
+  // 输入多个值，默认都是用空格或者换行分割
+  int year, month, day;
+  cin >> year >> month >> day;
+  scanf("%d%d%d", &year, &month, &day);
+  scanf("%d %d %d", &year, &month, &day); //不需要去加空格
+  
+  //20221128 无空格
+  scanf("%4d%2d%2d", &year, &month, &day); //scanf可以通过加宽度直接处理
+  //cin在这种情况下反而会比较麻烦
+  string str;
+  cin >> str;
+  year = stoi(str.substr(0, 4));
+  month = stoi(str.substr(4, 2));
+  day = stoi(str.substr(6, 2));
+  ```
+
+* `cin, cout` 可以直接输入和输出内置类型数据，因为标准库已经将所有内置类型的输入和输出全部重载了
+
+  <img src="ostream.png" width="80%">
+
+* 对于自定义类型，可以重载运算符 `<<` 和 `>>`
+
+  <img src="流输入运算符重载.png">
+
+  如上图是对string类的 `>>` 运算符重载，意思是支持了 `istream& is` 和 `string& str` 之间的 `>>` 运算
+
+  这部分可以参考Date类中的 `<<` 重载
+
+* OJ中的输入与输出
+
+  ```cpp
+  // 单个元素循环输入
+  while(cin>>a) {
+      // ...
+  }
+  // 多个元素循环输入
+  while(c>>a>>b>>c) {
+  	// ...
+  }
+  // 整行接收
+  while(cin>>str) {
+  	// ...
+  }
+  ```
+
+  OJ中有时候可能会出现用 cin 和 cout 效率过不了的问题，可以考虑采用 `printf` 和 `scanf`。这是因为C++为了要兼容C语言，内部需要采取和C语言输入输出函数同步顺序的一些处理，因此可能会导致效率的下降
+
+  因此还是建议在OJ中用 `printf` 和 `scanf`
+
+### `istream` 类型对象转换为逻辑条件判断值
+
+考虑有多组测试用例的情况，比如上面的代码中输入多组日期，那么要用
+
+```cpp
+char buff[128];
+while (scanf("%s", buff) != EOF) {}
+// or
+while (cin >> str) {} //如何实现逻辑判断？
+```
+
+对于 `scanf()` 而言，这是一个函数调用，返回的是接收到的值的数目，因此很好理解，若写入失败（满了）或按 `ctrl+z`，就返回EOF，ASCII码中 `EOF==0`，因此while循环会被终止，可是 cin 是一个全局流对象，为什么它也等价于一个逻辑值，从而可以作为while循环的判断条件呢？
+
+内置类型是可以隐式类型转换成自定义类型的，编译器会自动调构造和拷贝构造（有些编译器自动优化为只有自定义），反过来自定义类型也可以转换为内置类型，但是此时需要显式重载 `operator TYPE()`，比如重载 `operator bool()` 将自定义类型转换成bool内置类型
+
+`cin >> str` 的返回值是 `istream` 对象，因此在istream类内部实现了 `operator bool()` ，因此当 `while (istream& obj)` 可以进行逻辑判断
+
+`operator bool()` 全部是复用的ios基类的实现
+
+## *判断IO状态*
+
+### 条件状态
+
+IO类定义了一些函数和标志，来帮助用户访问和操纵流的条件状态 condition state
+
+在C++的输入输出库中，`std::ios_base::iostate` 是一个枚举类型，用于表示流的状态。它包括以下几个值：
+
+* `std::ios_base::goodbit`：表示流的状态良好，没有错误
+* `std::ios_base::badbit`：表示流的状态非常糟糕，可能发生了无法恢复的错误
+* `std::ios_base::failbit`：表示流的操作失败，但错误是可恢复的
+* `std::ios_base::eofbit`：表示流已经到达了文件末尾 End Of File
+
+### 操作条件状态
+
+提供了以下接口来查询流 `s` 的状态
+
+```c++
+s.eof(); // 若流s的eofbit置位，则返回true
+s.fai1(); // 若流s的failbit或badbit置位，则返回true
+s.bad(); // 若流s的badbit置位，则返回true
+s.good(); // 若流s处于有效状态，则返回true
+s.clear(); // 将流s中所有条件状态位复位，将流的状态设置为有效。返回void
+s.clear(flags) // 根据给定的flags标志位，将流s中对应条件状态位复位。flags的类型为strm::iostate。返回void
+s.setstate(flags) // 根据给定的 flags 标志位，将流s中对应条件状态位置位。flags的类型为strm::iostate。返回void
+s.rdstate() // 返回流s的当前条件状态，返回值类型为 strm::iostate
+```
+
+下面是一个查询的例子
+
+```c++
+std::ifstream inputFile("example.txt");
+std::ios_base::iostate state = inputFile.rdstate();
+
+if (state & std::ios_base::failbit) {
+    std::cout << "Fail bit is set." << std::endl;
+}
+
+if (state & std::ios_base::eofbit) {
+    std::cout << "EOF bit is set." << std::endl;
+}
+
+if (state == std::ios_base::goodbit) {
+    std::cout << "No errors or EOF." << std::endl;
+}
+```
+
+## *C++文件IO流*
+
+### 使用文件流对象
+
+C++用文件IO流的使用步骤
+
+1. 定义一个文件流对象
+   * `std::ifstream` 只输入用
+   * `std::ofstream` 只输出
+   * `std::fstream` 既输入又输出
+2. 使用文件流对象的成员函数打开一个磁盘文件，使得文件流对象和磁盘文件之间建立联系
+3. 使用提取和插入运算符对文件进行读写操作，或使用成员函数进行读写
+4. 关闭文件 `close()`
+
+### 文件模式
+
+打开模式，注意**C++根据文件内容的数据格式分为二进制文件和文本文件**
+
+* `std::ios::in` 读
+* `std::ios::out` 写
+* `std::ios::app` 追加
+* `std::ios::binary` 二进制流
+* `std::ios::ate`输出在末尾
+* `std::ios::trunc` 截断
+
+一个`std::fstream` 的demo
+
+```c++
+#include <iostream>
+#include <fstream>
+
+int main()
+{
+    std::fstream file("data.txt", std::ios::in | std::ios::out | std::ios::app); // 打开文件
+
+    if (file.is_open()) { // 确保文件成功打开
+        file << "Hello, World!" << std::endl; // 写入数据到文件
+        file.seekg(0); // 将文件指针移动到文件开头
+
+        std::string line;
+        while (std::getline(file, line)) { // 读取文件内容
+            std::cout << line << std::endl; // 输出每行内容
+        }
+        file.close(); // 关闭文件
+    } else {
+        std::cout << "Failed to open the file." << std::endl;
+    }
+
+    return 0;
+}
+```
+
+
+
+## *stringstream*
+
+istringstream、ostringstream 和 stringstream，分别用来进行流的输入、输出和输入输出操作
+
+## *输出格式控制*
 
 # C++内存管理 Memory Management
 
