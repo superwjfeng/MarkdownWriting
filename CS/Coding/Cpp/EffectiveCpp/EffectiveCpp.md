@@ -26,14 +26,72 @@
 
 ## <span id="条款2">*条款2：尽量以const、enum、inline替换 `#define`*</span>
 
-因为C的历史原因，`#define` 预处理仍然很常用
+因为C的历史原因，`#define` 预处理仍然很常用。事实上，C++的发明者 Dr. Bjarne Stroustrup 也致力于去除C++中预处理器的使用
 
-### 两种特殊情况
+使用 `#define` 预处理替换有两个显著的缺点
 
-* 定义常量指针
-* 类的专属常量
+1. 不方便追踪错误，编译器不会显式宏名称
+2. 即使很小心了，编写宏仍然是极易出错，应该考虑用内联函数来替换。通过使用内联函数模板，可以获得宏的所有效率，以及普通函数的所有可预测行为和类型安全
 
-### 用内联代替宏
+```c++
+#define ASPECT_RATIO 1.653 // 不好
+const double aspect_ratio = 1.653; // 用常量来代替
+```
+
+下面两种特殊情况需要我们考虑
+
+### 定义常量指针
+
+```c++
+#define AUTHORNAME "Scott Meyers"
+const char * const author_name = "Scott Meyers"; // const pointer & pointer to a const
+const string author_name2 = "Scott Meyers"; // better
+```
+
+定义字符串时不是 `const char *`，这只是一个常量指针，但按照 `#define` 或常量的意义应该既是一个指针常量，也是一个常量指针，即 `const char * const`
+
+然而写成 `const char * const` 这种形式很难看，用C++标准库提供的string会好很多
+
+### 类的专属常量
+
+* 静态常量
+
+  要把常量的作用域限制为类，就必须把它设为成员；而要确保最多有一个常量的副本，就必须把它设为静态成员
+
+  然而在C++中，类静态常量的使用非常特殊。一般的静态变量不能给缺省值，只能在类外面给初始值
+
+  但是有例外：`const static int`、`const static char`、`const static bool` 类型的静态变量可以给缺省值，比如哈希桶中的素数size扩容就用到了这个特性
+
+  或者更准确地可以理解为，**上面三种类型的静态常量的初始值如果在类内声明时指定的，那么在类外定义时反而不允许赋初始值**；反过来如果在类外定义指定了初值，那么类内声明就不可以给出
+
+  非常匪夷所思，明明是类内声明却可以给出初始值，但就是这么规定的
+
+  甚至只要不获取它们的地址，那么甚至可以在不提供类外定义的情况下只声明并使用它们
+
+  ```c++
+  class GamePlayer {
+  public:
+      int get_numturns() { return num_turns; }
+  private:
+      const static int num_turns = 5; // const static 类型的声明，在这里初始化了！
+      int scores_[num_turns];
+  }
+  const int GamePlyaers::num_turns; // const static 类型的定义，只要不获取它们的地址，可以不给出
+  ```
+
+* 枚举常量
+
+  另一种方法是使用枚举，反正只要是编译时顺序确定的就行了
+
+  ```c++
+  class GamePlayer {
+  public:
+      int get_numturns() { return NumTurns; }
+  private:
+      enum { NumTurns = 5 };
+      int scores_[NumTurns];
+  }
+  ```
 
 ### 总结
 
@@ -51,6 +109,8 @@
 问题：乘法重载的时候不用传左值吧
 
 ### const限定成员函数
+
+这部分在 *Cpp基础&11.md* 中的类与对象（上）-- 类成员中的const成员部分讲过了，可以回顾一下
 
 在成员函数上使用const
 
