@@ -285,7 +285,35 @@ class NameObject {
 
 ## *条款7：为多态基类声明virtual析构函数*
 
+这部分在 *Cpp基础&11.md* 的继承-派生类的构造函数-基类虚析构函数中有
+
+总结一下就是多态基类应该声明虚析构函数，非基类或非多态使用的类不应该声明虚析构函数
+
+补充的点是对于纯虚函数（即抽象类），它也要设置为虚析构，且必须提供虚析构的定义，因为要用到
+
+```c++
+// Abstract w/o Virtuals
+class AWOV {
+public:
+    virtual ~AWOV() = 0; // 声明为纯虚析构函数
+}
+AWOV::~AWOV() {} // 必须提供纯虚析构函数的定义
+```
+
 ## *条款8：别让异常逃离析构函数*
+
+别让异常逃离析构函数 Prevent exceptions from leaving destructors。不要逃离指的是不让异常继续从析构函数中继续throw出去，没有说不能在析构中产生异常，只要try析构，然后catch到处理好就可以
+
+### 场景
+
+从析构函数逃离的异常很难处理
+
+### 解决方案
+
+有两种主要的解决方法
+
+1. 若发生close抛出异常，就终止程序，通常可以调用abort
+2. 吞下调用close引起的异常
 
 ## *条款9：绝不在构造和析构过程中调用虚函数*
 
@@ -348,9 +376,64 @@ class NameObject {
 
 ## *条款22：将数据设为私有*
 
+## *条款23：非成员非友元函数优先*
+
+## *条款24：参数都需要转换的函数*
+
+## *条款25：不会抛出异常的swap*
+
 # 实现
 
 ## *条款26：尽量推迟定义变量*
+
+未使用的变量是有开销的，特别是一些大型的类或数据结构，因此应该尽可能避免过早地定义变量，既可以提高效率，也可以让结构更清晰
+
+### 异常
+
+比如说下面这个例子中过早地定义了变量 `encrypted`，若是中间抛出了异常那么就浪费了构造和拷贝赋值了
+
+```c++
+std::string encryptPassword(const std::string &password) {
+	std::string encrypted; // 调用默认构造函数对encrypted进行初始化
+	encrypted = password; // 调用赋值拷贝给encrypted赋值
+    if (password.length() < MinimumPasswordLength) {
+        throw logic_error("Password is too short");
+    }
+    encrypt(encrypted); // 将password加密后放入变量encryptedreturn encrypted;
+}
+```
+
+将定义变量 `encrypted` 推迟到真正需要的时候
+
+```c++
+std::string encryptPassword(const std::string &password) {
+    if (password.length() < MinimumPasswordLength) {
+        throw logic_error( "Password is too short");
+    }
+	std::string encrypted(password); // 通过拷贝构造函数定义和初始化
+    encrypt(encrypted); // 将password加密后放入变量encrypted
+	return encrypted;
+}
+```
+
+### 循环
+
+循环是一个经典的场景，但是下面两种到底构造、析构和赋值的开销谁大也不好说
+
+* 定义在循环外：1次构造+1次析构+n次赋值
+
+  ```c++
+  Widge w;
+  for (int i = 0; i < n; i++)
+      w = /*some value*/;
+  ```
+
+* 定义在循环内：n次构造+n次析构
+
+  ```c++
+  for (int i = 0; i < n; i++) 
+      Widge w(/*some value*/);
+  ```
 
 ## *条款27：尽量少做强制转换*
 
@@ -360,14 +443,66 @@ class NameObject {
 
 ## *条款30：内联函数*
 
+这条条款基本上所有的内容都在 *Cpp基础&11.md* 介绍过了，下面是补充的一些内容
+
+所有的虚函数都不允许内联，因为通过虚函数实现动态绑定的多态
+
+构造函数和析构函数是特殊的，虽然它们看起来都是空的，但实际上不是，要做大量的异常处理和可能需要的资源销毁处理，所以非常不适合内联
+
 ## *条款31：降低文件编译依赖*
 
 # 继承与面向对象设计
 
+## *条款32：public继承是is-a关系*
+
+## *条款33：避免遮掩父类的名称*
+
+## *条款34：区分接口和实现继承*
+
+## *条款35：虚函数的替代方案*
+
+## *条款36：非虚函数是静态绑定*
+
+## *条款37：不要重写默认参数值*
+
+## *条款38：*
+
+## *条款39：慎用私有继承*
+
+## *条款40：慎用多重继承*
+
 # 模版与泛型编程
+
+## *条款41：隐式接口和编译器多态*
+
+## *条款42：typename的双重含义*
+
+## *条款43：基类模板名称访问*
+
+## *条款44：抽离无关的模板代码*
+
+## *条款45：成员函数模板*
+
+## *条款46：类模板的友元函数*
+
+## *条款47：萃取类*
 
 ## <span id="条款48">*条款48：认识template元编程*</span>
 
 # 定制new和delete
 
+## *条款49：设置new-handler*
+
+## *条款50：自定义new和delete的时机*
+
+## *条款51：遵守new和delete的约定*
+
+## *条款52：定位new*
+
 # 杂项讨论
+
+## *条款53：不要轻忽编译器的警告*
+
+## *条款54：让自己熟悉包括TR1在内的标准程序库*
+
+## *条款55：Boost库*
