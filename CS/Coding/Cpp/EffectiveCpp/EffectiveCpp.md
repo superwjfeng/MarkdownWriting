@@ -83,7 +83,7 @@ const string author_name2 = "Scott Meyers"; // better
   private:
       const static int num_turns = 5; // const static 类型的声明，在这里初始化了！
       int scores_[num_turns];
-  }
+  };
   const int GamePlyaers::num_turns; // const static 类型的定义，只要不获取它们的地址，可以不给出
   ```
 
@@ -98,7 +98,7 @@ const string author_name2 = "Scott Meyers"; // better
   private:
       enum { NumTurns = 5 };
       int scores_[NumTurns];
-  }
+  };
   ```
 
 ### 总结
@@ -138,17 +138,18 @@ C++中成员函数可以根据是否可以通过this来修改对象可以分为�
 问题是谁调用谁？**用非const成员函数来调用const成员函数是安全的**，这样的话可以把修改数据的部分继续添加在非const成员函数中
 
 ```c++
-class TextBlock {public:
-    const char& operator[](std::size_t position) const{
+class TextBlock {
+public:
+    const char& operator[](std::size_t position) const {
         //...
         //在这种情况下，去掉返回值上的const是安全的，因为调用非const操作符[的人首先必须有一个非const对象。
         //...
         return text[position];
     }
-    char& operator[](std::size_t position){ //只需要调用const版本
+    char& operator[](std::size_t position) { //只需要调用const版本
         //对op[]的返回类型抛弃const //给*this的类型添加const;调用op的const版本[]，否则还是调用自己无限循环
         return const_cast<char&>(static_cast<const TextBlock&>(*this)[position]);
-}
+};
 ```
 
 ## *条款4：确定对象被使用前已先被初始化*
@@ -199,7 +200,7 @@ class Directory {
 public:
     Directory(params);
     // ...
-}
+};
 
 Directory::Directory(params) {
 	// ...
@@ -276,7 +277,7 @@ class NameObject {
         name_value_ = rhs.name_value_;
     }
     // ...
-}
+};
 ```
 
 ## *条款6：明确阻止编译器生成代码*
@@ -296,7 +297,7 @@ class NameObject {
 class AWOV {
 public:
     virtual ~AWOV() = 0; // 声明为纯虚析构函数
-}
+};
 AWOV::~AWOV() {} // 必须提供纯虚析构函数的定义
 ```
 
@@ -304,34 +305,268 @@ AWOV::~AWOV() {} // 必须提供纯虚析构函数的定义
 
 别让异常逃离析构函数 Prevent exceptions from leaving destructors。不要逃离指的是不让异常继续从析构函数中继续throw出去，没有说不能在析构中产生异常，只要try析构，然后catch到处理好就可以
 
+从析构函数逃离的异常很难处理，比如说下面的Widget的析构函数可能会发生异常，那么在do_something结束的时候，Widget实例要自动调用析构函数
+
+```c++
+class Widget {
+public:
+    // ...
+    ~Widget() { /**/ } // 假设这里可能会引发异常
+};
+
+void do_something() {
+	std::vector<Widget> v;
+}
+```
+
 ### 场景
 
-从析构函数逃离的异常很难处理
+若~DBConn中的 `db.close()` 产生异常，则会逃离出来
+
+```c++
+class DBConnection { 
+public:
+	static DBConnection create(); // 返回DBConnection对象的函数。为简单起见，省略了参数
+	void close(); // 关闭连接联系，如果关闭失败会抛出异常
+};
+
+class DBConn { // 用来来管理DBConnection对象的类
+public:
+	~DBConn() { //确保数据库连接总是关闭的
+		db.close();
+    }
+private:
+    DBConnection db;
+};
+```
 
 ### 解决方案
 
-有两种主要的解决方法
+有两种可能的解决方法
 
 1. 若发生close抛出异常，就终止程序，通常可以调用abort
-2. 吞下调用close引起的异常
+
+   ```c++
+   DBConn::~DBConn() {
+   	try { db.close(); } 
+       catch (...) {
+   		std::abort(); // 在日志中记录close调用失败
+   	}
+   }
+   ```
+
+2. 吞下调用close引起的异常，就是当他没发生:joy:
+
+   ```c++
+   DBConn::~DBConn() {
+   	try { db.close(); }
+       catch (...) {
+   		// 在日志中记录close调用失败;
+   	}
+   }
+   ```
+
+这两种方法都不好，因为程序无法对导致close抛出异常的条件做出反应。更好的策略是设计DBConn的接口，以便其使用者有机会对可能出现的问题做出反应
+
+将调用close的责任从DBConn的析构函数与转移到DBConn的客户
+
+```c++
+class DBConn {
+public:
+    void close() { // db自己的close由用户主动调用
+        db_.close();
+        closed_ = true;
+    }
+    ~DBConn() {
+        if (!closed_) {
+            try { db_.close(); }
+            catch (...) { // 若关闭失败就记录下来，终止或吞下
+                // 在日志中记录close调用失败
+            }
+        }
+    }
+private:
+    DB db_;
+    bool closed_;
+};
+```
 
 ## *条款9：绝不在构造和析构过程中调用虚函数*
 
+绝不在构造和析构过程中调用虚函数 Never call virtual functions during construction or destruction
+
+假设有个类的继承体系，用于建模股票交易，例如买入订单、卖出订单等。此类交易是可审计的，因此每次创建交易对象时，都需要在审计日志中创建适当的条目
+
+```c++
+class Transaction { //所有交易的基类
+public:
+	Transaction();
+	virtual void logTransaction() const = 0;// 创建依赖于类型的日志条目
+};
+
+Transaction::Transaction() {
+	logTransaction(); //记录这笔交易
+}
+
+class BuyTransaction : public Transaction {
+public:
+    virtual void logTransaction() const;
+};
+
+class SellTransaction : public Transaction {
+public:
+    virtual void logTransaction() const;
+};
+```
+
+在派生类构造函数开始执行之前，对象会被视为是一个基类对象
+
+### 解决方式
+
+解决这个问题有很多方式。一种是将logTransaction转换为非虚幻术，然后要求派生楼构造函数将必要的日志信息传递给基类的构造函数，然后基类的构造函数可以安全地调用非虚地logTransaction
+
 ## *条款10：操作符重载返回当前对象*
+
+操作符重载返回当前对象 have assignment operators return a reference to `*this`，在 *Cpp基础&11.md* 的拷贝控制操作 - 赋值运算符重载部分只是比较简略地提了一下，这里再扩展一下
+
+赋值的一个很有用的地方就在于可以连续赋值
+
+```c++
+int x, y, z;
+x = y = z =15; // -> x = (y = (z = 15));
+```
+
+自定义的类实现赋值操作符重载时应该要遵顼这个约定，因为好的类行为应该和内置类型一样。实现这种的方式就是，赋值操作返回一个指向左侧参数的引用。不过这只是一种约定和惯例，即使不遵守它也可以通过编译
+
+```c++
+class Widget {
+public:
+	widget& operator=(const widget& rhs) { // 返回类型是当前类的一个引用
+		return *this; // 返回左值对象
+	}
+	widget& operator+=(const widget& rhs) { // 这个约定也适用于+=、-=、*=等
+		return *this;
+    }
+	widget& operator=(int rhs) { // 即使参数的类型不符合约定，也适用
+		return *this;
+    }
+};
+```
 
 ## *条款11：自我赋值安全性*
 
+自我赋值安全性 handle assignment to self in operator= 也是在 *Cpp基础&11.md* 的拷贝控制操作 - 赋值运算符重载部分只是比较简略地提了一下，这里再扩展一下
+
+### 错误场景
+
+* 自我赋值
+
+  ```c++
+  class Widget { /**/ };
+  Widget w;
+  w = w; // 自己给自己赋值
+  ```
+
+  而且有时候自我赋值可能并不会那么明显，比如说在循环中或者两个指针指向同一个对象
+
+  ```c++
+  for (int i = 0; i < n; i++) {
+  	for (int j = 0; j < n ; j++) {
+  		a[i] = a[j]; // 潜在的自我赋值
+      }
+  }
+  
+  *px = *py; // 潜在的自我赋值
+  ```
+  
+  若两个对象来自同一个同一个继承机构的时候，甚至不需要将它们声明为同一类型，因为基类引用或指针可以引用或指向派生类类型的对象
+
+    ```c++
+    class Base { ... };
+    class Derived : public Base { ... };
+    void doSomething(const Base& rb，Derived* pd); // rb和*pd可能是同一个对象
+    ```
+
+* 提前释放对象错误
+  
+  如果试图自己管理资源，可能会陷入这样的陷阱：在使用完资源之前不小心释放了资源
+
+    ```c++
+  class Bitmap { ... };
+  class widget {
+  public:
+      Widget&operator=(const widget& rhs);
+  private:
+      Bitmap* pb; // 指向一个从堆中分配的对象
+  };
+  
+  widget& widget::operator=(const widget& rhs) { // 不安全的版本
+      delete pb; // 停止使用当前的bitmap
+      pb = new Bitmap(*rhs.pb); // 开始使用rhs的bitmap的一个副本
+      return *this;
+  }
+    ```
+
+  上面的 `operator=` 是不安全的，因为在 `w=w` 这种自我赋值的情况下，`*this`（赋值的目标）和rhs是同一个对象，导致最终指向一个己经被删除的对象。即rhs此时就是w自己。那么在构造新的pb的时候，实际上就在用一个被delete的空对象构造
+
+解决方法有三种：比较源对象和目标对象地址、语句排序、copy-and-swap
+
+### 比较源对象和目标对象地址
+
+防止这种错误的传统方法是在operator=的顶部检查是否是对自己赋值
+
+```c++
+widget& widget::operator=(const widget& rhs) {
+	if (this == &rhs)
+        return *this; // 如果是自我赋值，什么也不做
+    delete pb;
+	pb = new Bitmap(*rhs.pb);
+    return *this;
+}
+```
+
+不过问题还没有结束，上面的代码还有异常安全性的问题。若 `new Bitmap` 表达式产生异常，因为没有足够的内存用于分配的 `std::bad_alloc` 等异常，或者因为Bitmap的拷贝构造函数抛出异常而导致没有成功创建出新的pb，因为此时旧的pb已经被delete了，那么最终仍然会指向已删除的Bitmap对象
+
+### 语句排序
+
+比较幸运的是使 `operator=` 异常安全，通常也会自动解决自赋值的安全性问题
+
+解决的方法很简单，那就是创建副本，此时即使没有自我赋值测试，下面的代码也具有自我赋值的安全性，因为创建了原始Bitmap的一个副本，删除了原始Bitmap，然后指向创建的副本，此时就算new出问题了，也不会影响pb。虽然这不是最高效的方法，但有效
+
+```c++
+widget& widget::operator=(const widget& rhs) {
+	Bitmap* p_orig = pb; // 记住原先的pb
+    pb = new Bitmap(*rhs.pb); // 让pb指向*rhs.pb的副本
+    delete p_orig; // delete原先的pb
+    return *this
+}
+```
+
+### copy-and-swap
+
+更高效的方法可以采用拷贝的现代写法 copy and swap 条款29
+
 ## *条款12：要完整拷贝*
+
+这个条款主要是在说设计类的时候如果后期又增加了一些类属性，那么相应的不要忘了在其拷贝构造和赋值运算符重载中也要加上新增的类属性
+
+不过在自己类中一般不会忘了去处理，一般遗忘的情况是基类中添加了新成员，而在派生类中对基类的构造部分忘记了处理新的成员
 
 # 资源管理
 
 ## <span id="条款13">*条款13：以对象管理资源*</span>
+
+资源是指一旦使用完了就需要返回系统的东西  
+
+这一条款基本就是RAII和智能指针的基础内容
 
 ## *条款14：RAII对象拷贝*
 
 ## *条款15：RAII对象的原始资源访问*
 
 ## *条款16：new和delete要一致*
+
+在 *Cpp基础&11.md* 的C++内存管理 - new & delete封装 - `[]` 不匹配错误的底层原因中已经详细说明过了
 
 ## *条款17：独立构造智能指针*
 
@@ -340,6 +575,24 @@ AWOV::~AWOV() {} // 必须提供纯虚析构函数的定义
 ## *条款18：让接口容易被正确使用*
 
 ## *条款19：设计class就是设计type*
+
+设计class时，都要面对如下问题，答案通常会导致你的设计是否规范
+
+* 如何创建和销毁新类型的对象？这将影响
+  * 类的构造函数和析构函数的设计
+  * 内存分配和释放函数的设计 `operator new, operator new[], operator delete, operator delete[]`
+* 对象初始化和对象赋值有什么区别？这将影响构造函数和赋值运算符的行为以及它们之间的区别。重要的是不要混淆初始化和赋值，因为它们对应于不同的函数调用
+* 新类型的对象通过值传递意味着什么？拷贝构造函数定义了如何实现类型的值传递
+* 对于新类型的合法值有什么限制？通常类的数据成员只有某些值的组合是有效的。这些组合决定了类必须维护的不变式（约束条件）。不变量决定了你必须在成员函数中进行的错误检查，特别是构造函数、赋值运算符和“setter"函数。如果不合法就要进行处理或抛出异常
+* 新类型允许什么样的类型转换？
+  * 如果希望允许T1类型的对象隐式转换为T2类型的对象，需要在T1类中写一个类型转换函数（例如 `operator T2`），或类T2的带有一个参数的非显式 non-explicit 构造函数
+  * 如果希望只允许显式转换，就需要编写执行转换的函数，比如说 `to_string()` 这种。此时需要避免使用类型转换运算符或可以用—个参数调用的非显式构造函数
+* 哪些运算符和函数对新类型有意义？这将影响类需要声明哪些函数。有些函数是成员函数，但有些不是
+* 哪些标准函数应该被禁止？声明为private的，或使用delete（C++11）
+* 新类型的成员该被谁调用？确定各个成员的访问限定符，它还可以帮助你确定哪些类和（或）函数应该成为友元，以及将一个类嵌套在另一个类中是否有意义
+* 新类型的“未声明接口”是什么？它在性能、异常安全性和资源使用（例如锁和动态内存）方面提供了什么样的保证？在这些方面提供的保证会对类的实现造成限制
+* 新类型有多通用？也许你正在定义一个完整的类型族，这时你真正想定义一个的是一个类模板
+* 你真的需要一种新类型吗？如果你定义一个新的派生类只是为了向现有类添加功能（假设现有类来自一个库，不能改动），也许可以简单地定义一个或多个非成员函数或模板来实现
 
 ## *条款20：优先使用常量引用传递*
 
@@ -376,9 +629,15 @@ AWOV::~AWOV() {} // 必须提供纯虚析构函数的定义
 
 ## *条款22：将数据设为私有*
 
-## *条款23：非成员非友元函数优先*
+比较基础的内容，基本上就是阐述了把数据设为私有对封装的好处
+
+## *条款23：宁以成员非友元函数替换成员函数*
+
+宁以成员非友元函数替换成员函数 Prefer non-member, non-friend functions to member functions
 
 ## *条款24：参数都需要转换的函数*
+
+若所有参数皆需要类型转换，请为此采用非成员函数 Declare non-member functions when type conversions should apply to all members
 
 ## *条款25：不会抛出异常的swap*
 
@@ -450,6 +709,8 @@ std::string encryptPassword(const std::string &password) {
 构造函数和析构函数是特殊的，虽然它们看起来都是空的，但实际上不是，要做大量的异常处理和可能需要的资源销毁处理，所以非常不适合内联
 
 ## *条款31：降低文件编译依赖*
+
+C++在分离接口和实现方面做的不好，类定义不仅指定了类接口，还指定了相当多的实现细节
 
 # 继承与面向对象设计
 

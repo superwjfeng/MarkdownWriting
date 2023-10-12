@@ -1,12 +1,33 @@
-## *Makefile*
+## *intro*
 
 ### build系统
+
+直接用g++命令来编译的话，需要我们自己逐模块地编译目标文件，然后再链接起来，对于大的项目根本不可能手动来做
 
 类似于Java的build工具maven、gradle等，`make` 是最常用的build系统之一，它通常被安装到了几乎所有类UNIX系统中
 
 * 一个大的项目需要根据文件的类型、功能、模块按照一定顺序进行编译，不可能每次都手动输入编译命令，Makefile文件中存储着我们设计好的编译代码
 * `make` 是一个命令，用来解释Makefile文件中指令的命令工具。当执行 `make` 时，它会去参考当前目录下名为 `Makefile` 的文件。所有构建目标、相关依赖和规则都需要在该文件中定义
 * `make`并不完美，但是对于中小型项目来说，它已经足够好了。实际上单个project用的更多的是自动化构建Makefile工具如cmake，Makefile可以用来调用其他的build工具，比如camke、Maven等
+
+### Makefile vs. CMake
+
+<img src="CMake体系.drawio.png" width="50%">
+
+* Makefile
+  * Makefile 是一个文本文件，通常称为 `Makefile` 或 `makefile`，它包含了一系列规则，用于指导构建系统如何编译和链接项目的源代码文件
+  * Makefile 的规则通常定义了目标文件、依赖文件和构建命令。当你运行 `make` 命令时，它会根据 Makefile 中的规则来构建项目
+  * Makefile 通过检查文件的时间戳来确定哪些文件需要重新编译，以提高构建效率
+  * Makefile 是一个传统的构建工具，通常需要手动编写，它是用于构建过程的静态规则
+* CMake
+  * CMake 是一个**跨平台**的构建系统生成工具，它允许开发者定义项目的构建过程，而不需要在不同平台上重复编写或使用复杂的构建工具
+  * CMake 使用一个名为 `CMakeLists.txt` 的文本文件来描述项目的构建规则和依赖关系。这个文件中包含了构建配置选项、源代码文件、依赖库以及生成的目标等信息
+  * CMake 生成的 Makefile 可以用于不同的构建工具，如 GNU Make、Ninja 等。这使得项目可以在不同的平台上使用不同的构建工具
+  * CMake 支持多种生成器，允许你生成适用于不同集成开发环境和编译器的项目文件。这使得跨平台开发更加方便
+
+总的来说，Makefile 是一个静态的构建工具，需要手动编写，而 CMake 是一个用于生成 Makefile 或其他构建系统的工具，它提供了更灵活的方式来管理和构建项目，特别是在需要跨平台支持的情况下。使用 CMake 可以减少构建系统的维护成本，提高项目的可移植性
+
+## *Makefile*
 
 ### Makefile中的特殊符号
 
@@ -44,10 +65,12 @@ Makefile是一种汇编语言
 
 ## *基本语法*
 
-### demo
+### 基本语法格式
 
-```cmake
+```CMake
 #CMakeLists.txt
+# CMake最小版本要求为2.8.3
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.3)
 PROJECT (HELLO)
 SET(SRC_LIST main.cpp)
 MESSAGE(STATUS "This is BINARY dir " ${HELLO_BINARY_DIR})
@@ -55,34 +78,38 @@ MESSAGE(STATUS "This is SOURCE dir "${HELLO_SOURCE_DIR})
 ADD_EXECUTABLE(hello ${SRC_LIST})
 ```
 
-与makefile/Makefile都可以不一样，CMakeLists.txt文件名**必须严格区分大小写**
+* 基本语法格式为 `指令(参数1 参数2 ...)`
+  * 参数使用 `()` 括起
+  * 参数之间使⽤空格或分号分开，一般建议用空格
+* 与makefile/Makefile都可以不一样，**CMakeLists.txt文件名必须严格区分大小写**。然而指令是⼤⼩写⽆关的，参数和变量是⼤⼩写相关的。但是推荐全部使⽤⼤写指令
+* 变量使⽤ `${}` ⽅式取值，但是在 IF 控制语句中是直接使⽤变量名
 
-同时指令是⼤⼩写⽆关的，参数和变量是⼤⼩写相关的。但是推荐全部使⽤⼤写指令
+CMake的指令笔者不会在这里统一给出，而是在下面用到了之后再给出
 
-cmake的目的是为了生成Makefile，然后可以直接make编译
+`CMAKE_MINIMUM_REQUIRED(VERSION versionNumber [FATAL_ERROR])` 指定CMake的最小版本要求
 
-变量使⽤ `${}` ⽅式取值，但是在 IF 控制语句中是直接使⽤变量名。参数之间使⽤空格或分号分开，一般建议用空格
+### PROJECT指令
 
-### project关键字
+PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有语⾔
 
-project可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有语⾔
-
-* `PROJECT (HELLO CXX)`：指定了⼯程的名字，并且⽀持所有语⾔—建议
+* `PROJECT (HELLO)`：指定了⼯程的名字，并且⽀持所有语⾔，**建议这么写**
 * `PROJECT (HELLO CXX)` 指定了⼯程的名字，并且⽀持语⾔是C++
 * `PROJECT (HELLO C CXX)` 指定了⼯程的名字，并且⽀持语⾔是C和C++
 * 也可以支持JAVA
 
-### CMake变量
+## *CMake变量*
+
+### 自定义变量方法
 
 在CMake中，可以使用变量来存储和传递值。这些变量可用于设置构建选项、路径、编译器选项等。下面是一些常见的CMake变量用法
 
-1. 定义变量
+1. SET定义变量
 
    ```cmake
    set(variable_name value)
    ```
 
-   **`set` 用于创建一个名为 `variable_name` 的变量，并将其设置为 `value`**
+   **`set`  指令用于创建一个名为 `variable_name` 的变量，并将其设置为 `value`**
 
    demo中 `SET(SRC_LIST main.cpp)` 就是创建一个 `SRC_LIST` 变量，并将其值设置为 main.cpp
 
@@ -96,13 +123,13 @@ project可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 
    在CMake中，使用 `${}` 来引用变量的值。例如，`${variable_name}` 将被替换为变量 `variable_name` 的实际值
 
-3. 获取变量的值
+3. MESSAGE获取变量的值
 
    ```cmake
    message(STATUS "Variable value: ${variable_name}")
    ```
 
-   **`message` 命令可以用于向终端打印变量的值**。上述示例将输出变量 `variable_name` 的值到 CMake 构建过程的输出。
+   **`message` 指令可以用于向终端打印变量的值**。上述示例将输出变量 `variable_name` 的值到 CMake 构建过程的输出。
 
    主要包含三种信息
 
@@ -126,21 +153,118 @@ project可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 
 这些只是一些常见的CMake变量用法示例。CMake提供了更多高级用法，如列表变量、环境变量、缓存变量
 
-### `ADD_EXECUTABLE` 关键字
+### CMake常用内置变量
 
-使用指定的源文件来生成目标可执行文件
+* CMAKE_C_FLAGS：gcc编译选项
 
-`ADD_EXECUTABLE(hello ${SRC_LIST})` ⽣成的可执⾏⽂件名是hello，源⽂件读取变量SRC_LIST中的内容。也可以直接写 `ADD_EXECUTABLE(hello main.cpp)`
+* CMAKE_CXX_FLAGS：g++编译选项
 
-Demo可以简化的写成
+  ```cmake
+  # 在CMAKE_CXX_FLAGS编译选项后追加-std=c++11
+  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  ```
 
-```cmake
-PROJECT(HELLO) ADD_EXECUTABLE(hello main.cpp)
-```
+* CMAKE_BUILD_TYPE：编译类型（Debug or Release）
 
-注意：⼯程名的 HELLO 和⽣成的可执⾏⽂件 hello 是没有任何关系的
+  ```cmake
+  # 设定编译类型为debug，调试时需要选择debug
+  set(CMAKE_BUILD_TYPE Debug)
+  # 设定编译类型为release，发布时需要选择release
+  set(CMAKE_BUILD_TYPE Release)
+  ```
 
-## *内部构件与外部构建*
+* CMAKE_BINARY_DIR、PROJECT_BINARY_DIR、_BINARY_DIR：这三个变量指代的内容是一致的
+
+  * 若是 in source build，指的就是工程顶层目录
+  * 若是 out-of-source 编译，指的是工程编译发生的目录
+
+* CMAKE_SOURCE_DIR、PROJECT_SOURCE_DIR、_SOURCE_DIR
+
+* CMAKE_C_COMPILER：指定C编译器
+
+* CMAKE_CXX_COMPILER：指定C++编译器
+
+* EXECUTABLE_OUTPUT_PATH：可执行文件输出的存放路径
+
+* LIBRARY_OUTPUT_PATH：库文件输出的存放路径
+
+## *编译*
+
+### 用到的指令
+
+* INCLUDE_DIRECTORIES：向工程添加多个特定的头文件搜索路径，相当于指定g++编译器的 `-I` 参数
+
+  ```cmake
+  INCLUDE_DIRECTORIES([AFTER|BEFORE] [SYSTEM] dir1 dir2 ...)
+  # 将/usr/include/myincludefolder 和 ./include 添加到头文件搜索路径
+  INCLUDE_DIRECTORIES(/usr/include/myincludefolder ./include)
+  ```
+
+* LINK_DIRECTORIES：向工程添加多个特定的库文件搜索路径，相当于指定g++编译器的 `-L` 参数
+
+  ```cmake
+  LINK_DIRECTORIES(dir1 dir2 ...)
+  # 将/usr/lib/mylibfolder 和 ./lib 添加到库文件搜索路径
+  LINK_DIRECTORIES(/usr/lib/mylibfolder ./lib)
+  ```
+
+* TARGET_LINK_LIBRARIES：为 target 添加需要链接的共享库，相同于指定g++编译器 `-l` 参数
+
+  ```cmake
+  TARGET_LINK_LIBRARIES(target library1<debug | optimized> library2...)
+  # 将hello动态库文件链接到可执行文件main
+  TARGET_LINK_LIBRARIES(main hello)
+  ```
+
+* ADD_COMPILE_OPTIONS：添加编译参数
+
+  ```cmake
+  ADD_COMPILE_OPTIONS(）
+  # 添加编译参数 -Wall -std=c++11 -O2
+  ADD_COMPILE_OPTIONS(-Wall -std=c++11 -O2)
+  ```
+
+* ADD_EXECUTABLE：使用指定的源文件来生成目标可执行文件
+
+  ```cmake
+  ADD_EXECUTABLE(exename source1 source2 ... sourceN)
+  # 编译main.cpp生成可执行文件main
+  ADD_EXECUTABLE(main main.cpp)
+  ```
+
+  `ADD_EXECUTABLE(hello ${SRC_LIST})` ⽣成的可执⾏⽂件名是hello，源⽂件读取变量SRC_LIST中的内容。也可以直接写 `ADD_EXECUTABLE(hello main.cpp)`
+
+  Demo可以简化的写成
+
+  ```cmake
+  PROJECT(HELLO)
+  ADD_EXECUTABLE(hello main.cpp)
+  ```
+
+  注意：⼯程名的 HELLO 和⽣成的可执⾏⽂件 hello 是没有任何关系的
+
+* ADD_SUBDIRECTORY
+
+  ```cmake
+  ADD_SUBDIRECTORY(source_dir [binary_dir] [EXCLUDE_FROM_ALL])
+  ```
+
+  * 这个指令⽤于向当前⼯程添加存放源⽂件的⼦⽬录，并可以指定中间⼆进制和⽬标⼆进制存放的位置
+  * `EXCLUDE_FROM_ALL` 函数是将写的⽬录从编译中排除，如程序中的example
+  * 例：`ADD_SUBDIRECTORY(src bin)`
+    * 将 src ⼦⽬录加⼊⼯程并指定编译输出(包含编译中间结果)路径为bin ⽬录
+    * 本质上和包头文件是一样的，相当于包子文件中的 `ADD_EXECUTABLE` 直接拷进来
+    * 如果不进⾏ bin ⽬录的指定，那么编译结果(包括中间结果)都将存放在build/src ⽬录
+
+* AUX_SOURCE_DIRECTORY：发现一个目录下所有的源代码文件并将列表存储在一个变量中，这个指令临时被用来自动构建源文件列表
+
+  ```cmake
+  AUX_SOURCE_DIRECTORY(dir VARIABLE)
+  # 定义SRC变量，其值为当前目录下所有的源代码文件
+  AUX_SOURCE_DIRECTORY(.src)
+  # 编译SRC变量所代表的源代码文件，生成main可执行文件
+  ADD_EXECUTABLE(main ${SRC})
+  ```
 
 ### 工程结构
 
@@ -221,7 +345,10 @@ make
 
 ### CMake文件的层次结构
 
-每一个目录下面都要有一个CMakeLists.txt
+有两种方式来设置编译规则
+
+* 包含源文件的子文件夹包含CMakeLists.txt文件，主目录的CMakeLists.txt通过add_subdirectory添加子目录即可。即每一个目录下面都要有一个CMakeLists.txt，**推荐使用这种方式**
+* 包含源文件的子文件夹未包含CMakeLists.txt文件，子目录编译规则体现在主目录的CMakeLists.txt中
 
 比如说有这么一个结构
 
@@ -249,26 +376,35 @@ make
 
 在一个复杂的项目中，可能有多个子目录，每个子目录都包含了相关的源代码文件和构建规则。为了方便管理和配置，CMake 采用了一种层次化的项目结构，每个子目录都可以拥有一个独立的 `CMakeLists.txt` 文件。每个子目录下的 `CMakeLists.txt` 文件可以根据需要设置特定的构建规则，并与父目录的配置进行协调
 
-通过在每个目录下创建 `CMakeLists.txt` 文件，可以将构建规则和相关配置与对应的源代码文件放在一起，使项目的组织更加清晰和可维护。同时，这样的结构也使得整个项目可以方便地进行模块化和扩展
+通过在每个目录下创建 `CMakeLists.txt` 文件，**可以将构建规则和相关配置与对应的源代码文件放在一起，使项目的组织更加清晰和可维护**。同时，这样的结构也使得整个项目可以方便地进行模块化和扩展
 
 当使用 CMake 来构建项目时，CMake 会递归地遍历项目目录结构，并根据每个目录下的 `CMakeLists.txt` 文件来生成相应的构建脚本（如 Makefile、Visual Studio 解决方案等），最终用于编译和构建整个项目
 
 因此，为了使 CMake 能够正确地解析和处理项目，每个目录下都需要一个 `CMakeLists.txt` 文件来描述该目录的构建规则和相关配置
 
-### `ADD_SUBDIRECTORY` 指令
+### 编译流程
 
-```cmake
-ADD_SUBDIRECTORY(source_dir [binary_dir] [EXCLUDE_FROM_ALL])
-```
+在Linux平台下使用CMake构建C/C++工程的流程如下
 
-* 这个指令⽤于向当前⼯程添加存放源⽂件的⼦⽬录，并可以指定中间⼆进制和⽬标⼆进制存放的位置
-* `EXCLUDE_FROM_ALL` 函数是将写的⽬录从编译中排除，如程序中的example
-* 例：`ADD_SUBDIRECTORY(src bin)`
-  * 将 src ⼦⽬录加⼊⼯程并指定编译输出(包含编译中间结果)路径为bin ⽬录
-  * 本质上和包头文件是一样的，相当于包子文件中的 `ADD_EXECUTABLE` 直接拷进来
-  * 如果不进⾏ bin ⽬录的指定，那么编译结果(包括中间结果)都将存放在build/src ⽬录
+1. 手动编写CmakeLists.txt
+2. 执行命令 `cmake PATH` 生成Makefile，PATH是顶层CMakeLists.txt所在的目录。注意，在哪里执行cmake命令生成的内容就在哪里，一般选择在build文件夹中执行 `cmake ..`，因为build中是所有编译产生的内容
+3. 执行build命令make进行编译
 
 ## *构建库*
+
+### 用到的指令
+
+* SET_TARGET_PROPERTIES
+
+* ADD_LIBRARY 生成库文件，SHARED为动态库，STATIC为静态库
+
+  ```cmake
+  add_library(libname [SHARED | STATIC | MODULE] [EXCLUDE_FROM_ALL] source1 source2 ... sourceN)
+  # 通过变量 SRC 生成 libhello.so 共享库
+  add_library(hello SHARED ${SRC})
+  ```
+
+  
 
 SET 指令重新定义 `EXECUTABLE_OUTPUT_PATH` 和 `LIBRARY_OUTPUT_PATH` 变量来指定最终的⽬标⼆进制的位置
 
@@ -288,7 +424,7 @@ ADD_LIBRARY(hello SHARED ${LIBHELLO_SRC})
 ADD_LIBRARY(hello_static STATIC ${LIBHELLO_SRC})
 ```
 
-### `SET_TARGET_PROPERTIES` 命令
+
 
 ### 使用外部库和头文件
 
