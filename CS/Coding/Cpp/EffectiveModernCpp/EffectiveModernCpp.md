@@ -7,21 +7,106 @@ template<typename T> void f(ParamType param); // 函数模板
 f(expr); // 函数调用
 ```
 
-T的类别推导，不仅仅依赖expr，还依赖于ParamType的形式
-
-### ParamType是指针或引用，但不是万能引用
-
-### ParamType是万能引用
+模板类型T的推导取决于实际传入expr和预设ParamType的类型的不同形式的排列组合的共同作用
 
 ### ParamType既非指针也非引用
+
+此时就是按值传递，也就是说无论传入的是什么，param都会是它的一个副本。所以下面的性质是很好理解的，反正函数模板内部得到的都是一个实参拷贝，是不会拷贝它的性质的（原理就是所处区域不一样，一个栈区的拷贝常量区里的内存，不会拷贝它常量区的性质），所以对它做什么都不会影响原来的值
+
+1. **忽略expr的引用性 reference-ness、顶层常量性 top-level constness、volatile性**。注意一个点：右值引用得到的仍然是一个左值引用，所以当expr是一个右值引用时候的，它等同于一个左值引用，所以引用性同样会被忽略
+2. 将expr剩余的类别与ParamType的类别再进行匹配
+
+```c++
+void f(T param) { std::cout << param << std::endl; }
+void f(const T param) { std::cout << param << std::endl; }
+```
+
+### ParamType是指针或左值/右值引用，但不是万能引用
+
+1. **忽略expr的引用性**，expr的底层常量性和顶层常量性都会被保留下来（回忆：只有当执行对象拷贝的时候才能忽略expr的顶层常量性，这里不是对象拷贝了）
+2. 将expr剩余的类别与ParamType的类别再进行匹配
+
+### ParamType是万能引用 `T&&`
+
+在模板推导时 `T&&` 是一个万能引用。注意：只有 `T&&` 是万能引用，`const T&&` 是一个右值引用
+
+* 若传入的expr是个左值，则T和ParamType都会被推导为左值引用。**这是在模板类型推导中，T被推导为引用类别的唯一场景**。这种情况被称为引用折叠 reference collapse，相当于 `int & + int && -> int &`，相当于三个引用折叠成了一个引用
+* 若传入的expr是个右值，运用ParamType是非万能引用的指针或引用时的规则
+
+### 数组和函数指针实参的退化问题
+
+在上面三种情况中，当传入的模板参数T是数组和函数的时候，要考虑其退化情况
+
+退化其实在C语言的函数及传参部分就早已经有过了，其实就是数组/函数名等价于首元素指针。它仍然对模板的类型推导有着重要作用，因此这里再提一下
+
+**在一些语境下，数组和函数会退化成指向其首元素的指针**
+
+* 初始化的情况。注意：对数组名或函数名取地址的指针类型 $\neq$ 名字退化成的指针类型
+
+  ```c++
+  int array[5] = { 0, 1, 2, 3, 4 }; // array的数据类型是int[5]
+  int *ptr = &array; // 数组名退化为指向其首元素的指针
+  int (*ptr2)[5] = &array; // 数组名取地址的类型为int数值指针，不等于数组名的类型，即int指针
+  int (&ptr)[5] = array; // 数组引用
+  ```
+
+* 数组名作为参数传递时会发生退化，下面三种传递方法是完全等价的
+
+  ```c++
+  void foo(int a[100]);
+  void foo(int a[5]);
+  void foo(int *a);
+  ```
+
+  传递数组指针就不等价了
+
+  ```c++
+  void fun(int (*a)[5]);
+  void fun(int (*a)[100 ]);
+  ```
+
+特别注意下面几种情况
+
+* 数组名退化成指针的同时顶层const也退化为底层const
+
+  ```c++
+  const char str[] = "hello world";
+  f("hello world") // const char str*
+  ```
+
+* 函数指针没有底层const，底层const意味着可以修改函数内部的内容了，所以当有底层const的函数指针时，编译器会报错。而函数引用的底层const则会直接被编译器忽略
 
 ## *条款2：理解auto类型推导*
 
 auto类型推导和模板类型推导的规则基本上完全一致，它们之间可以建立起一一映射的关系，它们之间也确实存在双向的算法变换
 
-### `{}` 的auto类型推导
+采用auto进行变量声明是哦，类别饰词取代了ParamType，所以同样也是分成三种类型来讨论。并且同样的，数组和函数的退化情况也同样适用于auto
+
+```c++
+auto x = 28; // x既非指针也非引用
+const auto cx = x; // x既非指针也非引用
+const auto &rx = x; // rx是个引用，但不是万能引用
+auto &&uref1 = x; // 万能引用，左值，绑定的类型为 int&
+auto &&uref2 = cx; // 万能引用，左值，绑定的类型为 const int&
+auto &&uref3 = rx; // 引用折叠，右值，绑定的类型为 int&&
+```
+
+auto类型推导和模板类型推导的唯一区别在于，当用于auto声明变量的初始化表达式是使用大括号括起时，推导所得的型别就属于 `std::initializer_list`，而模板类型推导则不支持
+
+在这种情况下，若 `{}` 内的类型推导失败（最常见的原因可能是因为元素的数据类型不一致），那么也会导致auto的类型推导失败
+
+注意：下面两种写法auto本来都会推导出 `initializer_list`，但是在C++17推出后，`auto x3{20}` 的auto推导类型不再是 `initializer_list`
+
+```c++
+auto x3{20}; // int
+auto x4 = {27}; // initializer_list
+```
+
+此外，C++14中又引入了一种auto可以用作模板类型推导的方式，需要配合decltype一块使用，具体见下一条条款
 
 ## *条款3：理解decltype*
+
+decltype (declared type)
 
 ## *条款4：掌握查看类型推导结果的方法*
 
@@ -113,7 +198,74 @@ private:
 
 [大括号之谜：C++的列表初始化语法解析_too many initializers for-CSDN博客](https://blog.csdn.net/devcloud/article/details/114523118)
 
+## *条款8：优先考虑使用nullptr而非0和NULL*
+
+我们可以通过auto 自动推导来看看nullptr、0和NULL分别是什么类型
+
+```c++
+auto a = 0;
+auto b = NULL;
+auto c = nullptr;
+cout << typeid(a).name() << endl; // int
+cout << typeid(b).name() << endl; // Win是int，Linux是long
+cout << typeid(c).name() << endl; // std::nullptr_t
+```
+
+下面是 `nullptr_t` 的定义
+
+```c++
+#include <cstddef>
+typedef decltype(nullptr) nullptr_t;
+```
+
+### 正确调用指针版本的函数重载
+
+### 模板推导时不能混用
+
 ## *条款9：优先考虑别名声明而非typedef*
+
+C语言和C++98都提供了用typedef给类型起别名，从而简化一些特别长的自定义类型
+
+C++11规定了一种新的方法，称为**别名声明 alias declaration** ，用关键字using来定义类型别名，比如
+
+```c++
+using iterator = _list_iterator<T, Ref, Ptr>;
+```
+
+但是给指针这种复合类型和常量起类型别名要小心一点，因为可能会产生一些意想不到的后果
+
+using相较于typedef的优势主要是在跟模板相关的时候
+
+* typedef只能给一个实例化的类起别名，比如
+
+  ```c++
+  typedef Blob<string> StrBlob;
+  ```
+
+  若给要给模板起别名，则必须要在定义的类里面
+
+  ```c++
+  template<typename T> class myVector1 {
+      typedef std::vector<T> type;
+  }
+  ```
+
+* C++11标准允许我们为类模板直接定义一个类型别名，比如说下面的代码中，将twin定义为两个成员类型相同的一个模板pair的别名
+
+  ```c++
+  template<typename T> using myVector2 = std::vector<T>;
+  ```
+
+但真正的好处在于using可以避免使用typenmame来避免二义性
+
+```c++
+template<template T> Widge {
+	typename myVector1<T>::type myVec1; // 使用了依赖名，要用typename
+	myVector2<T> myVec2; // 不需要typename
+}
+```
+
+## *条款15：情况允许的话尽量使用constexpr*
 
 # 智能指针
 
@@ -121,6 +273,23 @@ private:
 
 ## *条款23：理解 `std::move` & `std::forward`*
 
+## *条款24：区分万能引用和右值引用*
+
+`T&&` 有两层含义，第一种就是普通的右值引用，它的目标是识别出可移动对象，然后绑定到右值上
+
+第二种含义是万能引用 universal reference，出现在模板和auto这两种类型推导之中
+
+```c++
+template<typename T> void f(T&& param); // T是个万能引用
+auto&& var2 = var; // var2是个万能引用
+```
+
+## *条款25：针对右值引用使用 `std::move`，针对万能引用使用 `std::forward`*
+
+由于万能引用几乎总是要用到转发，因此万能引用也被称为转发引用 forwarding references
+
+## *条款28：理解引用折叠*
+
 # lambda表达式
 
-# 并发API
+# 并发API 
