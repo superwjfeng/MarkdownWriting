@@ -106,11 +106,28 @@ auto x4 = {27}; // initializer_list
 
 ## *条款3：理解decltype*
 
+[【C++深陷】之“decltype”-CSDN博客](https://blog.csdn.net/u014609638/article/details/106987131)
+
 decltype (declared type)
+
+```c++
+int a = 10;
+int *aPtr = &a;
+decltype(aPtr) b1; // decltype + 变量，b1的类型是int *
+decltype(aPtr) b2; // decltype + 表达式，b1的类型是int &
+```
+
+
+
+
 
 C++11中，decltype 的主要用途就在于声明那些返回值型别依赖于形参型别的函数模板
 
 ## *条款4：掌握查看类型推导结果的方法*
+
+这一条款主要说了一下用IDE、编译器和typeid 运行时输出来查看类型的方法
+
+核心是typeid和type_info，这部分在 *Cpp基础&11.md* - 多态 - RTTI 中有比较详细的笔记了
 
 # auto
 
@@ -306,11 +323,120 @@ template<template T> Widge {
 
 ## *条款15：情况允许的话尽量使用constexpr*
 
+## *理解特殊成员函数的生成*
+
 # 智能指针
 
 # 右值引用
 
 ## *条款23：理解 `std::move` & `std::forward`*
+
+### 类型转换模板
+
+标准库的类型转换 type transformation 模板定义在头文件 `<type_traits>` 中，类型转换也是一种萃取器
+
+<img src="type_traits.png" width="60%">
+
+我们来看其中一个模板 `remove_reference` 是如何实现的，这个模板的作用就是脱去引用类型，得到非引用部分的类型。它是通过多次模板特化得到的
+
+```c++
+// 最通用版本
+template<class T> struct remove_reference {
+    typedef T type;
+}
+// 部分的特例化模板
+template<class T> struct remove_reference<T&> { // 脱去左值引用
+    typedef T type;
+}
+template<class T> struct remove_reference<T&&> { // 脱去右值引用
+    typedef T type;
+}
+```
+
+C++11和C++14使用的方式不太一样
+
+```c++
+template<class T> Foo {
+	using remove_refrence_t1 = typename std::remove_reference<T>::type; // C+=11
+    using remove_refrence_t2 = std::remove_remove_reference<T>; // C++14
+}
+```
+
+### `std::move`
+
+我们首先来看一种错误的实现
+
+```c++
+template<typename T>
+T &&myMove(T &&param) {
+    return static_cast<T &&>(param);
+}
+
+int mmm = 10;
+int &&nnn1 = mymove(10); // 通过编译
+int &&nnn2 = mymove(mm); // 编译报错
+```
+
+* `mymove(10)`：万能引用接收右值输入，万能引用再接收输出，得到一个 `int &&myMove<int>(int &&param)` 的模板
+* `mymove(mm)`：万能引用接收左值输入，会发生三次引用折叠，即输入一次，`static_cast` 一次，最后输出再一次，所以实际得到的是一个 `int &myMove<int &>(int &param)`，这不符合右值输出所以报错了
+
+标准库中则大概是下面这么实现的，使用了萃取器 `remove_reference`
+
+```c++
+// C++11
+template<typename T>
+typename remove_reference<T>::type&& move(T &&param) {
+    using ReturnType = typename std::remove_reference<T>::type &&; // 类型萃取
+    return static_cast<T &&>(param);
+}
+// C++14
+template<typename T>
+decltype(auto) move2(T &&param) {
+    using ReturnType = std::remove_reference<T> &&;
+    return static_cast<ReturnType>(param);
+}
+```
+
+右值绑定到右值引用上的效果和左值绑定到左值引用上的效果是一摸一样的，并不会发生什么突然的析构
+
+我们可以看到move的作用并不是用了之后马上就把资源转移给右值引用，然后直接把资源回收销毁了。资源的回收销毁仍然是由析构以及OS完成的。move的作用仅仅是将类型强转为 `&&`，因此有些人提议说move应该被叫做rvalue_cast
+
+总结来说，move的作用是强转为 `&&`，而强转为 `&&` 的作用则是告诉编译器：**该对象适合被移动，然后编译器会在条件满足的情况下移动它的资源**
+
+```c++
+int a = 3;
+int &&b = std::move(a);
+a++; // 未定义行为，仅为了实验说明，工程中不要这么做！
+cout << a << endl; // 4
+b++;
+cout << b << endl; // 5
+```
+
+上面的实验并不会报错，a在被move了之后还可以被访问，就说明此时a的资源都还在。注意：上面的实验中访问move了之后的资源是一种未定义行为，因为此时我们是无法确定资源是否还在的（当然在上面这种很简单的情况下我们知道资源暂时还没有被移动），所以在工程中不能写出这样的代码
+
+### `std::forward`
+
+万能引用接收参数时，传入左值就一定是一个左值引用，但传入右值也一定会产生左值引用。所以万能引用接收参数实际上丢失了参数到底是左值还是右值的信息
+
+但有些时候我们是需要这种信息的，因为我们可能会需要根据是左值还是右值来自适应。这时候我们就需要用`std::forward<T>` 来保留其引用性质
+
+比方说下面这种情况，不论传入的是左值还是右值，若用的是 `process(param)` 都只会调用左值版本；若用的是 `process(std::move(param))`，则都只会调用右值版本
+
+```c++
+void process(const A &lvalArg) { // 左值版本
+    std::cout << "deal 1valArg" << std::endl;
+}
+void process(A &&rva1Arg) { // 右值版本
+	std::cout << "deal rvalArg" << std::endl;
+}
+template<typename T> void logAndProcess(T &&param) {
+	// process(param); // 一定调用左值版本
+	// process(std::move(param)); // 一定调用右值版本 
+	process(std::forward<T>(param)); // 实参用右值初始化时，转换为一个右值
+}
+```
+
+**`std::forward<T>` 的本质是有条件的move，只有当模板参数T用右值初始化时才转换为右值**，而 `std::move` 的本质就是无论左值还是右值统统转为右值
 
 ## *条款24：区分万能引用和右值引用*
 
@@ -327,8 +453,24 @@ auto&& var2 = var; // var2是个万能引用
 
 由于万能引用几乎总是要用到转发，因此万能引用也被称为转发引用 forwarding references
 
+## *条款26：*
+
+## *条款27：*
+
 ## *条款28：理解引用折叠*
+
+## *条款29：*
+
+## *条款30：熟悉完美转发的失败情形*
 
 # lambda表达式
 
-# 并发API 
+## *条款31：避免默认捕获模式*
+
+## *条款32：使用初始化捕获将对象移入闭包*
+
+## *条款33*
+
+## *条款34：优先使用lambda，而非 `std::bind`*
+
+# 并发API
