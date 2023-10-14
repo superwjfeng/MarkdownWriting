@@ -108,9 +108,19 @@ auto x4 = {27}; // initializer_list
 
 decltype (declared type)
 
+C++11中，decltype 的主要用途就在于声明那些返回值型别依赖于形参型别的函数模板
+
 ## *条款4：掌握查看类型推导结果的方法*
 
 # auto
+
+## *条款5：优先使用auto，而非显式类型声明*
+
+auto除了避免程序员书写那些过于冗长的类型之外，还能阻止那些因为手动指定类型带来的潜在错误和性能影响
+
+## *条款6：auto推导若非己愿，使用显示类型初始化惯用法*
+
+
 
 # 转向现代C＋＋
 
@@ -211,16 +221,45 @@ cout << typeid(b).name() << endl; // Win是int，Linux是long
 cout << typeid(c).name() << endl; // std::nullptr_t
 ```
 
-下面是 `nullptr_t` 的定义
+### 正确调用指针版本的函数重载
+
+nullptr 不会造成0和NULL稍不留意就会遭遇的重载决议问题
+
+```c++
+void f(int); // f的三个重载版本
+void f(bool);
+void f(void*);
+
+f(0); // 调用的是f(int)，而不是 f(void*）
+f(NULL); // 可能通不过编译，但一般会调用f(int)。从来不会调用f(void*)
+```
+
+Linux中NULL的类型为long，long到int、bool和 `void *` 的转换可能是同样好的，此时编译器会报错
+
+对于没有nullptr可用的C++98程序员而言，指导原则是不要同时重载指针类型和整型
+
+下面是 `std::nullptr_t` 的定义， `std::nullptr_t` 可以隐式转换到所有的裸指针 raw pointer（即非智能指针），包括 `void *`。这就是为什么nullptr可以用来赋值给任意类型指针的原因了
 
 ```c++
 #include <cstddef>
 typedef decltype(nullptr) nullptr_t;
 ```
 
-### 正确调用指针版本的函数重载
-
 ### 模板推导时不能混用
+
+```c++
+template<typename FuncType,
+			typename MuxType,
+			typename Ptr Typey>
+auto lockAndCall (FuncType func,
+				MuxType& mutex,
+				PtrType ptr) -> decltype (func(ptr)) {
+    MuxGuard g(mutex);
+	return func(ptr);
+}
+```
+
+
 
 ## *条款9：优先考虑别名声明而非typedef*
 
