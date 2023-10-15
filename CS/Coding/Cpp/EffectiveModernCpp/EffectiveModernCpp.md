@@ -110,14 +110,90 @@ auto x4 = {27}; // initializer_list
 
 decltype (declared type)
 
+### 推导规则
+
+重温一下概念：表达式 expression 是由操作数 operands 和运算符 operators 组成的组合，用来执行特定的计算操作并生成一个结果。表达式可以包括各种数据类型的变量、常量、运算符以及函数调用等。表达式的结果不是左值就是右值。比如说取地址和取引用都是表达式，他们返回左值
+
+推导规则可以分为两大类
+
+* decltype + 变量：所有信息都会被保留，数组与函数名也不会退化
+* decltyp + 表达式：表达式返回的不是左值就是右值
+  * 左值得到左值引用 `T&`
+  * 右值得到该类型 T
+  * 将亡值得到 `T&&`
+* decltype + 函数/仿函数调用：返回返回值的类型。其实这条就是上面 decltype + 表达式的规则，因为函数调用就是表达式。但是有点容易混淆，所以单独列出来说一下
+
 ```c++
 int a = 10;
-int *aPtr = &a;
-decltype(aPtr) b1; // decltype + 变量，b1的类型是int *
-decltype(aPtr) b2; // decltype + 表达式，b1的类型是int &
+int *aptr = &a;
+decltype(*aptr) b1; // *a 表达式返回的是左值引用，结果为int &
+decltype(&a) b2; // &a 表达式返回的是地址的右值引用， 结果为int
+decltype(std::move(a)) b3; // 将亡值，结果为int &&
+```
+
+注意：`int a` 是一个变量，`decltype(a)` 得到的类型是int。若想要用它的表达式属性，可以用 `()` 括起来，`decltype((a))` 返回的是 `int &`
+
+decltype 并不会真的取计算表达式的值，编译器只是会分析表达式并得到类型
+
+```c++
+decltype(foo_func(param)) my_var; // foo_func 并没有被执行
+```
+
+### 使用场景
+
+* C++11的写法：位置返回，此时auto是一个返回值的置位符
+
+  ```c++
+  template <typename Container, typename Index> 
+  auto testFun(Container &c, Index i) -> decltype(c[i]) {
+      // ... do something
+      return c[i]
+  }
+  ```
+
+* C++14的写法：可以直接写auto，但是此时要注意auto走的是模板推导，当接受的ParamType是引用的时候，输入的引用性会被忽略，所以auto得到的不是一个引用
+
+  ```c++
+  template <typename Container, typename Index> 
+  auto testFun_error(Container &c, Index i) {
+      // ... do something
+      return c[i]
+  }
+  
+  template <typename Container, typename Index> 
+  delctype(auto) testFun_right(Container &c, Index i) {
+      // ... do something
+      return c[i]
+  }
+  ```
+
+
+
+
+
+```c++
+template <typename Container, typename Index> 
+delctype(auto) testFun_right(Container &&c, Index i) {
+    // ... do something
+    return std::forward<Container>(c)[i];
+}
 ```
 
 
+
+
+
+
+
+`std::vector<bool>::reference`
+
+
+
+### `decltype(auto)`
+
+
+
+等价于C++11的auto占位符写法，意思是保存引用性质，否则引用性会被模板脱掉
 
 
 
@@ -135,7 +211,124 @@ C++11中，decltype 的主要用途就在于声明那些返回值型别依赖于
 
 auto除了避免程序员书写那些过于冗长的类型之外，还能阻止那些因为手动指定类型带来的潜在错误和性能影响
 
+
+
+C++14之后lambda形参也可以使用auto了，这直接就变成了一个模板
+
+lambda表达式的返回值一定要用auto
+
+### 类型的跨平台性
+
+当使用 `std::vector<int> v` 的方法 `v.size()` 的时候，它的返回值是 `std::vector<int>::size_type`，这个类型在不同系统上的大小是不同的，如果我们一直用 size_t 来接受的话可能会造成移植问题，所以用auto来自动推导比较好
+
+### 避免因为类型写错而导致的无用的拷贝
+
+```c++
+int a = 10;
+//float &b = a; // 编译器报错
+const float &b = a;
+```
+
+C++中有一个上面这种很怪异的现象，引用的时候一定要类型匹配，否则编译器会报错。但是如果是用const引用就可以了。Primer中给出的解释是创建了临时变量然后隐式转换了
+
+现在考虑下面这个场景，我们想要遍历 `std::unordered_map<std::string, int> m` 这个map，通过编译器我们发现auto的实际推导类型为 `std::pair<const std::string, int>`，这和我们显式给出的 `std::pair<const std::string, int>` 并不相符。根据上面的例子，我们可以认为中间必然是会有拷贝和隐式转换的消耗
+
+```c++
+std::unordered_map<std::string, int> m{{"hello", 10}，{"world"，5}, { "heihei", 20}};
+for (const std::pair<std::string, int> &p : m) { /*遍历*/ }
+for (const auto &p : m){ /*遍历*/ }
+```
+
+为了避免这种潜在的因为类型错误而导致的性能开销，应该优先使用auto
+
+
+
 ## *条款6：auto推导若非己愿，使用显示类型初始化惯用法*
+
+### CRTP
+
+[【编程技术】C++ CRTP & Expression Templates_crtp与expression templates-CSDN博客](https://blog.csdn.net/HaoBBNuanMM/article/details/109740504)
+
+奇异递归模板模式(Curiously Recurring Template Pattern) - 吉良吉影的文章 - 知乎 https://zhuanlan.zhihu.com/p/54945314
+
+奇异递归模板模式 Curiously Recurring Template Pattern CRTP 是C++模板编程时的一种惯用法 idiom，它把派生类作为基类的模板参数。更一般地被称作 F-bound polymorphism。1980年代作为F-bound polymorphism被提出。Jim Coplien于1995年称之为CRTP
+
+编译期多态
+
+```c++
+template <typename Derived>
+struct Base {
+	void name() { (static_cast<Derived *>(this)) ->impl(); };
+};
+struct D1 : public Base<D1> {
+	void impl() { std::cout << "D1: :impl" << std::endl; }
+};
+struct D2 : public Base<D2> {
+	void impl() { std::cout << "D2: :impl" << std::endl; }
+};
+template <typename Derived>
+void func(Base<Derived> derived) {
+    derived.name();
+}
+```
+
+### 表达式模板
+
+表达式模板是CRTP的一种应用
+
+延迟计算表达式，从而可以将表达式传递给函数参数，而不是只能传计算结果
+
+节省表达式中间结果的临时存储空间，减少计算的循环次数
+
+### 代理类
+
+代理类 proxy class 是指以模仿和增强一些类型的行为为目的而存在的类
+
+```c++
+class MyArray {
+public:
+    class MyArraySize {
+    public:
+        MyArraySize(int size) : theSize(size) {}
+        int size() const { return theSize; }
+        operator int() const { return theSize; }
+    private:
+        int theSize;
+    };
+
+    MyArray(MyArraySize size) : size_(size), data_(new int[size.size()]) {}
+    int operator[](int index) {
+        return data_[index];
+    }
+    ~MyArray { delete int[size.size()]; }
+    bool operator==(const MyArray &temp) {
+        return data_ == temp.data_;
+    }
+    MyArraySize size() { return size_; }
+private:
+    int *data_;
+    MyArraySize size_;
+};
+```
+
+上面的内部类MyArraySize就是一个代理类，它是在模仿int
+
+```c++
+class MyArray_ {
+public:
+    MyArray_(int size) : size_(size), data_(new int[size]) {}
+    ~MyArray_() { delete int[size_]; }
+private:
+    int *data_;
+    int size_;
+};
+
+void func1(MyArray_ arr) {/**/}
+```
+
+如果直接用int会怎么样？上面的MyArray_就是直接用了int。一个很明显的问题就是因为它只吃了一个单参数构造，所以当调用 `func1(10)` 的时候发生参数的隐式转换了
+
+为了禁止隐式转换，这时候要把 `MyArray_` 设置为 explicit 来禁止隐式转换，调用的时候 `func1(MyArray_(10))` 这样就可以le
 
 
 
