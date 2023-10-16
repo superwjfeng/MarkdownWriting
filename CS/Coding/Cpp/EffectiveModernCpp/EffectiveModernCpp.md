@@ -14,7 +14,7 @@ f(expr); // 函数调用
 此时就是按值传递，也就是说无论传入的是什么，param都会是它的一个副本。所以下面的性质是很好理解的，反正函数模板内部得到的都是一个实参拷贝，是不会拷贝它的性质的（原理就是所处区域不一样，一个栈区的拷贝常量区里的内存，不会拷贝它常量区的性质），所以对它做什么都不会影响原来的值
 
 1. **忽略expr的引用性 reference-ness、顶层常量性 top-level constness、volatile性**。注意一个点：右值引用得到的仍然是一个左值引用，所以当expr是一个右值引用时候的，它等同于一个左值引用，所以引用性同样会被忽略
-2. 将expr剩余的类别与ParamType的类别再进行匹配
+2. 将expr剩余的类别与ParamType的类别再进行匹配，缺啥补啥
 
 ```c++
 void f(T param) { std::cout << param << std::endl; }
@@ -35,7 +35,7 @@ void f(const T param) { std::cout << param << std::endl; }
 
 ### 数组和函数指针实参的退化问题
 
-在上面三种情况中，当传入的模板参数T是数组和函数的时候，要考虑其退化情况
+在上面三种情况中，当传入的模板参数T是数组和函数的时候，要考虑其退化情况。注意：如果用了调用符 `()` 就是调用了，此时返回类型适用上面的规则
 
 退化其实在C语言的函数及传参部分就早已经有过了，其实就是数组/函数名等价于首元素指针。它仍然对模板的类型推导有着重要作用，因此这里再提一下
 
@@ -45,9 +45,9 @@ void f(const T param) { std::cout << param << std::endl; }
 
   ```c++
   int array[5] = { 0, 1, 2, 3, 4 }; // array的数据类型是int[5]
-  int *ptr = &array; // 数组名退化为指向其首元素的指针
-  int (*ptr2)[5] = &array; // 数组名取地址的类型为int数值指针，不等于数组名的类型，即int指针
-  int (&ptr)[5] = array; // 数组引用
+  int *ptr = &array;                // 数组名退化为指向其首元素的指针
+  int (*ptr2)[5] = &array;          // 数组名取地址的类型为int数值指针，不等于数组名的类型，即int指针
+  int (&ptr)[5] = array;            // 数组引用
   ```
 
 * 数组名作为参数传递时会发生退化，下面三种传递方法是完全等价的
@@ -78,18 +78,24 @@ void f(const T param) { std::cout << param << std::endl; }
 
 ## *条款2：理解auto类型推导*
 
+### auto类型推导 = 模板类型推导
+
 auto类型推导和模板类型推导的规则基本上完全一致，它们之间可以建立起一一映射的关系，它们之间也确实存在双向的算法变换
 
-采用auto进行变量声明是哦，类别饰词取代了ParamType，所以同样也是分成三种类型来讨论。并且同样的，数组和函数的退化情况也同样适用于auto
+<img src="auto推导与模板推导的关系.drawio.png">
+
+采用auto进行变量声明时，变量名取代了ParamType，auto是要推导的T，所以同样也是分成三种类型来讨论。并且同样的，数组和函数的退化情况也同样适用于auto
 
 ```c++
-auto x = 28; // x既非指针也非引用
-const auto cx = x; // x既非指针也非引用
-const auto &rx = x; // rx是个引用，但不是万能引用
-auto &&uref1 = x; // 万能引用，左值，绑定的类型为 int&
-auto &&uref2 = cx; // 万能引用，左值，绑定的类型为 const int&
-auto &&uref3 = rx; // 引用折叠，右值，绑定的类型为 int&&
+auto x = 28;           // x既非指针也非引用
+const auto cx = x;     // x既非指针也非引用
+const auto &rx = x;    // rx是个引用，但不是万能引用
+auto &&uref1 = x;      // 万能引用，左值，绑定的类型为 int&
+auto &&uref2 = cx;     // 万能引用，左值，绑定的类型为 const int&
+auto &&uref3 = rx;     // 引用折叠，右值，绑定的类型为 int&&
 ```
+
+### auto推导初始化列表
 
 auto类型推导和模板类型推导的唯一区别在于，当用于auto声明变量的初始化表达式是使用大括号括起时，推导所得的型别就属于 `std::initializer_list`，而模板类型推导则不支持
 
@@ -103,6 +109,42 @@ auto x4 = {27}; // initializer_list
 ```
 
 此外，C++14中又引入了一种auto可以用作模板类型推导的方式，需要配合decltype一块使用，具体见下一条条款
+
+### 使用auto的注意事项
+
+* 当用一个auto关键字声明多个变量的时候，编译器遵从由左往右的推导规则，以最左边的表达式推断auto的具体类型
+
+  ```c++
+  int n = 1;
+  auto *pn = &n, m = 10;
+  auto *pn = &n, m = 10.0; // 编译失败，声明类型不统一
+  ```
+
+  因为 &n 的类型是 `int *`，所以pn类型被推导为 `int *`，auto被推为int
+
+* 当使用条件表达式初始化auto声明的变量时，编译器总是使用表达能力更强的类型
+
+  ```c++
+  auto i = true ? 5 : 8.0; // i 的数据类型为 double
+  ```
+
+* 虽然C++11标准支持在声明时初始化（当然本质上是给初始化列表用的），但是auto依旧无法在这种情况下声明非静态成员变量。静态成员可以在声明处给值，但是必须是const staic
+
+  ```c++
+  class MyClass {
+  private:
+      auto x_ = 1; // 错误，无法通过编译
+      static const auto y_ = 2; // 允许
+  }
+  ```
+
+* C++20之前无法在函数形参中使用auto声明形参
+
+  ```c++
+  void foo(auto param) {} // C++20
+  ```
+
+* 从C++14开始，auto可以为lambda表达式声明形参
 
 ## *条款3：理解decltype*
 
@@ -141,7 +183,11 @@ decltype(foo_func(param)) my_var; // foo_func 并没有被执行
 
 ### 使用场景
 
-* C++11的写法：位置返回，此时auto是一个返回值的置位符
+C++11中decltype的主要用途大概就是用来声明那些返回值型别依赖于形参类型的函数模板
+
+考虑写一个返回容器 `[]` 调用的函数模板，虽然大部分容易都会返回 `T&`，但是若保存的数据类型是bool就不行了，比如 `std::vector<bool>` 返回的是`std::vector<bool>::reference` 类型。因此我们要对其进行delctype推导
+
+* C++11的写法：尾置返回，此时auto是一个返回值的置位符
 
   ```c++
   template <typename Container, typename Index> 
@@ -151,53 +197,64 @@ decltype(foo_func(param)) my_var; // foo_func 并没有被执行
   }
   ```
 
-* C++14的写法：可以直接写auto，但是此时要注意auto走的是模板推导，当接受的ParamType是引用的时候，输入的引用性会被忽略，所以auto得到的不是一个引用
+* C++14的写法
 
-  ```c++
-  template <typename Container, typename Index> 
-  auto testFun_error(Container &c, Index i) {
-      // ... do something
-      return c[i]
-  }
+  * 错误的写法：可以直接写auto，但是此时要注意auto走的是模板推导，当接受的ParamType是引用的时候，输入的引用性会被忽略，所以auto得到的不是一个引用，而是一个值拷贝
   
-  template <typename Container, typename Index> 
-  delctype(auto) testFun_right(Container &c, Index i) {
-      // ... do something
-      return c[i]
-  }
-  ```
-
-
-
-
-
-```c++
-template <typename Container, typename Index> 
-delctype(auto) testFun_right(Container &&c, Index i) {
-    // ... do something
-    return std::forward<Container>(c)[i];
-}
-```
-
-
-
-
-
-
-
-`std::vector<bool>::reference`
-
-
+    ```c++
+    // 返回的是T，而不是T&
+    template <typename Container, typename Index> 
+    auto testFun_error(Container &c, Index i) {
+        // ... do something
+        return c[i]
+    }
+    ```
+  
+  * 正确的写法：使用 `decltype(auto)`，它的作用简单来说就是告诉编译器用 decltype 的推导表达式规则来推导 auto。此时等价于C++11的auto占位符写法，意思是保存引用性质，否则引用性会被模板脱掉
+  
+    ```c++
+    template <typename Container, typename Index> 
+    delctype(auto) testFun_right(Container &c, Index i) {
+        // ... do something
+        return c[i]
+    }
+    ```
+  
+  * 也可以采用转发的方式来保留引用性质
+  
+    ```c++
+    template <typename Container, typename Index> 
+    delctype(auto) testFun_right(Container &&c, Index i) {
+        // ... do something
+        return std::forward<Container>(c)[i];
+    }
+    ```
+  
 
 ### `decltype(auto)`
 
+注意：在使用 `decltype(auto)` 的时候，它必须单独声明，不能结合指针、引用以及cv饰词
 
+```C++
+int 讠；
+int&& f();                         // 函数声明
+auto xla = i;                      // xla 推导类型为 int
+decltype (auto) x1d = i;           // xld 推导类型为 int
+auto x2a = (i);                    // x2a 推导类型为 int
+decltype (auto) x2d = ();          // x2d 推导类型为 int&
+auto x3a = f();                    // x3a 推导类型为 int，函数调用，PramType是值拷贝，所以忽略其引用性
+decltype (auto) x3d = f();         // x3d 推导类型为 int&&，decltype完整返回返回数据类型
+auto x4a = { 1, 2 };               // x4a 推导类型为 std::initializer_list<int>
+decltype (auto) x4d = { 1, 2 };    // 编译失败，{1，2}不是表达式
+auto *x5a = &i;                    // x5a推导类型为 int*
+decitype (auto) *x5d = &1;         // 编泽失败，decltype(auto)必须单独声明
+```
 
-等价于C++11的auto占位符写法，意思是保存引用性质，否则引用性会被模板脱掉
+C ++17中和auto一样，`decltype(auto)` 也能作为非类型模板形参的占位符，其推导规则和上面介绍的保持一致
 
-
-
-C++11中，decltype 的主要用途就在于声明那些返回值型别依赖于形参型别的函数模板
+```c++
+template<decltype(auto) N> void f() { std::cout << N << std::endl; }
+```
 
 ## *条款4：掌握查看类型推导结果的方法*
 
@@ -642,13 +699,15 @@ template<typename T> void f(T&& param); // T是个万能引用
 auto&& var2 = var; // var2是个万能引用
 ```
 
-## *条款25：针对右值引用使用 `std::move`，针对万能引用使用 `std::forward`*
+## *条款25：对右值引用用 `std::move`，对万能引用用 `std::forward`*
 
 由于万能引用几乎总是要用到转发，因此万能引用也被称为转发引用 forwarding references
 
 ## *条款26：*
 
 ## *条款27：*
+
+### 权衡
 
 ## *条款28：理解引用折叠*
 
@@ -662,7 +721,7 @@ auto&& var2 = var; // var2是个万能引用
 
 ## *条款32：使用初始化捕获将对象移入闭包*
 
-## *条款33*
+## *条款33：对auto&&类型的参数使用delctype并将其转发*
 
 ## *条款34：优先使用lambda，而非 `std::bind`*
 

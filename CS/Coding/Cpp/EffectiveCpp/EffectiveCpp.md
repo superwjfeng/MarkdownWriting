@@ -105,7 +105,28 @@ const string author_name2 = "Scott Meyers"; // better
 
 C++11为了适应C99，也引入至少64位的long long，它的后缀是LL和ULL。为此C++标准也必须为它配套加入整形大小的限制
 
-在C++中应该尽可能减少宏的使用，用模板取而代之是更明智的选择。因此C++标准对标准库文件做了扩展，特化了 long long
+在C++中应该尽可能减少宏的使用，用模板取而代之是更明智的选择。因此C++标准对标准库文件做了扩展，特化了 long long 和 unsgined long long版本的 numeric_limits 类模板
+
+```c++
+#include <limits>
+int main(int argc, char *argv[]) {
+    // 使用宏方法       
+    std::cout << "LLONG_MAX = " << LLONG_MAX << std::endl;
+    std::cout << "LLONG_MIN = " << LLONG_MIN << std::endl;
+    std::cout << "ULLONG_MAX = " << ULLONG_MAX << std::endl;
+    // 使用类模板方法
+    std::cout << "std::numeric_limits<long long>::max() = " 
+        << std::numeric_limits<long long>::max() << std::endl;
+    std::cout << "std::numeric_limits<long long>::min() = "
+        << std::numeric_limits<long long>::min() << std::endl;
+    std::cout << "std::numeric_limits<unsigned long long>::max() = "
+        << std::numeric_limits<unsigned long long>::max() << std::endl;
+    // 使用 printf 打印输出       
+    std::printf("LLONG_MAX = %lld\n", LLONG_MAX);
+    std::printf("LLONG_MIN = %lld\n", LLONG_MIN);
+    std::printf("ULLONG_MAX = %llu\n", ULLONG_MAX);
+}
+```
 
 ### 总结
 
