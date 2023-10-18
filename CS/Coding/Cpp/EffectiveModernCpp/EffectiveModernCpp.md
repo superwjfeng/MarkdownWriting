@@ -526,8 +526,6 @@ auto lockAndCall (FuncType func,
 }
 ```
 
-
-
 ## *条款9：优先考虑别名声明而非typedef*
 
 C语言和C++98都提供了用typedef给类型起别名，从而简化一些特别长的自定义类型
@@ -571,9 +569,124 @@ template<template T> Widge {
 }
 ```
 
+## *条款11：优先使用delete，而非private*
+
 ## *条款15：情况允许的话尽量使用constexpr*
 
-## *理解特殊成员函数的生成*
+
+
+### 运行期确定：变量
+
+```c++
+int a = 10; // 运行时变量
+const int b = 2; // 编译期常量
+```
+
+非常让人迷惑，为什么a是一个运行时变量，而b是编译期常量？
+
+实际上，`int a = 10;` 中的 `a` 变量在编译时分配了存储空间，但这并不是它是一个运行时值的原因。它是一个运行时值的原因在于变量 `a` 的值是在程序运行时确定的，而不是在编译时就已知的。
+
+当程序运行时，`int a = 10;` 中的 `10` 被分配给变量 `a`。如果您改变代码中的值，例如 `int a = 20;`，那么 `a` 的值会在运行时改变。这种在程序执行过程中动态确定变量值的性质使 `a` 成为一个运行时值。
+
+在编译时，编译器分配了存储空间来容纳变量 `a`，但它并不知道变量的具体值，直到程序运行时才会确定。编译器只负责生成程序代码以便在运行时分配存储空间和设置初始值。因此，`a` 是一个在运行时确定其值的变量
+
+
+
+具体来说变量是在栈区中的一个动态值，它随时可以被修改，汇编中给它的是一个内存单元的地址；而常量则会被置入常量区不被修改，所以编译器能确定它的值
+
+### 运行时多态
+
+
+
+函数调用在大部分情况下都是运行期的
+
+我理解的编译期就是说不经过符号表，直接就能用
+
+而运行时就是不知道具体的值，只知道是有一个符号的，要通过符号表来找
+
+
+
+为什么说多态是运行期的？因为要查虚表！在编译的时候只是知道虚函数在虚表中的偏移量，只有运行起来了，通过偏移量找到了虚表的对应项，然后再得到了虚函数的确切地址才行。而虚函数中可能还有其他的调用，或者动态资源的申请释放等等，这些全部都只能在运行时边走边看了
+
+### 编译期确定的场景
+
+
+
+### C++11的限制
+
+C++11对constexpr的使用给出了6个限制，导致它的使用非常不灵活
+
+对于普通变量而言，constexpr只是一个加强版的const，但constexpr修饰函数时，情况则会变得极为复杂
+
+* 修饰普通函数
+
+  * 规则a：函数的返回值类型不能是void
+
+    ```c++
+    // C++11
+    constexpr void Foo() {/**/} // 返回值为void报错
+    ```
+
+  * 规则b：函数体只能是一条 `return expr`，expr还必须是一个常量表达式（若函数有形参，则将形参替换到expr中后，expr必须仍然是一个常量表达式）
+
+    ```c++
+    // C++11
+    constexpr int abs_(int x) { // 多条语句报错
+        if (x > 0) return x;
+        else return -x; 
+    }
+    ```
+
+  * 规则c：若传给constexpr函数运行时的值，那么cocnstptr函数会退化为普通函数
+
+    ```c++
+    // C++11
+    int a = 1;
+    const int b = 2;
+    constexpr int res_error = abs_(a); // 编译器报错，传入运行时变量，constexpr函数要退化为普通函数
+    int res_correct = abs_(a);
+    int res = abs_(b); // 这样也会退化！
+    ```
+
+    如果没有退化极值的话就应该需要通过重载函数来适应，即下面这么写。当然函数列表出现constexpr肯定是错的，因为没有常量是一定要赋初值的
+
+    ```c++
+    constexpr int abs_(constexpr int x) { return x > 0 ? x : -x; }
+    int abs_(int x) { return x > 0 ? x : -x; }
+    ```
+
+* 修饰构造函数
+
+  * 规则d：构造函数初始化列表中必须是常量表达式
+  * 规则e：构造函数的函数体必须为空
+  * 规则f：所有和这个类相关的成员，析构函数都必须是默认的
+
+* 规则g：修饰类成员函数：constexpr声明的成员函数具有const属性，所以此时参数列表后的const饰词就不需要了
+
+### C++14
+
+C++14改善了constexpr函数的用法，打破了规则a、b、e、g，并且添加了一条规则：constexpr函数可以修改生命周期和常量表达式相同（即局部变量）的对象
+
+```c++
+// C++14
+constexpr void Foo() {
+    int a = 10;
+    a = 20;
+}
+```
+
+### C++17
+
+C++17引入了 `if constexpr` 的用法，此时可以让分支判断发生在编译期
+
+```c++
+void check () {
+    if constexpr(sizeof(int) > sizeof(double)) { /**/ }
+    else { /**/ } // 若上面的条件错误，else这部分甚至都不会被编译
+}
+```
+
+## *条款17：理解特殊成员函数的生成*
 
 # 智能指针
 
@@ -726,3 +839,29 @@ auto&& var2 = var; // var2是个万能引用
 ## *条款34：优先使用lambda，而非 `std::bind`*
 
 # 并发API
+
+
+
+
+
+
+
+
+
+[C++干货系列——从编译期常量谈到constexpr（一） - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/250238866)
+
+
+
+
+
+[C++的杂七杂八：constexpr与编译期计算-CSDN博客](https://blog.csdn.net/tangxiaoyin/article/details/80123024)
+
+
+
+[奇异递归模板模式(Curiously Recurring Template Pattern) - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/54945314)
+
+[【编程技术】C++ CRTP & Expression Templates_crtp与expression templates-CSDN博客](https://blog.csdn.net/HaoBBNuanMM/article/details/109740504)
+
+
+
+[C++：友元（看这一篇就够了）_c++友元_孙 悟 空的博客-CSDN博客](https://blog.csdn.net/weixin_46098577/article/details/116596183)
