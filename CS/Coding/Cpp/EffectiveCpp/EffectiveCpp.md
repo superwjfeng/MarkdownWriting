@@ -1066,11 +1066,149 @@ TMP能够得到更小的可执行文件，更短的运行时间和更少的内�
 
 # 定制new和delete
 
+许多开发人员在高要求的系统应用程序中选择C++，因为它让他们可以手动管理内存。开发者需要理解C++的内存管理行为
+
 ## *条款49：设置new-handler*
 
-## *条款50：自定义new和delete的时机*
+### `std::set_new_handler`
+
+一种最典型的情况是当new了之后无法提供需要的内存时候，new会抛出异常来响应，它会调用客户指定的错误处理函数new-handler
+
+```c++
+//若new运算符不能分配足够的内存，要调用的函数
+void outOfMem() {
+	std::cerr << "Unable to satisfy request for memory\n";
+    std::abort(); //如果不abort，程序会一直尝试调用这个处理函数
+}
+
+int main() {
+	std::set_new_handler(outOfMem);
+    for(int i=o; i<100000; i++) {
+        int* pBigDataArray = new int[100000000L];
+    }
+}
+```
+
+### new-handler的任务
+
+设计良好的new-handler函数必须完成下列任务之一
+
+* 让更多内存可被使用。例如：程序一开始就分配一大块内存，而后当new-handler第一次被调用，将它们释还给程序使用
+* 安装另一个new-handler。若当前new-handler无法取得更多可用内存，或许它知道另外哪个new-handler有此能力。通过调用 `std::set_new_handler`，或通过改变全局数据改变自己的行为
+* 卸除new-handler，也就是将nullptr传给 `std::set_new_handler`。这样operator new会在内存分配失败时抛出异常
+* 抛出bad_alloc或其派生的异常。这样的异常不会被operator new捕捉，而会被传播到内存索求处
+* 不返回，通常调用abort或exit
+
+## *条款50：了解new和delete的合理替换时机*
+
+需要替换operator new或 operator delete有三大理由
+
+### 用来检测运用上的错误
+
+若令operator new持有一串动态分配所得地址，而operator delete将地址从中移除，就很容易检测内存泄露或重复delete的错误用法。比如说没人在用了里面的资源还没有人释放那就是内存泄漏了
+
+此外以额外空间放置特定的签名 signature，可以解决 overruns（写入点在分配区块尾端之后）和 underruns（写入点在分配区块起点之前）
+
+```c++
+static const int signature = OXDEADBEEF; // 签名
+typedef unsigned char Byte;
+// 这段代码有一些缺陷，例如不能保证内存对齐
+void* operator new(std::size_t size) {
+	using namespace std;
+	size_t realSize = size + 2 * sizeof(int); // 增加请求的大小，所以2个签名也将适合里面
+    void* pMem = malloc(realSize); // 调用malloc来获取实际的内存
+	if (!pMem) throw bad_alloc();
+	*(static_cast<int*>(pMem)) =signature; // 把签名写进内存的头和尾
+	*(reinterpret_cast<int*>(static_cast<Byte*>(pMem)+ realSize - sizeof(int)))=signature;
+	return static_cast<Byte*>(pMem) + sizeof(int); // 返回一个指向第一个签名后面的内存的指针
+}
+```
+
+### 提高效率
+
+默认的new和delete设计成对任何情况的处理效果都是不错的，但对任何专用情况都不够有效
+
+* 提高分配和释放的速度
+
+  例如：编译器的内存管理器是线程安全的，如果程序是单线程的，替换为一个不是线程安全的分配器可能会提高速度
+
+* 降低缺省内存管理器带来的空间额外开销
+
+  例如：为小对象调优的分配器基本上可以消除而外的开销
+
+* 弥补缺省分配器种的非最佳齐位
+
+  例如：将默认new运算符替换为能够确保8字节对齐的版本，可以大幅提高程序性能（如果编译器本身不是这样做的话）
+
+* 把相关的物体聚集在一起
+
+  例如：如果知道一些特定的数据结构通常一起使用，那么为这些数据结构创建一个单独的堆是有意义的。这样可以降低“内存页错误（page faults）”的频率。比如STL的 `std::allocator`
+
+* 获得非传统的行为
+
+  例如：可以编写一个自定义delete运算符，用0重写已释放的内存，以提高应用程序数据的安全性
+
+
+### 统计信息收集
+
+为了收集分配区块的大小分布；寿命分布；它们是倾向于按照FIFO、LIFO的顺序分配和释放，还是更接近随机的顺序？在执行的不同阶段是否有不同的分配/释放模式等这些使用信息
 
 ## *条款51：遵守new和delete的约定*
+
+adhere to convention when writing new and delete
+
+### new
+
+* C++要求new运算符即使在请求o字节时也返回一个合法的指针
+
+* 成员函数的operator new是会会被派生类继承。但派生类和基类的大小可能不同，处理这种情况的最佳方法是将请求“错误”内存大小的调用丢给标准new运算符
+
+  ```c++
+  class Base {
+  public:
+  	static void* operator new(std::size_t size);
+      // ...
+  };
+  class Derived : public Base { /**/ }; // 派生类没有声明new运算符
+  Derived* p = new Derived; // 调用 Base::operator new!
+  
+  void* Base::operator new(std: :size_t size) {
+  	if (size != sizeof(Base)) // 如果大小是“错误的”，
+  		return ::operator new(size); // 采用标准operator new处理请求
+  	// 否则在这里处理请求
+  }
+  ```
+
+### delete
+
+* C++保证delete空指针总是安全的，所以要遵守这个约定
+
+  ```C++
+  void operator delete(void* rawMemoriy) throw() {
+  	if (rawMemory == 0) return; // 如果空指针正在被删除，什么都不做
+      // 释放rawMemory指向的内存;
+  }
+  ```
+
+* 成员函数版本也很简单，只需要将大小“错误”的delete行为转交给标准的operator delete
+
+  ```C++
+  class Base { // 和之前一样，但现在声明了delete运算符
+  public:
+  	static void* operator new(std::size_t size) throw(std::bad_alloc);
+      static void operator delete(void* rawMemory, std::size_t size)
+  throw();
+  };
+  void Base::operator delete(void* rawMemory, std::size_t size) throw() {
+  	if(rawMemory == 0) return; // 检查空指针
+      if(size != sizeof(Base)) {
+          ::operator delete(rawMemory);
+          return;
+      }
+      // 释放rawMemory指向的内容;
+      return;
+  }
+  ```
 
 ## *条款52：定位new*
 

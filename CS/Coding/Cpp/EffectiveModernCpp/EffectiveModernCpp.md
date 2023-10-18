@@ -801,17 +801,177 @@ C++11之后默认成员函数变成了8个，增加了移动构造和移动赋�
 
 所有五个拷贝控制成员应该看作一个整体。一般来说，若一个类定义了任何一个拷贝操作，它就应该定义所有五个操作
 
+
+
+
+
 # 智能指针
 
 ## *条款18：使用 `std::unique_ptr` 管理具备专属所有权的资源*
 
+可以认为在默认情况下 `std::unique_ptr` 和裸指针有着有着相同的尺寸。`std::unique_ptr` 独享一份资源，不允许拷贝，只允许移动
+
+### 理解工厂函数
+
+<img src="工厂函数.drawio.png" width="60%">
+
+工厂函数内部要把开辟的资源返回出来，所以要用智能指针
+
+### 自定义删除器
+
+具有很多状态的自定义删除器会产生大size的 `std::unique_ptr` 对象
+
+用lambda作自定义删除器比较好。lambda是一个匿名对象，因为匿名对象没有数据对象（若没有捕捉）
+
 ## *条款19：使用 `std::shared_ptr` 管理具备共享所有权的资源*
 
-## *条款20：*
+### `std::shared_ptr` 对象模型
+
+<img src="shared_ptr对象模型.drawio.png" width="60%">
+
+`std::shared_ptr` 比正常指针大一倍，因为里面有两个指针，一个是指向管理的堆上的T类型的对象的指针，另一个指针是指向堆上的控制块的指针
+
+从上面的结构图也可以看出自定义删除器是不会增加 `std::shared_ptr` 的大小的，删除器的size只会影响在堆上的控制块的大小。这点与 `std::unique_ptr` 不同，自定义删除器是 unique_ptr 的一部分
+
+### 引用计数机制的性能影响
+
+* 如上面的对象模型所示，引用计数需要的控制块会让`std::shared_ptr` 比正常指针大一倍
+* 引用计数的内存必须动态分配
+* 引用计数的递增和递减必须是原子操作
+
+### 控制块的生成时机
+
+* 使用 `std::make_shared`
+* 通过 unique_ptr 构造 shared_ptr
+* 向 shared_ptr 的构造函数中传入一个裸指针
+
+### `std::shared_ptr` 可能存在的问题
+
+从上面的结构图可以看出，堆上的T类型对象和控制块是一一对应的关系（并没有说他们的存放地址是相连的）。但如果2个控制块与同一个T类型对象关联到一块，那么大概率会有多次释放的风险
+
+结论是无论一个T类型对象有多少个shared_ptr指向它，都应该只有一个控制块
+
+```c++
+class A { /**/ };
+{
+    auto pa = new A();
+    std::shared_ptr<A> sp1(pa);
+    std::shared_ptr<A> sp2(pa);
+}
+// ... 程序崩溃
+```
+
+因为控制块会在向 shared_ptr 的构造函数中传入一个裸指针创建，上面的控制块创建了两回，指向同一个A对象，所以出了作用域后两次析构程序崩溃了
+
+修改的方法就是用 shared_ptr 的拷贝构造
+
+```c++
+class A { /**/ };
+{
+    std::shared_ptr<A> sp1(new A());
+    std::shared_ptr<A> sp2(sp1); // 拷贝
+}
+// OK
+```
+
+### 使用this指针作为 `std::shared_ptr` 的构造函数实参
+
+这个在看了 emplace_back 之后再回顾一下
+
+## *条款20：当 `std::shared_ptr` 可能悬空时使用 `std:weak_ptr`*
+
+waek_ptr 不能单独使用，它必须要通过传入一个共享指针来创建。weak_ptr不会增加引用计数
+
+shared_ptr对管理的资源有完全的管理权限、使用权和所有权；而weak_ptr只能使用它，不能管理它
+
+### 查看资源是否释放
+
+虽然weak_ptr不能掌握资源是否释放，但有3种方式可以通过查看资源是否已经释放了
+
+```c++
+auto spw = std::make_shared<Widget>(); // spw 引用计数为1
+std::waek_ptr<Widget> wpw(spw);        // wpw 指向与spw所持有相同的Widget，RC仍然为1
+spw = nullptr;                         // RCb变为0，Widget 被销毁，wpw悬空
+```
+
+* `wpw.expired() == true` 来看资源是否已经被释放了
+
+* 若wpw过期了，spw1为空
+
+  ```c++
+  std::shared_ptr<Widget> spw1 = wpw.lock(); // 若wpw过期，则spw1为nullptr
+  ```
+
+* 若wpw过期了，则抛异常
+
+  ```c++
+  std::shared_ptr<Widget> spw2(wpw); // 抛异常
+  ```
 
 ## *条款21：使用 `std::make_unique` & `std::make_shared`，而不是直接new*
 
+### make_xxx 的优势
+
+* 减少代码重复
+
+  ```c++
+  auto wpw1(std::make_unique<Widget>()); // 写一次类型
+  std::unique_ptr<Widget> wpw2(new Widget); // 写两次类型
+  ```
+
+* 使用make_xxx更安全
+
+  ```c++
+  void processWidget(std::shared_ptr<Widget> spw, int priority); // 声明
+  processWidget(std::shared_ptr<Widget>(new Widget), computePriority()); // 调用
+  ```
+
+  如果Widget先被new出来，但是computePriority抛异常导致processWidget无法执行，那么此时就没有人释放new出来的Widget了
+
+  下面的可以解决问题
+
+  ```c++
+  processWidget(std::make_shared<Widget>(), computePrioriy());
+  ```
+
+* 使用 `std::make_shared` 比直接 new shared_ptr 要高效
+
+  用new的时候实际上malloc了两次，一次malloc管理对象，一次malloc申请控制块。而 make_shared 就直接把管理对象和管理块一块申请了出来。当然这条规则不适用于 unique_ptr，它没有管理快
+
+  ```c++
+  std::shared_ptr<Widget> spw(new Widget);
+  auto spw = std::make_shared<Widget>();
+  ```
+
+### make_xxx的局限性
+
+* make_shared和make_unique的通病
+
+  * 使用自定义删除器时只能使用new，没法给make_xxx传自定义删除器
+
+  * 无法通过 `{}` 来初始化指向的对象，原因是 `{}` 无法完美转发
+
+    ```c++
+    auto spv = std::make_shared<std::vector<int>>(10, 20); // OK！ 
+    auto spv = std::make_shared<std::vector<int>>({10, 20}); // 错误！
+    ```
+
+* make_shared独有的问题
+
+  * 若类中重载了 operator new/delete，使用make_shared不会执行重载函数。此时只能使用shared_ptr或使用 `std::allocated_shared`
+
+  * 使用make_shared，管理对象和控制块会一块申请，同样也会一块释放。所以当weak_ptr存在时，对象的销毁与内存释放之间的间隔时间可能很长
+
+    ```c++
+    auto sptr = std::make_shared<Widget>();
+    std::weak_ptr<Widget> wptr(sptr);
+    sptr = nullptr; // 执行到这里的时候sptr指向的Widget已经马上调用析构把Widget销毁了
+    // 但只有当wptr被销毁时OS才会释放内存
+    ```
+
 ## *条款22：使用Pimpl习惯法时，将特殊成员函数的定义放到实现文件中*
+
+### Pimpl
 
 Pimpl, Pointer to implementation
 
