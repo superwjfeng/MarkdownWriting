@@ -1562,8 +1562,6 @@ enum Color // 颜色
 * 在预编译之后 `#define` 已经被常量替换掉了，但枚举不替换，便于调试
 * 使用方便，一次可以定义多个常量
 
-### 枚举的使用
-
 ## *联合 union*
 
 ### 联合类型的定义
@@ -1613,15 +1611,13 @@ void free (void* ptr);
      ```c
      int* ptr = (int*) malloc(40); //开辟40个字节的int型空间
      int* p = ptr; //free()要从开辟空间的起始地址开始，所以不能直接用ptr
-     if (p == NULL) //检查动态内存空间开辟是否成功
-     {
+     if (p == NULL) { //检查动态内存空间开辟是否成功
           perror("malloc");
           return 1;
      }
         
      int i = 0;
-     for(i=0; i<10; i++)
-     {
+     for(i=0; i<10; i++) {
           *p = i;
           p++;
      }
@@ -1629,8 +1625,8 @@ void free (void* ptr);
      free(ptr); //释放空间
      ptr = NULL; //ptr释放后变成野指针，置空
      ```
-
-  * 若参数size未定，则 `malloc()` 的行为是标准未定义的，由编译器决定
+     
+     * 若参数size未定，则 `malloc()` 的行为是标准未定义的，由编译器决定
 * `free()` 用来释放回收动态开辟的内存
   
   * 若参数ptr指向的空间不是动态开辟的，则 `free()` 的行为未定义
@@ -1665,15 +1661,13 @@ void* realloc (void* ptr, size_t size);
 ```c
 int* p = (int*)malloc(40);
 
-if (p == NULL)
-{
+if (p == NULL) {
      perror("malloc");
      return 1;
 }
 
 int* ptr = (int*)realloc(p, 80); //将空间扩容为存储80字节的int数据的空间
-if (ptr != NULL)
-    p = ptr;
+if (ptr != NULL) p = ptr;
 
 free(p);
 p = NULL;
@@ -1766,7 +1760,7 @@ struct S {
 int main() {
     //柔性数组用malloc()初始化
     struct S* ps = (struct S*)malloc(sizeof(struct S) + 40);
-    if (ps == NULL) 
+    if (ps == NULL) {
         perror("malloc\n");
         return 1;
     }
