@@ -387,143 +387,11 @@ void func1(MyArray_ arr) {/**/}
 
 为了禁止隐式转换，这时候要把 `MyArray_` 设置为 explicit 来禁止隐式转换，调用的时候 `func1(MyArray_(10))` 这样就可以le
 
-
-
 # 转向现代C＋＋
 
 ## *条款7：区别使用 `()` & `[]` 创建对象*
 
-### 多样化的初始化方法
-
-可以用下面的程序在Linux上通过 `-fno-elide-constructors` 关闭编译器的所有优化后得到结果
-
-```c++
-class A {
-public:
-  A(int a) : a_(a) {
-    std::cout << "A(int a)" << std::endl;
-  }
-  A(const A &a) {
-    std::cout << "A(const A& a)" << std::endl;
-  }
-private:
-  int a_ = 0;
-};
-```
-
-1. `A a = 10;` 隐式转换：自动先调转换构造产生一个临时量，然后再掉拷贝构造把临时量拷贝给对象
-
-    ```c++
-    /* 打印结果
-    A(int a)
-    A(const A& a)
-    */
-    ```
-
-2. `A a(10);`：直接调用一次拷贝
-
-    ```c++
-    /* 打印结果
-    A(const A& a)
-    */
-    ```
-
-3. `A a = (10);` 和第一种初始化是一样的
-
-4. `A a{10};`：调一次构造
-
-    ```c++
-    /* 打印结果
-    A(int a)
-    */
-    ```
-
-5. `A a = {10}` ：调一次构造，C++11时和第四种构造是一样的，C++14开始不一样了
-
-### `{}` 列表初始化的优势
-
-* `{}` 列表初始化的优势：完美解决下面的问题，即 `{}` 可以一次性接收多个参数、`{}` 只需要一次构造
-
-  * `A a = 10;` 的问题
-    * `=` 初始化无论如何只能接受一个参数，若把拷贝构造改成需要两个参数，就不能用它了
-    * `=` 初始化需要额外进行一次拷贝
-
-  * `A a(10);` 的问题：被用做函数参数或返回值时还是会执行拷贝
-
-* `{}` 列表初始化有一项新的特性：它禁止内置类型之间进行隐式窄化类别转换 narrowing conversion。所谓的隐式窄化类别转换就是指可能导致数据的精度或范围减小，可能会导致数据丢失或截断的类型转换，比如下面这种
-
-  ```c++
-  double x = 5.7;
-  int y = x; // 隐式窄化类别转换，将5.7转换为5
-  ```
-
-* 列表初始化也大大简化了聚合类的初始化，一个拥有众多类成员的聚合类不需要定义复杂的构造函数就可以直接使用列表初始化进行初始化了。特别是C++17对聚合类做了大幅扩展之后，有继承关系聚合类也可以用 `{}` 来初始化了
-
-* 列表初始化免疫解析问题 most vexing parse
-
-  对于下面这个声明，C++有两种解释方式：对象参数的创建或者函数类型的声明。也就是说下面 `int (value)` 的括号是没有效果的。C++规定了，任何能够解析为声明的都要解析为声明，而这就会带来副作用
-
-  ```c++
-  int i(int (value)); // int i (int value)
-  TimerKeeper time_keeper(Timer()); // 本意是调用，传入了一个Timer() 匿名对象
-  // TimeKeeper time_keeper(Timer (*)()); 解析成了声明
-  ```
-
-  若我们时候 `{}` 列表初始化就不会出现这样的解析错误
-
-### 对 `{}` 的强烈偏好
-
-在构造函数被调用时，只要形参中没有任何一个具备 `std::initializer_list` 类型，那么 `()` 和 `{}` 的意义就没有区别
-
-```c++
-class Widget {
-public:
-    //构造函数的形参中没有任何一个具备std::initializer_list类别的形参
-    Widget(int i, bool b);
-	Widget(int i, double d);
-};
-Widget w1(10, true); // 调用的是第一个构造函数
-Widget w2{10, true}; // 调用的还是第一个构造函数
-Widget w3(10, 5.0);  // 调用的是第二个构造函数
-Widget w4{10, 5.0};  // 调用的还是第二个构造函数
-```
-
-但一旦有一个或多个构造函数声明了任何一个具备 `std::initializer_list` 类型的形参，那么采用了 `{}` 初始化的调用语句会强烈地优先选用带有 `std::initializer_list` 类型形参的重载版本。事实上，**编译器只要有任何可能把一个采用 `{}` 的调用语句解读为带有 `std::initializer_list` 类型形参的构造函数，则编译器就会选用这种解释**
-
-比如说若上述 Widget 类增加了一个带有 `std::initializer_list<long double>` 类型的形参
-
-```c++
-class Widget {
-public:
-    //构造函数的形参中没有任何一个具备std::initializer_list类别的形参
-    Widget(int i, bool b);
-	Widget(int i, double d);
-    Widget(std::initializer_list<long double> il);
-};
-```
-
-
-
-如果既支持默认构造，又支持带有 `std::initializer_list` 类别的形参的构造函数，此时若用一对空的 `{}` 来构造一个对象，语言规定此时应该执行默认构造，而非带有 `std::initializer_list` 类别的形参的构造函数
-
-可以通过把空大括号对作为构造函数实参的方式实现这个目的，即把一对空大括号放入一对小括号或大括号的方式来清楚地表明你传递的是什么
-
-```c++
-class Widget {
-public:
-    Widget();
-    Widget(std::initializer_list<int> il);
-};
-Widget w1; // 调用的是默认构造函数
-Widget w2{}; // 调用的仍是默认构造函数
-Widget w3(); // 解析语法错误，变成函数声明语句了
-widget w4({}); // 带有 std::initializer_list 型别形参的构造函数。传入一个空的std::initializer_list
-Widget w5 {()};
-```
-
-### array聚合类 & `{}` 的坑
-
-[大括号之谜：C++的列表初始化语法解析_too many initializers for-CSDN博客](https://blog.csdn.net/devcloud/article/details/114523118)
+这一条款的内容和补充内容很多，不方便写在这个条款里，可以直接看 *Cpp基础&1114.md* 的列表初始化部分
 
 ## *条款8：优先考虑使用nullptr而非0和NULL*
 
@@ -1086,7 +954,7 @@ int &&nnn2 = mymove(mm); // 编译报错
 template<typename T>
 typename remove_reference<T>::type&& move(T &&param) {
     using ReturnType = typename std::remove_reference<T>::type &&; // 类型萃取
-    return static_cast<T &&>(param);
+    return static_cast<ReturnType>(param);
 }
 // C++14
 template<typename T>
@@ -1136,6 +1004,22 @@ template<typename T> void logAndProcess(T &&param) {
 ```
 
 **`std::forward<T>` 的本质是有条件的move，只有当模板参数T用右值初始化时才转换为右值**，而 `std::move` 的本质就是无论左值还是右值统统转为右值
+
+它的参考实现如下
+
+[c++ - std::forward() 源码分析 - chenBright - SegmentFault 思否](https://segmentfault.com/a/1190000021259721)
+
+```c++
+template <class T>
+T&& forward(typename tinySTL::remove_reference<T>::type& t) noexcept {
+    return static_cast<T&&>(t);
+}
+
+template <class T>
+T&& forward(typename tinySTL::remove_reference<T>::type&& t) noexcept {
+    return static_cast<T&&>(t);
+}
+```
 
 ## *条款24：区分万能引用和右值引用*
 
@@ -1210,15 +1094,40 @@ auto timeFuncInvocation = [](auto &&func, auto&&... params) {
 }
 ```
 
-
-
 ## *条款25：对右值引用用 `std::move`，对万能引用用 `std::forward`*
 
 由于万能引用几乎总是要用到转发，因此万能引用也被称为转发引用 forwarding references
 
-## *条款26：*
 
-## *条款27：*
+
+虽然传进来的时候是右值引用，但右值引用也是一种左值，所以在函数体内若不用move，那么就全部都是拷贝
+
+若有n个参数，那么就需要有 $2^n$ 个重载函数
+
+多个参数
+
+```c++
+template <class T, class... Args>
+shared_ptr<T> make_shared(Args&&... args);
+```
+
+### 返回值
+
+返回右值引用要用 `std::move`，返回通用引用要用 `std::forward`
+
+```c++
+Widget func(Widget &&w) { return std::move(w); }
+
+template <typename T> 
+```
+
+## *条款26：避免在通用引用上重载*
+
+### 通用引用普通函数的重载
+
+### 通用引用构造函数的重载
+
+## *条款27：熟悉通用引用重载的替代方法*
 
 ### 权衡
 

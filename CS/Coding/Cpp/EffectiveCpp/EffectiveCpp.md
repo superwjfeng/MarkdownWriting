@@ -1210,7 +1210,37 @@ adhere to convention when writing new and delete
   }
   ```
 
-## *条款52：定位new*
+## *条款52：若自定义定位new，也要自定义定位delete*
+
+标准库中的定位new是
+
+```c++
+void *operator new(std::size_t); // 普通new
+void *operator new(std::size_t, void *pMemory) noexcept; // 定位new
+void *operator new(std::size_t, const std::nothrow_t &) noexcept; // nothrow new
+```
+
+现在假设我们写了一个类专用的定位new运算符，要求指定一个ostream，并记录分配信息。我们也要为它配套一个自定义的定位delete，因为运行时系统会去寻找一个有与自定义定位new运算符相同数量和类型的参数的自定义delete。如果找不到就不能正常delete，从而导致内存泄漏
+
+```c++
+class Widget {
+public:
+    static void *operator new(std::size_t size, std::ostream &logStream); // 自定义定位new
+    static void operator delete(void *pMemory, std::size_t size) noexcept; // 自定义定位delete
+}
+```
+
+若有一个基类，它只声明了定位new，则会隐藏普通new。类似地，派生类中地new也会同时隐藏全局版本和继承版本的new
+
+```c++
+class Base {
+public:
+	//这个new隐藏了全局的普通new
+	static void* operator new(std::size_t size, std::ostream& logStream);
+};
+Base* pb = new Base; //错误！普通new运算符被隐藏了
+Base* pb = new (std::cerr) Base; //没问题，调用Base类的定位new
+```
 
 # 杂项讨论
 
