@@ -457,7 +457,7 @@ private:
   int y = x; // 隐式窄化类别转换，将5.7转换为5
   ```
 
-* 列表初始化也大大简化了聚合类的初始化，一个拥有众多类成员的聚合类不需要定义复杂的构造函数就可以直接使用列表初始化进行初始化了
+* 列表初始化也大大简化了聚合类的初始化，一个拥有众多类成员的聚合类不需要定义复杂的构造函数就可以直接使用列表初始化进行初始化了。特别是C++17对聚合类做了大幅扩展之后，有继承关系聚合类也可以用 `{}` 来初始化了
 
 * 列表初始化免疫解析问题 most vexing parse
 
@@ -471,7 +471,57 @@ private:
 
   若我们时候 `{}` 列表初始化就不会出现这样的解析错误
 
-### array和 `{}` 的坑
+### 对 `{}` 的强烈偏好
+
+在构造函数被调用时，只要形参中没有任何一个具备 `std::initializer_list` 类型，那么 `()` 和 `{}` 的意义就没有区别
+
+```c++
+class Widget {
+public:
+    //构造函数的形参中没有任何一个具备std::initializer_list类别的形参
+    Widget(int i, bool b);
+	Widget(int i, double d);
+};
+Widget w1(10, true); // 调用的是第一个构造函数
+Widget w2{10, true}; // 调用的还是第一个构造函数
+Widget w3(10, 5.0);  // 调用的是第二个构造函数
+Widget w4{10, 5.0};  // 调用的还是第二个构造函数
+```
+
+但一旦有一个或多个构造函数声明了任何一个具备 `std::initializer_list` 类型的形参，那么采用了 `{}` 初始化的调用语句会强烈地优先选用带有 `std::initializer_list` 类型形参的重载版本。事实上，**编译器只要有任何可能把一个采用 `{}` 的调用语句解读为带有 `std::initializer_list` 类型形参的构造函数，则编译器就会选用这种解释**
+
+比如说若上述 Widget 类增加了一个带有 `std::initializer_list<long double>` 类型的形参
+
+```c++
+class Widget {
+public:
+    //构造函数的形参中没有任何一个具备std::initializer_list类别的形参
+    Widget(int i, bool b);
+	Widget(int i, double d);
+    Widget(std::initializer_list<long double> il);
+};
+```
+
+
+
+如果既支持默认构造，又支持带有 `std::initializer_list` 类别的形参的构造函数，此时若用一对空的 `{}` 来构造一个对象，语言规定此时应该执行默认构造，而非带有 `std::initializer_list` 类别的形参的构造函数
+
+可以通过把空大括号对作为构造函数实参的方式实现这个目的，即把一对空大括号放入一对小括号或大括号的方式来清楚地表明你传递的是什么
+
+```c++
+class Widget {
+public:
+    Widget();
+    Widget(std::initializer_list<int> il);
+};
+Widget w1; // 调用的是默认构造函数
+Widget w2{}; // 调用的仍是默认构造函数
+Widget w3(); // 解析语法错误，变成函数声明语句了
+widget w4({}); // 带有 std::initializer_list 型别形参的构造函数。传入一个空的std::initializer_list
+Widget w5 {()};
+```
+
+### array聚合类 & `{}` 的坑
 
 [大括号之谜：C++的列表初始化语法解析_too many initializers for-CSDN博客](https://blog.csdn.net/devcloud/article/details/114523118)
 
@@ -1097,6 +1147,70 @@ template<typename T> void logAndProcess(T &&param) {
 template<typename T> void f(T&& param); // T是个万能引用
 auto&& var2 = var; // var2是个万能引用
 ```
+
+### 模板的通用引用
+
+要求是 `T&&` + 类型推导
+
+```c++
+template <typename T> void func(T &&param) { /**/ }
+int a = 10;
+func(a); // 推导为 int&
+func(10); // T推导为int，总体推导为int&&
+
+```
+
+判断是否是万能引用很简单，那就是看模板类型到底是不是自己推出来的，不能人为的给他帮助
+
+* 显示给出T
+
+  ```c++
+  func<int>(10); // T显式设置为int，总体为int&&
+  func<int>(a); // 报错，T显式设置为int，所以总体只能是int&&，但是这里正常推导应该为int&
+  ```
+
+* 之前有提到过万能引用**只能是单独给出的**，不能有任何cv饰词，模板的通用引用同理，比如下面的
+
+  ```c++
+  template <typename T> void func(std::vector<T> &&param); // 不是万能引用！
+  template <typename T> void func(const T &&param); // 同理，不是万能引用！
+  ```
+
+* 下面push_back中的也不是万能引用，因为T的类型是和vector的数据类型强绑定的
+
+  ```c++
+  template < class T, class Alloc = allocator<T> > class vector {
+  public:
+      push_back(T &&x);
+  };
+  ```
+
+### 可变参数模板的通用引用
+
+要求是 `Args&&...` + 类型推导
+
+下面emplace_back的参数和vector的T没关系
+
+```c++
+template < class T, class Alloc = allocator<T> > class vector {
+public:
+    template <typename... Args> void emplace_back(Args&&... args);
+};
+```
+
+### auto的通用引用
+
+要求是 `auto&&/auto&&...` + 类型推导
+
+```c++
+auto timeFuncInvocation = [](auto &&func, auto&&... params) {
+    std::forward<decltype(func)>(func)(
+    	std::forward<decltype(params)>(params...)
+    )
+}
+```
+
+
 
 ## *条款25：对右值引用用 `std::move`，对万能引用用 `std::forward`*
 
