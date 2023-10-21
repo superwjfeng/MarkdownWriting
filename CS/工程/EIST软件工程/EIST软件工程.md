@@ -611,7 +611,194 @@ Capabilities Lists CLs
 
 ## *Scalability*
 
+# UML
+
+Unified Modeling Language 统一建模语言
+
+> UML是一种开放的方法，用于说明、可视化、构建和编写一个正在开发的、面向对象的、软件密集系统的制品的开放方法。UML展现了一系列最佳工程实践，这些最佳实践在对大规模，复杂系统进行建模方面，特别是在[软件架构](https://zh.wikipedia.org/wiki/软件架构)层次已经被验证有效 -- Wikipedia
+
+## *分类*
+
+UML2.2定义了14种类图
+
+* 结构型图形 structure diagram 强调的是系统式的建模
+  * 静态图 static diagram
+    * 类图
+    * 对象图
+    * 包图
+  * 实现图 implementation 
+    * 组件图
+    * 部署图
+  * 剖面图
+  * 复合结构图
+* 行为式图形 behaviour diagram 强调系统模型中触发的事件
+  * 活动图
+  * 状态图
+  * 用例图
+* 交互式图形 interaction diagram 属于行为图形的子集合，强调系统模型中的资料流程
+  * 通信图
+  * 交互概述图
+  * 时序图
+  * 事件图
+
+## *类图*
+
+30分钟学会UML类图 - 肖继潮的文章 - 知乎 https://zhuanlan.zhihu.com/p/109655171
+
+### 在类图中表示关系
+
+类和类、类和接口、接口和接口之间存在关系。其强弱关系为 泛化 $\geq$ 实现 > 关联 > 聚合 > 组合和依赖
+
+<img src="UML类关系.jpg" width="50%">
+
+* 泛化关系 Generalization
+
+  * 对象与对象之间的继承关系 "is-a"
+  * Java中对象之间的泛化关系可以直接翻译为关键字 `extends`
+
+* 实现关系 Implementation
+
+  * 实现关系是指接口及其实现类之间的关系
+  * Java中实现关系可以直接翻译为关键字 `implements`
+
+* 关联关系 Association
+
+  * 对象和对象之间的连接，它使一个对象知道另一个对象的属性和方法
+
+  * 关联可以分为单向关联、双向关联、自关联（比如二叉树结构体）和多重性关联
+
+    <img src="多重性关联.png">
+
+  * 在Java中，关联关系的代码表现形式为一个对象含有另一个对象的引用
+
+* 聚合关系 Aggregation "has-a" ：没有整体，部分**可以独立存在**。表示一个对象包含或拥有另一个对象。常用于一个类和其成员的关系。例如一个汽车对象可以包含一个引擎对象
+
+* 组合关系 Composition：整体与部分的关系，部分离开整体后**不可以单独存在**，代表整体的对象负责代表部分的对象的生命周期。常用于类的成员，比如说公司和部门的关系
+
+* 依赖关系 Dependency "use a "：是一种使用的关系，即一个类的实现需要另一个类的协助，常用于类方法的局部变量、方法参数等。比如说Animal类的 `eat()` 方法的参数是 Food
+
+### 类图中具体类、抽象、接口和包的表示法
+
+UML绘制：https://www.planttext.com
+
+UML Class Diagram Tutorial：https://www.visual-paradigm.com/guide/uml-unified-modeling-language/uml-class-diagram-tutorial/;WWWSESSIONID=155970796B4B5C5AA833E9DF81911DA5.www1
+
+<img src="UML_class图例.webp">
+
+* 第一层是名字，若该类是抽象类就用斜体
+* 第二层是属性：`[权限]名称 : 类型[=默认值]`
+* 第三层是方法：`[权限]名称 ([参数列表]) [:返回类型]`
+
+成员属性和成员方法的访问限定副的表示方法为
+
+* `+` 表示public
+* `-` 表示private
+* `#` 表示protected
+* `~` 表示default/package
+
+下面是几种类图元素
+
+* 表示具体类
+
+  ```java
+  public class Hourly {
+      private double hourlyRate;
+      private double hoursWorkded;
+      public double computePay(double hourlyWorked);
+  }
+  ```
+
+  <img src="UML_class.png">
+
+* 表示抽象类：抽象类在UML类图中同样用矩形框表示，但是抽象类的类名以及抽象方法的名字都用斜体字表示
+
+  ```java
+  public abstract class Employee {
+      private String address;
+      private String name;
+      private int number;
+      public abstract double computePay() {}
+      public void mailCheck() {}
+  }
+  ```
+
+  <img src="UML_abstract.png">
+
+* 表示接口：接口在类图中也是用矩形框表示，但接口在类图中的第一层顶端用 `<<interface>>`表示，而且只有方法
+
+  ```java
+  public interface Shape {
+      public double computeArea();
+      public double computePerimeter();
+  }
+  ```
+
+  
+
+  <img src="UML_interface.png">
+
+* 表示包
+
+
+## *用例图*
+
+## *组件图*
+
+组件图 Component group 描绘了系统中组件提供的、需要的接口、端口等，以及它们之间的关系
+
+## *部署图*
+
+## *活动图*
+
 # 设计模式
+
+https://blog.csdn.net/sinat_21107433/category_9418696.html
+
+## *分类*
+
+设计模式 Design Pattern 是一套被反复使用、多数人知晓的、经过分类编目的、代码设计经验的总结，使用设计模式是为了可
+重用代码、让代码更容易被他人理解并且保证代码可靠性
+
+大部分设计模式兼顾了系统的可重用性和可扩展性，这使得我们可以更好地重用一些已有的设计方案、功能模块甚至一个完整的
+软件系统，避免我们经常做一些重复的设计、编写一些重复的代码
+
+最常用的23种设计模式可以分为
+
+* 创建者模式 creational
+  * 创建型模式关注对象的创建过程，创建型模式描述如何将对象的创建和使用分离，让用户在使用对象过程中无须关心对象的创建细节，从而降低系统耦合度，并且让系统易于修改和扩展
+  * 创建模式有单例模式 singleton、简单工厂模式 simple factory、抽象工厂模式 abstract factory、工厂方法模式 factory method、原型模式 prototype、建造者模式 builder
+* 结构型模式 structural
+  * 结构型模式处理对象之间的组合，以构建更大的结构，并帮助客户端理解如何将对象组合在一起形成更复杂的结构
+  * 适配器模式 adapter、桥接模式 bridge、组合模式 composite、装饰模式 decorator、外观模式 facade、享元模式 flyweight、代理模式 proxy
+* 行为型模式 behavioral
+  * 行为型模式关注对象之间的协作和职责分配，以实现更有效的通信和协同工作
+  * 职责链模式 chain of responsibility、命令模式 command、解释器模式 interpreter、迭代器模式 iterator、中介者模式 mediator、备忘录模式 memento/快照模式 snapshot、观察者模式 observer、状态模式 state、策略模式 strategy、模板方法模式 template、访问者模式 visitor
+
+## *简单工厂模式*
+
+C++ 深入浅出工厂模式（初识篇） - 小林coding的文章 - 知乎 https://zhuanlan.zhihu.com/p/83535678
+
+### 组成
+
+简单工厂模式：定义一个简单工厂类，它可以根据参数的不同返回不同类的实例化对象，被创建的实例通常都具有共同的父类
+
+* 工厂 Factory：根据客户提供的具体产品类的参数，创建具体产品实例
+* 抽象产品 AbstractProduct：具体产品类的基类，包含创建产品的公共方法
+* 具体产品 ConcreteProduct：抽象产品的派生类，包含具体产品特有的实现方法，是简单工厂模式的创建目标
+
+其UML图为
+
+### 实现
+
+### Pros & Cons
+
+## *抽象工厂模式*
+
+## *工厂方法模式*
+
+## *原型模式*
+
+## *建造者模式*
 
 ## *Adapter pattern*
 

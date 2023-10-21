@@ -719,21 +719,19 @@ C++11之后默认成员函数变成了8个，增加了移动构造和移动赋�
 
 所有五个拷贝控制成员应该看作一个整体。一般来说，若一个类定义了任何一个拷贝操作，它就应该定义所有五个操作
 
-
-
-
-
 # 智能指针
 
 ## *条款18：使用 `std::unique_ptr` 管理具备专属所有权的资源*
 
 可以认为在默认情况下 `std::unique_ptr` 和裸指针有着有着相同的尺寸。`std::unique_ptr` 独享一份资源，不允许拷贝，只允许移动
 
-### 理解工厂函数
+### 工厂模式
+
+
 
 <img src="工厂函数.drawio.png" width="60%">
 
-工厂函数内部要把开辟的资源返回出来，所以要用智能指针
+工厂函数内部需要把开辟出来的资源返回出来，所以要用智能指针
 
 ### 自定义删除器
 
@@ -887,18 +885,32 @@ spw = nullptr;                         // RCb变为0，Widget 被销毁，wpw悬
     // 但只有当wptr被销毁时OS才会释放内存
     ```
 
-## *条款22：使用Pimpl习惯法时，将特殊成员函数的定义放到实现文件中*
+## *条款22：使用Pimpl惯用法时，将特殊成员函数的定义放到实现文件中*
 
-### Pimpl
+https://fengjungle.blog.csdn.net/article/details/123150564
 
-Pimpl, Pointer to implementation
+### Pimpl惯用法
+
+Pimpl, Pointer to implementation 指向实现的指针是一种C++中的惯用法 idiom，因为它局限于对指针的使用，所以称不上是一种设计模式 design pattern
+
+将类的实现细节从其公共接口中分离出来，将这些细节封装在内部实现类中
+
+### Pimpl惯用法的优点
+
+* 减少编译依赖性：Pimpl模式可以减少类的头文件中的编译依赖性。因为类的私有实现细节被封装在内部实现类中，外部代码只需要包含类的公共头文件，而不需要知道类的具体实现细节。这可以显著减少重新编译的需求，提高了项目的构建效率
+* 提高封装性：Pimpl模式提高了类的封装性，因为内部实现细节被隐藏起来，外部代码无法访问它们。这有助于防止外部代码直接修改类的内部状态，从而提高了代码的稳定性和可维护性
+* 降低二进制兼容性风险：当你需要更改类的实现细节时，只需在内部实现类中进行更改，而不需要更改类的公共接口。这降低了向后兼容性破坏的风险，因为类的公共接口保持不变
+* 允许延迟实际的对象创建：Pimpl模式允许你延迟对象的创建，只在需要的时候才创建内部实现类的实例。这对于提高性能和减少资源消耗非常有用，尤其是对于大型对象或对象集合
+* 隐藏库依赖性：内部实现类可以包含库的特定细节，从而将库依赖性隔离在内部。这有助于减少对外部库的直接依赖，从而提高了代码的可维护性和可移植性提高安全性：通过将内部实现细节隐藏在内部实现类中，可以提高代码的安全性，减少不当访问和滥用的风险
+
+因为Pimpl多封装了一层，所以当阅读源代码的时候也会更加痛苦
 
 
 # 右值引用
 
 ## *条款23：理解 `std::move` & `std::forward`*
 
-### 类型转换模板
+### 类型转换模板（萃取器）
 
 标准库的类型转换 type transformation 模板定义在头文件 `<type_traits>` 中，类型转换也是一种萃取器
 
@@ -920,12 +932,12 @@ template<class T> struct remove_reference<T&&> { // 脱去右值引用
 }
 ```
 
-C++11和C++14使用的方式不太一样
+C++11和C++14使用的方式不太一样，C++14引入了 `std::remove_remove_reference_t`，它不需要typename 和 `::type` 就能使用
 
 ```c++
 template<class T> Foo {
 	using remove_refrence_t1 = typename std::remove_reference<T>::type; // C+=11
-    using remove_refrence_t2 = std::remove_remove_reference<T>; // C++14
+    using remove_refrence_t2 = std::remove_remove_reference_t<T>; // C++14
 }
 ```
 
@@ -959,16 +971,14 @@ typename remove_reference<T>::type&& move(T &&param) {
 // C++14
 template<typename T>
 decltype(auto) move2(T &&param) {
-    using ReturnType = std::remove_reference<T> &&;
+    using ReturnType = std::remove_reference_t<T> &&;
     return static_cast<ReturnType>(param);
 }
 ```
 
 右值绑定到右值引用上的效果和左值绑定到左值引用上的效果是一摸一样的，并不会发生什么突然的析构
 
-我们可以看到move的作用并不是用了之后马上就把资源转移给右值引用，然后直接把资源回收销毁了。资源的回收销毁仍然是由析构以及OS完成的。move的作用仅仅是将类型强转为 `&&`，因此有些人提议说move应该被叫做rvalue_cast
-
-总结来说，move的作用是强转为 `&&`，而强转为 `&&` 的作用则是告诉编译器：**该对象适合被移动，然后编译器会在条件满足的情况下移动它的资源**
+### `std::move` 只是在声明资源适合移动
 
 ```c++
 int a = 3;
@@ -980,6 +990,10 @@ cout << b << endl; // 5
 ```
 
 上面的实验并不会报错，a在被move了之后还可以被访问，就说明此时a的资源都还在。注意：上面的实验中访问move了之后的资源是一种未定义行为，因为此时我们是无法确定资源是否还在的（当然在上面这种很简单的情况下我们知道资源暂时还没有被移动），所以在工程中不能写出这样的代码
+
+根据move的定义，我们可以看到move的作用并不是用了之后马上就把资源转移给右值引用，然后直接把资源回收销毁了。资源的回收销毁仍然是由析构以及OS完成的。move的作用仅仅是将类型强转为 `&&`，因此有些人提议说move应该被叫做rvalue_cast
+
+总结来说，move的作用是强转为 `&&`，而强转为 `&&` 的作用则是告诉编译器：**该对象适合被移动，然后编译器会在条件满足的情况下移动它的资源**。比方说 `std::move(const std::string str);` 实际上执行的仍然是复制。我们得到的教训是如果要对某个对象执行移动操作时，则不要将其声明为常量。因为**针对常量对象执行移动操作将变成复制操作**。移动构造只能接受非常量的右值作为参数
 
 ### `std::forward`
 
@@ -1005,19 +1019,31 @@ template<typename T> void logAndProcess(T &&param) {
 
 **`std::forward<T>` 的本质是有条件的move，只有当模板参数T用右值初始化时才转换为右值**，而 `std::move` 的本质就是无论左值还是右值统统转为右值
 
-它的参考实现如下
+引用折叠是forward能够实现的关键，引用折叠会在类别推导中（模版、auto）的形参、类型强制转换和返回值处发挥作用
 
-[c++ - std::forward() 源码分析 - chenBright - SegmentFault 思否](https://segmentfault.com/a/1190000021259721)
+它的参考实现如下。`std::forward<T>` 是借助模版中保留的引用信息对两种引用进行了两次重载
 
 ```c++
+// C++11
+// 左值，函数体内第一次引用折叠得到T&，返回值处第二次引用折叠得到T&
 template <class T>
-T&& forward(typename tinySTL::remove_reference<T>::type& t) noexcept {
-    return static_cast<T&&>(t);
+T&& forward(typename remove_reference<T>::type& param) noexcept {
+    return static_cast<T&&>(param);
+}
+// 右值，右值引用时忽略expr的引用性，得到T，函数体内强转为T&&，返回值除同理得到T&&
+template <class T>
+T&& forward(typename remove_reference<T>::type&& param) noexcept {
+    return static_cast<T&&>(param);
 }
 
+// C++14
 template <class T>
-T&& forward(typename tinySTL::remove_reference<T>::type&& t) noexcept {
-    return static_cast<T&&>(t);
+T&& forward(remove_reference_t<T>& param) noexcept {
+    return static_cast<T&&>(param);
+}
+template <class T>
+T&& forward(remove_reference_t<T>&& param) noexcept {
+    return static_cast<T&&>(param);
 }
 ```
 
@@ -1025,7 +1051,7 @@ T&& forward(typename tinySTL::remove_reference<T>::type&& t) noexcept {
 
 `T&&` 有两层含义，第一种就是普通的右值引用，它的目标是识别出可移动对象，然后绑定到右值上
 
-第二种含义是万能引用 universal reference，出现在模板和auto这两种类型推导之中
+第二种含义是万能引用 universal reference，出现在模板和auto这两种类型推导的场景中
 
 ```c++
 template<typename T> void f(T&& param); // T是个万能引用
@@ -1046,7 +1072,7 @@ func(10); // T推导为int，总体推导为int&&
 
 判断是否是万能引用很简单，那就是看模板类型到底是不是自己推出来的，不能人为的给他帮助
 
-* 显示给出T
+* 显式给出T
 
   ```c++
   func<int>(10); // T显式设置为int，总体为int&&
@@ -1073,7 +1099,7 @@ func(10); // T推导为int，总体推导为int&&
 
 要求是 `Args&&...` + 类型推导
 
-下面emplace_back的参数和vector的T没关系
+和push_back不同，下面emplace_back的参数包 `Args&&...` 和vector的T没关系
 
 ```c++
 template < class T, class Alloc = allocator<T> > class vector {
@@ -1086,7 +1112,10 @@ public:
 
 要求是 `auto&&/auto&&...` + 类型推导
 
+auto万能引用在C++14中大量出现，因为C++14支持lambda可以声明 `auto&&` 形参
+
 ```c++
+// C++14s
 auto timeFuncInvocation = [](auto &&func, auto&&... params) {
     std::forward<decltype(func)>(func)(
     	std::forward<decltype(params)>(params...)
@@ -1096,9 +1125,43 @@ auto timeFuncInvocation = [](auto &&func, auto&&... params) {
 
 ## *条款25：对右值引用用 `std::move`，对万能引用用 `std::forward`*
 
-由于万能引用几乎总是要用到转发，因此万能引用也被称为转发引用 forwarding references
+### move和forward的正确用法
 
+右值就说明了绑定的对象很适合移动，那么正确做法
 
+ ```c++
+ class Widget {
+ public:
+ 	Widget(widget&& rhs) // rhs 是个右值引用，但仍然是一个左值，所以要move它的成员
+ 		: name(std::move(rhs.name)) 
+         , p(std::move(rhs.p))
+     {}
+ private:
+ 	std::string name;
+ 	std::shared ptr<SomeDataStructure> p;
+ };
+ ```
+
+而万能引用则是要有选择性的转发，它只是有可能会保定到右值。由于万能引用几乎总是要用到转发，因此万能引用也被称为转发引用 forwarding references
+
+```c++
+class Widget {
+public:
+	template<typename T>
+	void setName(T&& newName) { // newName是个万能引用
+		name = std::forward<T>(newName);
+    }
+private:
+	std::string name;
+	std::shared ptr<SomeDataStructure> p;
+};
+```
+
+不要对右值用forward，虽然这在语法和功能上不会造成错误，因为左值引用传给引用
+
+也不要对万能引用用move，不过这次并不只是会造成代码冗余了，而是会实打实地产生功能上的错误。本来一个想要保留左值引用的变量直接被move转移走了
+
+### 问题
 
 虽然传进来的时候是右值引用，但右值引用也是一种左值，所以在函数体内若不用move，那么就全部都是拷贝
 
@@ -1132,6 +1195,10 @@ template <typename T>
 ### 权衡
 
 ## *条款28：理解引用折叠*
+
+引用折叠是专用于类型推导的概念，会出现在模版类型推导、auto类型推导、typedef 或using别名声明以及decltype中
+
+如果是形参不匹配，比如左值赋给右值，只是会报类型不匹配的编译错误而已，因为此时根本就不是万能引用！
 
 ## *条款29：*
 
