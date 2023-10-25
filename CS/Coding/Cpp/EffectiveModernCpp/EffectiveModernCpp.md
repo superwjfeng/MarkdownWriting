@@ -725,19 +725,97 @@ C++11之后默认成员函数变成了8个，增加了移动构造和移动赋�
 
 可以认为在默认情况下 `std::unique_ptr` 和裸指针有着有着相同的尺寸。`std::unique_ptr` 独享一份资源，不允许拷贝，只允许移动
 
-### 工厂模式
-
-
+### unique_ptr作为工厂函数的返回值类型
 
 <img src="工厂函数.drawio.png" width="60%">
 
-工厂函数内部需要把开辟出来的资源返回出来，所以要用智能指针
+工厂函数接受一个类实例，然后内部需要把开辟出来的资源返回出来，所以要用智能指针
+
+```c++
+// 抽象产品
+class Investment {
+public:
+    virtual ~Investment() {}
+};
+// 具体产品
+class Stock : public Investment {
+public:
+    Stock(int a) { std::cout << "Stock(int a)" << std::endl; }
+    ~Stock() override { std::cout << "~Stock()" << std::endl; }
+};
+class Bond : public Investment {
+public:
+    Bond(int a, int b) { std::cout << "Bond(int a, int b)" << std::endl; }
+    ~Bond() override { std::cout << "~Bond()" << std::endl; }
+};
+class RealEstate : public Investment {
+public:
+    RealEstate(int a, int b, int c) { std::cout << "RealEstate(int a, int b, int c)" << std::endl; }
+    ~RealEstate() override { std::cout << "~RealEstate()" << std::endl; }
+};
+```
+
+下面是工厂函数，我们的工厂函数用传入的参数作为区分来构建相应的对象
+
+```c++
+// 工厂函数
+template <typename... Ts>   // 返回指向对象的std::unique_ptr，对象使用给定实参创建
+std::unique_ptr<Investment> makeInvestment(Ts &&...params) { // 条宽25 对万能引用用forward
+    std::unique_ptr<Investment> uptr{nullptr};
+    constexpr int numArgs = sizeof...(params);
+    if constexpr (numArgs == 1) {
+        uptr.reset(new Stock(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 2) {
+        uptr.reset(new Bond(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 3) {
+        uptr.reset(new RealEstate(std::forward<Ts>(params)...));
+    }
+    return uptr;
+}
+```
+
+unique_ptr 可以高效地转换为shared_ptr，所以它适合做返回值。因为无法确定用户是否需要专属所有权语义还是共享所有权语义
+
+```c++
+std::shared_ptr<Investment> sp = makeInvestment(arguments);
+```
 
 ### 自定义删除器
 
-具有很多状态的自定义删除器会产生大size的 `std::unique_ptr` 对象
+具有很多状态的自定义删除器 custom deleter 会产生大size的 `std::unique_ptr` 对象
 
 用lambda作自定义删除器比较好。lambda是一个匿名对象，因为匿名对象没有数据对象（若没有捕捉）
+
+```c++
+auto delInvmt = [](Investment *pInvestment) { // lambda作为自定义删除器
+    std::cout << "delete" << std::endl;
+    delete pInvestment;
+};
+
+template <typename... Ts>
+std::unique_ptr<Investment, decltype(delInvmt)> // 更改后的返回类型
+makeInvestment2(Ts &&...params) {
+    std::unique_ptr<Investment, decltype(delInvmt)> // 应返回的指针
+        uptr(nullptr, delInvmt);
+    constexpr int numArgs = sizeof...(params);
+    if constexpr (numArgs == 1) {
+        uptr.reset(new Stock(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 2) {
+        uptr.reset(new Bond(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 3) {
+        uptr.reset(new RealEstate(std::forward<Ts>(params)...));
+    }
+    return uptr;
+}
+// C++14
+template <typename... Ts> auto makeInvestment3(Ts &&...params) {}
+```
+
+当要使用自定义析构器时，其必须被指定为 `std::unique_ptr` 的第二个模版实参
 
 ## *条款19：使用 `std::shared_ptr` 管理具备共享所有权的资源*
 
@@ -752,16 +830,16 @@ C++11之后默认成员函数变成了8个，增加了移动构造和移动赋�
 ### 引用计数机制的性能影响
 
 * 如上面的对象模型所示，引用计数需要的控制块会让`std::shared_ptr` 比正常指针大一倍
-* 引用计数的内存必须动态分配
+* 引用计数的控制块内存必须动态分配
 * 引用计数的递增和递减必须是原子操作
 
 ### 控制块的生成时机
 
-* 使用 `std::make_shared`
-* 通过 unique_ptr 构造 shared_ptr
+* 使用 `std::make_shared<T>` 的时候
+* 从具备专属所有权的智能指针 unique_ptr 或 auto_ptr（当然请绝对不要使用auto_ptr）出发构造 shared_ptr
 * 向 shared_ptr 的构造函数中传入一个裸指针
 
-### `std::shared_ptr` 可能存在的问题
+### `std::shared_ptr` 多控制块引起类浅拷贝问题
 
 从上面的结构图可以看出，堆上的T类型对象和控制块是一一对应的关系（并没有说他们的存放地址是相连的）。但如果2个控制块与同一个T类型对象关联到一块，那么大概率会有多次释放的风险
 
@@ -792,27 +870,81 @@ class A { /**/ };
 
 ### 使用this指针作为 `std::shared_ptr` 的构造函数实参
 
-这个在看了 emplace_back 之后再回顾一下
+```c++
+class Widget; // 前向声明
+std::vector<std::shared_ptr<Widget>> processedWidgets;
+
+class Widget {
+public:
+    void process() { processedWidgets.emplace_back(this); }
+};
+
+// 两次析构错误
+{
+    auto w = std::shared_ptr<Widget>();
+    w->process();
+}
+```
+
+在 `std::shared_ptr<Widget>()` 处会创建一次控制块，因为this指针和裸指针的效果是一样的，所以在emplace_back的时候会调用 `{}` 初始化又创建了一次
+
+当希望一个托管到shared_ptr的类能够安全地由this指针创建一个shared_ptr的时候，要使用 `std::enable_sahred_from_this<T>`，它是一种CRTP
+
+```c++
+class Widget : public std::enable_shared_from_this<Widget> {
+public:
+    void process() { processedWidgets.emplace_back(shared_from_this()); }
+};
+```
+
+另外说一下，下面的写法虽然可以通过编译，但非常不合理，因为托管给shared_ptr的是一个栈上的地址，shared_ptr应该要管理堆上开辟的地址
+
+```c++
+{
+    Widget w;
+    w.process();
+}
+```
+
+所以完整的版本应该像下面这么写
+
+```c++
+class Widget : public std::enable_shared_from_this<Widget> {
+public:
+    template <typename... Ts>
+    static std::shared_ptr<Widget> create(Ts &&...params) {
+        return std::shared_ptr<Widget>(new Widget(std::forward<Ts>(params)...));
+    }
+    void process() {
+        processedWidgets.emplace_back(shared_from_this());
+    }
+private:
+    Widget(int data) : _data(data){}; //禁用构造
+    int _data;
+};
+```
 
 ## *条款20：当 `std::shared_ptr` 可能悬空时使用 `std:weak_ptr`*
 
 waek_ptr 不能单独使用，它必须要通过传入一个共享指针来创建。weak_ptr不会增加引用计数
 
-shared_ptr对管理的资源有完全的管理权限、使用权和所有权；而weak_ptr只能使用它，不能管理它
-
-### 查看资源是否释放
-
-虽然weak_ptr不能掌握资源是否释放，但有3种方式可以通过查看资源是否已经释放了
+shared_ptr对管理的资源有完全的管理权限、使用权和所有权；而weak_ptr不干涉对象的共享所有权，它所做的只是检查对象是否还在
 
 ```c++
-auto spw = std::make_shared<Widget>(); // spw 引用计数为1
+auto spw = std::make_shared<Widget>(); // spw 引用计数 Reference Counter, RC为1
 std::waek_ptr<Widget> wpw(spw);        // wpw 指向与spw所持有相同的Widget，RC仍然为1
-spw = nullptr;                         // RCb变为0，Widget 被销毁，wpw悬空
+spw = nullptr;                         // RC变为0，Widget 被销毁，wpw悬空，不过此时空间还没有被OS回收
 ```
+
+### 监视资源是否释放
+
+悬空 dangle 就是指指向了一个空指针，也可以叫做失效 expired。weak_ptr常用来检查它对应的资源是否是空指针
+
+虽然weak_ptr不能掌握资源是否释放，但有3种方式可以检查资源是否已经释放了
 
 * `wpw.expired() == true` 来看资源是否已经被释放了
 
-* 若wpw过期了，spw1为空
+* 若wpw过期了，则lock的结果，即spw1为空
 
   ```c++
   std::shared_ptr<Widget> spw1 = wpw.lock(); // 若wpw过期，则spw1为nullptr
@@ -823,6 +955,36 @@ spw = nullptr;                         // RCb变为0，Widget 被销毁，wpw悬
   ```c++
   std::shared_ptr<Widget> spw2(wpw); // 抛异常
   ```
+
+会延迟空间的回收
+
+### 一种使用场景
+
+```c++
+std::unique_ptr<const Widget> loadWidget(int id) {
+    // 耗时操作
+    std::unique_ptr<const Widget> uptr{new Widget(id)};
+    return uptr;
+}
+
+std::shared_ptr<const Widget> fastLoadWidget(int id) {
+    static std::unordered_map<int, std::weak_ptr<const Widget>> cache;
+    auto objPtr = cache[id].lock();
+    if (!objPtr) {
+        objPtr = loadWidget(id);
+        cache[id] = objPtr;
+    }
+    return objPtr;
+}
+```
+
+上面loadWidget是很费时的工厂函数，因为可能牵涉到了IO等操作。若找到了就返回对应的Widget托管指针，否则就调用费时的loadWidget
+
+其实上面的实现还是有问题的，因为cache中可能会堆积大量的失效weak_ptr。可以考虑用观察者模式来改写
+
+### `std::weak_ptr` 应对循环引用问题
+
+
 
 ## *条款21：使用 `std::make_unique` & `std::make_shared`，而不是直接new*
 
@@ -842,9 +1004,9 @@ spw = nullptr;                         // RCb变为0，Widget 被销毁，wpw悬
   processWidget(std::shared_ptr<Widget>(new Widget), computePriority()); // 调用
   ```
 
-  如果Widget先被new出来，但是computePriority抛异常导致processWidget无法执行，那么此时就没有人释放new出来的Widget了
+  如果Widget先被new出来，但是computePriority抛异常导致processWidget无法执行，那么此时就没有人释放new出来的Widget了。本质就是无法保证new和computePriority的异常安全
 
-  下面的可以解决问题
+  下面的写法是异常安全的，可以解决问题
 
   ```c++
   processWidget(std::make_shared<Widget>(), computePrioriy());
@@ -863,9 +1025,9 @@ spw = nullptr;                         // RCb变为0，Widget 被销毁，wpw悬
 
 * make_shared和make_unique的通病
 
-  * 使用自定义删除器时只能使用new，没法给make_xxx传自定义删除器
+  * 使用自定义删除器时只能使用new，没法给make_xxx传自定义删除器。因为自定了删除器之后相当于是一种新的类型，但make_xxx只接受了原生的智能指针
 
-  * 无法通过 `{}` 来初始化指向的对象，原因是 `{}` 无法完美转发
+  * 无法通过 `{}` 来初始化指向的对象，原因是 `{}` 无法完美转发（条款30）
 
     ```c++
     auto spv = std::make_shared<std::vector<int>>(10, 20); // OK！ 
@@ -895,6 +1057,16 @@ Pimpl, Pointer to implementation 指向实现的指针是一种C++中的惯用�
 
 将类的实现细节从其公共接口中分离出来，将这些细节封装在内部实现类中
 
+
+
+类的私有对象不能在类外使用，而且这些声明中的私有对象还有可能暴露接口的实现方式 
+
+
+
+现在这样的话如果Gadget发生了重构，main.cc也不需要再次编译，因为它并没有用到Gadget头文件，只需要重新编译Widget.cc就可以了
+
+必须要使用指针，因为此时找不到Impl的定义，无法确定大小，指针的大小是确定的
+
 ### Pimpl惯用法的优点
 
 * 减少编译依赖性：Pimpl模式可以减少类的头文件中的编译依赖性。因为类的私有实现细节被封装在内部实现类中，外部代码只需要包含类的公共头文件，而不需要知道类的具体实现细节。这可以显著减少重新编译的需求，提高了项目的构建效率
@@ -903,7 +1075,7 @@ Pimpl, Pointer to implementation 指向实现的指针是一种C++中的惯用�
 * 允许延迟实际的对象创建：Pimpl模式允许你延迟对象的创建，只在需要的时候才创建内部实现类的实例。这对于提高性能和减少资源消耗非常有用，尤其是对于大型对象或对象集合
 * 隐藏库依赖性：内部实现类可以包含库的特定细节，从而将库依赖性隔离在内部。这有助于减少对外部库的直接依赖，从而提高了代码的可维护性和可移植性提高安全性：通过将内部实现细节隐藏在内部实现类中，可以提高代码的安全性，减少不当访问和滥用的风险
 
-因为Pimpl多封装了一层，所以当阅读源代码的时候也会更加痛苦
+不过因为Pimpl多封装了一层，所以当阅读源代码的时候也会更加痛苦
 
 
 # 右值引用
