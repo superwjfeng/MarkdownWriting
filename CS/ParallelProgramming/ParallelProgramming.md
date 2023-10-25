@@ -175,6 +175,62 @@ OpenMP提供了一些环境变量，用来在运行时对并行代码的执行�
 } /* end of parallel block */
 ```
 
+### nowait
+
+以下是一个示例，演示了`nowait`的作用。假设有一个循环，需要计算两个数组 `A` 和 `B` 的元素之和，并且我们使用OpenMP并行化来加速这个计算
+
+```c
+int N = 100;
+int A[N], B[N], result[N];
+
+#pragma omp parallel for
+for (int i = 0; i < N; i++) {
+    A[i] = i;
+    B[i] = 2 * i;
+}
+
+#pragma omp parallel for
+for (int i = 0; i < N; i++) {
+    result[i] = A[i] + B[i];
+}
+
+printf("Results:\n");
+for (int i = 0; i < N; i++) {
+    printf("%d + %d = %d\n", A[i], B[i], result[i]);
+}
+```
+
+在这个示例中，我们有两个并行区域，一个用于初始化数组 `A` 和 `B`，另一个用于计算 `result` 数组。这两个并行区域没有使用`nowait`
+
+执行结果可能如下所示：
+
+```
+Results:
+0 + 0 = 0
+1 + 2 = 3
+2 + 4 = 6
+3 + 6 = 9
+...
+```
+
+这个示例中，第一个并行区域初始化数组 `A` 和 `B`，然后第二个并行区域计算 `result`。线程必须等待第一个并行区域完成后才能执行第二个并行区域，这会引入等待开销
+
+现在，让我们使用`nowait`来改进第一个并行区域：
+
+```c
+// same
+#pragma omp parallel for nowait
+for (int i = 0; i < N; i++) {
+    A[i] = i;
+    B[i] = 2 * i;
+}
+// same
+```
+
+在第一个并行区域中，我们添加了`nowait`。现在，线程不必等待第一个并行区域完成，而可以立即执行第二个并行区域。
+
+这意味着线程可以更充分地利用并行性，减少等待时间，提高性能。但要注意，`nowait`必须小心使用，以确保没有潜在的竞态条件。
+
 ## *循环分割工作*
 
 ### for相关
