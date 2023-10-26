@@ -649,7 +649,7 @@ UML2.2定义了14种类图
 
 类和类、类和接口、接口和接口之间存在关系。其强弱关系为 泛化 $\geq$ 实现 > 关联 > 聚合 > 组合和依赖
 
-<img src="UML类关系.jpg" width="50%">
+<img src="UML类关系.drawio.png" width="60%">
 
 * 泛化关系 Generalization
 
@@ -813,6 +813,8 @@ https://blog.csdn.net/sinat_21107433/article/details/102927937
 观察者模式 Observer Pattern 是一种行为型设计模式，用于定义一种一对多的依赖关系，当一个对象的状态发生变化时，其所有依赖对象都会自动收到通知并被更新。
 
 观察者模式也被称为发布-订阅模式 Publish-Subscribe、模型-视图模式 Model-View、源-监听器模式 Source-Listener、从属者模式 Denpendents，它提供了一种松耦合的方式，允许主题（被观察者）和观察者之间的互动，而不需要彼此了解具体的细节。
+
+<img src="观察者模式UML图.png">
 
 以下是观察者模式的主要参与者和它们的作用：
 
