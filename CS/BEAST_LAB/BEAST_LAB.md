@@ -150,7 +150,7 @@ ThunderX2 CN9980采用AArch64 ISA和Vulcan 微架构。
 
 Fujitsu A64FX是一款高性能、面向科学计算和高性能计算的ARM架构处理器
 
-### NVidia V100
+### Nvidia V100
 
 ### AMD MI-100
 
@@ -355,6 +355,34 @@ for (i=0; i<N; i ++) {
 ### Sequential Performance
 
 ### Parallel Performance
+
+
+
+
+
+Cycling time：什么时候可以进行下一次的寻址
+
+
+
+Read的延迟很大、电荷会泄漏，需要不断刷新
+
+
+
+50% miss rate -> filter
+
+
+
+L1和L2的管理算法是不同的
+
+
+
+可以只利用time locality或只利用spatial locality，或者两者都利用
+
+
+
+Tag 是一种Metadata
+
+是并行还是顺序的获取Tag和Data
 
 
 

@@ -485,9 +485,117 @@ MPI的接口大致可以分为
 * 点对点通信：一组用于两个进程之间进行交互的调用
 * 集体调用：所有的处理器或者某个指定的处理器子集都会参与其中，比如广播调用
 
+# GPU编程
+
+## *Scaling*
+
+Scaling指的是随着线程数的变化系统性能的变化
+
+### Weak Scaling
+
+Weak scaling是指令每个线程的problem size保持不变，HPC中最常用的scaling方式
+
+负载和消耗的变化都不太大，sacling比较容易。但一些应用问题要保持problem size per thread不变会比较难
+
+### Strong Scaling
+
+强扩展性是指在增加计算资源（例如，处理器核心、计算节点）的情况下，保持问题的总规模不变，此时要改变问题的decomposition，或者说负载分配方式
+
+Strong scaling在变得越来越重要，有些任务的problem size并不是一直在增长的，但对精确度、求解速度的要求越来越高
+
+## *GPU编程概览*
+
+### 多媒体API
+
+GPU的API是一组允许软件与GPU进行通信和协作的软件函数和库，不过随着系统优化的深入，API也可以直接统筹管理高级语言、显卡驱动和底层汇编语言。以下是一些常见的GPU API
+
+* 微软 DirectX 标准：DirectX是Microsoft开发的多媒体和图形API，主要用于Windows操作系统上的游戏和多媒体应用程序。它包括Direct3D用于3D图形渲染，以及其他组件用于音频、输入和网络等
+
+  * Direct 3D & Dicrect 2D
+  * DirectCompute 通用计算
+
+* Khronos Group 标准
+
+  > 科纳斯组织（Khronos Group）是一个开放、非营利的行业协会，致力于创建可免费使用的图形合成、虚拟现实、增强现实、视觉加速、并行计算和机器学习的开放API标准，使在各种平台和设备上的应用程序和中间件都能有效利用硬件加速。所有Khronos成员都能够在API公开发布前提出自己的意见、在规范制定初期得到草案并进行平台和应用程序测试。
+  > 2006年7月31日，Khronos Group在SIGGRAPH上宣布得到OpenGL规范的控制权 -- wikipedia
+
+  * OpenGL：OpenGL Open Graphics Library 开放图形库 是一种跨平台的图形API，用于2D和3D图形渲染。它提供了一套用于创建和管理图形对象、设置渲染状态以及执行渲染命令的函数。OpenGL是开放标准，因此可以在多个平台上使用
+  * Vulkan：Vulkan是一个低级的跨平台图形API，旨在提供更高的性能和更好的多线程支持。它更接近硬件层，允许开发者更细粒度地控制GPU，但也需要更多的编程工作
+  * OpenCL通用计算
+
+* 其他标准
+
+  * 苹果 Metal API
+  * AMD Mantle API
+  * Intel One API
+
+
+### GPGPU 通用计算
+
+GPU通用计算 General-Purpose Graphics Processing Unit 的核心思想是利用 GPU 的大规模并行处理能力来加速计算任务，尤其是那些可以分解为许多小任务的工作负载。为了在 GPU 上进行通用计算，开发者使用 GPU 编程框架和 API 来编写并行计算代码，这些框架和 API 提供了对 GPU 资源的访问以及任务分发和同步的机制。以下是一些用于 GPGPU 的常见 API 和框架
+
+* CUDA Compute Unified Device Architecture：由NVIDIA开发的CUDA是GPGPU编程的一种流行框架。它允许开发者使用类C编程语言来编写通用计算代码，并在NVIDIA GPU上执行。CUDA 提供了丰富的库和工具，用于优化并行计算任务
+* HIP Heterogeneous-Computing Interface for Portability：由 AMD 开发的 HIP 是一个类似于 CUDA 的框架，旨在实现跨供应商的移植性，使开发者能够在不同供应商的 GPU 上运行通用计算代码
+* OpenCL Open Computing Language：OpenCL 是一个跨平台的 GPGPU 编程框架，允许在不同供应商的 GPU 上运行通用计算任务。它使用 C 样式的语言编写内核，并提供了广泛的设备支持
+* OpenMP ：从OpenMP 4.0版本开始，它还引入了对GPU通用计算的支持，允许将OpenMP用于GPU加速的应用程序开发。加速器被视为 targets 和 devices
+* OpenACC：脱胎于OpenMP
+* DirectCompute：DirectCompute 是 Microsoft DirectX 的一部分，用于在 Windows 平台上进行通用计算。它允许开发者使用 HLSL（High-Level Shading Language）编写并行计算内核
+* SYCL：SYCL 是一种基于 C++ 的编程模型，用于实现高性能并行计算，并在不同的硬件上运行。它允许开发者使用标准的 C++ 语言编写并行计算代码，然后将其映射到不同的加速器上，包括 GPU
+
+## *GPU通用计算的特点*
+
+GPU并不是一个独立运行的计算平台，而需要与CPU协同作工作，因此可以GPU可以看成是CPU的协处理器 coprocessor，因此当我们在说GPU并行计算时，其实是指的基于CPU+GPU的异构计算架构
+
+在异构计算架构中，GPU与CPU通过PCle总线连接在一起来协同工作
+
+CPU所在位置称为为主机端 host，而GPU所在位置称为设备端 device
+
+
+
 # CUDA
 
-# OpenACC
+cuda编程本身就对硬件依赖很大，不同的GPU架构必须要编写不同的代码，否则性能会下降很多甚至会出现负优化的情况
+
+CUDA提供了对其它编程语言的支持，如C/C++、Python、Fortran等语言
+
+## *CUDA编程模型*
+
+在CUDA中，host和device是两个重要的概念。用host指代CPU及其内存，而用device指代GPU及其内存。CUDA程序中既包含host程序，又包含device程序，它们分别在CPU和GPU上运行。host与device之间可以进行通信，这样它们之间可以进行数据拷贝
+
+### CUDA程序执行流程
+
+1. 分配host内存，并进行数据初始化
+2. 分配device内存，并从host将数据拷贝到device上
+3. 调用CUDA的核函数在device上完成指定的运算
+4. 将device上的运算结果拷贝到host上（性能）
+5. 释放device和host上分配的内存
+
+### 核函数
+
+上面流程中最重要的一个过程是调用CUDA的核函数来执行并行计算
+
+核函数 kernel 是CUDA 中一个重要的概念，kernel 是 在device 上线程中并行执行的函数
+
+核函数用 `__global__` 符号声明，在调用时需要用 `<<<grid, block>>>` 来指定kernel要执行的线程数量
+
+在CUDA中，每一个线程都要执行核函数，并且每个线程会分配一个唯一的线程是thread ID，这个ID值可以通过核函数的內置变量threadldx来获得
+
+## *CUDA工具*
+
+### 编译器
+
+nvcc（C/C++）
+### 调试器
+
+nvcc-gdb
+### 性能分析
+
+nsight, nvprof
+### 函数库
+
+cublas, nvblas, cusolver, cufftw, cusparse, nvgraph
+
+# OpenMP用于GPU编程
 
 
 
