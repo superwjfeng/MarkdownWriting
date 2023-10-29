@@ -558,6 +558,69 @@ cuda编程本身就对硬件依赖很大，不同的GPU架构必须要编写不�
 
 CUDA提供了对其它编程语言的支持，如C/C++、Python、Fortran等语言
 
+## *CUDA程序层次结构*
+
+<img src="CUDA程序层次结构.png" width="60%">
+
+GPU上有很多并行化的轻量级线程，它们有一定的层次结构
+
+* kernel在device上执行时实际上是启动很多线程，一个kernel所后动的所有线程称为一个网格 grid。同一个grid上的线程共享相同的全局内存空间。grid是线程结构的第一层
+* Grid又可以分为很多线程块 block，一个线程块里面包含很多线程，这些线程运行在同一个SMP中。块不能太小以至于不能隐藏其调度开销，但是也不能太大，一般是128或256个线程（32的倍数）。block是第二层
+* 一个block里的线程按顺序排成一个一维向量，每32个线程称为一个warp，是CUDA最小的调度单位。warp是第三层
+* 单独的线程是第四层
+
+### 维度
+
+grid、block和warp的维度对GPU内存调度有着重要影响。不同GPU架构，grid 和 block 的维度限制是不同的
+
+grid 和 block 都是定义为dim3类型的变量。dim3可以看成是包含三个无符号整数 x, y, z 成员的结构体变量。在定义时缺省值初始化为1
+
+grid和block 可以灵活地定义为1-dim、2-dim以及3-dim结构
+
+定义的grid和block如下所示，kernel 在调用时也必须通过执行配置 `<<<grid, block>>>` 来指定kernel所使用的线程数及结构
+
+```c++
+// 1-dim 的 grid 和 block
+dim3 grid(128,);
+dim3 block(256);
+kernel_fun<<< grid, block >>>(prams...);
+// 2-dim 的 grid 和 block
+dim3 grid(5, 4);
+dim3 block(4, 3)
+kernel_funs<< grid, block >>>(prams...);
+// 3-dim 的 grid 和 block
+dim3 grid(100, 100, 50);
+dim3 block(16, 16, 4)
+kernel_funs<< grid, block >>>(prams...);
+```
+
+### 各维度的排列顺序
+
+一个线程需要两个内置的坐标变量 `(blockldx, threadldx)` 来唯一标识，它们都是dim3类型变量
+
+* blockldx指明线程所在grid中的位置，blockidx同样包含三个值：`blockldx.x, blockldx.y, blockldx.z`
+* threaldx指明线程所在block中的位置，threadldx包含三个值：`threadldx.x, threadldx.y, threadldx.z`
+
+
+在内存中各个维度的排列是有顺序的：`X -> Y -> Z`
+
+```c
+lim3 grid(3, 2);
+dim3 block(5, 3);
+// block: (0, 0) -> (1, 0) -> (2, 0) -> (0, 1) -> (1, 1) -> (2, 1)
+// thread: (0, 0) -> (1, 0) -> (2, 0) -> (3, 0) -> (4, 0) -> (0, 1) -> (1, 1) -> (2, 1) -> (3, 1) -> (4, 1) -> (0, 2) -> (1, 2) -> (2, 2) -> (3, 2) -> (4, 2)
+```
+
+处理矩阵的时候可以选择二维grid和block来对齐，而矢量就用一维的grid和block来对齐
+
+### warp调度
+
+<img src="warp调度器.png" width="40%">
+
+Warp内的线程需要执行相同的指令
+
+依靠硬件的warp调度器可以做到warp调度的零开销
+
 ## *CUDA编程模型*
 
 在CUDA中，host和device是两个重要的概念。用host指代CPU及其内存，而用device指代GPU及其内存。CUDA程序中既包含host程序，又包含device程序，它们分别在CPU和GPU上运行。host与device之间可以进行通信，这样它们之间可以进行数据拷贝
@@ -570,15 +633,42 @@ CUDA提供了对其它编程语言的支持，如C/C++、Python、Fortran等语�
 4. 将device上的运算结果拷贝到host上（性能）
 5. 释放device和host上分配的内存
 
+### CUDA的函数类型限定符
+
+GPU是异构模型，所以需要区分host和device上的代码，在CUDA中是通函数类型限定词开区别host和device上的函数，主要的三个函数类型限定词如下：
+
+* `__global__ void func()`
+  * 在device上执行，从host中调用（一些特定的GPU也可以直接从device上调用）。返回类型必须是void，不支持可变参数参数，不能成为类成员函数
+  * 注意用 `__global__` 定义的kernel是异步的，这意味着host不会等待kernel执行完就会执行下一步
+* `__device__`：在GPU device上执行，但是仅可以从device中调用，不可以和 `__global__` 同时使用
+* `__host__`：在host上执行，也仅可以从host上调用，一般省略不写。不可以和 `__global__` 同时使用，但可以和 `__device__` 同时使用，此时函数在host和device上都会编译
+
 ### 核函数
 
 上面流程中最重要的一个过程是调用CUDA的核函数来执行并行计算
 
 核函数 kernel 是CUDA 中一个重要的概念，kernel 是 在device 上线程中并行执行的函数
 
-核函数用 `__global__` 符号声明，在调用时需要用 `<<<grid, block>>>` 来指定kernel要执行的线程数量
+核函数用 `__global__` 符号声明，在调用时需要用 `<<<grid, block>>>` 来指定kernel要执行的线程数量。用 `__global__` 声明的核函数必须要返回void
 
 在CUDA中，每一个线程都要执行核函数，并且每个线程会分配一个唯一的线程是thread ID，这个ID值可以通过核函数的內置变量threadldx来获得
+
+```c++
+// Kernel定义
+__global__ void vec_add(double *x, double *y, double *z, int n) {
+	int i= get_tid(); // user-defined macro/function
+	if(i < n) z[i] = x[i] + y[i];
+}
+int main() {
+    int N = 1000000; // 1M
+	int bs = 256;
+	int gs = (N + bs - 1) / bs; // 向上取整
+	// kernel, call GPU
+	vec_add<<<gs, bs>>>(x, y, z, N);
+}
+```
+
+## *GPU的内存*
 
 ## *CUDA工具*
 
@@ -596,6 +686,30 @@ nsight, nvprof
 cublas, nvblas, cusolver, cufftw, cusparse, nvgraph
 
 # OpenMP用于GPU编程
+
+OpenMP在4.0后加入了对GPU通用计算编程的支持
+
+## *Offloading*
+
+和CUDA的异构编程模型一样，OpenMP也是Host-centric，默认是在host上运行。需要offloading到device上运行代码。所谓offloading就是CUDA中的转移到device上运行
+
+用target来声明要offloading的运算
+
+### 变量所有权
+
+```c++
+int N=100;
+double b[N]. c[N];
+double a = 1.2;
+for (int i = 0; i < N; i++) b[i] = (double)(i); 
+#pragma omp target map(a, b, c)
+{
+for(int i=0; i<N; i++) c[i] = a * b[i];
+}
+
+```
+
+map是offloading特有的变量类型，适用于separate memory，shared不允许在separate memory中使用
 
 
 
