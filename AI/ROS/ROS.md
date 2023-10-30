@@ -1,16 +1,6 @@
-# ROS简介
+# ROS1 & ROS2 架构
 
-Robotic Operating System, ROS是一个用于编写机器人软件的灵活框架，它集成了大量的工具、库和协议，提供了类似操作系统所提供的功能，包括硬件抽象描述、底层驱动程序管理、共用功能的执行、程序间的消息传递、程序发行包管理，可以极大简化繁杂多样的机器人平台下的复杂任务创建与稳定行为控制。
-
-## *ROS1 & ROS2*
-
-
-
-ROS2：https://www.guyuehome.com/34382
-
-
-
-# ROS1架构
+Robotic OperatingSystem, ROS是一个用于编写机器人软件的灵活框架，它集成了大量的工具、库和协议，提供了类似操作系统所提供的功能，包括硬件抽象描述、底层驱动程序管理、共用功能的执行、程序间的消息传递、程序发行包管理，可以极大简化繁杂多样的机器人平台下的复杂任务创建与稳定行为控制。
 
 ## *ROS1架构设计*
 
@@ -41,18 +31,99 @@ ROS节点管理器就是ROS Master用来管理各种节点。Master调用RPC来�
 
 节点之间的通信机制基于发布-订阅模式的消息 Message 通信
 
-ROS中的标准消息包是 `std_msgs`，里面定义一些常用的消息类型，以便在ROS系统中进行通信和数据交换。ROS的消息系统允许不同的ROS节点之间传递数据，而 `std_msgs` 中的消息类型提供了一些基本的数据结构，例如整数、浮点数、字符串等，以满足通用的通信需求
-
-* `std_msgs/String`.h：用于传递文本字符串数据
-* `std_msgs/Int32.h`：用于传递32位整数数据
-* `std_msgs/Float32.h`：用于传递32位浮点数数据
-* `std_msgs/Bool.h`：用于传递布尔值（True或False）
-* `std_msgs/Time.h`：用于传递ROS时间戳
-* `std_msgs/Header.h`：包含时间戳和帧ID的消息头，通常用于消息的元数据
-
-另外ROS还支持用户定义的消息类型，允许开发者创建自己的消息以传递特定的数据
-
 ### 话题 Subject
+
+## *ROS2架构设计*
+
+ROS2：https://www.guyuehome.com/34382
+
+<img src="ROS1ROS2架构对比.drawio.png" width="80%">
+
+# Catkin
+
+## *小乌龟仿真例程*
+
+```shell
+$ roscore
+$ rosrun turtlesim turtlesim_node
+$ rosrun turtlesim turtle_teleop_key
+```
+
+## *catkin_make*
+
+`catkin_make` 的可选参数
+
+```xml
+catkin_make [args]
+   -h, --help            帮助信息
+   -C DIRECTORY, --directory DIRECTORY
+                         工作空间的路径 (默认为 '.')
+   --source SOURCE       src的路径 (默认为'workspace_base/src')
+   --build BUILD         build的路径 (默认为'workspace_base/build')
+   --use-ninja           用ninja取代make
+   --use-nmake           用nmake取make
+   --force-cmake         强制cmake，即使已经cmake过
+   --no-color            禁止彩色输出(只对catkin_make和CMake生效)
+   --pkg PKG [PKG ...]   只对某个PKG进行make
+   --only-pkg-with-deps  ONLY_PKG_WITH_DEPS [ONLY_PKG_WITH_DEPS ...]
+                         将指定的package列入白名单CATKIN_WHITELIST_PACKAGES，
+                         之编译白名单里的package。该环境变量存在于CMakeCache.txt。
+   --cmake-args [CMAKE_ARGS [CMAKE_ARGS ...]]
+                         传给CMake的参数
+   --make-args [MAKE_ARGS [MAKE_ARGS ...]]
+                         传给Make的参数
+   --override-build-tool-check
+                         用来覆盖由于不同编译工具产生的错误
+```
+
+## *工作空间*
+
+### 工作空间
+
+工作空间 workspace 是一个存放工程开发相关文件的文件夹。ROS默认采用catkin编译系统，它封装了cmake
+
+典型的工作空间中一般包括以下四个目录空间
+
+* src 代码空间 Source Space：开发过程中最常用的文件夹，用来存储所有ROS功能包的源码文件
+* build 编译空间 Build Space：用来存储工作空间编译过程中产生的缓存信息和中间文件
+* devel 开发空间 Development Space：用来放置**编译生成的可执行文件**
+* install 安装空间 Install Space：编译成功后，可以使用 `make install` 命令将可执行文件安装到该空间中，运行该空间中的环境变量脚本，即可在终端中运行这些可执行文件。安装空间并不是必需的，很多工作空间中可能并没有该文件夹
+
+### 创建工作空间
+
+```shell
+$ mkdir -p ~/catkin_ws/src
+$ cd ~/catkin_ws/src
+$ catkin_init_workspace
+```
+
+创建完成后，可以在**工作空间的根目录**下使用catkin_make命令编译整个工作空间
+
+```shell
+$ cd ~/catkin_ws/
+$ catkin_make
+```
+
+编译过程中在工作空间的根目录里会自动产生build和devel两个文件夹及其中的文件。在编译完成后，在devel文件夹中已经产生几个 `setup.*sh` 形式的环境变量设置脚本。使用source命令运行这些脚本文件，则工作空间中的环境变量可以生效
+
+```shell
+$ source devel/setup.bash
+$ echo"source/WORKSPACE/devel/setup.bash">>~/.bashrc # 加入bash配置文件，避免每次重新启动bash都要打一遍
+```
+
+### 创建功能包
+
+```shell
+$ catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
+```
+
+其中的可选参数depend是所依赖的其他功能包
+
+### 工作空间覆盖机制
+
+不同的工作空间中可能存在相同命名的功能包，如果这些工作空间的环境变量都已经设置了，那么此时要依靠Overlaying 工作空间覆盖机制来解决
+
+所有工作空间的路径会依次在ROS_PACKAGE_PATH环境变量中记录，当设置多个工作空间的环境变量后，新设置的路径在ROS_PACKAGE_PATH中会自动放置在最前端。此时最前面的同名功能包会对后面的同名功能包形成覆盖
 
 ## *文件系统*
 
@@ -74,6 +145,32 @@ ROS中的标准消息包是 `std_msgs`，里面定义一些常用的消息类型
 * action：放置功能包自定义的动作指令
 * CMakeLists.txt：编译器编译功能包的规则。
 * package.xml：功能包清单
+* yaml：yaml文件一般存储了ROS需要加载的参数信息，一些属性的配置。通常在launch文件或程序中读取.yaml文件，把参数加载到参数服务器上。通常我们会把yaml文件存放在 param/路径下
+
+### package.xml
+
+每个ROS功能包都包含一个名为 package.xml 的文件，它用于存储有关功能包的元信息和依赖项的信息。以下是一个简单的package.xml文件的示例，以演示它的基本结构和内容
+
+```xml
+<?xml version="1.0"?>
+<package> <!--根标记文件-->
+  <name>my_example_package</name> <!--包名-->
+  <version>0.1.0</version> <!--版本-->
+  <description>This is an example ROS package.</description> <!--内容描述-->
+  <maintainer email="your@email.com">Your Name</maintainer> <!--维护者-->
+  <license>MIT License</license> <!--软件许可证-->
+
+  <depend>roscpp</depend> <!--指定依赖项为编译、导出、运行需要的依赖，最常用-->
+  <depend>std_msgs</depend>
+  <buildtool_depend>catkin</buildtool_depend> <!--编译构建工具，通常为catkin-->
+
+  <build_depend>message_generation</build_depend> <!--编译依赖项-->
+  <build_export_depend></build_export_depend> <!--导出依赖项-->
+  <exec_depend>geometry_msgs</exec_depend> <!--运行依赖项-->
+  <test_depend>rospy</test_depend> <!--测试用例依赖项 -->
+  <doc_depend></doc_depend> <!--文档依赖项 -->
+</package>
+```
 
 ### 功能包命令
 
@@ -91,7 +188,9 @@ ROS中的标准消息包是 `std_msgs`，里面定义一些常用的消息类型
 
 元功能包 Meta Package 的主要作用是组织多个用于同一目的的功能包
 
-## *常用命令*
+## *命名空间*
+
+# 通信
 
 ## *分布式通信*
 
@@ -138,71 +237,6 @@ Talker和Listener谁先启动没有强制要求，这里只是假设Talker首先
 3. Master向Listener发送参数值：Master根据Listener的查找请求从参数列表中进行查找，查找到参数后，使用RPC将参数值发送给Listener
 
 注意：若Talker向Master更新参数值，Listener在不重新查询参数值的情况下是无法知晓参数值已经被更新的。需要一种动态参数更新的机制
-
-# ROS2
-
-## *ROS2架构设计*
-
-<img src="ROS1ROS2架构对比.drawio.png" width="80%">
-
-# 使用ROS
-
-## *小乌龟仿真例程*
-
-```shell
-$ roscore
-$ rosrun turtlesim turtlesim_node
-$ rosrun turtlesim turtle_teleop_key
-```
-
-## *工作空间*
-
-### 工作空间
-
-工作空间 workspace 是一个存放工程开发相关文件的文件夹。ROS默认采用catkin编译系统，它封装了cmake
-
-典型的工作空间中一般包括以下四个目录空间
-
-* src 代码空间 Source Space：开发过程中最常用的文件夹，用来存储所有ROS功能包的源码文件
-* build 编译空间 Build Space：用来存储工作空间编译过程中产生的缓存信息和中间文件
-* devel 开发空间 Development Space：用来放置**编译生成的可执行文件**
-* install 安装空间 Install Space：编译成功后，可以使用 `make install` 命令将可执行文件安装到该空间中，运行该空间中的环境变量脚本，即可在终端中运行这些可执行文件。安装空间并不是必需的，很多工作空间中可能并没有该文件夹
-
-### 创建工作空间
-
-```shell
-$ mkdir -p ~/catkin_ws/src
-$ cd ~/catkin_ws/src
-$ catkin_init_workspace
-```
-
-创建完成后，可以在工作空间的根目录下使用catkin_make命令编译整个工作空间
-
-```shell
-$ cd ~/catkin_ws/
-$ catkin_make
-```
-
-编译过程中在工作空间的根目录里会自动产生build和devel两个文件夹及其中的文件。在编译完成后，在devel文件夹中已经产生几个 `setup.*sh` 形式的环境变量设置脚本。使用source命令运行这些脚本文件，则工作空间中的环境变量可以生效
-
-```shell
-$ source devel/setup.bash
-$ echo"source/WORKSPACE/devel/setup.bash">>~/.bashrc # 加入bash配置文件，避免每次重新启动bash都要打一遍
-```
-
-### 创建功能包
-
-```shell
-$ catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
-```
-
-其中的可选参数depend是所依赖的其他功能包
-
-### 工作空间覆盖机制
-
-不同的工作空间中可能存在相同命名的功能包，如果这些工作空间的环境变量都已经设置了，那么此时要依靠Overlaying 工作空间覆盖机制来解决
-
-所有工作空间的路径会依次在ROS_PACKAGE_PATH环境变量中记录，当设置多个工作空间的环境变量后，新设置的路径在ROS_PACKAGE_PATH中会自动放置在最前端。此时最前面的同名功能包会对后面的同名功能包形成覆盖
 
 ## *Publisher & Subscriber*
 
@@ -351,21 +385,183 @@ Subscriber需要调用回调函数，当有信息到来时就调用回调函数
 3. 运行Publisher & Subscriber
 
    ```shell
+   # rosrun <功能包名> <节点名>
    $ rosrun my_ros_tutorial publisher_node
    $ rosrun my_ros_tutorial subscriber_node
    ```
 
 ## *Server & Client*
 
-## *命名空间*
+### 自定义srv
 
 ## *分布式多机通信*
 
 首先需要确定ROS多机系统中的所有计算机应处于同一网络
 
-# 组件
+# 消息
+
+ROS的msg文件提供自动的跨平台的和跨语言的序列化与反序列化，从而支持通信
+
+## *预定义消息*
+
+### 标准消息包
+
+ROS中的标准消息包是 `std_msgs`，里面定义了ROS的内置数据类型，以便在ROS系统中进行通信和数据交换
+
+这里使用的基础数据类型string、uint8都是语言无关的，编译阶段会变成各种语言对应的数据类型
+
+在自定义msg的时候要使用这些数据类型，具体的类型可以查询 <http://wiki.ros.org/std_msgs>
+
+### 几何消息包
+
+geometry_msgs 提供了用于常见几何原语（如点、矢量和位姿）的消息。这些基本原语的设计旨在提供一种通用数据类型，以促进整个系统的互操作性
+
+具体的类型可以查询 http://wiki.ros.org/geometry_msgs
+
+### 传感器数据类型
+
+具体的类型可以查询 http://wiki.ros.org/sensor_msgs?distro=noetic
+
+## *自定义消息*
+
+自定义msg的过程很像protobuf的使用，先定义再编译
+
+### 定义msg文件
+
+ROS支持用户定义的消息类型，允许开发者创建自己的消息以传递特定的数据
+
+msg文件就是ROS中定义消息类型的文件，一般放置在功能包根目录下的msg文件夹中。在功能包编译过程中，可以使用msg文件生成不同编程语言使用的代码文件。例如下面的msg文件
+
+```
+Header header
+string name
+uint8  sex
+uint8  age
+
+uint8 unknown = 0
+uint8 male    = 1
+uint8 female  = 2
+```
+
+### Header
+
+自定义信息一般会放一条Header数据类型，它的内容如下
+
+```
+uint32 seq
+time stamp
+string frame_id
+```
+
+* seq是消息的顺序标识，不需要手动设置，Publisher在发布消息时会自动累加
+* stamp是消息中与数据相关联的时间戳，可以用于时间同步
+* frame_id是消息中与数据相关联的参考坐标系id
+
+### 编译msg文件
+
+* 在package.xml中添加功能包依赖
+
+  ```xml
+  <build_depend>message_generation</build_depend>
+  <run_depend>message_runtime</run_depend>
+  ```
+
+* 在CMakeLists.txt中添加编译选项
+
+  ```cmake
+  find_package(catkin REQUIRED COMPONENTS
+      geometry_msgs
+      roscpp
+      rospy
+      std_msgs
+      message_generation
+  )
+  
+  # catkin依赖
+  catkin_package(
+      ……
+      CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs message_runtime
+      ……)
+  
+  add_message_files(
+      FILES
+      Person.msg
+  )
+  generate_messages(
+      DEPENDENCIES
+      std_msgs
+  )
+  ```
+
+最后可以使用 `rosmsg show <msg名>` 来查看msg内容
+
+# 常用组件
 
 ## *launch文件*
+
+`rosrun <功能包名> <节点名>` 只能运行一个节点，若要启动一批节点就要用 roslaunch。roslaunch通过XML格式实现多节点的配置和启动，有点像maven
+
+```shell
+$ roslaunch <功能包名> <launch文件名.launch>
+```
+
+### 基本结构
+
+```xml
+<launch>
+  <node pkg="turtlesim" name="sim1" type="turtlesim_node"/>
+  <node pkg="turtlesim" name="sim2" type="turtlesim_node"/>
+</launch>
+```
+
+* `<launch>` 是launch XML文件的根元素，launch中除了开头的 `<?xml version="1.0"?>` 之外的所有内容都放在 `<launch>` 里面
+
+* `<node>` 用来定义启动的节点
+
+  ```xml
+  <node pkg="package-name" type="executable-name" name="node-name" />
+  ```
+
+  node至少要包含上面这三个属性
+
+  * pkg 定义节点所在的包名，type 定义节点的可执行文件名称，这两个属性相当于 rosrun 的两个输入参数
+  * name定义节点名， 它会覆盖 `ros::init()` 的第三个参数
+
+  还有一些可选的属性
+
+  * `output="screen”`：将节点的标准输出打印到终端屏幕，默认输出为日志文档
+  * `respawn="true"`： 复位属性，该节点停止时，会自动重启，默认为false
+  * `required="true"`： 必要节点，当该节点终止时，launch文件中的其他节点也被终止
+  * `ns="hamespace"`：命名空间，为节点内的相对名称添加命名空间前缀
+  * `args="arguments"`：节点需要的输入参数
+
+### 参数设置
+
+* param：设置ROS系统的运行时参数
+
+  ```xml
+  <node pkg="package-name" type="executable-name" name="node-name">
+  	<param name="output_frame" value="odom"/>
+  </node>
+  ```
+
+  可以通过 `rosparam get <参数名>` 命令来查看参数 
+
+* arg：设置launch的内置参数
+
+  ```xml
+  <node pkg="package-name" type="executable-name" name="node-name" args="-ip $(arg ip)"/>
+  ```
+
+### 重映射
+
+### 嵌套复用
+
+和include的机制相似，launch文件可以直接复用其他的launch文件
+
+```xml
+<include file="$(dirname)/other.launch" />
+```
 
 ## *TF坐标变换*
 
@@ -524,3 +720,8 @@ int main(int argc, char* argv[]) {
 }
 ```
 
+# Vision
+
+# SLAM
+
+# ML/DL
