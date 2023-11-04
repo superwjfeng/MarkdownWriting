@@ -386,3 +386,26 @@ Tag 是一种Metadata
 
 
 
+# Assignment 2
+
+### GPU监控
+
+Check GPU utilization `nvidia-smi -l 1` each second update 或者 `watch -n 1 nvidia-smi`
+
+* GPU：本机中的GPU编号（有多块显卡的时候，从0开始编号）图上GPU的编号是：0
+* Fan：风扇转速（0%-100%），N/A表示没有风扇
+* Name：GPU类型，图上GPU的类型是：Tesla T4
+* Temp：GPU的温度（GPU温度过高会导致GPU的频率下降）
+* Perf：GPU的性能状态，从P0（最大性能）到P12（最小性能），图上是：P0
+* Persistence-M：持续模式的状态，持续模式虽然耗能大，但是在新的GPU应用启动时花费的时间更少，图上显示的是：off
+* Pwr：Usager/Cap：能耗表示，Usage：用了多少，Cap总共多少
+* Bus-Id：GPU总线相关显示，domain：bus：device.function
+* Disp.A：Display Active ，表示GPU的显示是否初始化
+* Memory-Usage：显存使用率
+* Volatile GPU-Util：GPU使用率
+* Uncorr. ECC：关于ECC的东西，是否开启错误检查和纠正技术，0/disabled,1/enabled
+* Compute M：计算模式，0/DEFAULT,1/EXCLUSIVE_PROCESS,2/PROHIBITED
+* Processes：显示每个进程占用的显存使用率、进程号、占用的哪个GPU 显存占用和GPU占用是两个不一样的东西，显卡是由GPU和显存等组成的，显存和GPU的关系有点类似于内存和CPU的关系。跑caffe代码的时候显存占得少，GPU占得多；跑TensorFlow代码的时候，显存占得多，GPU占得少
+
+
+
