@@ -201,6 +201,8 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 
 * INCLUDE_DIRECTORIES：向工程添加多个特定的头文件搜索路径，相当于指定g++编译器的 `-I` 参数
 
+  开发时遇到过这个问题：如果用到的头文件和cc文件不在同一目录下的时候，要通过绝对路径或相对路径显式给出头文件路径。这很麻烦，而且一旦头文件或者cc文件本身的位置发生变化，就要把涉及到的所有头文件位置都要更改掉。INCLUDE_DIRECTORIES就是用来解决这个麻烦的
+
   ```cmake
   INCLUDE_DIRECTORIES([AFTER|BEFORE] [SYSTEM] dir1 dir2 ...)
   # 将/usr/include/myincludefolder 和 ./include 添加到头文件搜索路径
@@ -257,6 +259,7 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
   ```
 
   * 这个指令⽤于向当前⼯程添加存放源⽂件的⼦⽬录，并可以指定中间⼆进制和⽬标⼆进制存放的位置
+  * 其实最常用的用法是告诉cmake**去找子目录下的CMakeLists.txt**
   * `EXCLUDE_FROM_ALL` 函数是将写的⽬录从编译中排除，如程序中的example
   * 例：`ADD_SUBDIRECTORY(src bin)`
     * 将 src ⼦⽬录加⼊⼯程并指定编译输出(包含编译中间结果)路径为bin ⽬录
