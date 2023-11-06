@@ -593,6 +593,8 @@ Robot Visualizer, rviz
 
 ## *SDL2*
 
+https://blog.csdn.net/yingshukun/category_10400331.html
+
 Simple DirectMedia Layer, SDL是一个跨平台的多媒体库，用于开发2D游戏和多媒体应用程序。它提供了访问音频、图形、输入设备和窗口管理等功能，使开发者能够在不同操作系统上创建游戏和多媒体应用程序。以下是一些使用SDL2的基本步骤
 
 ### 基本使用方法
