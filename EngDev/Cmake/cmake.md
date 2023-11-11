@@ -1,3 +1,5 @@
+# build系统介绍
+
 ## *intro*
 
 ### build系统
@@ -64,11 +66,32 @@ Makefile是一种汇编语言
 * 一对make指令是由依赖关系和依赖方法组成的
   * 依赖关系：文件之间的关系，即 `目标文件: 依赖文件`
   * 依赖方法：如何通过依赖关系编译文件
+  
 * `make` **默认执行遇到的第一对依赖关系和依赖方法**，其余的需要 `make+依赖关系`，如 `make clean`
+
+* 如果依赖关系中的文件找不到，就继续往下找，比如说下面的makefile所有指令都会执行
+
+  ```makefile
+  main: main.o add.o # 没找到main.o add.o，继续往下找
+      g++ main.o add.o -o main
+  main.o add.o: main.s add.s
+  	g++ -cmain.s -o main.o
+  	g++ -c add.s -o add.o
+  main.s add.s: main.i add.i
+  	g++ -S main.i -o main.s
+  	g++ -S add.i -o add.s
+  main.i add.i: main.cpp add.cpp
+  	g++ -E main.cpp -o main.i
+  	g++ -E add.cpp -o add.i
+  ```
+
 * 伪指令 `.PHONY`：每次 make 总是被执行的，若不是伪目标则若已经存在make后的结构则不会被执行；习惯是将 `clean` 设为伪目标，其他不设置
+
 * make是如何知道目标已经是最新的呢？根据文件的最近修改时间，若可执行程序的修改时间比所有相关文件的修改时间都要晚，那么可执行程序就是最新的
 
 <img src="PHONY_comparison.png">
+
+# CMake的使用
 
 ## *基本语法*
 
@@ -203,13 +226,17 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 
   开发时遇到过这个问题：如果用到的头文件和cc文件不在同一目录下的时候，要通过绝对路径或相对路径显式给出头文件路径。这很麻烦，而且一旦头文件或者cc文件本身的位置发生变化，就要把涉及到的所有头文件位置都要更改掉。INCLUDE_DIRECTORIES就是用来解决这个麻烦的
 
+  这条指令可以用来向工程添加多个特定的头文件搜索路径，路径之间用空格分割
+
+  如果要让VS Code和Clion在写代码时找到用的头文件，得先编译一次
+
   ```cmake
   INCLUDE_DIRECTORIES([AFTER|BEFORE] [SYSTEM] dir1 dir2 ...)
   # 将/usr/include/myincludefolder 和 ./include 添加到头文件搜索路径
   INCLUDE_DIRECTORIES(/usr/include/myincludefolder ./include)
   ```
 
-* LINK_DIRECTORIES：向工程添加多个特定的库文件搜索路径，相当于指定g++编译器的 `-L` 参数
+* LINK_DIRECTORIES：向工程添加多个特定非标准的库文件搜索路径，相当于指定g++编译器的 `-L` 参数
 
   ```cmake
   LINK_DIRECTORIES(dir1 dir2 ...)
@@ -220,10 +247,13 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 * TARGET_LINK_LIBRARIES：为 target 添加需要链接的共享库，相同于指定g++编译器 `-l` 参数
 
   ```cmake
+  LINK_DIRECTORIES(dir1 dir2 ...) # 需要先把库的路径包进来，不包的话就要写绝对路径了
   TARGET_LINK_LIBRARIES(target library1<debug | optimized> library2...)
   # 将hello动态库文件链接到可执行文件main
   TARGET_LINK_LIBRARIES(main hello)
   ```
+
+  这里注意和 `LINK_LIBRARIES(绝对路径)` 的区别，这个命令要写要链接的库文件的绝对路径，不推荐使用它
 
 * ADD_COMPILE_OPTIONS：添加编译参数
 
@@ -398,9 +428,106 @@ make
 
 1. 手动编写CmakeLists.txt
 2. 执行命令 `cmake PATH` 生成Makefile，PATH是顶层CMakeLists.txt所在的目录。注意，在哪里执行cmake命令生成的内容就在哪里，一般选择在build文件夹中执行 `cmake ..`，因为build中是所有编译产生的内容
-3. 执行build命令make进行编译
+3. 使用 `cmake --build .` 进行跨平台build，Linux上也可以使用 `make`
 
-## *构建库*
+可以通过 `cmake .. -DCMAKE_VERBOSE_MAKEFILE=on` 将之后在make的时候具体的编译命令展示出来
+
+# 构建库
+
+## *函数库和 gcc/g++编译器*
+
+### gcc/g++ 编译器
+
+GCC（GNU Compiler Collection）和G++都是由GNU项目开发的编译器，用于编译各种编程语言，包括C和C++。它们之间的主要区别在于它们所针对的编程语言以及默认的编译行为：
+
+* GCC（GNU C Compiler）：GCC最初是C语言的编译器，因此其主要关注点是C语言的编译。尽管如此，GCC也可以用于编译C++代码，但在这种情况下，需要手动指定编译器选项来告诉GCC编译器将源代码视为C++代码
+* G++：G++是GCC的一个衍生版本，专门用于C++编译。它默认将源代码视为C++代码，因此无需手动指定编译选项。G++提供了对C++语言的更好支持，并在默认情况下启用C++语言特性，如C++标准库的支持
+
+总结来说，主要区别在于默认编译语言和默认编译行为：
+
+* 使用GCC时，源代码默认视为C代码，需要手动指定编译选项来将其视为C++代码
+* 使用G++时，源代码默认视为C++代码，无需手动指定编译选项
+
+在实际使用中，您可以根据需要选择使用GCC或G++来编译C或C++代码。如果您编写纯C代码，GCC通常足够，但如果您编写C++代码，建议使用G++以获得更好的C++语言支持
+
+### 函数库
+
+* 函数库可以让其他开发者用到高质量的代码以及提高自己工程的安全度，防止暴露源代码
+* 静态库 Static Library
+  * 静态库是指编译链接时，把库文件中用到的目标文件的代码全部链接到可执行文件中，因此生成的文件比较大，但在运行时也就不再需要库文件了
+  * CentOS安装C/Cpp静态库（系统默认自带动态库）
+    * C: `sudo yum install -y glibc-static`
+    * Cpp: `sudo yum install -y libstdc++static`
+  * 可以通过 `ldd` 命令查看依赖库文件 <img src="ldd_command.png" width="80%">
+* 动态库 Dynamic Link Library：动态库在编译链接时并不会把库文件的代码加入到可执行文件中，而是在程序运行时由运行时链接文件加载库，这样可以节省系统的开销
+* Linux环境中 `.so` 为动态库，`.a` 为静态库；而 windows环境中 `.dll` 为动态库，`.lib` 为静态库
+* gcc生成的二进制文件默认采用动态链接，可以用 `file` 命令验证
+
+<img src="库链接到内存.png">
+
+### 制作静态库
+
+* 前缀必须是lib，后缀必须是.a  `ar -rc libhello.a mymath.o myprint.o`
+* 库目录
+  * include 库的所有头文件
+  * lib 对应的库文件
+* 发布和使用
+  * 自己写的库属于第三方库，既不是语言提供的也不是系统调用库。gcc调用时需要显式给
+  * 头文件gcc的默认搜索路径是：`/usr/include`
+  * 库文件的默认搜索路径是：`/lib64` 或者 `/usr/lib64`
+  * 把第三方库拷贝到系统的默认路径下，称为库的安装
+  * 为了避免未经测试的库污染，不要把第三库放到系统库里，对第三方库进行指定头文件搜索路劲共和库文件搜索路径的硬使用：`gcc main.c -I ./hello/include -L ./hello/lib -lhello`，其中-I指定头文件搜索路径，-L指定库文件搜索路径，lhello是库名
+
+### 制作动态库
+
+* `gcc -shared  myprint.o mymath.o -o libhello.so`
+* fPIC 的意思是生成一个与地址无关的目标二进制文件。程序编译完后有自己固定的内存地址空间，因此静态库在调用时是占用固定的地址空间的，而动态库则不占用，动态库采用的是相对动态编址方式
+* gcc对动态库和静态库的使用选择
+  * 静态库和动态库可以同名
+  * 若只有静态库，则会强制进行静态连接
+  * 若既有静态库也有动态库，则默认使用动态库；此时若想强制使用静态库，也可以用 `-staic` 来指定
+* 动态库是一个独立的库文件，动态库可以和可执行文件分批加载
+  * 动态库只要加载到内存中的**堆栈之间的共享区**一次，**每次使用时只要与调用它的进程的页表建立新的映射关系就可以**；但用静态库的时候是将静态库引入到了调用程序中，即即**保存在代码段**，成为程序的一部分，一起调用，若有很多个程序都使用了同一份静态库，那么内存中将存在大量的库代码冗余
+  * 每一个动态库被加载到内存中，映射到进程的地址空间，映射的位置可能是不一样的，但是因为库里面是相对地址，每一个函数定位采用的是偏移量的方式来寻找的。即只要知道这个库的相对地址，库的起始地址+函数偏移量就可以将函数映射到虚拟地址上·
+
+* 虽然在gcc编译的时候已经告诉了程序需要的动态库的地址，但对生成程序进行调用的时候它并不能找到动态库
+  * 可以将库放到系统库中，但这会造成库污染，不要使用这种方法
+  * 可以将第三方动态库的地址放到库加载的搜索路径的环境变量下 `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH: pwd`，但这个环境变量在OS重启后会被重置为原来的内容
+  * 可以通过新增系统默认的配置文件来达到永久修改的目的：往 `/etc/ld.so.conf.d` 新建一个带有库地址的配置文件后再执行 `ldconfig` 令配置文件生效
+  * 也可以在系统库 `/usr/lib64` 中建立一个指向第三库的软连接
+
+```makefile
+.PHONY:all    
+all:libhello.so libhello.a    
+
+libhello.so:mymath_d.o myprint_d.o
+    gcc -std=c99 -shared mymath_d.o myprint_d.o -o libhello.so    
+mymath_d.o:mymath.c
+    gcc -std=c99 -c -fPIC mymath.c -o mymath_d.o    
+myprint_d.o:myprint.c
+    gcc -std=c99 -c -fPIC myprint.c -o myprint_d.o
+
+libhello.a: mymath.o myprint.o    
+    ar -rc libhello.a mymath.o myprint.o
+mymath.o:mymath.c    
+    gcc -std=c99 -c mymath.c -o mymath.o    
+myprint.o:myprint.c    
+    gcc -std=c99 -c myprint.c -o myprint.o    
+
+.PHONY:output    
+output:    
+    mkdir -p output/lib    
+    mkdir -p output/include    
+    cp -rf *.h output/include    
+    cp -rf *.a output/lib    
+    cp -rf *.so output/lib                                                                                     
+
+.PHONY:clean    
+clean:    
+    rm -rf *.o *.a *.so output    
+```
+
+## *CMake构建库*
 
 ### 用到的指令
 
@@ -408,13 +535,14 @@ make
 
 * ADD_LIBRARY 生成库文件，SHARED为动态库，STATIC为静态库
 
+* 如果没有给出库的类型，那么根据变量 `BUILD_SHARED_LIBS` 是否是 `on` 来自动设置为 SHARED 或 STATIC
+
   ```cmake
   add_library(libname [SHARED | STATIC | MODULE] [EXCLUDE_FROM_ALL] source1 source2 ... sourceN)
   # 通过变量 SRC 生成 libhello.so 共享库
   add_library(hello SHARED ${SRC})
   ```
 
-  
 
 SET 指令重新定义 `EXECUTABLE_OUTPUT_PATH` 和 `LIBRARY_OUTPUT_PATH` 变量来指定最终的⽬标⼆进制的位置
 
@@ -434,9 +562,25 @@ ADD_LIBRARY(hello SHARED ${LIBHELLO_SRC})
 ADD_LIBRARY(hello_static STATIC ${LIBHELLO_SRC})
 ```
 
+解决方法是使用 SET_TARGET_PROPERTIES 来设置输出的名称，对于动态库，还可以用来指定动态库版本和 API 版本
 
+### Win的特殊流程
 
-### 使用外部库和头文件
+当使用Win中的VS配合MSVC编译时，流程和用gcc不太一样
+
+VS要求必须在编译动态库的函数实现的返回值之前声明为 `__declspec(dllexport)`，此时同时生成一个 `.lib`（编译时需要） 和一个 `.dll` 动态库文件（运行加载时需要）
+
+此时需要搭配 TARGET_COMPILE_DEFINITIONS 使用
+
+```c++
+#ifdef EXPORT
+#define CMAKE_STUDY_API declspec（dllexport）
+#else
+#define CMAKE_STUDY_API _declspec（d11import）
+#endif
+```
+
+一定要把 `.lib` 放到和 `.exe` 同一个文件夹里
 
 ## *安装*
 

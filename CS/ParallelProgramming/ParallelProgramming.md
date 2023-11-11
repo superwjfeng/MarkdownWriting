@@ -493,33 +493,186 @@ reduction(operator:list)
 
 ### 竞态的种类
 
+Data Races 是指对多个线程对一个变量的未同步的、有冲突性的获取，至少有一个线程写了这个数据，可以分为 RAW、WAW、WAR三种情况
+
+竞态有时候是很难发现的，即使是我们能确认自己的代码没有问题，但是当我们调用别人的代码，或者我们的代码被别人调用的时候可能也会有问题。比如说下面这种情况，问题在于我们不知道FMAX可能是怎么实现的，它是否有对变量多线程的写？
+
+```c++
+static double farg1,farg2;
+#define FMAX(a,b) (farg1=(a),farg2=(b),farg1>farg2?farg1:farg2)
+
+1619: #pragma omp parallel for shared(bar, foo, THRESH) 
+1620: for (x=0; x<1000;x++)
+1621: double T = FMAX(0.1111*foo*bar[x],THRESH); 
+1622: <work with value T>
+```
+
+竞态可以是无害的，如果我们真100%可以确认写同样的值肯定是发生在多线程不同的时间段内。但即使我们可以从语言层面上确定，编译器的优化方式可能也会造成竞态条件。所以最好不要用，即使用了也要明确标出
+
 ### 竞态条件检测工具
 
+以下是一些常用的工具
 
+* Helgrind 是一款开源的运行时工具，基于valgrind工具包
+* Intel Inspector 是intel开发工具的一部分
+* Thread Sanitizer 是LLVM的静态工具
+* Archer 结合了Thread Sanitizer和OpenMP语义
 
-问题：开销非常非常大导致debug时间非常非常久
+这些工具的原理大概是需要往代码中插入一些内容然后取追踪这些代码的走向，所以开销会非常非常大导致debug时间非常非常久
 
+* Static and/or dynamic instrumentation of all memory accesses
+* Tracking synchronization
+* Detection of unsynchronized accesses to the same memory
 
+## *Dependencies*
 
-100%可以确认写同样的值，但即使我们可以从语言层面上确定，但编译器的优化方式可能也会造成竞态条件。所以最好不要用，即使用了也要明确标出
+到底有没有形成数据依赖取决于循环之间的关系以及变量、array之间的关系。比如说下面这个循环可能存在依赖，因为我们不知道A和B数据之间是否有交叉
 
-## *Loop Dependencies*
+```fortran
+Do i=1,n 
+	A(i) = 5*B(i) + A(i)
+Enddo
+```
 
-### 依赖种类
+### 数据依赖
+
+数据依赖在流水线冲突中已经介绍过了，也就是RAW、WAW、WAR三种情况
 
 和data race不同，数据依赖不一定就是坏事，有时候可以利用依赖来实现某些功能
 
+### 循环依赖
+
+* Loop Independent Dependencies：依赖性只存在于单次iteration之间，没有跨iteration的依赖性。这种循环可以直接循环展开 loop unrolling 后并行执行
+
+  ```c++
+  for (i = 0; i < 4; i++) {
+      b[i] = 8;         // Step 1
+      a[i] = b[i] + 10; // Step 2
+  }
+  ```
+
+* Loop Carried Dependencies：依赖性是跨越iteration的，在一个iteration中的数据依赖于另一个iteration的数据，这种循环无法并行展开执行
+
+  ```c++
+  for (i = 0; i < 4; i++) {
+      b[i] = 8;           // Step 1
+      a[i] = b[i-1] + 10; // Step 2
+  }
+  ```
+
 ## *Aliasing*
+
+Aliasing就是多个变量实际指向的是同一个物理地址 
 
 ## *Loop Transformation*
 
 ### Loop Interchange
 
+如果只有Loop Independent Dependencies可以安全地进行Loop Interchange，也就是调换嵌套循环的顺序
+
+```c++
+for (int i = 0; i < 10; i++) {
+	for (int j = 0; j < 10; i++)  { // 调换j、k循环的顺序没有影响
+		for (int k = 0; k < 10; i++) {
+            A[i, j, k] = A[i, j, k] + B;
+        }
+    }
+}
+```
+
+当有Loop Carried Dependencies，但是可以确保所有的依赖性中，数据更新的方向和interchange之前一样，则调换嵌套循环的顺序也是安全的
+
+```c++
+for (int i = 0; i < 10; i++) {
+	for (int j = 0; j < 10; i++)  { // 调换j、k循环的顺序没有影响
+		for (int k = 0; k < 10; i++) {
+            A[i+1, j+2, k+3] = A[i, j, k] + B;
+        }
+    }
+}
+```
+
 ### Loop Distribution/Fission
+
+将Loop Carried Dependencies分解为Loop Independent Dependencies。比如说下面这个Loop Carried Dependencies是很难并行化的
+
+```c++
+for (int i = 1; i < 10; i++) {
+	a[i] = b[i] + 2;
+    c[i] = a[i-1] * 2; // Loop Carried Dependencies
+}
+```
+
+分解为两个独立的循环。这两个循环中间需要barrier同步数据，而且两个循环也会造成overhead
+
+```c++
+for (int i = 1; i < 10; i++) {
+	a[i] = b[i] + 2;
+}
+for (int i = 1; i < 10; i++) {
+    c[i] = a[i-1] * 2; 
+}
+```
 
 ### Loop Fusion
 
+Loop Fusion就是Loop Distribution/Fission的反过程，合并后粒度上升，中间也不需要barrier了
+
+```c++
+for (int i = 1; i < 10; i++) {
+	a[i] = b[i] + 2;
+}
+for (int i = 1; i < 10; i++) {
+    c[i] = d[i+1] + a[i]; 
+}
+```
+
+这两个循环合并后也不存在Loop Carried Dependencies，可以合并
+
+```c++
+for (int i = 1; i < 10; i++) {
+   	a[i] = b[i] + 2;
+    c[i] = d[i+1] + a[i]; 
+}
+```
+
+下面这两个loop是无法合并的，因为 `a[i+1]` 读到的数据是要等整个 `a` 都更新完了才行，而如果是 `a[i-1]` 就可以合并
+
+```c++
+for (int i = 1; i < 10; i++) {
+	a[i] = b[i] + 2;
+}
+// 不可以合并
+for (int i = 1; i < 10; i++) {
+    c[i] = d[i+1] + a[i+1]; 
+}
+// 可以合并
+for (int i = 1; i < 10; i++) {
+    c[i] = d[i+1] + a[i-1]; 
+}
+```
+
 ### Loop Alignment
+
+Loop Alignment可以把Loop Carried Dependencies转换为Loop Independent Dependencies
+
+```c++
+for (int i = 1; i < 10; i++) {
+	a[i] = b[i] + 2;
+    c[i] = a[i-1] * 2;
+}
+```
+
+这个循环实际上只要稍微shift错位后就可以完全并行化，不过要对第首位元素做一下特殊处理
+
+```c++
+c[2] = a[1] * 2;
+for (int i = 2; i < 9; i++) {
+	a[i] = b[i] + 2;
+    c[i+1] = a[i] * 2;
+}
+a[9] = b[9] + 2;
+```
 
 # MPI
 
@@ -606,14 +759,14 @@ CUDA提供了对其它编程语言的支持，如C/C++、Python、Fortran等语�
 
 ## *CUDA程序层次结构*
 
-<img src="CUDA程序层次结构.png" width="60%">
+<img src="CUDA软件架构.png">
 
-GPU上有很多并行化的轻量级线程，它们有一定的层次结构
+CUDA的软件架构在逻辑上可以分为thread，block，gird。注意：thread，block，gird的设定是为了方便程序员进行软件设计和组织线程，是CUDA编程上的概念
 
 * kernel在device上执行时实际上是启动很多线程，一个kernel所后动的所有线程称为一个网格 grid。同一个grid上的线程共享相同的全局内存空间。grid是线程结构的第一层
 * Grid又可以分为很多线程块 block，一个线程块里面包含很多线程，这些线程运行在同一个SMP中。块不能太小以至于不能隐藏其调度开销，但是也不能太大，一般是128或256个线程（32的倍数）。block是第二层
 * 一个block里的线程按顺序排成一个一维向量，每32个线程称为一个warp，是CUDA最小的调度单位。warp是第三层
-* 单独的线程是第四层
+* 单独的线程是第四层，线程是最小的逻辑单元
 
 ### 维度
 
@@ -661,7 +814,7 @@ dim3 block(5, 3);
 
 ### warp调度
 
-<img src="warp调度器.png" width="40%">
+<img src="FGMTofWarps.drawio.png" width="90%">
 
 Warp内的线程需要执行相同的指令
 

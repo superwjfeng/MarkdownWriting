@@ -407,5 +407,126 @@ Check GPU utilization `nvidia-smi -l 1` each second update 或者 `watch -n 1 nv
 * Compute M：计算模式，0/DEFAULT,1/EXCLUSIVE_PROCESS,2/PROHIBITED
 * Processes：显示每个进程占用的显存使用率、进程号、占用的哪个GPU 显存占用和GPU占用是两个不一样的东西，显卡是由GPU和显存等组成的，显存和GPU的关系有点类似于内存和CPU的关系。跑caffe代码的时候显存占得少，GPU占得多；跑TensorFlow代码的时候，显存占得多，GPU占得少
 
+# Assignment3
+
+## *性能分析相关概念*
+
+1. 事件（Events）：事件是在处理器中发生的特定操作或情况，如缓存命中、缓存不命中、分支预测错误、指令执行等。这些事件可以用于分析程序或工作负载的性能特征。
+2. **性能计数器（Performance Counters）**：性能计数器是硬件寄存器，用于记录特定事件的数量。每个性能计数器通常与一个特定的事件相关联。通过读取这些计数器的值，在程序运行期间或之后，可以分析性能并评估处理器的行为。
+3. **寄存器（Registers）**：在CPU或系统芯片中，有一组特殊寄存器用于存储性能事件和计数器的配置信息以及计数器的当前值。这些寄存器通常由操作系统、性能分析工具或用户空间程序来配置和访问。
+4. **性能监测工具（Performance Monitoring Tools）**：性能监测工具是用于配置、启动性能计数器并分析计数器数据的软件工具。这些工具可以提供详细的性能分析信息，帮助开发人员和系统管理员识别性能瓶颈和优化机会。
 
 
+
+
+
+## *Perf*
+
+http://www.yunweipai.com/43686.html
+
+### Perf event
+
+Perf event 是perf工具的基础，代表了一个特定的性能度量。事件可以是内核、硬件或用户级应用程序产生的。这些事件可以用于监控、统计和剖析各种性能指标
+
+* Hardware Event由Power Management Unit, PMU部件产生，在特定的条件下探测性能事件是否发生以及发生的次数。比如cache命中
+* Software Event是内核产生的事件，分布在各个功能模块中，统计和操作系统相关性能事件。比如进程切换，tick数等
+* Tracepoint Event是内核中静态tracepoint所触发的事件，这些tracepoint用来判断程序运行期间内核的行为细节，比如slab分配器的分配次数等
+
+### perf record
+
+`perf record` 命令用于收集指定事件的性能数据，并将其保存在文件中以便后续分析。默认数据将保存在名为 perf.data 的文件中
+
+```shell
+$ perf record [options] [command]
+```
+
+* -e 或 –event：指定要记录的事件类型，例如cache-misses, instructions等
+* -p 或 –pid：指定要监控的进程ID
+* -t 或 –tid：指定要监控的线程ID
+* -a 或 –all-cpus：监控所有CPU，而不仅仅是当前CPU
+* -C 或 –cpu：指定要监控的CPU列表
+* -f 或 –overwrite：以覆盖模式记录事件
+* -c 或 –count：设置每个事件的采样周期
+* -r 或 –real-time：设置实时优先级
+* -o 或 –output：指定要将数据写入的文件
+* -g 或 –call-graph：指定调用图记录方法，例如dwarf或fp（帧指针）
+* –switch-events：记录上下文切换事件
+* –no-buffering：禁用数据缓冲
+* –dry-run：显示要执行的操作，但不实际执行
+
+### perf report
+
+perf report 命令从 perf.data 文件中读取性能数据，并以多种格式展示分析结果。用户可以根据需要自定义报告的输出格式
+
+```shell
+$ perf report [options]
+```
+
+* -i 或 –input：指定要读取的输入文件，默认为 perf.data
+* -F 或 –fields：指定要显示的字段，例如：comm, dso, symbol 等
+* –sort：指定排序顺序，例如：dso,symbol 或 symbol,dso
+* –show-total-period：显示每个符号的总周期数
+* -T 或 –threads：显示线程相关数据
+* -m 或 –modules：显示模块（共享库）相关数据
+* -k 或 –vmlinux：指定内核符号表文件（vmlinux）的路径
+* -f 或 –force：强制解析文件，即使它看起来无效或损坏
+* -c 或 –comms：指定要显示的命令（进程）列表
+* –dsos：指定要显示的动态共享对象（DSO）列表
+* -s 或 –symbols：指定要显示的符号（函数）列表
+* –percent-limit：仅显示超过指定百分比的项
+* -P 或 –pretty：指定输出格式，如raw、normal等
+* –stdio：以文本模式显示报告（而非 TUI 模式）
+* –tui：以 TUI 模式显示报告（默认方式）
+* –gtk：以 GTK 模式显示报告
+* -g 或 –call-graph：显示调用图数据
+* –no-children：仅显示独立样本，不显示调用子函数的样本
+* –no-demangle：禁用 C++ 符号解析
+* –demangle：指定 C++ 符号解析方式，如：no, normal, smart 等
+* –filter：指定过滤器，如：–filter ‘dso(/lib*)’
+* –max-stack：指定栈帧的最大数量
+
+## *likwid*
+
+https://github.com/RRZE-HPC/likwid/wiki/
+
+likwid, like I knew what I am doing. 是一组命令行性能分析系列工具的集合，用于针对多线程程序的指标分析
+
+* likwid-topology：显示线程和缓存拓扑
+* likwid-perfctr：在Intel、ARM、Power处理器上测量硬件性能计数寄存器
+* likwid-features：显示并切换Intel Core 2处理器上的硬件预取控制位
+* likwid-pin：在不修改代码的情况下为多线程应用程序设置绑定（支持pthread、Intel OpenMP和gcc OpenMP）
+* likwid-bench：允许快速原型化线程汇编内核的基准测试框架
+* likwid-mpirun：脚本，可简化MPI和MPI/多线程混合应用程序的绑定设置
+* likwid-perfscope：likwid-perfctr时间轴模式的前端。允许实时绘制性能指标
+* likwid-powermeter：用于访问Intel处理器上的RAPL计数器并查询Turbo模式步骤的工具
+* likwid-memsweeper：用于清理ccNUMA内存域并强制从缓存中驱逐脏缓存行的工具
+* likwid-setFrequencies：用于设置特定处理器频率的工具
+
+### Performance Group
+
+Performance group 指的是一组计算机中测量用的性能计数寄存器
+
+```
+$ likwid-perfctr -a
+    Group name	Description
+--------------------------------------------------------------------------------
+           UPI	UPI data traffic 用于测量处理器之间的数据通信流量，特别是用于UPI的数据流量。
+          DATA	Load to store ratio 用于测量加载和存储操作之间的比率，有助于了解内存访问模式。
+        ENERGY	Power and Energy consumption 用于测量系统的功耗和能源消耗情况，帮助评估能源效率。
+        BRANCH	Branch prediction miss rate/ratio 用于测量分支预测错误的频率，这对于评估分支预测性能很有帮助。
+           TMA	Top down cycle allocation 用于测量处理器周期的分配情况，以了解性能瓶颈。
+           MEM	Memory bandwidth in MBytes/s 用于测量内存带宽，即从主存读取和写入数据的速度。
+        MEM_DP	Overview of arithmetic and main memory performance 提供有关算术运算和主存性能的总体概述。
+            L2	L2 cache bandwidth in MBytes/s 用于测量L2缓存的带宽，即L2缓存的读取和写入速度。
+  CYCLE_STALLS	Cycle Activities (Stalls) 用于测量处理器周期内不同类型的停顿（stalls）活动。
+        MEM_SP	Overview of arithmetic and main memory performance 提供有关算术运算和主存性能的总体概述，针对单精度操作。
+            L3	L3 cache bandwidth in MBytes/s 用于测量L3缓存的带宽，即L3缓存的读取和写入速度。
+        DIVIDE	Divide unit information 提供有关除法单元性能和信息的计数。
+   MEM_FREERUN	Memory bandwidth in MBytes/s 用于测量内存带宽，与之前的 "MEM" 类似。
+CYCLE_ACTIVITY	Cycle Activities 用于测量不同类型的处理器周期活动。
+     FLOPS_AVX	Packed AVX MFLOP/s 用于测量AVX（Advanced Vector Extensions）指令集的每秒浮点操作（FLOP）。
+       L2CACHE	L2 cache miss rate/ratio 用于测量L2缓存的缺失率或比率。
+      FLOPS_DP	Double Precision MFLOP/s 用于测量双精度浮点操作的每秒执行次数。
+         CLOCK	Power and Energy consumption 用于测量处理器时钟频率、功耗和能源消耗。
+      FLOPS_SP	Single Precision MFLOP/s 用于测量单精度浮点操作的每秒执行次数。
+```
