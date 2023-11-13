@@ -343,10 +343,322 @@ https://www.bkunyun.com/help/docs/cloudE18
 ## *Vector Triad Microbenchmark*
 
 ```c++
-for (i=0; i<N; i ++) {
-	A[i] = B[i] + C[i] * D[i];
+#include <assert.h>
+#include <errno.h>
+#include <omp.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+// pointers for vectors
+static double *restrict A, *restrict B, *restrict C, *restrict D;
+
+bool verify(int N)
+{
+    for (int i = 0; i < N; ++i) {
+        if (A[i] != 7.0)
+            return false;
+    }
+    return true;
+}
+
+double triad(int N, int REP)
+{
+    double begin = omp_get_wtime();
+#pragma omp parallel
+    {
+        for (int r = 0; r < REP; ++r)
+#pragma omp for schedule(static) nowait
+            for (int i = 0; i < N; ++i)
+                A[i] = B[i] + C[i] * D[i];
+    }
+    return omp_get_wtime() - begin;
+}
+
+void initialize_vectors(int N)
+{
+#pragma omp parallel for schedule(static)
+    for (int i = 0; i < N; ++i) {
+        A[i] = 0.0;
+        B[i] = 1.0;
+        C[i] = 2.0;
+        D[i] = 3.0;
+    }
+}
+
+void allocate_vectors(size_t N, bool aligned)
+{
+    size_t CACHE_LINESIZE = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
+
+    if (aligned) {
+        A = aligned_alloc(CACHE_LINESIZE, N * sizeof(double));
+        B = aligned_alloc(CACHE_LINESIZE, N * sizeof(double));
+        C = aligned_alloc(CACHE_LINESIZE, N * sizeof(double));
+        D = aligned_alloc(CACHE_LINESIZE, N * sizeof(double));
+    } else {
+        A = malloc(N * sizeof(double));
+        B = malloc(N * sizeof(double));
+        C = malloc(N * sizeof(double));
+        D = malloc(N * sizeof(double));
+    }
+
+    if(!A || !B || !C || !D) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void free_vectors(void)
+{
+    free(A);
+    free(B);
+    free(C);
+    free(D);
+}
+
+int main(int argc, char *argv[])
+{
+    size_t N_max;
+    size_t N_min = 128;
+
+    // min. measurement time in seconds
+    double min_duration = 1.0;
+    bool   aligned      = true;
+
+    if (argc < 2 || argc > 3) {
+        fprintf(stderr, "Usage: %s <N> [aligned]\n", argv[0]);
+        fprintf(stderr, "    N         : maximum vector length (2^N_max)\n");
+        fprintf(stderr, "    aligned=0 : use unaligned memory allocation\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char *pEnd;
+    N_max = 1ULL << strtol(argv[1], &pEnd, 10);
+    if (errno || N_max > __INT_MAX__ || N_max < N_min) {
+        fprintf(stderr, "N invalid / out of range\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (argc == 3) {
+        aligned = atoi(argv[2]);
+    }
+
+    fprintf(stderr, "N_max = %zu %s\n", N_max, aligned ? "" : "(unaligned memory)");
+
+    printf("%s,%s,%s,%s\n", "N", "GFLOPS", "Repetitions", "Threads");
+
+    int num_threads = omp_get_max_threads();
+
+    for (size_t N = N_min; N <= N_max; N *= 2) {
+        allocate_vectors(N, aligned);
+        initialize_vectors(N);
+
+        size_t rep = 1;
+        // warm-up and set number of repetitions
+        while (triad(N, rep) < min_duration / 2) {
+            rep *= 2;
+        }
+
+        // actual measurement
+        double time = triad(N, rep);
+
+        assert(verify(N));
+        free_vectors();
+
+        // flop calculation
+        double num_flops = 2.0 * N * rep;
+        double gflops    = (num_flops / time) * 1.0e-9;
+
+        printf("%zu,%.2f,%zu,%d\n", N, gflops, rep, num_threads);
+    }
+    return EXIT_SUCCESS;
 }
 ```
+
+### REP 的作用
+
+* **重复执行以增加准确性**：在性能测试中，通常希望测量的操作能持续足够长的时间，以便能够准确地计算出执行时间。如果操作执行得太快，计时器的精度可能不足以提供准确的读数。通过重复执行相同的操作（在这个案例中是数组操作 `A[i] = B[i] + C[i] * D[i]`），可以延长总的执行时间，从而获得更精确的测量
+* **动态确定重复次数**：在 main 函数中，有一段代码专门用来确定合适的 REP 值。代码的逻辑是这样的：首先以一个很小的重复次数开始，然后不断增加重复次数，直到 `triad` 函数执行的时间达到或超过预设的最小持续时间的一半（这里是 `min_duration / 2`）。这样做的目的是为了确保在进行实际的性能测量时，每次测量都有足够长的执行时间，从而提高准确性
+
+### 计算 GFLOPS & Bandwidth
+
+假设triad用到的数组数据都是double，一次数组操作 `A[i] = B[i] + C[i] * D[i]` 总共需要2次浮点数操作和4次内存访问，即 `16 Bytes/flop`
+
+当然 `16 Bytes/flop` 只是平均值，可能会因为read miss、特殊的instruction而产生变化
+
+所以计算bandwidth就是 `#FLOPS * 16 Bytes/flop`
+
+## *研究一下parallel construct*
+
+run命令：`srun OMP_NUM_THREADS=64 OMP_PROC_BIND=spread ./triad-ice1 26 1`
+
+`#pragma omp parallel` 的作用是创建并行区域，把同样的代码分配给不同的线程
+
+而 `#pragma omp for` 的作用则是拆分一个for循环，把里面不同的iterations分配给不同的线程（若并行化了）
+
+### 原版
+
+```c++
+double triad(int N, int REP)
+{
+    double begin = omp_get_wtime();
+#pragma omp parallel
+    {
+        for (int r = 0; r < REP; ++r)
+#pragma omp for schedule(static) nowait
+            for (int i = 0; i < N; ++i)
+                A[i] = B[i] + C[i] * D[i];
+    }
+    return omp_get_wtime() - begin;
+}
+```
+
+为什么第二个for后面不用加 {}？
+
+`for (int r = 0; r < REP; ++r)` 后面紧跟着的是 `#pragma omp for schedule(static) nowait` 和内层的 `for` 循环。由于 `#pragma` 指令和内层的 `for` 循环被视为一体，因此外层 `for` 循环实际上只包含了这个复合语句。因此，从语法上来说，这种情况下外层 `for` 循环也不需要大括号。
+
+然而，这样的代码可能会使阅读和理解变得有些困难，特别是对于不熟悉OpenMP指令的人来说。为了提高代码的清晰度，最好还是通过添加大括号明确地表示出哪些代码属于外层循环
+
+```csv
+N,        GFLOPS,  Repetitions,  Threads
+128,      15.85,   33554432,     64
+256,      141.42,  268435456,    64
+512,      323.92,  268435456,    64
+1024,     497.15,  134217728,    64
+2048,     531.48,  67108864,     64
+4096,     624.71,  67108864,     64
+8192,     830.01,  33554432,     64
+16384,    894.73,  16777216,     64
+32768,    888.11,  8388608,      64
+65536,    828.92,  4194304,      64
+131072,   401.26,  1048576,      64
+262144,   371.55,  524288,       64
+524288,   374.24,  262144,       64
+1048576,  371.17,  131072,       64
+2097152,  281.56,  65536,        64
+4194304,  40.70,   4096,         64
+8388608,  19.09,   1024,         64
+16777216, 16.02,   256,          64
+33554432, 9.16,    128,          64
+67108864, 7.98,    32,           64
+```
+
+### 同时并行化外部和内部循环
+
+```c++
+double triad(int N, int REP)
+{
+    double begin = omp_get_wtime();
+#pragma omp parallel for schedule(static)
+        for (int r = 0; r < REP; ++r) {
+            for (int i = 0; i < N; ++i)
+                A[i] = B[i] + C[i] * D[i];
+        }
+    return omp_get_wtime() - begin;
+}
+```
+
+为什么不可以加 {} 和 nowait？
+
+```csv
+N,        GFLOPS,  Repetitions,  Threads
+128,      1.90,    4194304,      64
+256,      2.69,    4194304,      64
+512,      2.94,    2097152,      64
+1024,     3.09,    1048576,      64
+2048,     4.13,    524288,       64
+4096,     1.98,    524288,       64
+8192,     4.65,    262144,       64
+16384,    4.64,    131072,       64
+32768,    4.89,    65536,        64
+65536,    5.38,    32768,        64
+131072,   6.00,    16384,        64
+262144,   7.29,    8192,         64
+524288,   8.32,    4096,         64
+1048576,  10.00,   4096,         64
+2097152,  11.59,   2048,         64
+4194304,  18.78,   2048,         64
+8388608,  26.72,   1024,         64
+16777216, 21.14,   512,          64
+33554432, 27.20,   256,          64
+67108864, 26.51,   128,          64
+```
+
+### f
+
+```c++
+double triad(int N, int REP)
+{
+    double begin = omp_get_wtime();
+#pragma omp parallel
+{
+        for (int r = 0; r < REP; ++r) {
+            for (int i = 0; i < N; ++i)
+                A[i] = B[i] + C[i] * D[i];
+        }
+}
+    return omp_get_wtime() - begin;
+}
+```
+
+
+
+
+
+```c++
+double triad(int N, int REP)
+{
+    double begin = omp_get_wtime();
+    for (int r = 0; r < REP; ++r)
+#pragma omp parallel for schedule(static) 
+        for (int i = 0; i < N; ++i)
+            A[i] = B[i] + C[i] * D[i];
+    return omp_get_wtime() - begin;
+}
+```
+
+```csv
+N,        GFLOPS,  Repetitions,  Threads
+128,      0.02,    65536,        64
+256,      0.04,    65536,        64
+512,      0.08,    65536,        64
+1024,     0.16,    65536,        64
+2048,     0.32,    65536,        64
+4096,     0.65,    65536,        64
+8192,     1.30,    65536,        64
+16384,    2.60,    65536,        64
+32768,    5.17,    65536,        64
+65536,    10.33,   65536,        64
+131072,   20.35,   65536,        64
+262144,   39.16,   65536,        64
+524288,   71.85,   65536,        64
+1048576,  124.87,  32768,        64
+2097152,  189.80,  32768,        64
+4194304,  36.94,   4096,         64
+8388608,  19.31,   1024,         64
+16777216, 15.35,   256,          64
+33554432, 14.05,   128,          64
+67108864, 14.18,   64,           64
+```
+
+
+
+```c++
+double triad(int N, int REP)
+{
+    double begin = omp_get_wtime();
+    for (int r = 0; r < REP; ++r)
+#pragma omp parallel
+{
+        for (int i = 0; i < N; ++i)
+            A[i] = B[i] + C[i] * D[i];
+}
+    return omp_get_wtime() - begin;
+}
+```
+
+
 
 
 
