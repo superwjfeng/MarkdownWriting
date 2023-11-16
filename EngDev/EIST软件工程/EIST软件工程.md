@@ -847,7 +847,7 @@ https://blog.csdn.net/sinat_21107433/article/details/102927937
 
 ## *MVC*
 
-# Testing
+# 测试
 
 ## *Overview*
 
@@ -1218,7 +1218,7 @@ clang++ -fsanitize=memory <source_file.cpp>
 
 ### ThreadSanitizer
 
-# Software Management & Deployment
+# 软件的开发、管理 & 部署
 
 ## *Software Configuration Management*
 
@@ -1243,7 +1243,7 @@ SCM通常使用一系列工具和流程来实现以上功能，例如版本控�
 
 ### 构建系统分类
 
-CMake和Makefile内容可以看 [*CMakeLists.md*](../Cmake/cmake.md)
+CMake和Makefile内容可以看 [*CMakeLists.md*](../CMake/CMake.md)
 
 ## *Git*
 
@@ -1552,6 +1552,13 @@ DevOps到底是什么意思？ - 小枣君的文章 - 知乎 https://zhuanlan.zh
 ### Scrum 敏捷开发
 
 <img src="ScrumLifeCycle.png" width="70%">
+
+敏捷软件开发是以短周期迭代为核心，包含团队、工作件、管理和技术优秀实践的集合
+
+* 团队：Product Owner, PO 产品经理、Scrum Master 敏捷教练、Team
+* 工作件：产品Backlog, PBL（需求清单）、迭代清单、完成标准
+* 管理实践：迭代计划会议、每日站立会议、可视化管理、迭代验收、迭代回顾会议
+* 技术实践：用户故事、结对编程、Test-Driven Development, TDD 測试驱动开发、CI 持续集成、Anatomy系统解剖
 
 ### DevOps
 
