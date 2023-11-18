@@ -179,8 +179,6 @@
 * 中国邮政编码：`[1-9]\d{5}(?!\d)` (中国邮政编码为6位数字)
 * IPv4地址：`((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}`
 
-
-
 ## *文本处理工具*
 
 在Linux中，grep、sed、awk等文本处理工具都支持通过正则表达式来进行模式匹配
@@ -191,20 +189,20 @@
 
 * `d`选项：指定字段分隔符，默认为制表符（Tab `\t`）
 
-  ```shell
+  ```cmd
   $ cut -d',' -f2 file.txt  # 使用逗号作为分隔符提取第二个字段
   ```
 
 * `-f`选项：指定要提取的字段或字段范围
 
-  ```shell
+  ```cmd
   $ cut -f1,3 file.txt    # 提取第一个和第三个字段
   $ cut -f2-4 file.txt    # 提取第二到第四个字段
   ```
 
 * `-c`选项：指定在每行中要提取的字符位置或范围
 
-  ```shell
+  ```cmd
   $ cut -cchars <file-name>
   $ cut -c1-5 file.txt    # 提取第1到第5个字符
   $ cut -c2,4,6 file.txt  # 提取第2、4和6个字符
@@ -212,13 +210,13 @@
 
 * `-s`选项：禁止输出不包含分隔符的行
 
-  ```shell
+  ```cmd
   $ cut -s -d',' -f2 file.txt  # 只输出包含逗号分隔符的行的第二个字段
   ```
 
 * `--complement`选项：输出除指定字段之外的字段
 
-  ```shell
+  ```cmd
   $ cut -d',' --complement -f2 file.txt  # 输出除第二个字段之外的所有字段
   ```
 
@@ -235,7 +233,7 @@ paste 命令的效果和 cut 相反：它不是拆分行，而是合并行
 
 `ed`的使用方式是在终端中启动`ed`程序，然后输入一系列命令来编辑文本。`ed`不提供图形用户界面，因此在使用时需要学习一些命令语法。例如，可以使用`ed`来插入、删除、替换文本行，以及移动光标等
 
-```shell
+```cmd
 $ ed filename.txt
 ed> 1i            # 在第一行之前插入文本
 This is a test.
@@ -250,7 +248,7 @@ ed> q             # 退出编辑器
 
 Sed（stream editor）可以用来在管道或命令序列中编辑数据。和ed不同，sed不是交互式程序，sed会将指令的命令应用到输入的每一行上，并将结果写入到标准输出
 
-```shell
+```cmd
 $ sed [选项] '脚本' [文件]
 ```
 
@@ -262,19 +260,19 @@ $ sed [选项] '脚本' [文件]
 
 * `-n` ：默认情况下sed将输入的每一行都写入到标准输出中，`-n` 则告诉sed默认不打印任何行。与之搭配使用的是 p 命令,p 命令可以打印出符合指定范围或模式的所有行
 
-  ```shell
+  ```cmd
   $ sed -n '1,2p' input.txt # 只打印前两行
   ```
 
   下面这个命令用来查看一些特殊的符号，比如说制表符 `\t` 之类的很好用
 
-  ```shell
+  ```cmd
   $ sed -n l file
   ```
 
 * `-e`：多个操作，可以将多个`sed`命令组合在一起，以依次对文本进行多次处理
 
-  ```shell
+  ```cmd
   $ sed -e 's/old/new/g' -e '/pattern/d' input.txt
   ```
 
@@ -282,7 +280,7 @@ $ sed [选项] '脚本' [文件]
 
 `tr`命令用于在文本流中进行字符转换和删除操作。它通常用于处理文本数据的字符级别操作，例如字符替换、删除和转换。以下是`tr`命令的基本用法和一些常见选项：
 
-```shell
+```cmd
 $ tr [选项] 字符集1 字符集2
 ```
 
@@ -294,7 +292,7 @@ $ tr [选项] 字符集1 字符集2
 
 1. **替换字符**：最常见的用法是替换一个字符集中的字符为另一个字符集中的字符。例如，将所有小写字母转换为大写字母：
 
-   ```shell
+   ```cmd
    $ echo "hello" | tr 'a-z' 'A-Z'
    ```
 
@@ -302,7 +300,7 @@ $ tr [选项] 字符集1 字符集2
 
 2. **删除字符**：可以使用`-d`选项来删除指定字符集中的字符。例如，删除文本中的所有空格：
 
-   ```shell
+   ```cmd
    $ echo "Hello, World!" | tr -d ' '
    ```
 
@@ -310,7 +308,7 @@ $ tr [选项] 字符集1 字符集2
 
 3. **字符集补集**：可以使用`-c`选项来指定字符集的补集，即除了指定字符集以外的所有字符。例如，删除除了数字以外的所有字符：
 
-   ```shell
+   ```cmd
    $ echo "abc123" | tr -c '0-9' '\n'
    ```
 
@@ -318,7 +316,7 @@ $ tr [选项] 字符集1 字符集2
 
 4. **字符转义**：使用`-s`选项可以将多个连续重复的字符替换为一个字符。这在压缩连续的空格或其他字符时非常有用。
 
-   ```shell
+   ```cmd
    $ echo "Too      many       spaces." | tr -s ' '
    ```
 
@@ -326,13 +324,13 @@ $ tr [选项] 字符集1 字符集2
 
 5. **删除换行符**：可以使用`-d`选项删除换行符，将文本压缩成一行。
 
-   ```shell
+   ```cmd
    $ cat file.txt | tr -d '\n'
    ```
 
 6. **将字符映射为其他字符**：通过提供字符映射表，可以将一个字符集中的字符映射为另一个字符集中的字符。例如，将数字0-9映射为字母a-j：
 
-   ```shell
+   ```cmd
    $ echo "0123456789" | tr '0-9' 'a-j'
    ```
 
@@ -350,7 +348,7 @@ $ tr [选项] 字符集1 字符集2
 
 ### uniq
 
-```shell
+```cmd
 $ uniq <input_file> [output_file]
 ```
 
@@ -358,15 +356,14 @@ uniq 命令可用于查找或删除文件中的重复行
 
 uniq 将 input_file 复制为 output_file，同时删除所有重复的行。uniq 将重复的行定义为内容一模一样的连续行。若没有指定 output_file,则结果会写入标准输出。若 input_file 也没有指定，那么 uniq 可以作为过滤器，即从标准输入中读取输入
 
-* uniq 的-c 选项可以统计出现的次数，在脚本中极为有用
+uniq 的-c 选项可以统计出现的次数，在脚本中极为有用
 
 ### tee
 
 `tee` 用于从标准输入中读取数据，并将数据同时输出到标准输出和一个或多个文件。它的名字"tee"来自于水管系统中的T型接头，表示数据从一个管道分流到多个管道的操作。`tee`通常用于将命令的输出保存到文件同时在终端上显示输出，或者将**输出传递给多个不同的处理管道。以下是`tee`的基本用法和一些常见选项：
 
-```
-bashCopy code
-command | tee [选项] 文件...
+```cmd
+$ command | tee [选项] 文件...
 ```
 
 * `command`：是生成输出的命令或命令序列
@@ -377,7 +374,7 @@ command | tee [选项] 文件...
 
 * 保存输出到文件：最简单的用法是将命令的**输出保存到一个或多个**文件中。例如，将命令的输出保存到`output1.txt`和`output2.txt`文件：
 
-   ```shell
+   ```cmd
    $ command | tee output.txt output2.txt 
    ```
 
@@ -385,13 +382,13 @@ command | tee [选项] 文件...
 
 * 忽略标准输出：使用`-`（单破折号）选项可以忽略标准输出，只将数据写入文件
 
-   ```shell
+   ```cmd
    $ command | tee - output.txt
    ```
 
 * 追加到文件：使用`-a`选项可以将输出追加到文件而不是覆盖文件内容。例如，将命令的输出追加到`output.txt`文件：
 
-   ```shell
+   ```cmd
    $ command | tee -a output.txt
    ```
 
@@ -399,7 +396,7 @@ command | tee [选项] 文件...
 
 `grep`是一个强大的命令行工具，用于在文本文件中搜索指定的模式（正则表达式或字符串），并将匹配的行打印到标准输出。它的名字"grep"是"Global Regular Expression Print"的缩写，强调了其在全局范围内搜索和打印匹配文本的功能。以下是`grep`的基本用法和一些常见选项：
 
-```shell
+```cmd
 $ grep [选项] 模式 [文件]
 ```
 
@@ -411,13 +408,18 @@ $ grep [选项] 模式 [文件]
 
 * 基本搜索：默认情况下，`grep`搜索并打印包含指定模式的行。例如，搜索文件`input.txt`中包含字符串"pattern"的行：
 
-   ```shell
+   ```cmd
    $ grep "pattern" input.txt
    ```
 
+   Grep默认会把搜索到的内容放到标准输出中，有两种方法来避免
+
+   * 可以用 `-q` 选项，它使 `grep` 在找到匹配行时不输出内容，只返回状态码
+   * `> /dev/null` 重定向到垃圾桶
+
 * 正则表达式搜索：`grep`支持正则表达式搜索。使用`-E`选项或`--extended-regexp`选项来启用扩展正则表达式，以进行更复杂的匹配。
 
-   ```shell
+   ```cmd
    $ grep -E "regex_pattern" input.txt
    ```
 
@@ -429,7 +431,7 @@ $ grep [选项] 模式 [文件]
 
 * 递归搜索：使用`-r`选项可以递归地搜索目录下的所有文件
 
-   ```shell
+   ```cmd
    $ grep -r "pattern" /path/to/directory
    ```
 
@@ -441,11 +443,305 @@ $ grep [选项] 模式 [文件]
 
 awk命令实际上是一种脚本语言
 
+## *搜索*
+
+grep的递归搜索
+
+```cmd
+$ grep -r "pattern" /path/to/directory
+```
+
+### find
+
+`find` 命令是在Linux和Unix系统中用于搜索文件和目录的强大工具。它可以在指定的目录树中递归搜索文件，并根据不同的条件进行筛选。下面是 `find` 命令的常见用法和选项：
+
+```cmd
+$ find [起始目录] [选项] [表达式]
+```
+
+* `起始目录`：指定搜索的起始目录。如果不提供起始目录，默认从当前目录开始搜索
+* `选项`：`find` 命令的选项，用于指定搜索的条件和行为
+* `表达式`：用于定义搜索条件的表达式，可以包含文件名、文件类型、大小、权限等信息
+
+以下是一些常见的 `find` 命令选项和用法：
+
+* 搜索文件名：使用 `-name`  选项可以根据文件名搜索文件。例如，要搜索名为 "myfile.txt" 的文件
+
+  ```cmd
+  $ find /path/to/search -name "myfile.txt"
+  ```
+
+* 搜索文件类型：使用 `-type` 选项可以根据文件类型进行搜索。常见的类型包括 `f`（普通文件）和 `d`（目录）
+
+* 搜索文件大小：使用 `-size` 选项可以根据文件大小进行搜索。可以指定大小的单位，如 `k`（千字节）和 `M`（兆字节）。例如，要搜索大于1MB的文件
+
+  ```cmd
+  $ find /path/to/search -type f -size +1M
+  ```
+
+* 搜索文件权限：使用 `-perm` 选项可以根据文件权限进行搜索。可以指定八进制数字来表示文件权限。例如，要搜索具有读取权限的文件
+
+  ```cmd
+  $ find /path/to/search -type f -perm /u+r
+  ```
+
+* 递归搜索：find默认会递归搜索指定目录及其子目录中的文件。若不需要递归搜索，可以使用 `-maxdepth` 选项来限制搜索的深度。例如，要在当前目录中搜索文件，但不包括子目录
+
+  ```cmd
+  $ find . -maxdepth 1 -name "myfile.txt"
+  ```
+
+* 执行操作：可以使用 `-exec` 选项来执行操作，例如打印匹配的文件或执行其他命令。例如，要打印匹配的文件路径，可以运行
+
+  ```cmd
+  $ find /path/to/search -name "myfile.txt" -exec echo {} \;
+  ```
+
+### locate
+
+`locate` 命令是用于快速搜索文件和目录的命令，它通常比 `find` 命令快速，并且适用于那些已建立好的文件数据库。`locate` 命令搜索一个预先生成的数据库，而不是实时搜索文件系统，因此可以快速找到文件，但不会返回最新创建或修改的文件
+
+```cmd
+$ locate [选项] [模式]
+```
+
+* `选项`：一些常见的 `locate` 命令选项包括：
+  * `-i`：不区分大小写地搜索
+  * `-c`：只返回匹配项的数量，而不是文件路径
+  * `-l`：只返回匹配项的文件路径，而不输出详细信息
+  * `-e`：将搜索模式视为扩展的正则表达式
+* `模式`：要搜索的文件或目录的名称模式。可以使用通配符或正则表达式
+
+### 搜索可执行文件和库
+
+在Linux上，`where`、`whereis`、`whence` 和 `which` 是用于**查找可执行文件和命令**的命令，它们有不同的用途和行为。以下是对这些命令的简要介绍：
+
+* where
+
+   `where` 命令通常不是Linux系统中的标准命令，而是一些shell（如bash）的内建命令。它用于查找**特定命令**的位置。`where` 会搜索系统的 PATH 变量中指定的目录，以找到命令的位置并显示在屏幕上
+
+   ``` cmd
+   $ where ls
+   ```
+
+2. **`whereis` 命令**：
+
+   * `whereis` 命令用于查找二进制、源代码和帮助页面文件的位置。它会在一些标准的系统目录中搜索，并显示相关文件的路径。
+
+   * 示例：
+
+     ```
+     bashCopy code
+     whereis ls
+     ```
+
+     上述命令将显示与 
+
+     ```
+     ls
+     ```
+
+      命令相关的二进制、源代码和帮助页面文件的路径。
+
+3. **`whence` 命令**：
+
+   * `whence` 命令通常不是Linux系统中的标准命令，而是某些shell（如ksh）的内建命令。它用于显示命令的位置，类似于 `which` 命令。
+
+   * 示例：
+
+     ```
+     bashCopy code
+     whence ls
+     ```
+
+     上述命令会显示 
+
+     ```
+     ls
+     ```
+
+      命令的位置。
+
+4. **`which` 命令**：
+
+   * `which` 命令用于查找并显示命令的位置。它会搜索系统的 PATH 变量中指定的目录，并显示第一个匹配到的命令的路径。
+
+   * 示例：
+
+     ```
+     bashCopy code
+     which ls
+     ```
+
+     上述命令会显示 
+
+     ```
+     ls
+     ```
+
+      命令的路径，通常是该命令的二进制可执行文件的位置。
+
+总结：
+
+* `where` 和 `whence` 命令通常是特定shell的内建命令，具体取决于使用的shell。它们的主要目的是查找命令的位置，但它们的行为可能会因不同的shell而异
+* `whereis` 和 `which` 命令是通用的Linux命令，用于查找命令和文件的位置。`whereis` 还可以查找源代码和帮助页面文件。它们在绝大多数Linux发行版中都是可用的
+
+# Shell
+
+## *Shell功能*
+
+### 命令解析 & 执行
+
+* **命令行中的 `if` 语句**：当你在命令行中直接输入 `if` 语句时，Shell 需要一种方式来知道何时一个命令结束，何时另一个命令开始。因为命令行是交互式的，Shell 不能像处理脚本那样等待直到它遇到一个换行符。在这种情况下，分号 `;` 用作命令分隔符，它告诉 Shell 一个命令已经结束，可以开始解析下一个命令了。例如：
+
+   ```cmd
+   $ if [ condition ]; then command; fi
+   ```
+
+   在这里，分号用于分隔 `if` 语句中的不同部分，使 Shell 能够正确解析整个语句。
+
+* **脚本中的 `if` 语句**：在 Shell 脚本中，换行符本身就作为命令分隔符。当 Shell 解析脚本时，它使用换行符来确定命令何时结束，因此你不需要在每个命令后加分号。例如：
+
+   ```shell
+   if [ condition ]
+   then
+       command
+   fi
+   ```
+
+   在这个例子中，每行的结束本身就表示了命令的结束，所以不需要额外的分号。
+
+要注意的是，在脚本中，即使不是必须的，你仍然可以使用分号。这可以在某些情况下（例如将 `then` 放在与 `if` 相同的行上）提高代码的可读性或满足个人编码风格。例如：
+
+```shell
+if [ condition ]; then
+    command
+fi
+```
+
+## *实现简单Shell*
+
+### shell执行的命令
+
+* 第三方提供的对应的在磁盘中有具体二进制文件的可执行程序，由子进程来执行
+* shell内部自己实现的方法，由自己（即父进程）来执行。有些命令就是要用来影响shell本身的，如cd是要用来切换shell本身的路径
+
+### 实现过程详见代码
+
+* shell的环境变量是从其配置文件中来的，`.bashrc` (resource configuration) 是一个脚本文件，当shell启动的时候，通过执行改脚本来读取对应的配置文件
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <string.h>
+#include <sys/types.h>
+
+#define NUM 1024
+#define SIZE 32
+#define SEP " "
+
+// 定义缓冲区
+char* g_argv[SIZE]; // 保存打散之后的命令行字符串
+char cmd_line[NUM]; // 保存完整的命令行字符串
+char g_myval[64];// 写一个环境变量的buffer，用来测试
+
+// shell运行原理：通过让子进程执行命令，父进程等待&&解析命令
+int main()
+{
+    extern char** environ;
+    // 0. 命令行解释器，一定是一个常驻内存的进程，不退出
+    while (1)
+    {
+        // 1. 打印处提示信息 [root@localhost myshell]
+        printf("[root@localhost myshell]# ");
+        fflush(stdout);
+        memset(cmd_line, '\0', sizeof(cmd_line));
+
+        // 2. 获取用户键盘输入[输入的是各种指令和选项：如"ls -a -l -i"]
+        if (fgets(cmd_line, sizeof(cmd_line), stdin) == NULL)
+        {
+            continue;
+        }
+        cmd_line[strlen(cmd_line)-1] =  '\0';
+        //printf("echo: %s\n", cmd_line);
+        
+        // 3. 命令行字符串解析："ls -a -l -i" -> "ls", "-a", "-l", "-i"
+        // 可以在每个空格处放置'\0'后依次拆开。也可以使用strtok函数 
+        g_argv[0] = strtok(cmd_line, SEP); // strtok第一次调用要传入原始字符串
+        int index = 1;
+        if (strcmp(g_argv[0], "ls") == 0)
+        {
+            g_argv[index++] = "--color=auto";
+        }
+        if (strcmp(g_argv[0], "ll") == 0)
+        {
+            g_argv[0] = "ls";
+            g_argv[index++] = "-1";
+            g_argv[index++] = "--color=auto";
+
+        }
+        //while (1)
+        //{
+        //    g_argv[index] = strtok(NULL, SEP); // 第二次若还要解释原始字符串，则传入NULL
+        //    index++;
+        //}
+        while (g_argv[index++] = strtok(NULL, SEP)); // 解析字符
+        for (index=0; g_argv[index]; index++) 
+            printf("g_argv[%d]: %s\n", index, g_argv[index]);
+        
+        // 4. 内置命令，让父进程（shell）自己执行的命令，我们叫做内置命令/内建命令
+        // 内置命令本质就是shell中的一个函数调用，因此若拿到的是内置命令，则父进程直接执行
+        if (strcmp(g_argv[0], "export") == 0 && g_argv[1] != NULL)
+        {
+            strcpy(g_myval, g_argv[1]);
+            int ret = putenv(g_myval);
+            if (ret == 0)
+                printf("%s export success\n", g_argv[1]);
+            for (int i=0; environ[i]; i++)
+                printf("%d: %s\n", i, environ[i]);
+            continue;
+        }
+        if (strcmp(g_argv[0], "cd") == 0)
+        {
+            if (g_argv[1] != NULL)
+                chdir(g_argv[1]); // chdir系统调用
+            continue;
+        }
+        // 5. fork()
+        pid_t id = fork();
+        if (id == 0)
+        {
+            // child
+            printf("功能让子进程进行\n");
+            printf("child, MYVAL: %s\n", getenv("MYVAL"));
+            printf("child, PATH: %s\n", getenv("PATH"));
+            //execvpe(g_argv[0], g_argv, environ);
+            execvp(g_argv[0], g_argv);
+            // 问题在于类似于cd这样的命令，这能作用在子进程中，并不能影响shell的路径
+            exit(1);
+        }
+        // father
+        int status = 0;
+        pid_t ret = waitpid(id, &status, 0);
+        if (ret > 0)
+            printf("exit code: %d\n", WEXITSTATUS(status));
+    }
+    return 0;
+}
+```
+
+### 如何执行其他的C、C++二进制程序或其他语言的程序？
+
+* 无论是任何语言，都是运行在OS上面的，都需要调用类似exec\*的系统接口。因此本质而言Shell就是一个解析用户输入命令并调用exec\*函数的C文件
+* C语言、Python和Shell语言都像是软件，编译型的第一次编译之后生成二进制可执行文件，之后再使用都可以直接运行可执行文件，速度非常快。而解释型语言需要每次都将代码文件输入给python或shell解释器逐行解析，因此速度很慢
+
 # 脚本 & 变量
 
 ## *helloworld*
 
-```sh
+```shell
 #! /bin/bash
 echo "hello, world"
 ```
@@ -458,39 +754,58 @@ echo "hello, world"
 * 用绝对路径或相对路径来执行脚本文件
 * 用 `source`（csh实现）或 `.`（bash实现） 命令来执行脚本文件。source调用并加载新的配置到子bash
 
-## *变量*
+## *普通变量*
 
 ### 分类
 
-* 环境变量和自定义变量
+* 普通变量，也称为关键字参数
+* 传递给脚本或命令的特殊的 Shell 变量，也称为位置参数
+* 环境变量
 * 全局和局部
   * 全局对所有bash有效，局部只对当前bash有效
   * 用户自定义的默认都是局部变量，可以通过 `export` 来导出为全局变量。但是特别的是对于子shell中更改了全局变量，不会对父shell造成影响
 
-使用一个定义过的变量，只要在变量名前面加 `$` 符号，然后 `{}` 括起来即可
+使用一个定义过的变量，只要在变量名前面加 `$` 符号
 
 ### 变量定义的规则
 
 * 变量名称可以由字母、数字和下划线组成，但是不能以数字开头，环境变量名建议大写
 
-* **等号两侧不能有空格（（
+* **等号两侧不能有空格**
 
 * 变量的值如果有空格，需要使用双引号或单引号括起来
 
 * 在bash中，**变量默认类型都是字符串类型**，无法直接进行数值运算。需要使用下面会介绍的算术扩展机制
 
+  ```shell
+  count=1
+  ```
 
-
-### 变量定义基本句法
-
-* 定义变量：变量名=变量值，注意不能有空格，否则会被
-* 解释为两条语句
-* 撤销变量：unset变量名
 * 声明静态/只读变量：readonly变量 `readonly b=5`
 
-### 特殊变量
+### 变量相关命令
 
-* `$n`：n是数字，`$0` 代表该脚本名称， `$1-$9` 代表第1-9个参数，10 以上的参数要用花括号括起来 `${10}`
+* 撤销变量：unset命令
+* set命令用于设置或修改Shell的选项和参数。`set`命令可以用于启用或禁用各种Shell功能，以及设置全局或局部变量。它还可以用于设置特殊的Shell行为。下面是一些常见的`set`命令的用法和示例
+  * 启用和禁用选项：
+    * `set -x`：启用脚本的调试模式，会输出每个命令执行前的提示
+    * `set +x`：禁用调试模式
+    * `set -e`：如果某个命令返回非零退出状态，则立即退出脚本
+    * `set +e`：禁用上述的"立即退出"模式
+    * `set -u`：对未初始化的变量执行操作时，产生错误
+    * `set +u`：禁用对未初始化变量的错误检查
+  * 设置位置参数：
+    * `set --`：清除所有位置参数
+    * `set -- arg1 arg2 arg3`：设置新的位置参数
+  * 修改特殊行为：
+    * `set -o option`：启用某个特殊行为选项
+    * `set +o option`：禁用某个特殊行为选项
+
+## *传参*
+
+### 位置参数
+
+* `$1` ~ `$9`：代表第1-9个参数
 
   ```shell
   #! /bin/bash
@@ -498,7 +813,12 @@ echo "hello, world"
   echo $0
   echo $1
   echo $2
+  echo ${10}
   ```
+
+* `${n}`：若给程序提供的参数多于 9 个，是没法访问第 10 个以及之后的参数的。 比方说当访问第 10 个参数的时候写成 `$10` 的时候，那么 Shell 实际上会替换$1 的值，然后在后面加上一个 0。比如要写成 **`${n}`** 的格式才行
+
+* `$0`：Shell 会自动将程序名保存在特殊变量 `$0` 中
 
 * `$#`：参数个数统计，获取所有输入参数的数量。常用于循环，判断参数的个数是否正确以及增强脚本的健壮性
 
@@ -509,7 +829,96 @@ echo "hello, world"
 * `$@`：也代表命令中所有的参数，但是 `$@` 把每个参数区分对待，即形成一个集合或者数字
 
 
+注意：shell中的 `$@` 和makefile script中的 `$@` 意义是不同的
+
+### 参数替换
+
+* `${parameter}`
+
+  若参数名后的字符可能会造成名字冲突，可以把参数名放进花括号内
+
+  ```shell
+  mv $file ${file}x
+  mv $file $filex # 试图去找名为filex变量的值
+  ```
+
+* `{parameter:-value}`
+
+  如果`${parameter}`未设置或为空时，将默认值`value`替换到字符串中
+
+  ```shell
+  # 如果未设置或为空，使用默认值
+  unset variable
+  result="${variable:-Default Value}"
+  echo "${result}"  # 输出: Default Value
+  
+  # 如果设置了值，使用该值
+  variable="Custom Value"
+  result="${variable:-Default Value}"
+  echo "${result}"  # 输出: Custom Value
+  ```
+
+* `{parameter:=value}`
+
+  ```shell
+  # 如果未设置或为空，使用默认值，并将变量设置为默认值
+  unset variable
+  result="${variable:=Default Value}"
+  echo "${result}"  # 输出: Default Value
+  echo "${variable}"  # 输出: Default Value
+  
+  # 如果设置了值，使用该值，并保持变量不变
+  variable="Custom Value"
+  result="${variable:=Default Value}"
+  echo "${result}"  # 输出: Custom Value
+  echo "${variable}"  # 输出: Custom Value
+  ```
+
+* `{parameter:?value}`
+
+  如果`${parameter}`未设置或为空时，将错误信息`value`输出到标准错误，并退出脚本
+
+  ```shell
+  # 如果未设置或为空，输出错误信息并退出脚本
+  unset variable
+  result="${variable:?Variable is not set or is empty.}"
+  # 输出到标准错误并退出脚本
+  ```
+
+* `${parameter:+value}`
+
+  如果`${parameter}`已设置且不为空时，将值`value`替换到字符串中
+
+  ```shell
+  # 如果设置了值，使用附加值
+  variable="Custom Value"
+  result="${variable:+Additional Value}"
+  echo "${result}"  # 输出: Additional Value
+  
+  # 如果未设置或为空，不附加值
+  unset variable
+  result="${variable:+Additional Value}"
+  echo "${result}"  # 输出为空字符串
+  ```
+
+另外可以用 `${#variable}` 来得到变量中保存了多少个字符
+
+### 模式匹配
+
 ## *环境变量*
+
+### Linux中Bash的环境配置
+
+<img src="Bash初始化.drawio.png">
+
+上图是一个Bash启动时依次需要读取的配置文件，这些文件全部都是shell脚本
+
+* `/etc/profile` 是系统整体的设定：根据用户的UID设定各种环境变量以提供不同的权限。因为用户可以有多个 shell 比如 bash, sh, zsh 之类的，但像环境变量这种其实只需要在统一的一个地方初始化就可以了
+  * `/etc/profile.d/` 文件夹下的各种shell文件用来设置Bash的各种属性 
+  * `/etc/locate.conf` 负责环境变量 `$LANG` 来设置系统的语系
+* `~/.bash_profile` 是每个用户的个人设定，它会再读入 `~/.bashrc`
+  * `~/.bashrc` rc的意思是Run Command
+  * `/etc/bashrc` 是专门用来给 bash 做初始化的，比如用来初始化 bash 的设置
 
 ## *算术扩展*
 
@@ -517,7 +926,7 @@ echo "hello, world"
 
 算术扩展的格式为:  `$((expression))`
 
-### 支持的运算符
+### 算术扩展命令支持的运算符
 
 要进行数值运算要用运算符 operator 表达
 
@@ -531,28 +940,33 @@ Unix/Linux shell支持
 * 常见的算术运算符：加减乘除、取模 `%`
 * 比较运算符：`==`、`!=`、`>`、`<`、`>=`、`<=` 等
 
-### 算术扩展命令
+### `expr` 命令
+
+当旧的 Shell 不支持算术扩展的情况下, 可以使用数学等式解算器 mathematical equation solver `expr` 命令来代替
 
 或者用比较麻烦的 `expr` 算术扩展命令： `expr 1 + 2` 的时候中间要有空格，而且 `*` 要转义，即 `\*`
 
-### 命令替换
+# Shell处理引号
 
-将一个命令运行的结果赋值给变量
+## *引号和反斜线*
 
-```shell
-a=$(expr 5 \* 3) # or
-a=`expor 5 \* 3`
+### 单引号 Single Quote
+
+当 Shell 看到第一个单引号时，**它会忽略随后的所有特殊字符**，直到碰到下一个与之匹配的的封闭单引号 matching closing quote。单引号内的任何字符都会被视为字面文本，包括单引号本身。因此在单引号内部无法嵌套其他单引号。**单引号适用于需要确保字符串内容不被修改或解释的情况**
+
+和Shell会把一般的命令去掉空格不同，无论引号中有多少个空格，它们都会被 Shell 所保留
+
+```cmd
+$ echo  one            two      three    four
+one two three four
+$ echo 'one            two      three    four'
+one            two      three    four
+$
 ```
 
-# shell处理引号
+因此单引号甚至可以跨行作用，因为此时Shell也会保留回车并作为命令参数的一部分
 
-## *引号*
-
-### 单引号
-
-单引号甚至可以跨行作用，因为此时Shell也会保留回车并作为命令参数的一部分
-
-```shell
+```cmd
 $ echo 'Hello, 
 > World' 
 Hello, 
@@ -562,34 +976,58 @@ $
 
 解析完第一行之后，Shell 发现引号并没有配对上，因此提会示用户（弹出 `>` 符号）输入结尾的引号。 `>` 叫做辅助提示符  secondary prompt character，Shell 会在等待用户完成多行命令的输入时显示该提示符
 
-### 双引号
+### 双引号 Double Quote
 
-## *反斜线*
+双引号和单引号的区别在于双引号对引号内的内容的保护力度弱于单引号，也就是说有3个字符在双引号中不会被忽略：`$`、反引号 backtick`` ` `` 和反斜线 `\` 
+
+双引号内的变量会被解析为它们的实际值，并且可以使用特殊字符（如换行符、制表符等）。双引号也支持命令替换，可以使用反引号 `` ` `` 或 `$()` 来执行命令并将其结果嵌入字符串中。双引号适用于需要对字符串中的变量进行扩展和解释的情况
+
+### 补充：Smart Quotes
+
+注意：**在 Shell 中并没有 smart quotes。这种由字处理器，比如Microsoft Word 所生成的向内弯的引号，打印效果要更好看，但它们会破坏 Shell 脚本**
+
+Smart quotes 智能引号 是指在文本编辑和排版中使用的引号字符，它们在显示和排版时会根据上下文自动替换成适当的左引号和右引号，以使文本看起来更加美观和规范。与智能引号相对应的是 直引号 straight quotes，它们是键盘上常见的直角引号字符，不会根据上下文进行替换
+
+智能引号通常分为两种类型：左引号 opening quotes 和 右引号 closing quotes
+
+智能引号的使用有助于提高文本的可读性，并且符合排版和印刷的标准。在一些文字处理软件、排版工具和网页编辑器中，智能引号通常会自动应用，以确保文本的引号使用规范。然而，有时在某些特定的文本编辑环境中，需要手动输入智能引号字符。
+
+智能引号的样式和字符可能因语言和文化而异，所以在不同的国家和地区，智能引号的样式可能有所不同。例如，德语和法语中使用的引号样式与英语不同
+
+### 反斜线 Backslash
+
+* 转义特殊字符：反斜线可以用来转义特殊字符，例如双引号、单引号、`$`、反引号 `` ` `` 等，使它们不被解释为Shell的控制字符，而被视为普通字符
+
+* 使用反斜线续行：若反斜线是输入行的最后一个字符，Shell 会将其视为续行符。它会删除随后的换行符
+
+* Win上反斜线被用作路径分隔符，表示文件或目录路径的不同部分
+
+  ```shell
+  # Windows路径示例
+  path="C:\\Users\\YourUser\\Documents"
+  ```
 
 ## *命令替换*
 
-# 函数
+命令替换是指将命令的输出嵌入到另一个命令或上下文中。这允许在Shell脚本或命令中执行一个命令，并将其结果用作变量、参数或其他上下文的一部分。命令替换有两种常用的语法
 
-## *函数*
+### 反引号
 
-### 系统函数
+使用反引号形式的命令替换已经不再是首选的方法了，之所以在这里给出是因为很多老旧的 Shell 脚本还在使用这种写法
 
-* `basename [string/pathname][suffix]` 取路径里的文件名称，会去掉所有前缀（包括最后一个/），默认保留suffix，若指定了suffix，就会把文件的suffix后缀去掉
-* `dirname`：截取绝对路径名称
-
-### 自定义函数
-
-```shell
-[ function ] funname[()]
-{
-	Action;
-	[return int;]
-}
+```cmd
+$ echo "今天的日期是 `date`"
 ```
 
-shell脚本是逐行运行，不会编译。所以必须在调用函数的地方之前，先声明函数
+### `$()`
 
-函数返回值，只能通过 `$?` 系统变量获得。若不加return，将以最后一条命令的运行结果作为返回值。return后跟数值n（0-255）
+较新的和更常见的命令替换语法使用美元符号和圆括号（$()）将命令括起来，然后将命令的输出嵌入到当前命令中
+
+```cmd
+$ echo "今天的日期是 $(date)"
+```
+
+这种写法相比于反引号更好，因为使用了单引号和反引号的复杂命令会很难阅读，另外 `$()` 易于嵌套，能够在命令替换中再进行命令替换
 
 # 控制流
 
@@ -597,9 +1035,15 @@ shell脚本是逐行运行，不会编译。所以必须在调用函数的地方
 
 ### 基本语法
 
-* `test condition`
+条件判断有两种写法
 
-* `[ condition ]` 注意condition前后的空格不可少
+* 直接用 `if condition`。`if` 语句后面可以直接跟任何命令，包括复杂的管道命令
+
+* test命令：当测试条件有多个的时候，用Shell的test内置命令比较方便，它有两种形式
+
+  * `if test condition`。用 `""` 将 condition括起来是一种良好的工程实践，确保了就算其志伟空，test也能将其视为参数
+  *  `if [ condition ]` 比较方便。注意condition前后的空格、`[]` 前后的空格不可少。`[]` 符号可理解为指向test命令的一个软链接，所以其用法可完全参照test
+
 
   ``` shell
   a=hello
@@ -607,7 +1051,20 @@ shell脚本是逐行运行，不会编译。所以必须在调用函数的地方
   [ ] #echo $? 空输出1
   ```
 
-和高级语言相反，shell script用0表示真，非0表示假，因为用的是返回状态作为判断条件
+和高级语言相反，shell script用0表示真，非0表示假，因为用的是返回状态作为判断条件。可以通过 `echo $?` 来查看上一条语句的退出码
+
+注意和高级语言不同：**test或 `[]` 是不可以测试管道命令的**
+
+```cmd
+$ if [ who | grep "$user" ]; then echo x; fi # 错误！
+$ if who | grep "$user"; then echo x; fi     # 正确
+```
+
+在 Shell 中，不能将管道命令直接放入测试条件 `[ ... ]` 是因为 `[ ... ]` 本身是一个条件测试命令，它的功能是评估表达式或检查文件状态，**它们期望的输入是可以直接在其内部评估的表达式，而不是一个独立的、需要被执行的命令序列**。管道命令（例如 `cmd1 | cmd2`）是用来将一个命令的输出作为另一个命令的输入的，它们的用途和语法上与条件测试命令 `[ ... ]` 不相兼容
+
+在 `[ ... ]` 中使用管道会导致语法错误，因为 Shell 会把 `[` 和 `]` 之间的内容解释为要测试的条件表达式，而不是要执行的命令序列。条件测试命令 `[ ... ]` 期望得到的是一个能被评估为真或假的表达式，而不是命令的执行结果
+
+说实话这一块笔者仍然感到疑惑
 
 ### 常用判断条件
 
@@ -623,7 +1080,7 @@ shell脚本是逐行运行，不会编译。所以必须在调用函数的地方
 
 * 按照文件类型进行判断：-e -f -d 文件是否存在 existence、存在并且是一个常规文件 file 、存并且是一个目录 directory
 
-* 多条件判断：`&&` 表示前一条指令执行成功时，才执行后一条命令；`||` 表示上一条命令执行失败后，才执行下一条命令
+* 多条件判断：`&&`/-a 表示前一条指令执行成功时，才执行后一条命令；`||`/-o 表示上一条命令执行失败后，才执行下一条命令
 
   ```shell
   a=15
@@ -638,14 +1095,24 @@ shell脚本是逐行运行，不会编译。所以必须在调用函数的地方
 ```shell
 if [ condition ]
 then
-	程序
+	command
 elif [ condition ]
 then
-	程序
+	command
 else
 	程序
 fi
 ```
+
+或者 
+
+```shell
+if [ condition ]; then
+    command
+fi
+```
+
+缩进不是强制的，只是为了方便阅读
 
 一个小优化保证判断条件不为空，""是进行字符串拼接（用单引号''就不会翻译$1了）
 
@@ -656,8 +1123,8 @@ if [ "$1"x  = "zhang3"x ]; then echo "welcome, zhang3"; fi
 若是多个判断条件有两种表示方法
 
 ```shell
-if [ $a -gt 18 ] && [ $a -lt 35 ]; then echo OK; fi
-if [ $a -gt 18 -a $a -lt 35 ]; then echo OK; fi # -a -r 表示逻辑与、或
+$ if [ $a -gt 18 ] && [ $a -lt 35 ]; then echo OK; fi
+$ if [ $a -gt 18 -a $a -lt 35 ]; then echo OK; fi # -a -r 表示逻辑与、或
 ```
 
 ### case语句
@@ -665,18 +1132,28 @@ if [ $a -gt 18 -a $a -lt 35 ]; then echo OK; fi # -a -r 表示逻辑与、或
 case就是switch语句
 
 ```shell
-case $变量名 in
-"value 1")
-	# 程序1
-;; # break
-"value 2")
-	# 程序2
-;;
-*)
-	# 这里是default
-;;
+case value in 
+pattern1)   command
+			command
+            ... 
+            command;;
+pattern2)   command
+			command
+            ... 
+            command;;
+... 
+patternn)   command
+			command
+            ... 
+            command;;
 esac
 ```
+
+value 会连续地和 pattern1、pattern2、...、patternn比较，直到找到匹配项
+
+若匹配上了则执行所匹配值之后的命令，碰到双分号后停止，**双分号在这里起到一个 break 语句的作用**，表明已经完成了特定条件下指定的语句。在这之后,case 语句就结束了
+
+若没有发现匹配项，则case 中的命令一个都不执行
 
 ## *循环*
 
@@ -707,7 +1184,7 @@ do
 done
 ```
 
-### while循环
+### while & until
 
 ```shell
 while [ condition ] #[]里的循环变量要在外面定义
@@ -716,6 +1193,31 @@ do
 done
 ```
 
+### 循环控制
+
 ### read读取控制台输入
 
 `read -p -t` -p指定读取值时的提示符；-t指定读取时等待的时间，若不加-t则一直等待
+
+# 其他特性
+
+## *函数*
+
+### 系统函数
+
+* `basename [string/pathname][suffix]` 取路径里的文件名称，会去掉所有前缀（包括最后一个/），默认保留suffix，若指定了suffix，就会把文件的suffix后缀去掉
+* `dirname`：截取绝对路径名称
+
+### 自定义函数
+
+```shell
+[ function ] funname[()]
+{
+	Action;
+	[return int;]
+}
+```
+
+shell脚本是逐行运行，不会编译。所以必须在调用函数的地方之前，先声明函数
+
+函数返回值，只能通过 `$?` 系统变量获得。若不加return，将以最后一条命令的运行结果作为返回值。return后跟数值n（0-255）
