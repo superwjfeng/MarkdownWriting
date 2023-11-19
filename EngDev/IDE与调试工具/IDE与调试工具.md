@@ -66,14 +66,57 @@ IntelliSense 使用静态代码分析、语义分析和用户输入上下文来�
 
 ### Samba服务器
 
-Samba 是一个开源的网络协议套件，允许不同操作系统之间共享文件和打印机。它使Linux、Unix 和类似系统可以与Windows 系统互操作，允许在不同操作系统之间共享文件和资源。以下是关于Samba服务器的一些重要信息：
+Samba 是一个开源的**局域网络协议套件**，允许不同操作系统之间共享文件和打印机。它使Linux、Unix 和类似系统可以与Windows 系统互操作，允许在**处于同一个局域网内的不同操作系统之间**共享文件和资源。以下是关于Samba服务器的一些重要信息：
 
-1. **文件共享**：Samba允许在Linux/Unix和Windows系统之间共享文件和目录。这意味着您可以在Linux服务器上创建共享文件夹，并允许Windows用户通过网络访问这些文件夹，就好像它们位于Windows本地文件系统中一样。
-2. **打印机共享**：除了文件共享，Samba还支持共享打印机。这使得Windows用户可以使用网络上的共享打印机，无需在其本地系统上安装驱动程序。
-3. **支持多种协议**：Samba支持多种网络文件共享协议，包括SMB/CIFS（Server Message Block / Common Internet File System）、SMB2和SMB3等。这使得它与不同版本的Windows系统和其他操作系统兼容。
-4. **安全性**：Samba提供了强大的安全性功能，可以配置访问控制列表（ACLs）和权限，以确保只有授权的用户能够访问共享资源。它还支持用户身份验证和加密来保护数据传输的安全性。
-5. **域控制器**：Samba还可以用作域控制器，允许您在Linux系统上创建和管理Windows活动目录域。这使得在混合操作系统环境中实现统一的用户和资源管理变得更加容易。
-6. **跨平台**：Samba是一个跨平台的解决方案，可以在多种操作系统上运行，包括Linux、Unix、BSD等。
+* 文件共享：Samba允许在Linux/Unix和Windows系统之间共享文件和目录。这意味着您可以在Linux服务器上创建共享文件夹，并允许Windows用户通过网络访问这些文件夹，就好像它们位于Windows本地文件系统中一样
+* 打印机共享：除了文件共享，Samba还支持共享打印机。这使得Windows用户可以使用网络上的共享打印机，无需在其本地系统上安装驱动程序
+* 支持多种协议：Samba支持多种网络文件共享协议，包括SMB/CIFS（Server Message Block / Common Internet File System）、SMB2和SMB3等。这使得它与不同版本的Windows系统和其他操作系统兼容
+* 安全性：Samba提供了强大的安全性功能，可以配置访问控制列表（ACLs）和权限，以确保只有授权的用户能够访问共享资源。它还支持用户身份验证和加密来保护数据传输的安全性
+* 域控制器：Samba还可以用作域控制器，允许您在Linux系统上创建和管理Windows活动目录域。这使得在混合操作系统环境中实现统一的用户和资源管理变得更加容易
+* 跨平台：Samba是一个跨平台的解决方案，可以在多种操作系统上运行，包括Linux、Unix、BSD等
+
+### Samba服务器的使用
+
+* Samba服务器在ubuntu上的安装
+
+  ```cmd
+  $ sudo apt-get install samba samba-common # 安装
+  $ dpkg -l | grep samba # 确认安装
+  $ sudo apt-get autoremove samba # 卸载
+  ```
+
+* 配置Samba服务器
+
+  ```cmd
+  $ sudo vim /etc/samba/smb.conf
+  ```
+
+  在文件最后添加
+
+  ```
+  [Share]
+  comment=This is samba dir
+  path=/home/wjfeng/
+  writable=yes
+  browseable=yes
+  ```
+
+  增加samba 用户
+
+  ```cmd
+  $ sudo smbpasswd -a wjfeng
+  ```
+
+* 启动和关闭
+
+  ```cmd
+  $ sudo service smbd start # 启动Samba服务器
+  $ sudo service smbd stop # 关闭Samba服务器
+  ```
+
+  
+
+
 
 # gdb调试器
 
