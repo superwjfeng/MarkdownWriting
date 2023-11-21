@@ -228,12 +228,16 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
   set(CMAKE_BUILD_TYPE Release)
   ```
 
-* CMAKE_BINARY_DIR、PROJECT_BINARY_DIR、_BINARY_DIR：这三个变量指代的内容是一致的
+* CMAKE_BINARY_DIR、PROJECT_BINARY_DIR、BINARY_DIR：这三个变量指代的内容是一致的
 
   * 若是 in source build，指的就是工程顶层目录
   * 若是 out-of-source 编译，指的是工程编译发生的目录
 
-* CMAKE_SOURCE_DIR、PROJECT_SOURCE_DIR、_SOURCE_DIR
+* CMAKE_SOURCE_DIR、PROJECT_SOURCE_DIR、SOURCE_DIR
+
+  * CMAKE_SOURCE_DIR 定义了顶级 CMakeLists.txt 所在的文件夹
+
+  * PROJECT_SOURCE_DIR 定义了包含最近的 `project()` 命令的CMakeLists.txt所在的文件夹
 
 * CMAKE_C_COMPILER：指定C编译器
 
@@ -330,6 +334,8 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
   # 编译SRC变量所代表的源代码文件，生成main可执行文件
   ADD_EXECUTABLE(main ${SRC})
   ```
+
+* SOURCE_AUX_DIRECTORY：搜集所有在指定路径下的源文件的文件名，并将输出结果列表储存在指定的变最中
 
 ### 工程结构
 
