@@ -1,5 +1,61 @@
 # 内存管理
 
+# 进程 & 线程
+
+## *task_struct*
+
+<img src="task_struct.png">
+
+Linux中的 `task_struct` 类型的结构体是进程描述符 process descriptor ，用来组织、管理进程资源
+
+### state
+
+<img src="Linux进程状态转移图.png" width="60%">
+
+## *进程切换*
+
+### 理解 `pthread_t` 线程id
+
+OS本身并不提供线程的系统调用接口是因为线程的全部实现并没有全部体现在OS内，而是OS提供服务流，具体的线程结构由用户层的库来管理。要进行管理就需要在线程库中维护相关的数据结构
+
+主线程的独立栈结构，用的是地址空间中的栈区；**而新线程用的栈结构，用的是线程库中维护的栈结构**
+
+<img src="线程库数据结构.png" width="80%">
+
+```c
+struct thread_info {
+	pthread_t tid;
+    void *stack; //私有栈
+}
+```
+
+
+
+### `tid` 与 `lwp` 标识线程身份
+
+`tid` 是用户级别的，可以由 `pthread_self()` 得到
+
+`lwp` 是内核级别的，需要使用 `syscall(SYS_gettid)` 来获取
+
+
+
+```cpp
+void *startRoutine(void *args) {
+    while (true) {
+        cout << "thread: " << pthread_self() << " |global_value: " << global_value << 
+            " |&global_value: " << &global_value << " |Inc: " << global_value++ <<
+            " |lwp: " << syscall(SYS_gettid) << endl;
+        sleep(1);
+    }
+}
+```
+
+<img src="用户级tid和内核级lwp.png">
+
+## *Linux 2.6 Kernel 进程调度算法架构*
+
+`ranqueue`
+
 # 文件系统
 
 文件对象由 file 结构体表示，定义在文件 `<linux/fs.h>` 中

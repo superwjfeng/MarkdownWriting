@@ -390,7 +390,7 @@ Ninja是一个专注于速度的小型构建系统，它被设计用来运行与
 * 跨平台支持：Ninja支持多种操作系统，包括Linux, Windows和macOS，这使得它成为在不同平台上进行项目构建的理想工具
 * 用于大型项目：Ninja特别适合大型项目，如Chrome或Android。这些项目可以从Ninja的快速迭代和构建过程中受益
 
-## *自动化任务*
+## *自动化构建任务*
 
 ### 新建工程
 
@@ -453,6 +453,8 @@ tasks: [
   * command 属性指定（终端中）要执行的命令或操作。这是任务的主要目标
   * 通常需要提供一个可执行文件的路径或一个命令行命令
 
+* args：args是一个数组，它会指定将传递给编译器的命令行参数。这些參数按照编译器期望的特定顺序列在该文件中
+
 * windows：windows 属性用于指定仅在 Windows 操作系统上运行的任务。可以在  windows 下定义 Windows 特定的任务配置
 
 * group：group 属性用于将任务分组。它包括两个子属性：kind 和 isDefault
@@ -498,28 +500,30 @@ tasks: [
 
 * problemMatcher：定义如何匹配和处理任务输出中的问题（错误和警告）的设置。它允许你配置 VS Code 如何识别和展示来自任务的错误和警告信息，以便在开发过程中更容易地发现和解决问题
 
-* detail：任务的详细说明
+* detail：任务列表中任务的描述。强烈建议重命名此值，以将其与类似的任务区分开来
 
 ### 预定义变量
 
 vscode 中的配置是可以移植的，若想让配置更加通用，最好使用一些VS Code预定义的一些变量。它们可以在配置文件（如 `settings.json`、`tasks.json` 等）中使用
 
-* `${workspaceFolder}`： 表示当前打开的工作区（项目）的根目录路径。这个变量经常用于配置文件中，用于引用项目文件的路径或设置任务的工作目录
-* `${workspaceFolderBasename}` 表示当前打开的工作区的基本名称，但是不带 `/`
+* `${cwd}` 表示当前工作目录的路径
+* `${defaultBuildTask}` 表示默认的构建任务的名称。如果在 `tasks.json` 中指定了默认任务，它将包含该任务的名称
+* `${execPath}` 表示执行VS Code的可执行文件的路径
 * `${file}` 表示当前打开的文件的完整路径
-* `${fileWorkspaceFolder}` 表示包含当前打开文件的工作区的根目录路径。这个变量可以用于确定当前文件所属的工作区，适用于多工作区项目
-* `${relativeFile}` 表示当前打开文件相对于工作区根目录的路径
-* `${relativeFileDirname}` 表示当前打开文件所在目录相对于工作区根目录的路径
 * `${fileBasename}` 表示当前打开文件的基本名称（不包括路径和扩展名）
 * `${fileBasenameNoExtension}` 表示当前打开文件的基本名称，但不包括扩展名
-* `${fileDirname}` 表示当前打开文件所在的目录的路径。
+* `${fileDirname}` 表示当前打开文件所在的目录的路径
+* `${fileDirnameBasename}` 当前打开的文件所在的文件夹名称
 * `${fileExtname}` 表示当前打开文件的扩展名（包括点号）
-* `${cwd}` 表示当前工作目录的路径
+* `${fileWorkspaceFolder}` 表示包含当前打开文件的工作区的根目录路径。这个变量可以用于确定当前文件所属的工作区，适用于多工作区项目
 * `${lineNumber}` 表示当前光标所在位置的行号
-* `${selectedText}` 表示当前选中的文本。这可用于将选中的文本传递给外部工具或任务
-* `${execPath}` 表示执行VS Code的可执行文件的路径
-* `${defaultBuildTask}` 表示默认的构建任务的名称。如果在 `tasks.json` 中指定了默认任务，它将包含该任务的名称
 * `${pathSeparator}` 表示文件路径中使用的路径分隔符，根据操作系统的不同而变化（例如，Windows 上为`\`，Linux/OS X 上为`/`）。这可用于在配置文件中指定跨平台兼容的路径
+* `${relativeFile}` 表示当前打开文件相对于工作区根目录的路径
+* `${relativeFileDirname}` 表示当前打开文件所在目录相对于工作区根目录的路径
+* `${selectedText}` 表示当前选中的文本。这可用于将选中的文本传递给外部工具或任务
+* `${userHome}`：用户的主文件夹路径
+* `${workspaceFolder}`： 表示当前打开的工作区（项目）的根目录路径。这个变量经常用于配置文件中，用于引用项目文件的路径或设置任务的工作目录
+* `${workspaceFolderBasename}` 表示当前打开的工作区的基本名称，但是不带 `/`
 
 ### `tasks.json` 示例
 
@@ -568,14 +572,29 @@ vscode 中的配置是可以移植的，若想让配置更加通用，最好使�
 
 ## *run & debug*
 
-### `launch.json` 配置调试
+### `launch.json` 配置
 
 控制如何启动调试会话
 
-1. **打开调试视图**：点击左侧工具栏上的“运行和调试”图标。
-2. **创建`launch.json`文件**：点击“创建 launch.json 文件”链接，或点击命令面板中的“Debug: Open launch.json”。
-3. **选择环境**：如果出现提示，请选择一个环境，如“C++ (GDB/LLDB)”。
-4. **调整配置**：根据你的项目调整生成的`launch.json`文件。例如，你可能需要设置`program`属性来指定要调试的可执行文件的路径。
+1. 打开调试视图：点击左侧工具栏上的“运行和调试”图标
+2. 创建 `launch.json` 文件：点击“创建 launch.json 文件”链接，或点击命令面板中的“Debug: Open launch.json”
+3. 选择环境：如果出现提示，请选择一个环境，如“C++ (GDB/LLDB)”
+4. 调整配置：根据你的项目调整生成的`launch.json`文件。例如，你可能需要设置`program`属性来指定要调试的可执行文件的路径
+
+### 强制属性
+
+* type：调试器的类型。每个安装的调试扩展都会引入一个类型，例如内置的 Node 调试器的类型是“node”，PHP和Go 扩展的类型分别是“php”和"g0"
+* request：调试配置的请求类型。目前支持 "launch”和"attach”两种请求类型
+* name：调试配置的名称
+
+### 可选属性
+
+* presentation：使用 presentation 对象中的order、group和hidden 属性，可以对调试配置和組合进行排序、分组和隐藏，以在调试配置下拉菜单和调试快速选择中进行管理
+* preLaunchTask：在调试会话开始之前启动任务。将该属性设置为 tasks,json 文件中指定的任务标签，或者设置为 `${defaultBuildTask}` 来使用默认的构建任务
+* postDebugTask：在调试会话结束时启动任务。将该属性设置为 tasks.json 文件中指定的任务名称
+* internalconsoloptions：该属性控制调试会话期间调试控制台面板的可见性
+* debugserver：仅适用于调试扩展的作者，该属性允许连接到指定的端口，而不是启动调试适配器
+* serverReadyAction：如果希望在调试程序输出特定消息到调试控制台或集成终端时，在Web 浏览器中打开一个 URL。有关详细信息，参阅下面的“在调试服务器程序时自动打开 URI”部分
 
 ### `launch.json` 示例
 
@@ -624,13 +643,62 @@ VS Code 中的设置结构是以 JSON 格式组织的，用于配置编辑器的
 
 这种组织结构允许你根据不同的层次和需求来配置 VS Code，使其适应不同的工作流和项目
 
-### c_cpp_properties.json
+## *c_cpp_properties.json*
 
 VS Code为C++项目提供了强大的支持
 
-`c_cpp_properties.json` 是用于配置 C/C++ 项目的 VS Code 设置文件之一。它主要用于指定项目的编译器路径、包含目录、宏定义以及其他与代码分析和 IntelliSense 相关的配置信息。这个文件通常用于确保 VS Code 正确识别和分析你的 C/C++ 代码，以提供代码补全、代码导航和错误检查等功能。
+`c_cpp_properties.json` 是用于配置 C/C++ 项目的 VS Code 设置文件之一。它主要用于指定项目的编译器路径、包含目录、宏定义以及其他与代码分析和 IntelliSense 相关的配置信息。这个文件通常用于确保 VS Code 正确识别和分析你的 C/C++ 代码，以提供代码补全、代码导航和错误检查等功能
 
-以下是 `c_cpp_properties.json` 文件的一些常见配置项和示例：
+### 顶级属性
+
+* env：用户定义的变量数组，可通过标准环境变量语法在配置中替换：`${<var>}` 或 `${env:<var>}`。接受字符串和字符串数组
+* configurations：一组配置对象的数组，包含了不同编译配置的设置。这些对象为IntelliSense引擎提供有关项目和首选项的信息。默认情况下，扩展会根据使用的操作系统来创建配置。还可以添加其他配置
+* version：建议不要编辑此字段。它会跟踪 c_cpp_properties.json 文件的当前版本，以便扩展知道应存在哪些属性和设置以及如何将此文件升级到最新版本
+
+### 配置属性
+
+* `browse`：这个部分用于配置符号浏览器的设置，包括浏览路径、符号数据库文件等
+* `configurationProvider`
+  * VS Code扩展的ID，它可以为源文件提供智能感知配置信息。例如使用VS Code 扩展ID `ms-vscode.cmake-tools` 从 CMake Tools扩展提供配置信息
+  * 若指定了一个configurationProvider，那么它提供的配置将优先于 c_cpp_properties.ison中的其他设置
+  * 一个configurationProvider候选扩展必须实现vscode-cpptools-api
+
+* `compilerArgs`：（可选）用于修改所使用的包含或定义的编译體参数，例如 `-nostdinc++`，`-m32` 等
+* `compilerCommands`（可选）
+  * compile_commands 的完整路径
+  * Json文件用于工作空间。将使用在该文件中发现的包含路径和定义，而不是为includePath和定义设置设置的值
+  * 若编译命令数据库不包含您在编辑器中打开的文件对应的翻译单元条目，则会出现一条警告消息，扩展将使用includePath并定义设置
+  * 有关文件格式的详细信息，参阅 Clang文档（Clang.documentation）。某些生成系统（如 CMake）简化了此文件的生成
+
+* `compilerPath`：（可选）
+  * 用于生成项目的编译器的完整路径，例如/usr/bin/gcc，用于启用更准确的智能感知（确保 VS Code 使用正确的编译器进行代码分析和 IntelliSense）。扩展将查询编译器器
+  * 若指定的编译器不支持用于查询的参数，这将非常有用，因为扩展将默认返回到它可以找到的任何编译器（如Visual C）。省略 compilerPath 该厲性不会跳过查找编译器
+* `cStandard` 和 `cppStandard`：指定了 C 和 C++ 的标准版本，用于代码分析和 IntelliSense 的配置
+* `defines`：（可选）定义一个宏的预处理器选项列表，供 IntelliSense 引擎在解析文件时使用。使用 `=` 来设置一个值，例如 `VERSION=1`
+* `databaseFilename`
+  * 生成的符号数据库的路径。此属性指示扩展将标记解析器的符号数据库保存在工作空间默认存储位置以外的地方
+  * 若指定了一个相对路径，它将相对于工作空间的默认存储位置，而不是工作空间文件夹本身。变量 `${workspaceFolder}` 可以用来指定一个相对于工作区文件夹的路径（例如 `${workspaceFolder}.vscode/ browser.vc.db` ）
+
+* `forcedInclude`
+* `intelliSenseMode`
+  * 指定 IntelliSense 使用的模式，例如 `"gcc-x64"` 表示使用 GCC 编译器。使用该模式的智能感知模式映射到特定于体系结构的 MSVC、gcc 或 Clang
+  * 若未设置或设置为 `${default}`，则扩展将为该平台选择默认值。在Windows 上为 msvc-x64，在 Linux 上为 gcc-x64，在 macOs 上为 clang-x64
+* `includePath`
+  * 包含路径，指包含源文件或头文件的文件夹。指定 IntelliSense 引擎在搜索包含的头文件时要使用的路径列表
+  * **默认情况下在这些路径上进行搜索不是递归的**。指定 `**` 以指示递归搜索。比方说 `${workspaceFolder}/**` 将搜索所有子目录使用，而 `${workspaceFolder}` 则不会
+  * 若在安装了 Visual Studio 的Windows 上，或者在 compilerPath 设置中指定了编译器，则无需在此列表中列出系统包含路径
+* `limitSymbolsToIncludeHeaders`
+  * 若为 true，则标记解析品将仅解析源文件直接或间接包含在 `${workspaceFolder}` 中的代码文件
+  * 若为false，则标记分析器将分析在 browse.path 列表中指定的路径中找到的所有代码文件
+
+* `macFrameworkPath`：（仅支持macOS的配置）一个路径列表，供智能感知引擎在搜索Mac框架中包含的头文件时使用
+* `name`：标识配置的名称。Linux、Mac 和 win32 是将在这些平台上自动选择的配置的特殊标识符。VS Code 中的状态栏将显示哪个配置处于活动状态。用户还可以单击状态栏中的标签以更改活动配置
+* `path`：标记解析骼用于搜索源文件中包含的头文件的路径列表。若省略，includePath将被用作路径。同样默认是不递归的
+* `windowsSdkVersion`：Windows SDK的版本的路径，例如 10.0.17134.0
+
+注意：`c_cpp_properties.json` 文件通常是针对每个项目或工作区创建的，因此用户可能会在不同的项目中看到不同的配置。可以在 VS Code 中使用工作区设置或项目设置来配置 `c_cpp_properties.json` 文件，以适应不同的编译环境和需求。这有助于确保代码分析和 IntelliSense 在不同的项目中都能正常工作
+
+### 示例
 
 ```json
 {
@@ -665,16 +733,6 @@ VS Code为C++项目提供了强大的支持
   "version": 4
 }
 ```
-
-* `"configurations"`：这是一个数组，包含了不同编译配置的设置。每个配置都有一个 `"name"` 字段，用于标识配置的名称。
-* `"includePath"`：这是一个数组，包含了要用于代码分析的包含目录路径。通常包括项目目录 `"${workspaceFolder}"` 和标准库的包含目录。
-* `"defines"`：这是一个数组，包含了预定义的宏定义。它们用于配置代码分析和 IntelliSense 的行为。
-* `"compilerPath"`：指定了编译器的路径。这是为了确保 VS Code 使用正确的编译器进行代码分析和 IntelliSense。
-* `"cStandard"` 和 `"cppStandard"`：指定了 C 和 C++ 的标准版本，用于代码分析和 IntelliSense 的配置。
-* `"intelliSenseMode"`：指定 IntelliSense 使用的模式，例如 `"gcc-x64"` 表示使用 GCC 编译器。
-* `"browse"`：这个部分用于配置符号浏览器的设置，包括浏览路径、符号数据库文件等。
-
-请注意，`c_cpp_properties.json` 文件通常是针对每个项目或工作区创建的，因此你可能会在不同的项目中看到不同的配置。你可以在 VS Code 中使用工作区设置或项目设置来配置 `c_cpp_properties.json` 文件，以适应不同的编译环境和需求。这有助于确保代码分析和 IntelliSense 在不同的项目中都能正常工作。
 
 # 远程调试
 

@@ -152,6 +152,39 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 * `PROJECT (HELLO C CXX)` 指定了⼯程的名字，并且⽀持语⾔是C和C++
 * 也可以支持JAVA
 
+## *CMake命令*
+
+### 新版编译命令
+
+```cmake
+#Cmake构建命令
+cmake -B build
+#cmake编译命令
+cmake --build build
+```
+
+* `cmake -B build`：这个命令用于配置CMake的构建过程，并将生成的构建系統文件放置在一个指定的目录中（在此示例中是build目录）。-B选项后面指定的参数表示生成构建文件的目录。如果不存在build目录，那么它会自动创建build目录
+
+  例如，运行命令 cmake -B build 会根据CMakellists.txt文件中的配置生成构建系统文件（如Makefile或Visual Studio项目文件）并将其放置在名为build的目录中。这个命令通常用于在构建系统文件和源代码文件分离的情况下，以保持源代码目录的干净和可维护性
+
+* `cmake --build build`：这个命令用于执行构建过程，根据配置好的构建系統文件（例如Makefile） 在指定的构建目录中进行实际的编译和链接
+
+  例如，在运行cmake -B build之后，可以使用cmake--build build命令在build 目录中执行构建过程。这将根据所生成的构建系统文件执行编译器和链接器，并生成可执行文件或库文件
+
+  这个命令会使用构建系统的默认构建规则，但也可以通过在cmake --build命令后面添加选项来修改构建过程的行为。例如，您可以使用--target 选项指定要构建的特定目标，或使用其他选项来控制并行编译、生成的输出等
+
+  该命今是跨平台的，可以在不同平台使用该命令编译构建cmake项目
+
+### 旧版编译命令
+
+在Linux平台下使用CMake构建C/C++工程的流程如下
+
+1. 手动编写CmakeLists.txt
+2. 执行命令 `cmake PATH` 生成Makefile，PATH是顶层CMakeLists.txt所在的目录。注意，在哪里执行cmake命令生成的内容就在哪里，一般选择在build文件夹中执行 `cmake ..`，因为build中是所有编译产生的内容
+3. 使用 `cmake --build .` 进行跨平台build，Linux上也可以使用 `make`
+
+可以通过 `cmake .. -DCMAKE_VERBOSE_MAKEFILE=on` 将之后在make的时候具体的编译命令展示出来
+
 ## *CMake变量*
 
 ### 自定义变量方法
@@ -453,15 +486,13 @@ make
 
 因此，为了使 CMake 能够正确地解析和处理项目，每个目录下都需要一个 `CMakeLists.txt` 文件来描述该目录的构建规则和相关配置
 
-### 编译流程
+## *返回码*
 
-在Linux平台下使用CMake构建C/C++工程的流程如下
-
-1. 手动编写CmakeLists.txt
-2. 执行命令 `cmake PATH` 生成Makefile，PATH是顶层CMakeLists.txt所在的目录。注意，在哪里执行cmake命令生成的内容就在哪里，一般选择在build文件夹中执行 `cmake ..`，因为build中是所有编译产生的内容
-3. 使用 `cmake --build .` 进行跨平台build，Linux上也可以使用 `make`
-
-可以通过 `cmake .. -DCMAKE_VERBOSE_MAKEFILE=on` 将之后在make的时候具体的编译命令展示出来
+* 0：成功。CMake 配置和生成过程成功完成
+* 1：一般错误。通常是由于无效的命令行参数或配置文件中的问题导致的
+* 2：严重错误。通常表示 CMake 在执行配置或生成期间遇到了致命错误，无法继续
+* 3：没有匹配的 CMakeLists.txt 文件。这表示 CMake 在当前目录或指定的目录中找不到 CMakeLists.txt 文件
+* 4：配置文件错误。表示 CMake 在配置项目时发生了错误，可能是由于 CMakeLists.txt 文件中的问题导致的
 
 # 构建库
 
@@ -639,3 +670,5 @@ DESTINATION：
 CMAKE_INSTALL_PREFIX 默认是在 /usr/local/
 
 cmake -DCMAKE_INSTALL_PREFIX=/usr 在cmake的时候指定CMAKE_INSTALL_PREFIX变量的路径
+
+# CMake控制流
