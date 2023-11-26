@@ -116,7 +116,7 @@ Makefile是一种汇编语言
 
 ## *隐含规则*
 
-# CMake的使用
+# CMake基础
 
 ## *基本语法*
 
@@ -126,11 +126,11 @@ Makefile是一种汇编语言
 #CMakeLists.txt
 # CMake最小版本要求为2.8.3
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.3)
-PROJECT (HELLO)
+project (HELLO)
 SET(SRC_LIST main.cpp)
 MESSAGE(STATUS "This is BINARY dir " ${HELLO_BINARY_DIR})
 MESSAGE(STATUS "This is SOURCE dir "${HELLO_SOURCE_DIR})
-ADD_EXECUTABLE(hello ${SRC_LIST})
+add_executable(hello ${SRC_LIST})
 ```
 
 * 基本语法格式为 `指令(参数1 参数2 ...)`
@@ -143,13 +143,13 @@ CMake的指令笔者不会在这里统一给出，而是在下面用到了之后
 
 `CMAKE_MINIMUM_REQUIRED(VERSION versionNumber [FATAL_ERROR])` 指定CMake的最小版本要求
 
-### PROJECT指令
+### project指令
 
-PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有语⾔
+project可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有语⾔
 
-* `PROJECT (HELLO)`：指定了⼯程的名字，并且⽀持所有语⾔，**建议这么写**
-* `PROJECT (HELLO CXX)` 指定了⼯程的名字，并且⽀持语⾔是C++
-* `PROJECT (HELLO C CXX)` 指定了⼯程的名字，并且⽀持语⾔是C和C++
+* `project (HELLO)`：指定了⼯程的名字，并且⽀持所有语⾔，**建议这么写**
+* `project (HELLO CXX)` 指定了⼯程的名字，并且⽀持语⾔是C++
+* `project (HELLO C CXX)` 指定了⼯程的名字，并且⽀持语⾔是C和C++
 * 也可以支持JAVA
 
 ## *CMake命令*
@@ -157,7 +157,7 @@ PROJECT可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 ### 新版编译命令
 
 ```cmake
-#Cmake构建命令
+#cmake构建命令
 cmake -B build
 #cmake编译命令
 cmake --build build
@@ -249,7 +249,7 @@ cmake --build build
 
   ```cmake
   # 在CMAKE_CXX_FLAGS编译选项后追加-std=c++11
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   ```
 
 * CMAKE_BUILD_TYPE：编译类型（Debug or Release）
@@ -261,16 +261,16 @@ cmake --build build
   set(CMAKE_BUILD_TYPE Release)
   ```
 
-* CMAKE_BINARY_DIR、PROJECT_BINARY_DIR、BINARY_DIR：这三个变量指代的内容是一致的
+* CMAKE_BINARY_DIR、project_BINARY_DIR、BINARY_DIR：这三个变量指代的内容是一致的
 
   * 若是 in source build，指的就是工程顶层目录
   * 若是 out-of-source 编译，指的是工程编译发生的目录
 
-* CMAKE_SOURCE_DIR、PROJECT_SOURCE_DIR、SOURCE_DIR
+* CMAKE_SOURCE_DIR、project_SOURCE_DIR、SOURCE_DIR
 
-  * CMAKE_SOURCE_DIR 定义了顶级 CMakeLists.txt 所在的文件夹
+  * CMAKE_SOURCE_DIR 定义了顶级 CMakeLists.txt 所在的文件夹，这个变量的值是不会变的
 
-  * PROJECT_SOURCE_DIR 定义了包含最近的 `project()` 命令的CMakeLists.txt所在的文件夹
+  * project_SOURCE_DIR 定义了包含最近的 `project()` 命令的CMakeLists.txt所在的文件夹
 
 * CMAKE_C_COMPILER：指定C编译器
 
@@ -280,95 +280,15 @@ cmake --build build
 
 * LIBRARY_OUTPUT_PATH：库文件输出的存放路径
 
-## *编译*
+## *CMake控制流*
 
-### 用到的指令
+## *函数 & 宏*
 
-* INCLUDE_DIRECTORIES：向工程添加多个特定的头文件搜索路径，相当于指定g++编译器的 `-I` 参数
+## *属性*
 
-  开发时遇到过这个问题：如果用到的头文件和cc文件不在同一目录下的时候，要通过绝对路径或相对路径显式给出头文件路径。这很麻烦，而且一旦头文件或者cc文件本身的位置发生变化，就要把涉及到的所有头文件位置都要更改掉。INCLUDE_DIRECTORIES就是用来解决这个麻烦的
+# 构建
 
-  这条指令可以用来向工程添加多个特定的头文件搜索路径，路径之间用空格分割
-
-  如果要让VS Code和Clion在写代码时找到用的头文件，得先编译一次
-
-  ```cmake
-  INCLUDE_DIRECTORIES([AFTER|BEFORE] [SYSTEM] dir1 dir2 ...)
-  # 将/usr/include/myincludefolder 和 ./include 添加到头文件搜索路径
-  INCLUDE_DIRECTORIES(/usr/include/myincludefolder ./include)
-  ```
-
-* LINK_DIRECTORIES：向工程添加多个特定非标准的库文件搜索路径，相当于指定g++编译器的 `-L` 参数
-
-  ```cmake
-  LINK_DIRECTORIES(dir1 dir2 ...)
-  # 将/usr/lib/mylibfolder 和 ./lib 添加到库文件搜索路径
-  LINK_DIRECTORIES(/usr/lib/mylibfolder ./lib)
-  ```
-
-* TARGET_LINK_LIBRARIES：为 target 添加需要链接的共享库，相同于指定g++编译器 `-l` 参数
-
-  ```cmake
-  LINK_DIRECTORIES(dir1 dir2 ...) # 需要先把库的路径包进来，不包的话就要写绝对路径了
-  TARGET_LINK_LIBRARIES(target library1<debug | optimized> library2...)
-  # 将hello动态库文件链接到可执行文件main
-  TARGET_LINK_LIBRARIES(main hello)
-  ```
-
-  这里注意和 `LINK_LIBRARIES(绝对路径)` 的区别，这个命令要写要链接的库文件的绝对路径，不推荐使用它
-
-* ADD_COMPILE_OPTIONS：添加编译参数
-
-  ```cmake
-  ADD_COMPILE_OPTIONS(）
-  # 添加编译参数 -Wall -std=c++11 -O2
-  ADD_COMPILE_OPTIONS(-Wall -std=c++11 -O2)
-  ```
-
-* ADD_EXECUTABLE：使用指定的源文件来生成目标可执行文件
-
-  ```cmake
-  ADD_EXECUTABLE(exename source1 source2 ... sourceN)
-  # 编译main.cpp生成可执行文件main
-  ADD_EXECUTABLE(main main.cpp)
-  ```
-
-  `ADD_EXECUTABLE(hello ${SRC_LIST})` ⽣成的可执⾏⽂件名是hello，源⽂件读取变量SRC_LIST中的内容。也可以直接写 `ADD_EXECUTABLE(hello main.cpp)`
-
-  Demo可以简化的写成
-
-  ```cmake
-  PROJECT(HELLO)
-  ADD_EXECUTABLE(hello main.cpp)
-  ```
-
-  注意：⼯程名的 HELLO 和⽣成的可执⾏⽂件 hello 是没有任何关系的
-
-* ADD_SUBDIRECTORY
-
-  ```cmake
-  ADD_SUBDIRECTORY(source_dir [binary_dir] [EXCLUDE_FROM_ALL])
-  ```
-
-  * 这个指令⽤于向当前⼯程添加存放源⽂件的⼦⽬录，并可以指定中间⼆进制和⽬标⼆进制存放的位置
-  * 其实最常用的用法是告诉cmake**去找子目录下的CMakeLists.txt**
-  * `EXCLUDE_FROM_ALL` 函数是将写的⽬录从编译中排除，如程序中的example
-  * 例：`ADD_SUBDIRECTORY(src bin)`
-    * 将 src ⼦⽬录加⼊⼯程并指定编译输出(包含编译中间结果)路径为bin ⽬录
-    * 本质上和包头文件是一样的，相当于包子文件中的 `ADD_EXECUTABLE` 直接拷进来
-    * 如果不进⾏ bin ⽬录的指定，那么编译结果(包括中间结果)都将存放在build/src ⽬录
-
-* AUX_SOURCE_DIRECTORY：发现一个目录下所有的源代码文件并将列表存储在一个变量中，这个指令临时被用来自动构建源文件列表
-
-  ```cmake
-  AUX_SOURCE_DIRECTORY(dir VARIABLE)
-  # 定义SRC变量，其值为当前目录下所有的源代码文件
-  AUX_SOURCE_DIRECTORY(.src)
-  # 编译SRC变量所代表的源代码文件，生成main可执行文件
-  ADD_EXECUTABLE(main ${SRC})
-  ```
-
-* SOURCE_AUX_DIRECTORY：搜集所有在指定路径下的源文件的文件名，并将输出结果列表储存在指定的变最中
+## *CMake项目结构组织*
 
 ### 工程结构
 
@@ -482,9 +402,119 @@ make
 
 通过在每个目录下创建 `CMakeLists.txt` 文件，**可以将构建规则和相关配置与对应的源代码文件放在一起，使项目的组织更加清晰和可维护**。同时，这样的结构也使得整个项目可以方便地进行模块化和扩展
 
-当使用 CMake 来构建项目时，CMake 会递归地遍历项目目录结构，并根据每个目录下的 `CMakeLists.txt` 文件来生成相应的构建脚本（如 Makefile、Visual Studio 解决方案等），最终用于编译和构建整个项目
+当使用 CMake 来构建项目并且通过 add_subdirectory 或 include 来组织层次时，CMake 会递归地遍历项目目录结构，并根据每个目录下的 `CMakeLists.txt` 文件来生成相应的构建脚本（如 Makefile、Visual Studio 解决方案等），最终用于编译和构建整个项目
 
 因此，为了使 CMake 能够正确地解析和处理项目，每个目录下都需要一个 `CMakeLists.txt` 文件来描述该目录的构建规则和相关配置
+
+## *子目录*
+
+### add_subdirectory
+
+* ADD_SUBDIRECTORY
+
+  ```cmake
+  ADD_SUBDIRECTORY(source_dir [binary_dir] [EXCLUDE_FROM_ALL])
+  ```
+
+  * 这个指令⽤于向当前⼯程添加存放源⽂件的⼦⽬录，并可以指定中间⼆进制和⽬标⼆进制存放的位置
+  * 其实最常用的用法是告诉cmake**去找子目录下的CMakeLists.txt**
+  * `EXCLUDE_FROM_ALL` 函数是将写的⽬录从编译中排除，如程序中的example
+  * 例：`ADD_SUBDIRECTORY(src bin)`
+    * 将 src ⼦⽬录加⼊⼯程并指定编译输出(包含编译中间结果)路径为bin ⽬录
+    * 本质上和包头文件是一样的，相当于包子文件中的 `add_executable` 直接拷进来
+    * 如果不进⾏ bin ⽬录的指定，那么编译结果(包括中间结果)都将存放在build/src ⽬录
+
+* AUX_SOURCE_DIRECTORY：发现一个目录下所有的源代码文件并将列表存储在一个变量中，这个指令临时被用来自动构建源文件列表
+
+  ```cmake
+  AUX_SOURCE_DIRECTORY(dir VARIABLE)
+  # 定义SRC变量，其值为当前目录下所有的源代码文件
+  AUX_SOURCE_DIRECTORY(.src)
+  # 编译SRC变量所代表的源代码文件，生成main可执行文件
+  add_executable(main ${SRC})
+  ```
+
+* SOURCE_AUX_DIRECTORY：搜集所有在指定路径下的源文件的文件名，并将输出结果列表储存在指定的变最中
+
+### include
+
+
+
+### include_directories
+
+include_directories：向工程添加多个特定的**头文件搜索路径**，效果就是指定g++编译器的 `-I` 参数
+
+开发时遇到过这个问题：如果用到的头文件和cc文件不在同一目录下的时候，要通过绝对路径或相对路径显式给出头文件路径。这很麻烦，而且一旦头文件或者cc文件本身的位置发生变化，就要把涉及到的所有头文件位置都要更改掉。include_directories就是用来解决这个麻烦的
+
+这条指令可以用来向工程添加多个特定的头文件搜索路径，路径之间用空格分割
+
+**如果要让VS Code和Clion在写代码时找到用的头文件，得先编译一次**
+
+```cmake
+include_directories([AFTER|BEFORE] [SYSTEM] dir1 dir2 ...)
+# 将/usr/include/myincludefolder 和 ./include 添加到头文件搜索路径
+include_directories(/usr/include/myincludefolder ./include)
+```
+
+注意：include_directories只适用于头文件，源文件如果是在其他文件夹里，还是得自己显式的给出路径
+
+### target_include_directories
+
+## *生成目标*
+
+* add_compile_options：添加编译参数
+
+  ```cmake
+  add_compile_options(）
+  # 添加编译参数 -Wall -std=c++11 -O2
+  add_compile_options(-Wall -std=c++11 -O2)
+  ```
+
+* add_executable：使用指定的源文件来生成目标可执行文件
+
+  ```cmake
+  add_executable(targetName [WIN32] [MACOSX_BUNDLE]                
+  				[EXCLUDE_FROM_ALL]
+                  source1 [source2 ...] )
+  # 编译main.cpp生成可执行文件main
+  add_executable(main main.cpp)
+  ```
+
+  `add_executable(hello ${SRC_LIST})` ⽣成的可执⾏⽂件名是hello，源⽂件读取变量SRC_LIST中的内容。也可以直接写 `add_executable(hello main.cpp)`
+
+  Demo可以简化的写成
+
+  ```cmake
+  project(HELLO)
+  add_executable(hello main.cpp)
+  ```
+
+  注意：⼯程名的 HELLO 和⽣成的可执⾏⽂件 hello 是没有任何关系的
+
+## *链接库*
+
+### target_link_libraries
+
+* link_directories：向工程添加多个特定非标准的库文件搜索路径，相当于指定g++编译器的 `-L` 参数
+
+  ```cmake
+  link_directories(dir1 dir2 ...)
+  # 将/usr/lib/mylibfolder 和 ./lib 添加到库文件搜索路径
+  link_directories(/usr/lib/mylibfolder ./lib)
+  ```
+
+* target_link_directories：为 target 添加需要链接的共享库，相同于指定g++编译器 `-l` 参数
+
+  ```cmake
+  link_directories(dir1 dir2 ...) # 需要先把库的路径包进来，不包的话就要写绝对路径了
+  target_link_directories(target library1<debug | optimized> library2...)
+  # 将hello动态库文件链接到可执行文件main
+  target_link_directories(main hello)
+  ```
+
+  这里注意和 `LINK_LIBRARIES(绝对路径)` 的区别，这个命令要写要链接的库文件的绝对路径，不推荐使用它
+
+
 
 ## *返回码*
 
@@ -600,7 +630,9 @@ clean:
 * 如果没有给出库的类型，那么根据变量 `BUILD_SHARED_LIBS` 是否是 `on` 来自动设置为 SHARED 或 STATIC
 
   ```cmake
-  add_library(libname [SHARED | STATIC | MODULE] [EXCLUDE_FROM_ALL] source1 source2 ... sourceN)
+  add_library(libname [SHARED | STATIC | MODULE] 
+  			[EXCLUDE_FROM_ALL]
+              source1 source2 ... sourceN)
   # 通过变量 SRC 生成 libhello.so 共享库
   add_library(hello SHARED ${SRC})
   ```
@@ -609,8 +641,8 @@ clean:
 SET 指令重新定义 `EXECUTABLE_OUTPUT_PATH` 和 `LIBRARY_OUTPUT_PATH` 变量来指定最终的⽬标⼆进制的位置
 
 ```cmake
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
-SET(LIBRARY_OUTPUT_PATH${PROJECT_BINARY_DIR}/lib)
+SET(EXECUTABLE_OUTPUT_PATH ${project_BINARY_DIR}/bin)
+SET(LIBRARY_OUTPUT_PATH${project_BINARY_DIR}/lib)
 ```
 
 ### 同时生成同名的动态库和静态库
@@ -670,5 +702,3 @@ DESTINATION：
 CMAKE_INSTALL_PREFIX 默认是在 /usr/local/
 
 cmake -DCMAKE_INSTALL_PREFIX=/usr 在cmake的时候指定CMAKE_INSTALL_PREFIX变量的路径
-
-# CMake控制流

@@ -1,4 +1,83 @@
+# Paging of x86-64
+
+https://zhuanlan.zhihu.com/p/652983618 & Intel® 64 and IA-32 Architectures Software Developer Manuals Volume 3 Chapter 4 Paging
+
+## *分页模式*
+
+### 开启分页
+
+分页 Paging 只能在保护模式（CR0.PE = 1）下使用。在保护模式下是否开启分页是由 CR0. PG 位（31位）决定的
+
+* 当 CR0.PG = 0 时，未开启分页，此时线性地址等同于物理地址
+* 当 CR0.PG = 1 时，开启分页
+
+### 四种分页模式
+
+intel-64 处理器支持 4 种分页模式
+
+* 32 位分页
+* PAE, Physical Address Extension 分页
+* 4 级分页
+* 5 级分页
+
+处理器当前处于哪种分页模式是由 CR4.PAE、CR4.LA57 以及 IA32_EFER.LME 共同决定的
+
+* 若 CR4.PAE = 0， 使用的是 **32位分页** 模式
+* 若 CR4.PAE = 1 且 IA32_EFER.LME = 0，使用的是 **PAE 分页**模式
+* 若 CR4.PAE = 1， IA32_EFER.LME = 1 且 CR4.LA57 = 0，使用的是 **4 级分页**模式
+* 若 CR4.PAE = 1， IA32_EFER.LME = 1 且 CR4.LA57 = 1，使用的是 **5 级分页**模式
+
+## *4级分页详解*
+
+page-map level-4, PML4
+
+Control Register 3, CR3
+
+# 内存寻址
+
+## *内存地址总览*
+
+具体可以看 *操作系统理论.md*
+
+### 三种地址
+
+* 逻辑地址 logical address：包含在机器语言指令中用来指令一个操作数或一条指令的地址。每一个逻辑地址都由一个段 segment 和偏移量 offset 组成
+* 虚拟地址 virtual address 或线性地址 linear address：32位或64位的连续无符号整数表示的虚拟地址
+* 物理地址 physical address：用于memory chip的内存单元寻址，物理地址与从CPU的地址引脚发送到memory总线上的电信号相对应，物理地址也由32位或64位的连续无符号整数表示
+
+### 地址翻译
+
+<img src="地址翻译.drawio.png">
+
+MMU中的TWU负责两部分寻址
+
+* 分段单元 segmentation unit 硬件电路：把一个逻辑地址转换成虚拟地址
+* 分页单元 paging unit 硬件电路：把一个虚拟地址转换为物理地址
+
+## *硬件分段*
+
+## *Linux分段机制*
+
+### Linux GDT
+
+### Linux LDT
+
+## *Linux分页机制*
+
+x86-64的物理分页见上
+
+从 Linux 的早期版本开始，Linux就支持两级分页；Linux 2.6版本开始支持PAE和三级分页，从 Linux 2.6.11开始支持四级分页，Linux 4.11 版本引入了对五级分页的支持。64位系统到底是用三级、四级还是五级分页取决于具体硬件对线性地址/虚拟地址的划分
+
+
+
+* 全局页目录 PGD Page Global Director
+* 上层页目录 PUD Page Upper Directory
+* 中间页目录 PMD Page Middle Directory
+* 页表项 PTE Page Table Entry
+
 # 内存管理
+
+
 
 # 进程 & 线程
 
@@ -6,11 +85,268 @@
 
 <img src="task_struct.png">
 
+```c
+struct task_struct {
+    volatile long state;  //说明了该进程是否可以执行,还是可中断等信息
+    unsigned long flags;  //Flage 是进程号,在调用fork()时给出
+    int sigpending;       //进程上是否有待处理的信号
+    mm_segment_t addr_limit; //进程地址空间,区分内核进程与普通进程在内存存放的位置不同
+                             //0-0xBFFFFFFF for user-thead
+                             //0-0xFFFFFFFF for kernel-thread
+    //调度标志,表示该进程是否需要重新调度,若非0,则当从内核态返回到用户态,会发生调度
+    volatile long need_resched;
+    int lock_depth;  //锁深度
+    long nice;       //进程的基本时间片
+    //进程的调度策略有三种：实时进程:SCHED_FIFO, SCHED_RR, 分时进程:SCHED_OTHER
+    unsigned long policy;
+    struct mm_struct *mm; //进程内存管理信息
+    int processor;
+    //若进程不在任何CPU上运行, cpus_runnable 的值是0，否则是1 这个值在运行队列被锁时更新
+    unsigned long cpus_runnable, cpus_allowed;
+    struct list_head run_list; //指向运行队列的指针
+    unsigned long sleep_time;  //进程的睡眠时间
+    //用于将系统中所有的进程连成一个双向循环链表, 其根是init_task
+    struct task_struct *next_task, *prev_task;
+    struct mm_struct *active_mm;
+    struct list_head local_pages;       //指向本地页面      
+    unsigned int allocation_order, nr_local_pages;
+    struct linux_binfmt *binfmt;  //进程所运行的可执行文件的格式
+    int exit_code, exit_signal;
+    int pdeath_signal;     //父进程终止时向子进程发送的信号
+    unsigned long personality;
+    //Linux可以运行由其他UNIX操作系统生成的符合iBCS2标准的程序
+    int did_exec:1; 
+    pid_t pid;    //进程标识符，用来代表一个进程
+    pid_t pgrp;   //进程组标识，表示进程所属的进程组
+    pid_t tty_old_pgrp;  //进程控制终端所在的组标识
+    pid_t session;  //进程的会话标识
+    pid_t tgid;
+    int leader;     //表示进程是否为会话主管
+    struct task_struct *p_opptr,*p_pptr,*p_cptr,*p_ysptr,*p_osptr;
+    struct list_head thread_group;   //线程链表
+    struct task_struct *pidhash_next; //用于将进程链入HASH表
+    struct task_struct **pidhash_pprev;
+    wait_queue_head_t wait_chldexit;  //供wait4()使用
+    struct completion *vfork_done;  //供vfork() 使用
+    unsigned long rt_priority; //实时优先级，用它计算实时进程调度时的weight值
+
+    //it_real_value，it_real_incr用于REAL定时器，单位为jiffies, 系统根据it_real_value
+    //设置定时器的第一个终止时间. 在定时器到期时，向进程发送SIGALRM信号，同时根据
+    //it_real_incr重置终止时间，it_prof_value，it_prof_incr用于Profile定时器，单位为jiffies。
+    //当进程运行时，不管在何种状态下，每个tick都使it_prof_value值减一，当减到0时，向进程发送
+    //信号SIGPROF，并根据it_prof_incr重置时间.
+    //it_virt_value，it_virt_value用于Virtual定时器，单位为jiffies。当进程运行时，不管在何种
+    //状态下，每个tick都使it_virt_value值减一当减到0时，向进程发送信号SIGVTALRM，根据
+    //it_virt_incr重置初值。
+    unsigned long it_real_value, it_prof_value, it_virt_value;
+    unsigned long it_real_incr, it_prof_incr, it_virt_value;
+    struct timer_list real_timer;   //指向实时定时器的指针
+    struct tms times;      //记录进程消耗的时间
+    unsigned long start_time;  //进程创建的时间
+    //记录进程在每个CPU上所消耗的用户态时间和核心态时间
+    long per_cpu_utime[NR_CPUS], per_cpu_stime[NR_CPUS]; 
+    //内存缺页和交换信息:
+    //min_flt, maj_flt累计进程的次缺页数（Copy on　Write页和匿名页）和主缺页数（从映射文件或交换
+    //设备读入的页面数）； nswap记录进程累计换出的页面数，即写到交换设备上的页面数。
+    //cmin_flt, cmaj_flt, cnswap记录本进程为祖先的所有子孙进程的累计次缺页数，主缺页数和换出页面数。
+    //在父进程回收终止的子进程时，父进程会将子进程的这些信息累计到自己结构的这些域中
+    unsigned long min_flt, maj_flt, nswap, cmin_flt, cmaj_flt, cnswap;
+    int swappable:1; //表示进程的虚拟地址空间是否允许换出
+    //进程认证信息
+    //uid,gid为运行该进程的用户的用户标识符和组标识符，通常是进程创建者的uid，gid
+    //euid，egid为有效uid,gid
+    //fsuid，fsgid为文件系统uid,gid，这两个ID号通常与有效uid,gid相等，在检查对于文件
+    //系统的访问权限时使用他们。
+    //suid，sgid为备份uid,gid
+    uid_t uid,euid,suid,fsuid;
+    gid_t gid,egid,sgid,fsgid;
+    int ngroups; //记录进程在多少个用户组中
+    gid_t groups[NGROUPS]; //记录进程所在的组
+    //进程的权能，分别是有效位集合，继承位集合，允许位集合
+    kernel_cap_t cap_effective, cap_inheritable, cap_permitted;
+    int keep_capabilities:1;
+    struct user_struct *user;
+    struct rlimit rlim[RLIM_NLIMITS];  //与进程相关的资源限制信息
+    unsigned short used_math;   //是否使用FPU
+    char comm[16];   //进程正在运行的可执行文件名
+     //文件系统信息
+    int link_count, total_link_count;
+    //NULL if no tty 进程所在的控制终端，如果不需要控制终端，则该指针为空
+    struct tty_struct *tty;
+    unsigned int locks;
+    //进程间通信信息
+    struct sem_undo *semundo;      //进程在信号灯上的所有undo操作
+    struct sem_queue *semsleeping; //当进程因为信号灯操作而挂起时，他在该队列中记录等待的操作
+    //进程的CPU状态，切换时，要保存到停止进程的task_struct中
+    struct thread_struct thread;
+     
+    struct fs_struct *fs;        //文件系统信息
+    struct files_struct *files;  //打开文件信息
+      
+    spinlock_t sigmask_lock;     //信号处理函数
+    struct signal_struct *sig;   //信号处理函数
+    sigset_t blocked;            //进程当前要阻塞的信号，每个信号对应一位
+    struct sigpending pending;   //进程上是否有待处理的信号
+    unsigned long sas_ss_sp;
+    size_t sas_ss_size;
+    int (*notifier)(void *priv);
+    void *notifier_data;
+    sigset_t *notifier_mask;
+    u32 parent_exec_id;
+    u32 self_exec_id;
+
+    spinlock_t alloc_lock;
+    void *journal_info;
+};
+```
+
 Linux中的 `task_struct` 类型的结构体是进程描述符 process descriptor ，用来组织、管理进程资源
 
-### state
+## *进程状态*
 
-<img src="Linux进程状态转移图.png" width="60%">
+### task_struct中的state
+
+<img src="Linux进程状态转移图.png" width="80%">
+
+进程状态查看：`ps aux 或 ps axj`。Linux 2.6 内核的定义
+
+<img src="PCB_kernel_def.png">
+
+* TASK_RUNNING / R运行状态 Running：并不意味着进程一定在运行中，它表示进程要么是在运行中要么在**CPU运行队列**里排队
+
+  <img src="runningStatus.png">
+
+* TASK_INTERRUPTIBLE / S睡眠状态 Sleeping：意味着进程在等待睡眠完成（这里的睡眠也可叫做可中断睡眠 **interruptible sleep**），S状态对应的理论状态为阻塞态和挂起态，在等待非CPU资源就位，或者说在**非CPU硬件的队列**里排队。当等待的资源就位后，产生一个硬件中断或信号来环境进程。sOS可以通过调度算法在内存不够时将进程换出到Swap区
+
+  * 情况一
+
+    <img src="sleepingStatusSitu1.png">
+
+    * 由于CPU的运行速度极快，实际上在该死循环中只有极少的时间在运行，绝大多数时间都在睡眠状态，将CPU资源给其他程序使用
+    * 注意：当进程状态有一个 `+` 时，表示该任务为前台进程。具体可以看 *系统编程.md* 前台进程与后台进程的区别
+
+  * 情况二
+
+    <img src="sleepingStatusSitu2.png">
+
+    一直在等待用户输入，所以一直处于IO的队列中，处于睡眠状态
+
+* TASK_UNINTERRUPTIBLE / D磁盘休眠状态 Disk sleep：也可叫做深度睡眠/不可中断睡眠 **uninterruptible sleep**，不可以被被动唤醒，在这个状态的进程通常会等待IO的结束
+
+  * 例子：一个进程正在往硬盘或者往其他IO设备写入数据，但此时该进程仍然占用了内存资源。若此时OS压力过大，可能会选择终止处于S状态的进程以保护整体的OS。当进程处于D状态时，则不能被OS终止，只能等该进程结束读写后自动醒来时，OS再结束它
+  * D状态一般用于硬盘的读写，因为涉及到用户的数据比较重要
+  * D状态的模拟代码不给出，因为要模拟这个进程需要大量数据的IO读写
+
+* TASK_STOPPED / T暂停状态 Stopped
+
+  * 当进程接收到 SIGSTOP、SIGTSTP、SIGTTIN、SIGTTOU 信号后进入暂停状态，可以通过 `kill -19 [PID]` 暂停进程
+  * 和D状态、S状态相比，前两者都在等待某项资源或执行任务，但T状态并没有，是被用户手动暂停的
+  * 调试时会呈现T状态，比如gdb打断点时gdb会给进程发送 `kill -19 [PID]` 暂停进程
+
+* TASK_TRACED / T tracing stop 调试状态：进程的执行由debugger程序暂停
+
+
+下面的两个进程状态既可以放在task_struct的state字段里，也可以放在exit_state字段里。只有当进程的执行被终止时，进程的状态才会变为这两种状态中的一种
+
+* EXIT_ZOMBIE / Z僵死状态 Zombie，具体见下
+
+* EXIT_DEAD / X死亡状态 Dead：这个状态只是一个返回状态，不会在任务列表里看到这个状态。和理论中的新建状态类似，存在时间极短，资源立刻会被OS回收
+
+### 僵尸进程
+
+* 什么是僵尸进程 Zombie Process：一个进程已经退出，但是还不允许被释放，处于一个被检测的状态。进程一般尤其父进程或者OS检测回收，维持该状态是为了让父进程和OS来回收其返回或产生的数据（回收就是由Z状态转到X状态）
+
+* 为什么会产生僵尸进程：子进程已退出，父进程还在运行，但父进程没有读取子进程状态，子进程就会变成Z状态。
+
+  ```c
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <unistd.h>                                                        
+                      
+  int main() {
+      pid_t id = fork();
+      if (id<0) {
+          perror("fork");
+          return 1;
+      } else if (id == 0) {
+          // Child process
+          while (1)
+          {
+              printf("I am child, pid: %d, ppid:%d\n", getpid(), getppid());
+              sleep(3);
+              break;
+          }
+          exit(0); // 子进程直接退出
+      } else {
+          // Parent process 
+          while (1)
+          {
+              printf("I am father, pid: %d, ppid:%d\n", getpid(), getppid());
+              sleep(1);
+          }
+      }                           
+      printf("You can see me!\n");
+      sleep(1);
+  
+      return 0;
+  }   
+  ```
+
+  <img src="ZombieProcess.png" width="80%">
+
+  `<defunct>` 指的是父子进程间失去通信的进程
+
+* 僵尸进程的危害
+
+  * 若父进程或OS一直不读取子进程的返回，那么子进程就一直处于Z状态
+  * 维护退出状态本身就是要用数据维护，也属于进程的基本信息，所有也保留在PCB中，若一直处于Z状态，则一直要维护PCB
+  * 进程需要占据内存资源，若一直不回收，会造成内存浪费，也就是内存泄漏
+
+* 孤儿进程 Orphan Process
+
+  * 孤儿进程和僵尸进程相反，若父进程先于子进程结束，那么子进程变成Z进程后就成为孤儿进程
+
+  * 孤儿进程被1号init进程领养后由init进程回收，下图可看到，PID为7425的子进程在PID为15713的父进程退出后被1号init进程领养了
+
+    <img src="OrphanProcess.png">
+
+## *链表管理*
+
+Linux内核定义了 `list_head` 的带头双向循环链表的数据结构
+
+### 进程链表
+
+task_struct 有一个tasks链表
+
+```c
+struct list_head tasks {
+    struct list_head *prev;
+    struct list_head *next;
+};
+```
+
+<img src="tasks链表.drawio.png" width="70%">
+
+进程链表的哨兵位头是init_task，它就是0进程 process 0或swapper进程
+
+### 进程间关系
+
+<img src="进程间的亲缘关系.png" width="40%">
+
+* real_parent
+* parent
+* children
+* sibling
+
+进程1（init）是所有进程的祖先
+
+### pidhash & 链表
+
+## *进程组织*
+
+### TASK_RUNNING
+
+### 等待队列
 
 ## *进程切换*
 
@@ -29,15 +365,11 @@ struct thread_info {
 }
 ```
 
-
-
 ### `tid` 与 `lwp` 标识线程身份
 
 `tid` 是用户级别的，可以由 `pthread_self()` 得到
 
 `lwp` 是内核级别的，需要使用 `syscall(SYS_gettid)` 来获取
-
-
 
 ```cpp
 void *startRoutine(void *args) {
@@ -52,9 +384,17 @@ void *startRoutine(void *args) {
 
 <img src="用户级tid和内核级lwp.png">
 
+## *内核线程*
+
+# 进程调度
+
 ## *Linux 2.6 Kernel 进程调度算法架构*
 
 `ranqueue`
+
+# 进程地址空间
+
+# VFS
 
 # 文件系统
 
@@ -263,6 +603,8 @@ struct ex2_innode {
 
 # 块设备驱动
 
+<img src="Linux块设备文件系统结构.drawio.png" width="50%">
+
 ### bio
 
 ```c
@@ -297,3 +639,52 @@ struct bio_vec {
 ```
 
 # 设备驱动
+
+<img src="Linux驱动结构.drawio.png" width=50%>
+
+# 文件访问
+
+## *读写文件*
+
+## *内存映射*
+
+### mmap的原理
+
+<https://nieyong.github.io/wiki_cpu/mmap详解.html>
+
+<https://www.cnblogs.com/huxiao-tee/p/4660352.html>
+
+<img src="mmap原理.png">
+
+管理虚拟进程空间的mm_struct结构体中有mmap指向 vm_area_struct，用于管理每一个虚拟内存段
+
+mmap内存映射的实现过程，大致可以分为三个阶段
+
+1. **进程启动映射过程，并在虚拟地址空间中为映射创建虚拟映射区域**
+
+   1. 进程在用户空间发起系统调用接口mmap
+   2. 在当前进程的虚拟地址空间中，寻找一段空闲的满足要求的连续的虚拟地址
+   3. 为此虚拟区分配一个vm_area_struct结构，并对这个结构的各个域进行初始化
+   4. 将新建的虚拟区结构 vm_area_struct 插入进程的虚拟地址区域链表或树中
+
+2. **调用内核空间的系统调用函数mmap（不同于用户空间函数），实现文件物理地址和进程虚拟地址的一一映射关系**
+
+   1. 为映射分配了新的虚拟地址区域后，通过待映射的文件指针，在文件描述符表中找到对应的文件描述符，通过文件描述符，链接到内核“已打开文件集”中该文件的文件结构体（struct file），每个文件结构体维护着和这个已打开文件相关各项信息
+   2. 通过该文件的文件结构体，链接到file_operations模块，调用内核函数 sys_mmap
+   3. sys_mmap 通过虚拟文件系统的inode定位到文件磁盘物理地址
+   4. 通过remap_pfn_range函数建立页表，即实现了文件地址和虚拟地址区域的映射关系。此时，这片虚拟地址并没有任何数据关联到主存中
+
+3. **进程发起对这片映射空间的访问，引发缺页异常，实现文件内容到物理内存（主存）的拷贝**
+
+   前两个阶段仅在于创建虚拟区间并完成地址映射，但是并没有将任何文件数据的拷贝至主存。真正的文件读取是当进程发起读或写操作时
+
+   1. 进程的读或写操作访问虚拟地址空间这一段映射地址，通过查询页表，发现这一段地址并不在物理页面上。因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中，因此引发缺页异常
+   2. 缺页异常进行一系列判断，确定无非法操作后，内核发起请求调页过程
+   3. 调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没有则调用nopage函数把所缺的页从磁盘装入到主存中
+   4. 之后进程即可对这片主存进行读或者写的操作，如果写操作改变了其内容，一定时间后系统会自动回写脏页面到对应磁盘地址，也即完成了写入到文件的过程
+
+注意：修改过的脏页并不会立即更新回文件中，而是有一段时间的延迟，可以调用 `msync()` 来强制同步, 这样所写的内容就能立即保存到文件里了
+
+# 页帧回收
+
+页帧回收算法 Page Frame Reclaiming Algorithm, PFRA
