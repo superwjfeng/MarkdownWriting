@@ -254,9 +254,9 @@ Linux中的 `task_struct` 类型的结构体是进程描述符 process descripto
 
 ### 僵尸进程
 
-* 什么是僵尸进程 Zombie Process：一个进程已经退出，但是还不允许被释放，处于一个被检测的状态。进程一般尤其父进程或者OS检测回收，维持该状态是为了让父进程和OS来回收其返回或产生的数据（回收就是由Z状态转到X状态）
+* 什么是僵尸进程 Zombie Process：一个进程已经退出，但是还不允许被释放，处于一个被检测的状态。进程一般尤其父进程或者init检测回收，维持该状态是为了让父进程和init来回收其返回或产生的数据（回收就是由Z状态转到X状态）
 
-* 为什么会产生僵尸进程：子进程已退出，父进程还在运行，但父进程没有读取子进程状态，子进程就会变成Z状态。
+* 为什么会产生僵尸进程：子进程已退出，父进程还在运行，但父进程没有读取子进程状态，子进程就会变成Z状态
 
   ```c
   #include <stdio.h>
@@ -270,8 +270,7 @@ Linux中的 `task_struct` 类型的结构体是进程描述符 process descripto
           return 1;
       } else if (id == 0) {
           // Child process
-          while (1)
-          {
+          while (1) {
               printf("I am child, pid: %d, ppid:%d\n", getpid(), getppid());
               sleep(3);
               break;
@@ -279,8 +278,7 @@ Linux中的 `task_struct` 类型的结构体是进程描述符 process descripto
           exit(0); // 子进程直接退出
       } else {
           // Parent process 
-          while (1)
-          {
+          while (1) {
               printf("I am father, pid: %d, ppid:%d\n", getpid(), getppid());
               sleep(1);
           }
@@ -291,7 +289,7 @@ Linux中的 `task_struct` 类型的结构体是进程描述符 process descripto
       return 0;
   }   
   ```
-
+  
   <img src="ZombieProcess.png" width="80%">
 
   `<defunct>` 指的是父子进程间失去通信的进程

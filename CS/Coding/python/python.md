@@ -1308,171 +1308,91 @@ os 模块提供了非常丰富的方法用来处理文件和目录
 
 ## *sys库*
 
-# Numpy
-
-参考《Python深度学习--基于PyTorch》
-
-## *python数据结构缺陷 & ndarray引入*
-
-python已经提供了list和array这种数据结构来进行计算，但是它们有各自的问题
-
-list中可以存储所有类型的对象，因为一切皆对象，实际存储的是对象的引用，这在以大量float和int为主的数据运算中是非常低效的
-
-而array和C语言的一维数组比较像，但是它不支持多维数组，而且支持的内置方法也比较少
-
-因此有必要提供一种高效的用于数据计算的数据结构，即numpy的ndarray（N-dimensional Array Object）和用于处理ndarray的ufunc（Universal Funciton Object）对象
-
-## *创建ndarray*
-
-### 从已有数据中创建数组
-
-用 `np.array()` 和 `np.asarray()` 来手动创建或者从已有的list或tuple类型来创建ndarray
-
-```python
->>> a = [1, 2, 3, 4]
->>> b = (5, 6, 7, 8)
->>> a_ndarray = np.array(a)
->>> b_ndarray = np.array(b)
->>> type(a_ndarray)
-<class 'numpy.ndarray'>
->>> type(b_ndarray)
-<class 'numpy.ndarray'>
-```
-
-`np.array()` 和 `np.asarray()` 的区别是前者会对前者做深拷贝生成新对象，而后者直接对对象操作，因此对原对象（必须是ndarray对象）进行修改的时候，会影响到用 `asarray` 生成的原对象引用
-
-```python
->>> a = np.array([1, 2, 3, 4])
->>> b = np.array(a)
->>> c = np.asarray(a)
->>> a[1] = 5
->>> a
-array([1, 5, 3, 4])
->>> b
-array([1, 2, 3, 4])
->>> c
-array([1, 5, 3, 4])
-```
-
-### 利用random模块生成数组
-
-* `np.random.random`：生成0到1之间的随机数
-* `np.random.uniform` ：生成均匀分布的随机数
-* `np.random.randn`：生成标准正态的随机数
-* `np.random.randint`：生成随机的整数
-* `np.random.normal`：生成正态分布
-
-### 创建特定形状的特殊多维数组
-
-* 生成特定形状的 $\boldsymbol{0}$ 数组
-* 生成特定形状的 $\boldsymbol{1}$ 数组
-* 生成空数组，里面是未初始化的垃圾值
-* 生成特定形状的 $\boldsymbol{I}$ 数组
-* 生成特定形状的制定值数组 `np.full()`
-
-### 利用 `arange`，`linspace` 函数
-
-`np.arange(Start, End, Step)` 生成固定范围内的数组
-
-## *数组变形*
-
-### axis问题
-
-```python
->>> a
-array([[[ 1,  2,  3,  4],
-        [ 5,  6,  7,  8],
-        [ 9, 10, 11, 12]],
-
-       [[13, 14, 15, 16],
-        [17, 18, 19, 20],
-        [21, 22, 23, 24]]])
->>> a.sum(axis = 0)
-array([[14, 16, 18, 20],
-       [22, 24, 26, 28],
-       [30, 32, 34, 36]])
->>> a.sum(axis = 2)
-array([[10, 26, 42],
-       [58, 74, 90]])
->>> a.sum(axis = (0, 1, 2))  # 对所有轴sum
-300
-```
-
-**axis的编号规则是最外层的为axis 0，最内层的为最大数值的axis**，和一般序列号一样，-1就是最大的序列值，即最内层的axis
-
-或者也可以**用数组shape理解**，上面代码中 `a.shape == (2, 3, 4)`，其中2对应的是axis 0，即最外层，而4对应的是axis 2，即最内层
-
-<img src="axis.jpg" width="50%">
-
-### 更改数组形状
-
-* `reshpae`：修改数组的形状，**不修改数组本身**，会返回一个原对象的引用
-* `resize`：修改数组的形状，**直接在原对象上修改**
-* `T`：转置
-* `transpose`：轴对换，常用于RBG转换为GBR
-* `flatten`：拉平原数组，即将多维数组转换为1维数组，不修改数组本身，会返回一个原对象的引用
-* `ravel`：拉平原数组，直接在原对象上修改
-* `squeeze`：将维数为1的维度去掉，进行降维
-
-### 合并数组
-
-## *numpy常用运算*
-
-### 切片、获取元素
-
-### 乘法
-
-* 逐元素相乘 Element-wise Product：`np.multiply` 或者直接用 `*` 运算符
-
-* 点积运算/矩阵乘法：`np.dot()`
-
-### 统计相关
-
-### 求最值
-
-## *广播机制 Broadcast*
-
-### 激活广播机制的条件
-
-numpy的ufunc要求输入的数组shape是一致的，当数组的shape不一致时，就会激活广播机制来强制统一shape，但是得满足以下规则
-
-1. 若两个数组维数不相等，维数较低的数组的shape会从左开始填充1，直到和高维数组的维数匹配。可以看下面的例子
-
-   ```python
-   >>> np.arange(1, 25).reshape(2, 3, 4) * np.arange(1, 5).reshape(1, 4)
-   array([[[ 1,  4,  9, 16],    # a.shape == (2, 3, 4)
-           [ 5, 12, 21, 32],    # b.shape == (4, ) 
-           [ 9, 20, 33, 48]],   # b.shape == (1, 1, 4) 实际上是这么从左边开始扩充的，相当于是往最外层扩充 
-                                # (a*b).shape == (2, 3, 4)
-          [[13, 28, 45, 64],
-           [17, 36, 57, 80],
-           [21, 44, 69, 96]]])
-   ```
-
-2. 若两个数组维数相同，但某些维度的长度不同，那么长度为1的维度会被扩展，即向长度大的数组看齐，和另一数组的同维度的长度匹配
-
-   ```python
-   >>> np.arange(1, 4).reshape(3, 1) * np.arange(1, 5).reshape(1, 4)
-   array([[ 1,  2,  3,  4],  # a.shape == (3, 1)
-          [ 2,  4,  6,  8],  # b.shape == (1, 4) 
-          [ 3,  6,  9, 12]]) # (a*b).shape == (3, 4)
-   ```
-
-3. 若两个数组维数相同，但有任一维度的长度不同且不为1，则报错
-
-### 一维情况
-
-numpy中 `(n,)` 形状的既可以是行也可以是列，都是1D-array，当它和二维数组进行计算时，会自动将size相符的维度匹配在一起计算。但若指定了第二维就不同了，2D-array `(5,1) != (1,5)`
-
-# Matplotlib
-
-
-
 # 常用的python工具包
 
 ## *conda*
 
+Conda是一个用于管理和部署软件包的开源包管理工具和环境管理器，Conda可以帮助用户创建、管理和切换不同的Python环境，并安装各种软件包，使得项目之间的依赖关系更加清晰和可管理
+
 用zsh安装sh可能会有问题，这时候可以换用bash安装
+
+* 创建和管理环境
+
+   * 使用Conda可以轻松创建新的Python环境，例如：
+
+     ```cmd
+     $ conda create --name myenv python=3.8
+     ```
+
+     这将创建一个名为 "myenv" 的新环境，并指定Python版本为3.8
+
+   * 激活环境：
+
+     ```cmd
+     $ conda activate myenv
+     ```
+
+     激活环境后可以在其中安装软件包，运行Python脚本等
+
+   * 退出环境：
+
+     ```cmd
+     $ conda deactivate
+     ```
+
+* 安装和管理软件包
+
+   * 使用Conda可以轻松安装、更新和删除软件包，例如：
+
+     ```cmd
+     $ conda install numpy
+     ```
+
+     这将安装名为 "numpy" 的Python包
+
+   * 更新软件包：
+
+     ```cmd
+     $ conda update numpy
+     ```
+
+   * 删除软件包：
+
+     ```cmd
+     $ conda remove numpy
+     ```
+
+* 创建环境文件
+
+   * 可以通过创建一个环境文件（例如environment.yml）来定义项目的环境依赖关系。这个文件可以包含项目所需的所有软件包及其版本信息
+
+   * 通过以下方式创建环境：
+
+     ```cmd
+     $ conda env export > environment.yml
+     ```
+
+* 从环境文件创建环境
+
+   * 若有一个环境文件，可以使用以下命令从文件中创建一个新的环境
+
+     ```cmd
+     $ conda env create -f environment.yml
+     ```
+
+* 查看已安装的环境和软件包
+
+   * 查看所有已创建的环境
+
+     ```
+     $ conda info --envs
+     ```
+
+   * 查看当前激活的环境中安装的软件包
+
+     ```cmd
+     $ conda list
+     ```
 
 ## *tqdm 进度条*
 

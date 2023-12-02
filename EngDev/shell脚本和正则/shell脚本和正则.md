@@ -626,9 +626,7 @@ fi
 * 第三方提供的对应的在磁盘中有具体二进制文件的可执行程序，由子进程来执行
 * shell内部自己实现的方法，由自己（即父进程）来执行。有些命令就是要用来影响shell本身的，如cd是要用来切换shell本身的路径
 
-### 实现过程详见代码
-
-* shell的环境变量是从其配置文件中来的，`.bashrc` (resource configuration) 是一个脚本文件，当shell启动的时候，通过执行改脚本来读取对应的配置文件
+### 实现
 
 ```c
 #include <stdio.h>
@@ -643,47 +641,36 @@ fi
 #define SEP " "
 
 // 定义缓冲区
-char* g_argv[SIZE]; // 保存打散之后的命令行字符串
+char* g_argv[SIZE]; // 保存依次parse之后的命令行字符串
 char cmd_line[NUM]; // 保存完整的命令行字符串
-char g_myval[64];// 写一个环境变量的buffer，用来测试
+char g_myval[64];   // 写一个环境变量的buffer，用来测试
 
 // shell运行原理：通过让子进程执行命令，父进程等待&&解析命令
-int main()
-{
-    extern char** environ;
+int main() {
+    extern char** environ; // 环境变量列表
     // 0. 命令行解释器，一定是一个常驻内存的进程，不退出
-    while (1)
-    {
-        // 1. 打印处提示信息 [root@localhost myshell]
+    while (1) {
+        // 1. 打印出提示信息 [root@localhost myshell]
         printf("[root@localhost myshell]# ");
         fflush(stdout);
         memset(cmd_line, '\0', sizeof(cmd_line));
 
         // 2. 获取用户键盘输入[输入的是各种指令和选项：如"ls -a -l -i"]
-        if (fgets(cmd_line, sizeof(cmd_line), stdin) == NULL)
-        {
-            continue;
-        }
-        cmd_line[strlen(cmd_line)-1] =  '\0';
+        if (fgets(cmd_line, sizeof(cmd_line), stdin) == NULL) continue;
+        cmd_line[strlen(cmd_line)-1] = '\0';
         //printf("echo: %s\n", cmd_line);
         
-        // 3. 命令行字符串解析："ls -a -l -i" -> "ls", "-a", "-l", "-i"
+        // 3. 命令行字符串解析/parse："ls -a -l -i" -> "ls", "-a", "-l", "-i"
         // 可以在每个空格处放置'\0'后依次拆开。也可以使用strtok函数 
         g_argv[0] = strtok(cmd_line, SEP); // strtok第一次调用要传入原始字符串
         int index = 1;
-        if (strcmp(g_argv[0], "ls") == 0)
-        {
-            g_argv[index++] = "--color=auto";
-        }
-        if (strcmp(g_argv[0], "ll") == 0)
-        {
+        if (strcmp(g_argv[0], "ls") == 0) g_argv[index++] = "--color=auto";
+        if (strcmp(g_argv[0], "ll") == 0) {
             g_argv[0] = "ls";
             g_argv[index++] = "-1";
             g_argv[index++] = "--color=auto";
-
         }
-        //while (1)
-        //{
+        //while (1) {
         //    g_argv[index] = strtok(NULL, SEP); // 第二次若还要解释原始字符串，则传入NULL
         //    index++;
         //}
@@ -693,26 +680,20 @@ int main()
         
         // 4. 内置命令，让父进程（shell）自己执行的命令，我们叫做内置命令/内建命令
         // 内置命令本质就是shell中的一个函数调用，因此若拿到的是内置命令，则父进程直接执行
-        if (strcmp(g_argv[0], "export") == 0 && g_argv[1] != NULL)
-        {
+        if (strcmp(g_argv[0], "export") == 0 && g_argv[1] != NULL) {
             strcpy(g_myval, g_argv[1]);
             int ret = putenv(g_myval);
-            if (ret == 0)
-                printf("%s export success\n", g_argv[1]);
-            for (int i=0; environ[i]; i++)
-                printf("%d: %s\n", i, environ[i]);
+            if (ret == 0) printf("%s export success\n", g_argv[1]);
+            for (int i=0; environ[i]; i++) printf("%d: %s\n", i, environ[i]);
             continue;
         }
-        if (strcmp(g_argv[0], "cd") == 0)
-        {
-            if (g_argv[1] != NULL)
-                chdir(g_argv[1]); // chdir系统调用
+        if (strcmp(g_argv[0], "cd") == 0) {
+            if (g_argv[1] != NULL) chdir(g_argv[1]); // chdir系统调用
             continue;
         }
         // 5. fork()
         pid_t id = fork();
-        if (id == 0)
-        {
+        if (id == 0) {
             // child
             printf("功能让子进程进行\n");
             printf("child, MYVAL: %s\n", getenv("MYVAL"));
@@ -725,17 +706,13 @@ int main()
         // father
         int status = 0;
         pid_t ret = waitpid(id, &status, 0);
-        if (ret > 0)
-            printf("exit code: %d\n", WEXITSTATUS(status));
+        if (ret > 0) printf("exit code: %d\n", WEXITSTATUS(status));
     }
     return 0;
 }
 ```
 
-### 如何执行其他的C、C++二进制程序或其他语言的程序？
-
-* 无论是任何语言，都是运行在OS上面的，都需要调用类似exec\*的系统接口。因此本质而言Shell就是一个解析用户输入命令并调用exec\*函数的C文件
-* C语言、Python和Shell语言都像是软件，编译型的第一次编译之后生成二进制可执行文件，之后再使用都可以直接运行可执行文件，速度非常快。而解释型语言需要每次都将代码文件输入给python或shell解释器逐行解析，因此速度很慢
+shell的环境变量是从其配置文件中来的，`.bashrc` (resource configuration) 是一个脚本文件，当shell启动的时候，通过执行改脚本来读取对应的配置文件
 
 # 脚本 & 变量
 

@@ -1803,6 +1803,10 @@ int main() {
 
 # 文件IO
 
+# 不常用的C库设施介绍
+
+## *时钟*
+
 # 程序环境和预处理
 
 预处理 -> 编译 -> 汇编 -> 链接（VMA分配） -> 生成ELF -> OS装载到内存（物理地址空间分配） -> 进程跑起来
@@ -2803,7 +2807,113 @@ typedef struct
 
 # 运行库
 
-*入口函数和程序初始化*
+## *GNU C源码阅读技巧*
+
+以 glibc-2.31 为例
+
+### _GNU_SOURCE
+
+`_GNU_SOURCE` 是一个用于预处理的宏定义，它用于启用特定于GNU编译器（如GCC）和GNU C库（glibc）的扩展功能和特性。具体来说，当在程序中包含 `_GNU_SOURCE` 宏定义时，编译器和标准库会根据 GNU 扩展启用额外的功能和特性，这些功能和特性在标准C或C++中不一定可用
+
+`_GNU_SOURCE` 宏通常用于以下情况：
+
+* 启用 GNU C 库的扩展功能：通过定义 `_GNU_SOURCE`，可以启用 glibc 提供的一些额外的非标准函数和特性。例如，这可以包括特定于 GNU 的线程函数、内存分配函数等
+* 启用 POSIX 标准扩展：一些 POSIX 扩展功能在标准C或C++中不是默认可用的。通过定义 `_GNU_SOURCE`，可以启用这些 POSIX 扩展，使它们在程序中可用
+* 启用一些 GNU 编译器扩展：一些 GNU 编译器（如 GCC）提供了特定于编译器的扩展功能。通过定义 `_GNU_SOURCE`，可以启用这些扩展功能
+
+需要注意的是，使用 `_GNU_SOURCE` 可能会使代码在不同编译器和平台上不具有可移植性，因为这些扩展功能不一定在所有编译器和标准库中都可用。因此，除非明确需要使用这些特定于 GNU 的特性，否则最好避免在通用的跨平台代码中使用 `_GNU_SOURCE`。如果要编写可移植的代码，建议仅依赖于标准C或C++功能，而不使用非标准或特定于编译器/库的扩展
+
+### \_\_attribute\_\_机制
+
+`__attribute__` 机制是 GNU C 编译器（如 GCC）提供的一种用于控制编译器行为和注释的机制。它允许程序员使用一些特殊的属性来告诉编译器如何处理变量、函数、结构等元素，或者对代码进行一些特殊的优化或警告
+
+`__attribute__` 机制是通过宏的多层封装实现的
+
+以下是一些常见的 `__attribute__` 属性和它们的用途，比较重要的 `__attribute__((alias))` 见下
+
+* `__attribute__((noreturn))`: 这个属性用于标记函数，表示该函数不会返回。这对于像 `exit()` 这样的函数很有用，因为它们在调用之后程序将终止，从不会返回
+
+    ```c
+    void my_exit() __attribute__((noreturn));
+    ```
+
+* `__attribute__((packed))`: 这个属性用于结构体，它告诉编译器要尽量减小结构体的内存占用，不要进行字节对齐
+
+    ```c
+    struct MyStruct {
+        int a;
+        char b;
+    } __attribute__((packed));
+    ```
+
+* `__attribute__((unused))`: 这个属性可以用于变量或函数，它告诉编译器忽略未使用的警告
+
+    ```c
+    int unused_variable __attribute__((unused));
+    ```
+
+* `__attribute__((constructor))` 和 `__attribute__((destructor))`: 这些属性用于标记函数，指示它们应该在程序启动或结束时自动执行，通常用于初始化或清理工作
+
+    ```c
+    void my_init_function() __attribute__((constructor));
+    void my_cleanup_function() __attribute__((destructor));
+    ```
+
+* `__attribute__((aligned(N)))`: 这个属性用于指定变量或结构体的对齐方式，其中 `N` 是对齐要求的字节数。
+
+    ```c
+    int aligned_variable __attribute__((aligned(16)));
+    ```
+
+* `__attribute__((warn_unused_result))`: 这个属性用于标记函数，表示调用该函数的返回值应该被检查，以避免警告。
+
+    ```c
+    int get_value() __attribute__((warn_unused_result));
+    ```
+
+这些只是 `__attribute__` 机制的一些示例。GNU C 编译器提供了许多其他的属性，用于更精细地控制编译器行为。这些属性可以帮助程序员优化代码、消除警告、进行特定的代码处理等。然而，需要注意的是，`__attribute__` 机制通常不是标准 C 或 C++ 的一部分，因此在不同的编译器之间可能会有一些差异
+
+### alias
+
+https://www.cnblogs.com/justinyo/archive/2013/03/12/2956438.html
+
+定义在 `include/libc-symbols.h` 下面
+
+`__attribute__((alias))` 是 GNU C 编译器（如 GCC）提供的一个属性，它用于创建一个符号别名，将一个变量、函数或符号关联到另一个符号上。这可以用于在编译期间将一个符号的名称关联到另一个名称，从而使它们在链接时被视为同一符号
+
+```c
+/* Define ALIASNAME as a strong alias for NAME.  */
+# define strong_alias(name, aliasname) _strong_alias(name, aliasname)
+# define _strong_alias(name, aliasname) \
+  extern __typeof (name) aliasname __attribute__ ((alias (#name))) \
+    __attribute_copy__ (name);
+
+/* Define ALIASNAME as a weak alias for NAME.
+   If weak aliases are not available, this defines a strong alias.  */
+# define weak_alias(name, aliasname) _weak_alias (name, aliasname)
+# define _weak_alias(name, aliasname) \
+  extern __typeof (name) aliasname __attribute__ ((weak, alias (#name))) \
+    __attribute_copy__ (name);
+```
+
+* 强别名 strong_alias
+
+  * 使用 `__attribute__((alias))` 属性创建强别名
+
+  * 强别名会将一个符号完全替代为另一个符号，它们在链接时被视为完全相同的符号，没有区别
+
+  * 如果两个符号具有相同的名称，则 `strong_alias` 可以用于将它们显式地关联在一起
+
+  * 强别名会完全替代原始符号，因此它们具有相同的可见性和强度
+
+* 弱别名 (`weak_alias`)：
+
+  * 使用 `__attribute__((weak))` 属性创建弱别名
+  * 弱别名不会完全替代原始符号，而是在原始符号不存在时才会起作用
+  * 如果原始符号存在，弱别名将被忽略，原始符号将被使用
+  * 弱别名常用于提供一个默认实现，但允许用户覆盖它
+
+## *入口函数和程序初始化*
 
 ### 入口函数
 

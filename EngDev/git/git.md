@@ -1,4 +1,4 @@
-# Git使用
+# Git原理
 
 ## *版本控制*
 
@@ -21,8 +21,25 @@
   * [Darcs](http://darcs.net): darcs.net – open source
   * [BitKeeper](http://www.bitkeeper.org): started proprietary, now open source, influenced creation of Git
 
+## *git分区*
 
-### Git的数据模型
+### 工作区、暂存区和版本库
+
+<img src="git三个区域.png" width="50%">
+
+* 工作区 Working directory：放需要管理的代码和文件的目录
+
+* 暂存区 Stage area/index：一般放在 `.git` 目录下的index文件中
+
+* 版本库 Repository (locally)：`.git` 这个隐藏目录被称为Git的版本库
+
+  <img src="git版本库内容.png" width="35%">
+
+修改的工作区内容的索引会写入对象库的一个新的git对象 object 中
+
+Git追踪管理的是修改，而不是文件
+
+## *Git的数据模型*
 
 Git 将顶级目录中的文件和文件夹作为集合，并通过一系列快照 snapshot 来管理其历史记录。每一个文件被称为Blob对象，相当于是字节Array数据对象，目录被称为Tree，它将名字String于Blob对象或另外的树映射 `map<string, object>`
 
@@ -99,6 +116,10 @@ git的分支实质上仅是包含所指对象的SHA-1校验和文件，所以它
 * origin一般用作本地对remote repository的名称，它是 `git clone` 时的默认remote库名称，可以 `git clone [-o RemoteName] ` 换一个名字
 * 本地 `git init` 时的默认branch名称是master。因此对远程库的本地branch名称是，`<remote>/<branch>`，即origin/master
 
+# Git使用
+
+## *git 配置*
+
 ### git的设置
 
 `git config`: Git 是一个 [高度可定制的](https://git-scm.com/docs/git-config) 工具。可以通过 `git config -l` 来查看设置列表
@@ -107,23 +128,7 @@ git的分支实质上仅是包含所指对象的SHA-1校验和文件，所以它
 
 `git config --global` 来设置当前host的全部仓库
 
-### 工作区、暂存区和版本库
-
-<img src="git三个区域.png" width="50%">
-
-* 工作区 Working directory：放需要管理的代码和文件的目录
-
-* 暂存区 Stage area/index：一般放在 `.git` 目录下的index文件中
-
-* 版本库 Repository (locally)：`.git` 这个隐藏目录被称为Git的版本库
-
-  <img src="git版本库内容.png" width="35%">
-
-修改的工作区内容的索引会写入对象库的一个新的git对象 object 中
-
-Git追踪管理的是修改，而不是文件
-
-### 基础指令
+## *基础指令*
 
 Git 处理snapshot场景的方法是使用一种叫做 staging area 暂存区的机制，它允许用户指定下次快照中要包括那些改动
 
@@ -298,5 +303,3 @@ Detached HEAD 状态通常发生在以下几种情况下
 * `git blame`：查看最后修改某行的人
 * `git bisect`：通过二分查找搜索历史记录
 * `.gitignore`： [指定](https://git-scm.com/docs/gitignore) 故意不追踪的文件
-
-# Git原理
