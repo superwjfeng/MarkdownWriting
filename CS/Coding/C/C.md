@@ -305,6 +305,42 @@ A& ra1 = bb; //向上转换切片，所以没有产生中间变量，也就不�
     
 * 如果表达式是浮点型或者范围，那么就不能使用switch，用if else结构方便
 
+## *无条件转移*
+
+### 局部跳转goto
+
+`goto` 是C语言中的关键字，用于无条件地将控制转移到程序中的标签位置。尽管 `goto` 在编程中有一些争议，并且在大多数情况下被认为是不推荐使用的，但在某些情况下，它仍然可以提供一种简洁的控制流
+
+```c
+goto label;
+
+// ...
+
+label:
+    // 语句
+```
+
+虽然 `goto` 可以在一些特殊情况下提供简便的解决方案，但过度使用它可能导致代码难以理解、维护和调试。在现代编程中，通常更推荐使用结构化的控制流语句（如 `if`、`for`、`while`）来实现逻辑
+
+### 非局部跳转/长跳转
+
+goto 语句存在一个限制，即不能从当前函数跳转到另一函数
+
+库函数 `setjmp()` 和 `longjmp()` 可执行非局部跳转 nonlocal goto。非局部 nonlocal 是指跳转的目标为当前执行函数之外的某个位置
+
+```c
+#include <setjmp.h>
+int setjmp(jmp_buf env);
+			// Returns 0 on initial call, nonzero on return via longyjmp()
+void longjmp(jmp_buf env, int val);
+```
+
+setjmp 为后续由 longjmp 执行的跳转确立了跳转目标。该目标正是程序发起 `setjmp()` 调用的位置
+
+setjmp 把当前进程环境的各种信息保存到 env 参数中
+
+长跳转只有在极少数的时候能用上，比如说系统编程的信号相关的处理。平时能避免使用就避免使用
+
 # 数组和指针
 
 ## *数组*
@@ -487,7 +523,56 @@ int* arr[3] = { data1, data2, data3 }; // 指针数组是一个数组，不是�
 
 ## *`restricted` 优化*
 
+如何理解C语言关键字restrict？ - Milo Yip的回答 - 知乎
+https://www.zhihu.com/question/41653775/answer/92088248
 
+当两个或以上的指针指向同一数据的时候称为 pointer alasing，比如
+
+```c
+int i = 0;
+int *a = &i;
+int *b = &i;
+```
+
+```c
+int foo (int *x, int *y) {
+    *x = 5;
+    *y = 6;
+    return *x + *y;
+}
+foo(a, b); // 得到12
+```
+
+如果用上面的这个函数调用foo得到的是12。为了保证结果正确，编译器需要在 `*y=6` 改变了值之后重新读取 `*x` 指向的值
+
+```assembly
+foo:
+	movl $5, (%rdi)   # 存储 5 至 *x
+	movl $6, (%rsi)   # 存储 6 至 *y
+	movl (%rdi), %eax # 重新读取 *x（因为有可能被上一行指令造成改变）
+	addl $6, %eax     # 加上 6
+	ret
+```
+
+如果不重新读取的后果就是取到的 `*x` 是旧值 5，返回的是11，在这个函数调用的语境下，结果是不正确的
+
+restrict 是为了告诉编译器额外信息（两个指针不指向同一数据），从而让编译器来优化机器码
+
+```c
+int rfoo (int *restrict x, int *restrict y) { /**/ }
+```
+
+```assembly
+rfoo:
+	movl $11, %eax # 在编译期已计算出 11
+	movl $5, (%rdi) # 存储 5 至 *x
+	movl $6, (%rsi) # 存储 6 至 *y
+	ret
+```
+
+注意：如果声明了restrict但仍然是pointer aliasing，则是一种未定义的情况，不要这么做！
+
+> 以个人经验而言，编写代码时通常会忽略 pointer aliasing的问题。更常见是在性能剖测时，通过反编译看到很多冗余的读取指令，才会想到加入restrict 关键字来提升性能。
 
 ## *字符指针*
 
@@ -1012,7 +1097,47 @@ Unix使用 `\n`，macOS使用 `\r`，Win使用 `\r\n`。如果不做切换换行
 
 ## *自定义输入/输出函数*
 
-### strol
+### strol 
+
+### sprintf
+
+和printf很像，但printf是打印到stdout，sprintf 则用于将格式化的数据写入一个字符串 str 中
+
+```c
+int sprintf(char *str, const char *format, ...);
+```
+
+* str 是目标字符串的指针，数据将被写入到这个字符串中。
+* format：格式控制字符串，指定了输出的格式，类似于 printf 中的格式字符串
+* 最后一个参数是可变参数，说明该函数可以把多个元素组合成一个字符串
+
+```c
+char buffer[50];
+int num = 42;
+float fnum = 3.14;
+
+// 使用 sprintf 将格式化的数据写入字符串
+sprintf(buffer, "The number is %d and the float is %.2f", num, fnum);
+```
+
+### snprintf
+
+snprintf 与 sprintf 类似，但是它多了一个参数，用于指定最大写入字符数，从而避免缓冲区溢出
+
+````c
+int snprintf(char *str, size_t size, const char *format, ...);
+````
+
+size：指定目标字符串的最大写入字符数，包括终止的 null 字符
+
+```c
+char buffer[20]; // 注意: 这里设置目标字符串的大小为 20
+int num = 42;
+float fnum = 3.14;
+
+// 使用 snprintf 将格式化的数据写入字符串，限制最大写入字符数为 20
+snprintf(buffer, sizeof(buffer), "The number is %d and the float is %.2f", num, fnum);
+```
 
 ## *字符串函数 (C Primer Plus 第11章)*
 
@@ -1750,13 +1875,17 @@ int main() {
 
 内存泄漏的具体内容可以看Cpp.md
 
-## *柔性数组/动态数组/伸缩性数组（C99） Flexible array*
+## *柔性数组/动态数组/伸缩性数组（C99）*
 
 ### 柔性数组的特点
+
+柔性数组 Flexible Array Member 允许在结构体的末尾定义一个数组，但是该数组的大小是在运行时确定的。柔性数组的声明方式是在结构体中使用一个未命名的数组成员，该数组成员的大小为0。这个特性通常用于创建动态分配的结构体，其中结构体的最后一个成员是一个数组，而数组的大小在运行时动态确定
 
 * 结构中的柔性数组成员前面必须至少有一个其他成员，且柔性数组一定要放在结构体最后
 * `sizeof` 返回的这种结构大小不包括柔性数组的内存
 * 包含柔性数组成员的结构用 `malloc()` 进行内存的动态分配，并且分配的内存应该大于结构的大小，以适应柔性数组的预期大小
+
+### 柔性数组的使用
 
 ```c
 struct S {
@@ -1797,15 +1926,74 @@ int main() {
 }
 ```
 
-### 柔性数组的使用
-
-### 柔性数组的优势
-
-# 文件IO
+# IO
 
 # 不常用的C库设施介绍
 
 ## *时钟*
+
+在C语言中，时钟通常是通过标准库中的 `<time.h>` 头文件提供的函数来处理的。这个头文件包含了一些有关时间的函数，其中最常用的是 `clock()`、`time()` 和 `difftime()`
+
+### `clock()`
+
+`clock()` 函数用于返回程序执行起始以来的时钟周期数。这个值通常用于测量程序的执行时间。它返回的是一个类型为 `clock_t` 的整数值
+
+```c
+#include <time.h>
+
+int main() {
+    clock_t start_time, end_time;
+    double cpu_time_used;
+
+    start_time = clock();
+
+    // Your code to measure execution time
+
+    end_time = clock();
+    cpu_time_used = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+
+    printf("CPU time used: %f seconds\n", cpu_time_used);
+
+    return 0;
+}
+```
+
+在上面的例子中，`CLOCKS_PER_SEC` 是一个常量，表示每秒的时钟周期数
+
+### `time()`
+
+`time()` 函数用于获取当前的系统时间。它返回一个 `time_t` 类型的值，表示自1970年1月1日午夜以来经过的秒数。
+
+```c
+#include <time.h>
+
+int main() {
+    time_t current_time;
+    time(&current_time);
+    printf("Current time: %s", ctime(&current_time));
+
+    return 0;
+}
+```
+
+`ctime()` 函数用于将 `time_t` 值转换为字符串表示形式
+
+### `difftime()`
+
+`difftime()` 函数用于计算两个 `time_t` 类型值之间的时间差，以秒为单位
+
+```c
+#include <time.h>
+
+int main() 
+    time_t start_time, end_time;
+    // Set start_time and end_time to some values
+    double time_difference = difftime(end_time, start_time);
+    printf("Time difference: %f seconds\n", time_difference);
+
+    return 0;
+}
+```
 
 # 程序环境和预处理
 
