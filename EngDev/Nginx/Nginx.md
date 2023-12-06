@@ -127,9 +127,3 @@ Nginx对于**每个HTTP请求或者TCP/IP连接**都会建立相应的内存池�
 ### 任务队列
 
 <img src="线程池任务队列.drawio.png">
-
-
-
-C10K问题的源头在于LMAP架构使用每线程来处理每请求
-
-Squid和Nginx都采用了Reactor 基于事件触发的模型

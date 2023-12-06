@@ -745,7 +745,7 @@ long vframe(long n, long idx, long *q)
 }
 ```
 
-## *可变参数列表*
+## *可变参数列函数*
 
 ### 使用
 
@@ -760,16 +760,130 @@ void va_end(va_list ap); //结束可变参数函数参数的遍历（函数宏�
 void va_copy(va_list dest, va_list src);
 ```
 
-函数的可变参数用 `...` 来代表，比如 `void logMessage(int level, char *format, ...)`
+`<stdarg.h>` 为函数提供了可变参数，它用 `...` 来代表，比如 `void logMessage(int level, char *format, ...)`
 
-1. 首先定义一个`va_list` 型的变量，这个变量是指向参数的指针
-2. 然后用 `va_start` 宏，初始化刚定义的 `va_list` 变量
-3. 返回可变参数有两种方式
-   * 用 `va_arg` 宏，返回可变的参数，`va_arg` 的第二个参数是寻找的参数的类型。若函数有多个可变参数的，依次调用 `va_arg`获取各个参数
+它的使用步骤如下
+
+1. 提供一个最后一个参数（parmN后的参数）是 `...` 的函数原型
+2. 在函数中定义一个`va_list` 型的变量，这个变量是指向参数的指针
+3. 然后用 `va_start` 宏，初始化刚定义的 `va_list` 变量
+4. 返回可变参数有两种方式
+   * 用 `va_arg` 宏，返回可变的参数
+     * 函数原型中必须有一个参数是给出参数的数量
+     * `va_arg` 的第二个参数是寻找的参数的类型
+     * 若函数有多个可变参数的，依次调用 `va_arg`获取各个参数
    * 用 `vsnprintf` 将格式化数据从可变参数列表写入缓冲区
-4. 最后用 `va_end` 宏，结束可变参数的获取
+5. 最后用 `va_end` 宏，清理并结束可变参数的获取
+
+下面给出分别用 va_arg 和 vsnprintf的两种使用方式
+
+* va_arg
+
+  ```c
+  #include <stdio.h>
+  #include <stdarg.h>
+  
+  // 可变参数函数示例
+  int sum(int num, ...) {
+      int result = 0;
+      // 定义一个va_list类型的变量args
+      va_list args;
+      // 初始化args，使其指向参数列表的第一个参数
+      va_start(args, num);
+  
+      // 遍历参数列表
+      for (int i = 0; i < num; ++i) {
+          // 从参数列表中获取一个参数
+          int value = va_arg(args, int);
+          // 累加参数值到结果
+          result += value;
+      }
+      // 结束对参数列表的访问
+      va_end(args);
+      return result;
+  }
+  
+  int main() {
+      // 调用可变参数函数，传递不定数量的参数
+      int result1 = sum(3, 1, 2, 3);
+      int result2 = sum(5, 10, 20, 30, 40, 50);
+      // 输出结果
+      printf("Result 1: %d\n", result1);
+      printf("Result 2: %d\n", result2);
+  
+      return 0;
+  }
+  ```
+
+* vsnprintf
+
+  ```c
+  #include <stdio.h>
+  #include <stdarg.h>
+  
+  // 使用vsnprintf格式化字符串的函数示例
+  void formatString(char *result, size_t size, const char *format, ...) {
+      va_list args;
+      // 初始化args，使其指向参数列表的parmN
+      va_start(args, format);
+      // 使用vsnprintf格式化字符串
+      vsnprintf(result, size, format, args);
+      // 结束对参数列表的访问
+      va_end(args);
+  }
+  
+  int main() {
+      char buffer[100];
+      // 使用formatString函数格式化字符串
+      formatString(buffer, sizeof(buffer), "This is a formatted string with %d and %s.", 42, "parameters");
+      // 输出结果
+      printf("Formatted string: %s\n", buffer);
+  
+      return 0;
+  }
+  ```
 
 ### 原理
+
+call函数时从右向左建立栈帧传参，最多可以用寄存器传递6个参数，大于6个的通过栈来传参，自函数要通过rsp和偏移来取用多余的参数
+
+C语言中可变参数函数实现原理 - 何处不江南的文章 - 知乎
+https://zhuanlan.zhihu.com/p/26712052
+
+```c
+typedef  char *  va_list;
+/*
+   Storage alignment properties -- 堆栈按X对齐
+*/
+#define  _AUPBND        (sizeof (X) - 1) 
+#define  _ADNBND        (sizeof (X) - 1)
+ 
+/* Variable argument list macro definitions -- 变参函数内部实现需要用到的宏 */                  
+#define _bnd(X, bnd)    (((sizeof (X)) + (bnd)) & (~(bnd)))
+#define va_start(ap, A)  (void) ((ap) = (((char *) &(A)) + (_bnd (A,_AUPBND))))
+#define va_arg(ap, T)   (*(T *)(((ap) += (_bnd (T, _AUPBND))) - (_bnd (T,_ADNBND))))
+#define va_end(ap)     (void) 0
+```
+
+`va_start()` 后会指向parmN的最后一位+1，然后用 `var_arg()` 不断取
+
+### 例子：printf的实现
+
+```c
+// from glibc
+int printf (const char *format, ...) {
+  va_list arg;
+  int done;
+
+  va_start (arg, format);
+  done = vfprintf (stdout, format, arg);
+  va_end (arg);
+
+  return done;
+}
+```
+
+printf很明显就是直接用可变参数配合vsnprintf实现的
 
 ## *存储类别 Storage class*
 
@@ -1138,6 +1252,14 @@ float fnum = 3.14;
 // 使用 snprintf 将格式化的数据写入字符串，限制最大写入字符数为 20
 snprintf(buffer, sizeof(buffer), "The number is %d and the float is %.2f", num, fnum);
 ```
+
+### vsnprintf
+
+```c
+int vsnprintf(char *str, size_t size, const char *format, va_list ap);
+```
+
+vsnprintf和snprintf唯一的区别是它使用一个 `va_list` 来获取参数，而不是靠可变参数 `...` 来获取
 
 ## *字符串函数 (C Primer Plus 第11章)*
 
@@ -2997,7 +3119,12 @@ typedef struct
 
 ## *GNU C源码阅读技巧*
 
-以 glibc-2.31 为例
+以 glibc-2.31 为例 https://ftp.gnu.org/gnu/glibc/
+
+```cmd
+$ wget https://ftp.gnu.org/gnu/glibc/glibc-2.31.tar.gz
+$ tar -xzvf glibc-2.31.tar.gz
+```
 
 ### _GNU_SOURCE
 
