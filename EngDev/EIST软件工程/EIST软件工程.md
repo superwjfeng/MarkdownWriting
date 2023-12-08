@@ -1373,9 +1373,23 @@ DevOps的核心目标是通过自动化、持续集成、持续交付和持续�
 5. Release preparation：最终准备工作，例如文档编制、与用户沟通和准备性检查；包括质量保证（Quality Assurance QA）团队的最终质量报告
 6. Release and deployment：将软件受控地部署到生产环境中
 
-### Software versioning
+### Semantic Versioning
 
-### Software Upgrades
+SemVer（Semantic Versioning）是一种常见的版本号规范，它详细定义了版本号的意义和如何根据软件的变更来递增版本号
+
+* **主版本号（Major Version）**：通常是整个软件的大幅度变更或重构
+* **次版本号（Minor Version）**：通常表示增加了新功能，但仍然向后兼容
+* **修订版本号（Patch Version）**：通常表示进行了小的修复，如 bug 修复
+
+版本号的格式通常是 MAJOR.MINOR.PATCH，比如说 `1.2.3` 的意思是 版本 1 的第 2 次发布的第 3 个修订
+
+<img src="SemanticVersioning.drawio.png">
+
+在版本号中的 `-rc` 表示 Release Candidate，即发布候选版。当软件开发进入预发布阶段时，开发团队通常会创建一个或多个候选版，以便让用户和测试团队在正式发布之前对软件进行测试和反馈
+
+一个版本号中的 `-rc` 后面通常会跟着一个数字，表示发布候选版的序号。例如，版本号可能是 `1.2.3-rc1`，表示这是第一个发布候选版。如果经过测试后发现没有重大问题，可以发布更多的候选版，如 `1.2.3-rc2`、`1.2.3-rc3`，以此类推
+
+Release Candidate 的目的是让用户和测试团队有机会在正式发布之前发现和报告潜在的问题。如果没有发现重大问题，发布候选版的版本可能会成为最终发布的版本，此时会去掉 `-rc` 标识
 
 # Monitoring
 

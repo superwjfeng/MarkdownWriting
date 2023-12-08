@@ -116,6 +116,40 @@ Makefile是一种汇编语言
 
 ## *隐含规则*
 
+## *Autoconf*
+
+<img src="Autoconf过程.png" width="40%">
+
+### configure
+
+configure 是一个脚本，通常与 make 结合使用，用于配置源代码以适应特定的系统环境。这一般是在构建开源软件时的第一步。configure 脚本的作用是根据当前系统的特性和环境来生成一个 Makefile，以便后续使用 make 命令进行编译
+
+主要步骤如下：
+
+1. 检查系统环境：configure 脚本会检查目标系统的一些基本特性，例如操作系统类型、处理器架构、编译器等。这有助于确定代码是否能够在当前系统上正常编译和运行
+2. 检查依赖项：configure 还会检查目标系统上是否存在所需的依赖项和库。如果某些依赖项缺失，configure 会生成一个警告或错误，并提示用户安装所需的依赖项
+3. 生成 Makefile：根据检测到的系统环境和依赖项，configure 会生成一个适用于当前系统的 Makefile。Makefile 是一个包含了构建软件的编译规则和依赖关系的脚本文件
+4. 用户定制选项：configure 通常还支持一些用户可定制的选项，例如安装路径、编译器选项等。这些选项允许用户在构建软件时进行一些定制化配置
+5. 执行 Make： 一旦 configure 完成，用户可以运行 make 命令来使用生成的 Makefile 编译和构建软件
+
+这种配置和构建的方式是为了使软件更具可移植性，因为它能够适应不同类型和版本的操作系统和编译器。许多开源软件项目都采用了这种配置方式，其中 Autoconf 是一个常用的工具，它生成了 configure 脚本，并与 Makefile 配合使用
+
+### autogen.sh
+
+autogen 是一个用于生成 configure 脚本的工具。它是 Autoconf 工具集的一部分，用于简化配置和构建过程。Autoconf 是一个用于生成可移植的配置脚本的工具，而 autogen 则是 Autoconf 的一个辅助工具，用于生成 configure 脚本
+
+主要步骤如下：
+
+1. 编写 configure.ac 文件：这个文件包含了 Autoconf 的宏和配置信息。在该文件中，开发者描述了项目的一些基本特性、依赖关系以及一些用户定制的选项
+2. 运行 autogen.sh 或 autoreconf：在项目的根目录中，通常会提供一个名为 `autogen.sh` 或者直接运行 autoreconf 的脚本。这个脚本的目的是调用 autogen 工具，该工具会读取 configure.ac 文件并生成 configure 脚本
+3. 生成 configure 脚本：autogen 会根据 configure.ac 中的信息，生成一个适用于当前系统的 configure 脚本。这个脚本将在后续的构建过程中使用
+4. 运行 configure：使用生成的 configure 脚本，运行 `./configure` 命令来配置软件。这一步会根据系统环境和用户选项生成相应的 Makefile
+5. 运行 make：配置完成后，运行 make 命令来编译和构建软件
+
+通过这个过程，开发者可以确保软件能够在不同的系统上进行配置和构建，同时允许用户在某些方面进行自定义。
+
+需要注意的是，并非所有的项目都使用 autogen。有些项目可能直接提供了预先生成的 configure 脚本，而不需要运行 autogen 这一步。使用 autogen 的目的在于自动生成 configure 脚本，减少配置和构建过程中的手动步骤
+
 # CMake基础
 
 ## *基本语法*
@@ -291,6 +325,8 @@ cmake --build build
 ## *CMake项目结构组织*
 
 ### 工程结构
+
+GNU项目一般都会遵守 Filesystem Hierarchy Standard, FHS <https://zh.wikipedia.org/wiki/文件系统层次结构标准>
 
 ```shell
 - MyProject/
@@ -702,3 +738,66 @@ DESTINATION：
 CMAKE_INSTALL_PREFIX 默认是在 /usr/local/
 
 cmake -DCMAKE_INSTALL_PREFIX=/usr 在cmake的时候指定CMAKE_INSTALL_PREFIX变量的路径
+
+# Bazel
+
+## *intro*
+
+https://www.jianshu.com/p/ab5ef02bfa2c
+
+### Bazel的兼容性问题
+
+Bazel是一个支持多语言、跨平台的构建工具。Bazel支持任意大小的构建目标，并支持跨多个仓库的构建，是Google主推的一种构建工具
+
+用Bazel管理、安装的包几乎无法使用make或cmake来进行管理
+
+### Abseil
+
+Abseil 是 Google 内部使用的 C++ 基础库，它历经十多年的开发，它的目的是为 Google 编程人员在各种项目上的工作需求提供支持，这些项目包括 Protocol Buffers、gRPC、TensorFlow 和 Bazel 等
+
+> Abseil是从 Google 内部代码块中抽取出来的一系列最基础的软件库。作为基本的组成部分，这些软件库支撑了几乎全部 Google 在运行的项目。以前这些 API 是零零散散地嵌入在 Google 的大部分开源项目中，现在我们将它们规整在一起，形成这样一个全面的项目。
+>
+> Abseil 是 Google 代码库的最基本构建模块，其代码经过了生产环节测试，此后还会继续得到完全的维护。 -- Google
+
+## *安装*
+
+### Ubuntu
+
+https://bazel.build/install/ubuntu?hl=zh-cn
+
+注意：**切换到root安装**
+
+* 第 1 步：将 Bazel 分发 URI 添加为软件包来源
+
+  **注意**：此步骤只需执行一次设置步骤
+
+  ```cmd
+  sudo apt install apt-transport-https curl gnupg -y
+  curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg
+  sudo mv bazel-archive-keyring.gpg /usr/share/keyrings
+  echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+  ```
+
+	组件名称“jdk1.8”仅出于传统原因保留，与受支持或包含的 JDK 版本无关。Bazel 版本与 Java 版本无关。更改“jdk1.8”组件名称将破坏代码库的现有用户
+
+* 第 2 步：安装和更新 Bazel
+
+  ```cmd
+  $ sudo apt update && sudo apt install bazel
+  ```
+
+  安装后，可以升级到常规 Bazel 版本，这是常规系统更新的一部分：
+
+  ```cmd
+  $ sudo apt update && sudo apt full-upgrade
+  ```
+
+	`bazel` 软件包始终安装最新的稳定版 Bazel。除了最新的 Bazel 之外，还可以安装其他的旧版本，例如：
+	
+	```cmd
+	$ sudo apt install bazel-1.0.0
+	```
+	
+	这会在系统上安装 `/usr/bin/bazel-1.0.0` 作为 Bazel 1.0.0。如果您需要特定的 Bazel 版本来构建项目，这种做法会非常有用，例如，它使用 `.bazelversion` 文件来明确说明应该使用哪个 Bazel 版本来构建项目。
+
+### 使用
