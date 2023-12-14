@@ -1,3 +1,9 @@
+# 并行架构的三大挑战
+
+* Resource Contention (contention among N processors)
+* Synchronization (updates to shared data)
+* Load imbalance (imperfect parallelization)
+
 # OpenMP
 
 ## *intro*

@@ -1,0 +1,229 @@
+<html lang="zh-CN"><head><meta charset="UTF-8"><style>.nodata  main {width:1000px;margin: auto;}</style></head><body class="nodata " style=""><div class="main_father clearfix d-flex justify-content-center " style="height:100%;"> <div class="container clearfix " id="mainBox"><main><div class="blog-content-box">
+<div class="article-header-box">
+<div class="article-header">
+<div class="article-title-box">
+<h1 class="title-article" id="articleContentId">辨析三种一致性：缓存一致、内存一致、数据一致</h1>
+</div>
+
+</div>
+</div>
+<div id="blogHuaweiyunAdvert"></div>
+<article class="baidu_pl">
+<div class="article_content clearfix" id="article_content">
+<link href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/editerView/kdoc_html_views-1a98987dfd.css" rel="stylesheet"/>
+<link href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/editerView/ck_htmledit_views-044f2cf1dc.css" rel="stylesheet"/>
+<div class="markdown_views prism-atom-one-dark" id="content_views">
+<svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
+<path d="M5,0 0,2.5 5,5z" id="raphael-marker-block" stroke-linecap="round" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+</svg>
+<hr/>
+<p>本文由giantpoplar发表于CSDN，转载请保留本声明。</p>
+<hr/>
+<p>“Cache Coherence” V.S. “Memory Consistency” V.S. “Data Consistency”</p>
+<h2 id="缓存一致性">缓存一致性</h2>
+<p><em>cache coherence 的coherence这个词猜测是体系结构圈为了和memory consistency做区分，用了coherence这个词，但我理解缓存一致性和分布式多副本数据的一致性基本接近，只不过cache coherence是一种同步可靠通信、有全局时钟条件下的强一致(linearizability)。cache一致性协议有MSI，MESI等，虽然处理器的整个内存系统很复杂，但就cache一致性协议来说，比分布式环境下的数据一致要简明一些</em></p>
+<p>多核处理器每个核会有私有cache，也就是内存里的一份数据在多个核上可能有了副本，这多个副本，每个核都可能会对一个内存地址有读写操作，每个核是直接读写自己私有的副本，这就要求各个副本上的读写操作顺序要一致，这和分布式环境下的数据一致性很接近。</p>
+<p>具体的MSI，MESI协议暂不展开写。</p>
+<h2 id="内存一致性">内存一致性</h2>
+<p><em>内存一致性说的是共享内存多核处理器访存序的问题，</em><del>进程对某<strong>一个</strong>内存地址(和分布式的同一数据多副本的一致性有所区别)的访问序的在多核下暴露出的问题</del> 全部内存读写顺序的正确性问题，单核乱序执行重新排列无关的指令在多核系统中可能出现问题。也就是程序中 Load Store 的(ISA)顺序(冯诺依曼架构下看可以看做内存操作请求的顺序)和Load Store实际执行完成的顺序可能相同、可能不同(这取决于微体系结构的实现)，在多核情况下，程序的正确性可能出问题。有各种一致性模型来表达各种程度的相同不同，相应的有软、硬件机制来确保多核处理器上程序的正确运行。</p>
+<p>这里只具体写顺序一致性(sequential consistency)模型，更弱的一致性模型在学习过相关资料论文后再做补充。顺序一致性的概念来源于Lamport 1977年的一篇论文How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Program <br/> 这里写一下论文中给出的阐述 <br/> 看一个互斥协议，问题是多核处理器下多进程并发/并行会使得两个进程都进入临界区么？</p>
+<p>几点说明写在前面：</p>
+<ul><li>1，2，3，4，5，6只是标号，数字本身带有的序和问题没联系 </li><li>程序里的读写操作都是一条指令的粒度，不是高级语言的一句语句 </li><li>P1, P2指处理器</li></ul>
+<table><thead><tr><th>-</th><th>P1</th><th>-</th><th>P2</th></tr></thead><tbody><tr><td></td><td>a=0</td><td></td><td>b=0</td></tr><tr><td></td><td>…</td><td></td><td>…</td></tr><tr><td>1</td><td>a=1</td><td>4</td><td>b=1</td></tr><tr><td>2</td><td>IF(b==0) THEN</td><td>5</td><td>IF(a==0) THEN</td></tr><tr><td></td><td>(临界区)</td><td></td><td>(临界区)</td></tr><tr><td>3</td><td>a=0</td><td>6</td><td>b=0</td></tr><tr><td></td><td>ELSE</td><td></td><td>ELSE</td></tr><tr><td></td><td>{…}</td><td></td><td>{…}</td></tr></tbody></table>
+<p>考虑这个例子，如下事件依次发生</p>
+<ul><li>1 P1 发出a=1的请求，请求的是内存模块1，内存模块1此时正忙</li><li>2 P1 发出取b的请求，请求的是内存模块2，内存模块2此时可用，取b的指令执行</li><li>4 P2 发出b=1的请求，请求的是内存模块2，这个请求会在取b执行完成后执行</li><li>5 P2 发送取a得请求，请求的是内存模块1，内存模块1此时正忙</li></ul>
+<p>在这个例子里，这4条指令对同一内存请求顺序是1 -&gt;5 ; 2-&gt;4 <br/> 这4条指令执行完成的顺序是什么呢 2-&gt;4； <br/> 如果是 2-&gt;4；5 -&gt; 1 这两个处理器会同时进入临界区 <br/> 如果是 2-&gt;4；1 -&gt; 5 则不会 <br/> -&gt; 符号不直接对应happen-before</p>
+<p>顺序一致性有两个条件：</p>
+<ul><li>每个处理器按程序序发射内存请求(1-&gt;2;4-&gt;5)</li><li>所有处理器到单个存储器模块的请求依照FIFO序服务。请求的发射过程包含进入FIFO队列。</li></ul>
+<p><em>我理解就是说，不管这多个处理器对同一内存的请求顺序如何交叠，都可以，但是内存必须按照请求到达的顺序执行（这里应该隐含着对同一地址先请求（指令发射）的先到达（指令执行）的假设），这样保证上面的互斥协议正确。这样的要求称为顺序一致的要求，是很严格的，会对硬件性能造成影响，其实可以放宽，不必严格按请求顺序执行，但是必须有软件机制来提供正确的互斥协议的实现，上面的护持互斥协议在弱于顺序一致的内存模型下是不正确的。</em></p>
+<p><em>也就是说1，2，4，5的请求可以有C(4,2)=6种交叠方式，每一种都符合顺序一致只要每种情况的执行也是按照这个顺序</em></p>
+<p>现在来看这句很拗口的话</p>
+<blockquote>
+<p>the result of any execution is the same as if the operations of all the processors were executed in some sequential order, and the operations of each individual processor appear in this sequence in the order specified by its program</p>
+</blockquote>
+<p><em>似乎这个定义里要求每个核上不同内存地址的请求也要安程序序执行，但是在微体系结构层次，提交时要保持，但是执行时程序序是可以打破的，同一处理器不同地址请求序(乱序发射)和程序序(冯诺依曼ISA序)是否一致，请求序和执行序是否一致，这里似乎没有明说。分布式环境中的一致性是关于同一数据的多个副本上要达成全局一致性，某种角度来讲，如果把内存的请求发射和到达，类比分布式中对一个副本的写/读和向各个副本传播写/读操作，这两者非常类似 //但是感觉还是没有理解二者的本质</em></p>
+<p><em>单核处理器下多进程并发会使得两个进程都进入临界区么？此时表里的P1,P2代指进程。不会有这个问题，内存请求是从同一个核过来，到达顺序和服务顺序一样(单核天然是顺序一致的)，不会有多核中多个请求到达，在执行请求时会涉及调度导致服务顺序和到达顺序不一致的情况。</em></p>
+<p><em>如果你考虑一个多核处理器的内存体系，就会发现这个问题很复杂，cache以及一致性，buffer，pipeline和内存一致性的保证，和分布式的一致性相比，虽然分布式下异步不可靠网络带来了很大挑战，但是现在我觉得处理器的内存系统可以说比分布式环境下的一致性问题更加复杂</em></p>
+<p>x86的内存一致模型是顺序一致的TSO，所以在实现一个正确的互斥锁的时候也没有考虑太多，比如没用memory barrier这种东西就对了</p>
+<h2 id="数据一致性">数据一致性</h2>
+<p><em>分布式系统为了性能、容错的需要，数据进行多副本冗余是一项很基本的技术。数据一致性说的是一份数据有多个副本，在多个副本上的读写操作的顺序要达成一致，这个一致也有很多不同的强弱要求，产生了众多的强弱一致性模型，这些模型的术语和内存一致性的术语有很大的重叠，可能是历史上并行体系结构和分布式系统两个领域是一伙人在搞？</em></p>
+<p>由强到弱的数据一致性模型构成了 数据一致性谱</p>
+<p><strong>线性一致性和顺序一致性</strong></p>
+<p>这两种都是称为强一致性</p>
+<ul><li>线性一致性和顺序一致性都是强一致性</li><li>都给客户端提供单副本的假象</li><li>Linearizability关乎时间，sequential consistency 关乎程序顺序</li></ul>
+<p>分布式下强一致是个困难问题，著名的paxos算法挺复杂的，Raft是2014年出的一个可以看作是改良版的算法。</p>
+<p><strong>线性一致性 Linearizability</strong></p>
+<ul><li>表现出单副本的行为</li><li>读操作返回最近(most recent)的写，和client无关</li><li>所有后序读返回相同值，直到下一次写，和client无关</li></ul>
+<p><strong>最近</strong>和<strong>所有后序</strong>： 由时间确定 <br/> e.g. <br/> <img alt="这里写图片描述" src="https://img-blog.csdn.net/2018061612593483?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2dpYW50cG9wbGFy/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" title=""> <br/> <img alt="这里写图片描述" src="https://img-blog.csdn.net/2018061612594311?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2dpYW50cG9wbGFy/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" title=""> <br/> <img alt="这里写图片描述" src="https://img-blog.csdn.net/20180616125950518?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2dpYW50cG9wbGFy/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" title=""/></img></img></p>
+<p><strong>顺序一致性</strong></p>
+<ul><li>表现出单副本的行为</li><li>读操作返回最近(most recent)的写，和client无关</li><li>所有后序读返回相同值，直到下一次写，和client无关</li></ul>
+<p><strong>最近</strong>和<strong>所有后序</strong>： <br/> 同一个client的操作由时间决定(程序序)； <br/> 跨client的操作：不由时间决定，我们可以安排某种序，只要保持程序序。</p>
+<p>从系统外的观察者来看：顺序一致性需要提供操作的全局序，1)工作起来像一个副本，2）来自同一个client的操作顺序被保持</p>
+<p>e.g.</p>
+<ul><li>不违背顺序一致</li></ul>
+<table><thead><tr><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th></tr></thead><tbody><tr><td>P1:</td><td>W(x)a</td><td></td><td></td><td></td><td></td></tr><tr><td>P2:</td><td></td><td>W(x)b</td><td></td><td></td><td></td></tr><tr><td>P3:</td><td></td><td></td><td>R(x)b</td><td></td><td>R(x)a</td></tr><tr><td>P4:</td><td></td><td></td><td></td><td>R(x)b</td><td>R(x)a</td></tr></tbody></table>
+<p><em>这个例子里面，横轴代表时间，时间上虽然W(x)a在前，W(x)b在后，但是其序不一定也如此，所以这个例子并不违背分布式环境下的顺序一致，也再次说明分布式的顺序一致是比内存的顺序一致更弱的一致</em></p>
+<ul><li>违背顺序一致</li></ul>
+<table><thead><tr><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th></tr></thead><tbody><tr><td>P1:</td><td>W(x)a</td><td></td><td></td><td></td><td></td></tr><tr><td>P2:</td><td></td><td>W(x)b</td><td></td><td></td><td></td></tr><tr><td>P3:</td><td></td><td></td><td>R(x)b</td><td></td><td>R(x)a</td></tr><tr><td>P4:</td><td></td><td></td><td></td><td>R(x)a</td><td>R(x)b</td></tr></tbody></table>
+<ul><li>不违背顺序一致，违背线性一致</li></ul>
+<table><thead><tr><th>-</th><th>-</th><th>-</th><th>-</th></tr></thead><tbody><tr><td>P1:</td><td>W(x)a</td><td>W(x)b</td><td></td></tr><tr><td>P2:</td><td></td><td></td><td>R(x)a</td></tr><tr><td>time</td><td>——-&gt;</td><td>——-&gt;</td><td>——-&gt;</td></tr></tbody></table>
+<h4 id="内存的顺序一致是顺序一致么">内存的顺序一致是顺序一致么？</h4>
+<p><em>内存的顺序一致性和分布式哪一种强一致性是一样的呢？是顺序一致性么？因为分布式环境下没有全局时间，所以分布式数据顺序一致性退化成较弱的一种一致性，而Linearizability和内存的顺序一致性更接近。</em></p>
+<p><strong>因果一致性</strong> <br/> 放宽顺序一致性的要求，有因果关联的操作保持顺序，并发的(相互没有因果关联的)写操作可能在不同机器上顺序不同 <br/> 因果关系可以由vector-clock捕捉 <br/> e.g.</p>
+<ul><li>违背顺序一致,不违背因果一致</li></ul>
+<table><thead><tr><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th></tr></thead><tbody><tr><td>P1:</td><td>W(x)a</td><td></td><td></td><td>W(x)c</td><td></td><td></td></tr><tr><td>P2:</td><td></td><td>R(x)a</td><td>W(x)b</td><td></td><td></td><td></td></tr><tr><td>P3:</td><td></td><td>R(x)a</td><td></td><td></td><td>R(x)c</td><td>R(x)b</td></tr><tr><td>P4:</td><td></td><td>R(x)a</td><td></td><td></td><td>R(x)b</td><td>R(x)c</td></tr></tbody></table>
+<ul><li>违背因果一致</li></ul>
+<table><thead><tr><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th></tr></thead><tbody><tr><td>P1:</td><td>W(x)a</td><td></td><td></td><td></td><td></td></tr><tr><td>P2:</td><td></td><td>R(x)a</td><td>W(x)b</td><td></td><td></td></tr><tr><td>P3:</td><td></td><td></td><td></td><td>R(x)b</td><td>R(x)a</td></tr><tr><td>P4:</td><td></td><td></td><td></td><td>R(x)a</td><td>R(x)b</td></tr></tbody></table>
+<ul><li>不违背因果一致</li></ul>
+<table><thead><tr><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th></tr></thead><tbody><tr><td>P1:</td><td>W(x)a</td><td></td><td></td><td></td><td></td></tr><tr><td>P2:</td><td></td><td></td><td>W(x)b</td><td></td><td></td></tr><tr><td>P3:</td><td></td><td></td><td></td><td>R(x)b</td><td>R(x)a</td></tr><tr><td>P4:</td><td></td><td></td><td></td><td>R(x)a</td><td>R(x)b</td></tr></tbody></table>
+<p><strong>最终一致性</strong> <br/> 某些副本的数据已经修改，而另一些副本的数据还没来得及修改。当修改可靠地传播到所有副本，并给予足够的时间，所有副本的数据都将变成新值，取得一致。</p>
+<h2 id="happen-before">happen-before</h2>
+<p><em>理解一致性要理解一个并发系统中的“序”的问题，什么叫先，什么叫后。在分布式系统中，这个问题困难是因为没有完美的全局同步时钟，多核系统中是因为多核的微体系结构上的原因。</em></p>
+<p>Lamport在1978年的论文中给出了happen-before的定义，这篇论文非常经典，提出了很多分布式系统中十分重要的概念，此处暂不展开，只谈happen-before。据说这篇文章受相对论启发，了解happen-before有助于理解时间、顺序。</p>
+<h3 id="happen-before-关系">happen-before 关系</h3>
+<p><strong>基本假设</strong></p>
+<ul><li>假设进程的事件(event)形成一个序列(sequence)，单个进程定义为 一组事件的全序(total ordering)</li><li>假设进程之间消息(message)的发送(send)和接受(receive)是事件</li></ul>
+<p><strong>happen-before</strong> <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-1-Frame" style="position: relative;" tabindex="0">
+<span class="math" id="MathJax-Span-1" style="width: 1.225em; display: inline-block;"><span style="display: inline-block; position: relative; width: 1.003em; height: 0px; font-size: 120%;"><span style="position: absolute; clip: rect(1.503em, 1000.95em, 2.336em, -999.997em); top: -2.164em; left: 0em;"><span class="mrow" id="MathJax-Span-2"><span class="mo" id="MathJax-Span-3" style="font-family: MathJax_Main;">→</span></span><span style="display: inline-block; width: 0px; height: 2.169em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.063em; border-left: 0px solid; width: 0px; height: 0.737em;"></span></span>
+<span class="MJX_Assistive_MathML"> 
+    
+    
+      → 
+     
+   </span></span><script id="MathJax-Element-1" type="math/tex">\rightarrow</script> 是满足以下条件的最小关系(relation)</p>
+<ul><li>如果a，b是同一个进程的事件，a在b前面 ,那么<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-2-Frame" style="position: relative;" tabindex="0">
+<span class="math" id="MathJax-Span-4" style="width: 3.003em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.503em; height: 0px; font-size: 120%;"><span style="position: absolute; clip: rect(1.336em, 1002.5em, 2.336em, -999.997em); top: -2.164em; left: 0em;"><span class="mrow" id="MathJax-Span-5"><span class="mi" id="MathJax-Span-6" style="font-family: MathJax_Math-italic;">a</span><span class="mo" id="MathJax-Span-7" style="font-family: MathJax_Main; padding-left: 0.281em;">→</span><span class="mi" id="MathJax-Span-8" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">b</span></span><span style="display: inline-block; width: 0px; height: 2.169em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.063em; border-left: 0px solid; width: 0px; height: 1.003em;"></span></span>
+<span class="MJX_Assistive_MathML"> 
+     
+     
+       a 
+      
+     
+       → 
+      
+     
+       b 
+      
+    </span></span><script id="MathJax-Element-2" type="math/tex">a\rightarrow b</script></li><li>如果a是发送消息进程的发送事件，b是接收该消息进程的接受事件，那么<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-3-Frame" style="position: relative;" tabindex="0">
+<span class="math" id="MathJax-Span-9" style="width: 3.003em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.503em; height: 0px; font-size: 120%;"><span style="position: absolute; clip: rect(1.336em, 1002.5em, 2.336em, -999.997em); top: -2.164em; left: 0em;"><span class="mrow" id="MathJax-Span-10"><span class="mi" id="MathJax-Span-11" style="font-family: MathJax_Math-italic;">a</span><span class="mo" id="MathJax-Span-12" style="font-family: MathJax_Main; padding-left: 0.281em;">→</span><span class="mi" id="MathJax-Span-13" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">b</span></span><span style="display: inline-block; width: 0px; height: 2.169em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.063em; border-left: 0px solid; width: 0px; height: 1.003em;"></span></span>
+<span class="MJX_Assistive_MathML"> 
+     
+     
+       a 
+      
+     
+       → 
+      
+     
+       b 
+      
+    </span></span><script id="MathJax-Element-3" type="math/tex">a\rightarrow b</script></li><li>如果<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-4-Frame" style="position: relative;" tabindex="0">
+<span class="math" id="MathJax-Span-14" style="width: 6.503em; display: inline-block;"><span style="display: inline-block; position: relative; width: 5.392em; height: 0px; font-size: 120%;"><span style="position: absolute; clip: rect(1.336em, 1005.39em, 2.503em, -999.997em); top: -2.164em; left: 0em;"><span class="mrow" id="MathJax-Span-15"><span class="mi" id="MathJax-Span-16" style="font-family: MathJax_Math-italic;">a</span><span class="mo" id="MathJax-Span-17" style="font-family: MathJax_Main; padding-left: 0.281em;">→</span><span class="mi" id="MathJax-Span-18" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">b</span><span class="mo" id="MathJax-Span-19" style="font-family: MathJax_Main;">,</span><span class="mi" id="MathJax-Span-20" style="font-family: MathJax_Math-italic; padding-left: 0.169em;">b</span><span class="mo" id="MathJax-Span-21" style="font-family: MathJax_Main; padding-left: 0.281em;">→</span><span class="mi" id="MathJax-Span-22" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">c</span></span><span style="display: inline-block; width: 0px; height: 2.169em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.263em; border-left: 0px solid; width: 0px; height: 1.203em;"></span></span>
+<span class="MJX_Assistive_MathML"> 
+     
+     
+       a 
+      
+     
+       → 
+      
+     
+       b 
+      
+     
+       , 
+      
+     
+       b 
+      
+     
+       → 
+      
+     
+       c 
+      
+    </span></span><script id="MathJax-Element-4" type="math/tex">a\rightarrow b, b\rightarrow c</script>，那么<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-5-Frame" style="position: relative;" tabindex="0">
+<span class="math" id="MathJax-Span-23" style="width: 3.003em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.503em; height: 0px; font-size: 120%;"><span style="position: absolute; clip: rect(1.503em, 1002.5em, 2.336em, -999.997em); top: -2.164em; left: 0em;"><span class="mrow" id="MathJax-Span-24"><span class="mi" id="MathJax-Span-25" style="font-family: MathJax_Math-italic;">a</span><span class="mo" id="MathJax-Span-26" style="font-family: MathJax_Main; padding-left: 0.281em;">→</span><span class="mi" id="MathJax-Span-27" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">c</span></span><span style="display: inline-block; width: 0px; height: 2.169em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.063em; border-left: 0px solid; width: 0px; height: 0.737em;"></span></span>
+<span class="MJX_Assistive_MathML"> 
+     
+     
+       a 
+      
+     
+       → 
+      
+     
+       c 
+      
+    </span></span><script id="MathJax-Element-5" type="math/tex">a\rightarrow c</script></li></ul>
+<p>定义<span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-6-Frame" style="position: relative;" tabindex="0">
+<span class="math" id="MathJax-Span-28" style="width: 3.169em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.614em; height: 0px; font-size: 120%;"><span style="position: absolute; clip: rect(1.836em, 1002.61em, 2.614em, -999.997em); top: -2.442em; left: 0em;"><span class="mrow" id="MathJax-Span-29"><span class="mi" id="MathJax-Span-30" style="font-family: MathJax_Math-italic;">a</span><span class="mo" id="MathJax-Span-31" style="font-family: MathJax_AMS; padding-left: 0.281em;">↛</span><span class="mi" id="MathJax-Span-32" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">a</span></span><span style="display: inline-block; width: 0px; height: 2.447em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.063em; border-left: 0px solid; width: 0px; height: 0.67em;"></span></span>
+<span class="MJX_Assistive_MathML"> 
+    
+    
+      a 
+     
+    
+      ↛ 
+     
+    
+      a 
+     
+   </span></span><script id="MathJax-Element-6" type="math/tex">a\nrightarrow	a</script> <br/> 另外，如果两个不同的事件a,b,有 <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-7-Frame" style="position: relative;" tabindex="0">
+<span class="math" id="MathJax-Span-33" style="width: 6.558em; display: inline-block;"><span style="display: inline-block; position: relative; width: 5.447em; height: 0px; font-size: 120%;"><span style="position: absolute; clip: rect(1.614em, 1005.45em, 2.781em, -999.997em); top: -2.442em; left: 0em;"><span class="mrow" id="MathJax-Span-34"><span class="mi" id="MathJax-Span-35" style="font-family: MathJax_Math-italic;">a</span><span class="mo" id="MathJax-Span-36" style="font-family: MathJax_AMS; padding-left: 0.281em;">↛</span><span class="mi" id="MathJax-Span-37" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">b</span><span class="mo" id="MathJax-Span-38" style="font-family: MathJax_Main;">,</span><span class="mi" id="MathJax-Span-39" style="font-family: MathJax_Math-italic; padding-left: 0.169em;">b</span><span class="mo" id="MathJax-Span-40" style="font-family: MathJax_AMS; padding-left: 0.281em;">↛</span><span class="mi" id="MathJax-Span-41" style="font-family: MathJax_Math-italic; padding-left: 0.281em;">a</span></span><span style="display: inline-block; width: 0px; height: 2.447em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.263em; border-left: 0px solid; width: 0px; height: 1.203em;"></span></span>
+<span class="MJX_Assistive_MathML"> 
+    
+    
+      a 
+     
+    
+      ↛ 
+     
+    
+      b 
+     
+    
+      , 
+     
+    
+      b 
+     
+    
+      ↛ 
+     
+    
+      a 
+     
+   </span></span><script id="MathJax-Element-7" type="math/tex">a\nrightarrow	b, b\nrightarrow	a</script>,就称a,b是并发的(concurrent)</p>
+<p><em>这样从数学上看，happen-before就是一个定义在所有事件上偏序关系，反自反，反对称，传递性都有了，偏序关系中存在不可比的情况，所以有些事件并无先后是并发的，如果在加上限制条件 break tie,那么在这个偏序关系上就可以定义一个全序关系。</em></p>
+<p>进程和事件的定义非常general，事件可以是一个子程序的执行、也可以是一条机器指令的执行。</p>
+<p><em>消息的发送和接受在分布式系统中很显然。在体系结构方面也有类似之处，考虑单核处理器、冯诺依曼架构中指令顺序执行，其实这些指令并不需要严格一条接着一条指令，所以会有乱序执行，在乱序执行里，如果把同一内存地址的写读看做消息发送接收，其实乱序执行的写后读依赖就和happen-before序十分类似。</em></p>
+<h2 id="引用">引用</h2>
+<p>[1].Gharachorloo, Kourosh, et al. Memory consistency and event ordering in scalable shared-memory multiprocessors. Vol. 18. No. 2SI. ACM, 1990. <br/> [2].Lamport, Leslie. “Time, clocks, and the ordering of events in a distributed system.” Communications of the ACM 21.7 (1978): 558-565. <br/> [3]Lamport, Leslie. “How to make a multiprocessor computer that correctly executes multiprocess progranm.” IEEE transactions on computers 9 (1979): 690-691. <br/> [4].Tanenbaum, Andrew S., and Maarten Van Steen. Distributed systems: principles and paradigms. Prentice-Hall, 2007. <br/> [5].<a href="https://homes.cs.washington.edu/~bornholt/post/memory-models.html" rel="nofollow">https://homes.cs.washington.edu/~bornholt/post/memory-models.html</a> <br/> [6].<a href="https://cse.buffalo.edu/~stevko/courses/cse486/spring15/lectures/23-consistency2.pdf" rel="nofollow">https://cse.buffalo.edu/~stevko/courses/cse486/spring15/lectures/23-consistency2.pdf</a></p>
+</div>
+<link href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/editerView/markdown_views-98b95bb57c.css" rel="stylesheet"/>
+<link href="https://csdnimg.cn/release/blogv2/dist/mdeditor/css/style-c216769e99.css" rel="stylesheet"/>
+</div>
+<div id="treeSkill"></div>
+</article>
+<script>
+  $(function() {
+    setTimeout(function () {
+      var mathcodeList = document.querySelectorAll('.htmledit_views img.mathcode');
+      if (mathcodeList.length > 0) {
+        for (let i = 0; i < mathcodeList.length; i++) {
+          if (mathcodeList[i].naturalWidth === 0 || mathcodeList[i].naturalHeight === 0) {
+            var alt = mathcodeList[i].alt;
+            alt = '\\(' + alt + '\\)';
+            var curSpan = $('<span class="img-codecogs"></span>');
+            curSpan.text(alt);
+            $(mathcodeList[i]).before(curSpan);
+            $(mathcodeList[i]).remove();
+          }
+        }
+        MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+      }
+    }, 1000)
+  });
+</script>
+</div></html>

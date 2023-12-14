@@ -1,3 +1,7 @@
+一个事件 eid 本身可以执行多种行为，所以一个eid可以有多个handler
+
+
+
 
 
 ## *项目架构*
@@ -62,3 +66,10 @@ $ make install
 
 ### memcheck
 
+
+
+
+
+
+
+NetworkInterface 是通过不断驱动libevent来实现事件驱动IO的

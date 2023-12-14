@@ -172,6 +172,7 @@ add_executable(hello ${SRC_LIST})
   * 参数之间使⽤空格或分号分开，一般建议用空格
 * 与makefile/Makefile都可以不一样，**CMakeLists.txt文件名必须严格区分大小写**。然而指令是⼤⼩写⽆关的，参数和变量是⼤⼩写相关的。但是推荐全部使⽤⼤写指令
 * 变量使⽤ `${}` ⽅式取值，但是在 IF 控制语句中是直接使⽤变量名
+* 命令的参数换行时通常不需要使用反斜杠 `\`。CMake 在解析命令时会自动识别行尾的换行符，并将多行的参数合并在一起
 
 CMake的指令笔者不会在这里统一给出，而是在下面用到了之后再给出
 
@@ -472,9 +473,51 @@ make
 
 * SOURCE_AUX_DIRECTORY：搜集所有在指定路径下的源文件的文件名，并将输出结果列表储存在指定的变最中
 
-### include
+### 操作目录中的所有文件
 
+* aux_source_directory 用于将指定目录下的所有源文件添加到当前项目中，而不需要手动一个个列举它们
 
+  ```cmake
+  aux_source_directory(dir VARIABLE)
+  ```
+
+  * `dir` 是要搜索源文件的目录
+
+  * `VARIABLE` 是一个用于存储找到的源文件列表的变量
+
+  ```cmake
+  # 将src目录下的所有源文件添加到变量SRC_LIST中
+  aux_source_directory(src SRC_LIST)
+  
+  # 将变量SRC_LIST中的源文件编译成可执行文件
+  add_executable(my_executable ${SRC_LIST})
+  ```
+
+* `file(GLOB ...)`
+
+  ```cmake
+  file(GLOB <variable> [LIST_DIRECTORIES true|false] [RELATIVE <path>] [CONFIGURE_DEPENDS] [<globbing-expressions>...])
+  ```
+
+  * `<variable>`：用于存储文件列表的变量名。通过这个变量，可以在后续的 CMake 文件中引用获取到的文件列表
+  * `[LIST_DIRECTORIES true|false]`：可选参数，指示是否包括子目录。如果设置为 `true`，则文件列表中会包含子目录的文件。默认为 `false`
+  * `[RELATIVE <path>]`：可选参数，表示相对于指定路径的文件路径。如果设置了这个参数，返回的文件路径将相对于指定路径
+  * `[CONFIGURE_DEPENDS]`：可选参数，表示文件的配置是否会影响生成。通常在需要 CMake 重新运行配置时，使用这个选项，以便更新文件列表
+  * `...`（`<globbing-expressions>`）：通配符表达式，用于匹配文件名。可以使用多个通配符表达式，它们之间用空格分隔
+
+  ```cmake
+  # 获取当前目录下的所有子文件夹
+  file(GLOB SUBDIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
+  
+  # 遍历所有子文件夹并添加到项目
+  foreach(SUBDIR ${SUBDIRS})
+      if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR})
+          add_subdirectory(${SUBDIR})
+      endif()
+  endforeach()
+  ```
+
+不太推荐用 `file(GLOB) ...`，比较麻烦。用aux_source_directory比较清晰
 
 ### include_directories
 
