@@ -386,9 +386,142 @@ void *startRoutine(void *args) {
 
 # 进程调度
 
-## *Linux 2.6 Kernel 进程调度算法架构*
+http://www.wowotech.net/process_management/447.html
 
-`ranqueue`
+## *核心数据结构*
+
+### 公共部分
+
+Linux将调度器公共的部分抽象出来，使用`struct sched_class`结构体描述一个具体的调度类
+
+```c
+struct sched_class {
+	const struct sched_class *next;
+	void (*enqueue_task) (struct rq *rq, struct task_struct *p, int flags);
+	void (*dequeue_task) (struct rq *rq, struct task_struct *p, int flags);
+	void (*check_preempt_curr)(struct rq *rq, struct task_struct *p, int flags);
+	struct task_struct * (*pick_next_task)(struct rq *rq, struct task_struct *prev, struct rq_flags *rf);
+    /* ... */
+}; 
+```
+
+1. next：指向下一个调度类（比自己低一个优先级）。在Linux中，每一个调度类都是有明确的优先级关系，高优先级调度类管理的进程会优先获得cpu使用权
+2. enqueue_task：入队列，向该调度器管理的runqueue中添加一个进程
+3. dequeue_task：出队列，向该调度器管理的runqueue中删除一个进程
+4. check_preempt_curr：当一个进程被唤醒或者创建的时候，需要检查当前进程是否可以抢占当前cpu上正在运行的进程，如果可以抢占需要标记TIF_NEED_RESCHED flag
+5. pick_next_task：从runqueue中选择一个最适合运行的task。问题是我们依据什么标准来挑选最适合运行的进程呢？一般是按照优先级的顺序
+
+### Linux调度器
+
+Linux支持的调度器有
+
+* RT scheduler 实时进程的实时调度器：用 `rt_sched_class` 来描述，调度策略有SCHED_FIFO 和 SCHED_RR
+* CFS scheduler 普通进程的完全公平调度器：用 `rt_sched_class` 来描述，调度策略有SCHED_NORMAL和SCHED_BATCH
+* Deadline scheduler：用 `dl_sched_class` 来描述，调度策略为SCHED_DEADLINE
+* Idle scheduler 空闲调度器：用 `idle_sched_class` 来描述，调度策略有为SCHED_IDLE
+
+### Deadline & Idle scheduler
+
+这两种调度方式不太常用，所以这简单介绍一下
+
+* Deadline Scheduler截止期限调度器
+  * 原理：Deadline 调度器是一种实时 I/O 调度器，旨在确保 I/O 请求在给定的截止期限内完成。它通过为每个请求设置截止期限，优先执行截止期限最近的请求。这有助于避免 I/O 请求因等待时间过长而导致性能下降
+  * 特点：
+    * 通过 I/O 请求的截止期限进行调度
+    * 对于实时任务，可以提供更可预测的 I/O 响应时间
+  * 适用场景：适用于对 I/O 响应时间要求敏感的实时系统
+* Idle Scheduler空闲调度器
+  * 原理：空闲调度器主要用于在系统处于空闲状态时执行 I/O 操作。当系统没有其他任务运行时，空闲调度器可以执行挂起的 I/O 操作，以充分利用系统资源
+  * 特点：
+    * 在系统空闲时执行 I/O 操作，以提高资源利用率
+    * 不会影响其他活动任务的性能
+  * 适用场景：适用于需要在系统空闲时执行 I/O 操作的场景，以防止浪费系统资源
+
+## *普通进程调度*
+
+Completely Fair Scheduler, CFS 完全公平调度器
+
+### vruntime
+
+```c
+static const int prio_to_weight[40] = {
+    /* -20 */     88761,     71755,     56483,     46273,     36291,
+    /* -15 */     29154,     23254,     18705,     14949,     11916,
+    /* -10 */      9548,      7620,      6100,      4904,      3906,
+    /*  -5 */      3121,      2501,      1991,      1586,      1277,
+    /*   0 */      1024,       820,       655,       526,       423,
+    /*   5 */       335,       272,       215,       172,       137,
+    /*  10 */       110,        87,        70,        56,        45,
+    /*  15 */        36,        29,        23,        18,        15
+};
+```
+
+若新进程的vruntime初始值为0，会导致新进程立刻被调度，而且在一段时间内都是最小的
+
+### runqueue
+
+系统中每个CPU都会有一个全局的就绪队列 cpu runqueue，使用`struct rq`结构体描述，它是per-cpu类型，即每个cpu上都会有一个`struct rq` 结构体
+
+<img src="vruntime红黑树.png">
+
+## *实时进程调度*
+
+### SCHED_RR 策略
+
+SCHED_RR 采用 round robin 的策略，比 SCHED_FIFO多维护了一个时间片，相同优先级之间的进程能够轮流执行，每次执行的实际是一个固定的时间片
+
+### SCHED_FIFO 策略
+
+SCHED_FIFO 是一种 run to completion 的算法，采用先进先出的策略，获得CPU 控制权的进程会一直执行直到主动放弃CPU或者被更高优先级的实时进程抢占
+
+## *实验*
+
+Linux的调度器为非实时的进程预留了5%的CPU时间片，避免某死循环实时进程完全占满了CPU
+
+```cmd
+$ sysctl -a | grep sched_rt_
+
+kernel.sched_rt_period_us = 1000000
+kernel.sched_rt_runtime_us = 950000 # 在period 时间里RT进 程最多能运行的时间
+```
+
+`busy -j2` 这个程序调度进程变成实时调度的时候，CPU占用率会从200%变成190%，因为一个线程会留出5%给普通调度的进程
+
+
+
+两个都改为FIFO，则同优先级的进程会把另一个实时进程的抢占完，比普通进程还惨
+
+
+
+
+
+
+
+
+
+### chrt
+
+chrt 用于为特定的进程或线程设置不同的调度策略和优先级，如实时调度（SCHED_FIFO、SCHED_RR）或普通调度（SCHED_OTHER）
+
+```cmd
+$ chrt [options] [priority] command [arguments...]
+```
+
+* options 是一些可选的标志，用于指定调度策略等参数
+* priority 是进程的优先级，一般是一个整数值，实时调度策略的优先级范围通常是 1 到 99
+* command 是要执行的命令
+* arguments 是命令的参数
+
+以下是一些常用的选项
+
+* -m 或 --max：显示指定调度策略的最大优先级值
+* -p 或 --pid：指定一个已存在的进程的 PID，而不是启动新进程
+* -a 或 --all-tasks：operate on all the tasks (threads) for a given pid
+* -r 或 --rr：将进程设置为实时轮转调度策略（SCHED_RR）
+* -b 或 --batch：将进程设置为批处理调度策略（SCHED_BATCH）
+* -f 或 --fifo：将进程设置为实时先进先出调度策略（SCHED_FIFO）
+
+一个常用的组合
 
 # 进程地址空间
 

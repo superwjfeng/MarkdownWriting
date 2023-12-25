@@ -124,6 +124,8 @@ Nginx对于**每个HTTP请求或者TCP/IP连接**都会建立相应的内存池�
 
 # 线程池
 
+<img src="线程池结构.drawio.png" width="70%">
+
 ### 任务队列
 
 <img src="线程池任务队列.drawio.png">

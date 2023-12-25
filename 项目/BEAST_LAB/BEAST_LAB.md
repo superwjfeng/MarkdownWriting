@@ -719,7 +719,7 @@ Check GPU utilization `nvidia-smi -l 1` each second update 或者 `watch -n 1 nv
 * Compute M：计算模式，0/DEFAULT,1/EXCLUSIVE_PROCESS,2/PROHIBITED
 * Processes：显示每个进程占用的显存使用率、进程号、占用的哪个GPU 显存占用和GPU占用是两个不一样的东西，显卡是由GPU和显存等组成的，显存和GPU的关系有点类似于内存和CPU的关系。跑caffe代码的时候显存占得少，GPU占得多；跑TensorFlow代码的时候，显存占得多，GPU占得少
 
-# Assignment3
+# Assignment 3
 
 ## *性能分析相关概念*
 

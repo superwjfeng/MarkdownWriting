@@ -154,6 +154,8 @@ autogen 是一个用于生成 configure 脚本的工具。它是 Autoconf 工具
 
 ## *基本语法*
 
+现代 CMake 指的是 CMake 3.x；古代 CMake 指的是 CMake 2.x
+
 ### 基本语法格式
 
 ```CMake
@@ -187,22 +189,26 @@ project可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有�
 * `project (HELLO C CXX)` 指定了⼯程的名字，并且⽀持语⾔是C和C++
 * 也可以支持JAVA
 
-## *CMake命令*
+## *CMake项目构建命令*
 
-### 新版编译命令
+### 现代编译命令
 
 ```cmake
-#cmake构建命令
-cmake -B build
-#cmake编译命令
-cmake --build build
+# cmake 构建 
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+# cmake 编译
+cmake --build build --parallel 4
+# cmake 安装
+cmake --build build --target install
 ```
 
-* `cmake -B build`：这个命令用于配置CMake的构建过程，并将生成的构建系統文件放置在一个指定的目录中（在此示例中是build目录）。-B选项后面指定的参数表示生成构建文件的目录。如果不存在build目录，那么它会自动创建build目录
+* `cmake -B build`：这个命令用于配置CMake的配置 configure 过程，并将生成的构建系統文件放置在一个指定的目录中（在此示例中是build目录）。-B选项后面指定的参数表示生成构建文件的目录。如果不存在build目录，那么它会自动创建build目录
 
   例如，运行命令 cmake -B build 会根据CMakellists.txt文件中的配置生成构建系统文件（如Makefile或Visual Studio项目文件）并将其放置在名为build的目录中。这个命令通常用于在构建系统文件和源代码文件分离的情况下，以保持源代码目录的干净和可维护性
 
-* `cmake --build build`：这个命令用于执行构建过程，根据配置好的构建系統文件（例如Makefile） 在指定的构建目录中进行实际的编译和链接
+  `-DCMAKE_BUILD_TYPE=Release`：通过这个选项，指定了构建的类型为 Release
+
+* `cmake --build build`：这个命令用于执行构建 build 过程，根据配置好的构建系統文件（例如Makefile） 在指定的构建目录中进行实际的编译和链接
 
   例如，在运行cmake -B build之后，可以使用cmake--build build命令在build 目录中执行构建过程。这将根据所生成的构建系统文件执行编译器和链接器，并生成可执行文件或库文件
 
@@ -210,9 +216,18 @@ cmake --build build
 
   该命今是跨平台的，可以在不同平台使用该命令编译构建cmake项目
 
-### 旧版编译命令
+### 古代编译命令
 
 在Linux平台下使用CMake构建C/C++工程的流程如下
+
+```cmd
+$ mkdir -p build
+$ cd build
+$ cmake .. -DCMAKE_BUILD_TYPE=Release
+$ make -j4
+$ make install
+$ cd ..
+```
 
 1. 手动编写CmakeLists.txt
 2. 执行命令 `cmake PATH` 生成Makefile，PATH是顶层CMakeLists.txt所在的目录。注意，在哪里执行cmake命令生成的内容就在哪里，一般选择在build文件夹中执行 `cmake ..`，因为build中是所有编译产生的内容
@@ -443,7 +458,13 @@ make
 
 因此，为了使 CMake 能够正确地解析和处理项目，每个目录下都需要一个 `CMakeLists.txt` 文件来描述该目录的构建规则和相关配置
 
-## *子目录*
+## *子模块*
+
+有三种引入子模块的方式
+
+1. 纯头文件：target_include_directories
+2. 子模块：add_subdirectory
+3. 引用系统中预安装的第三方库：find_package & target_link_libraries
 
 ### add_subdirectory
 
@@ -466,7 +487,7 @@ make
   ```cmake
   AUX_SOURCE_DIRECTORY(dir VARIABLE)
   # 定义SRC变量，其值为当前目录下所有的源代码文件
-  AUX_SOURCE_DIRECTORY(.src)
+  AUX_SOURCE_DIRECTORY(. SRC)
   # 编译SRC变量所代表的源代码文件，生成main可执行文件
   add_executable(main ${SRC})
   ```
@@ -502,7 +523,7 @@ make
   * `<variable>`：用于存储文件列表的变量名。通过这个变量，可以在后续的 CMake 文件中引用获取到的文件列表
   * `[LIST_DIRECTORIES true|false]`：可选参数，指示是否包括子目录。如果设置为 `true`，则文件列表中会包含子目录的文件。默认为 `false`
   * `[RELATIVE <path>]`：可选参数，表示相对于指定路径的文件路径。如果设置了这个参数，返回的文件路径将相对于指定路径
-  * `[CONFIGURE_DEPENDS]`：可选参数，表示文件的配置是否会影响生成。通常在需要 CMake 重新运行配置时，使用这个选项，以便更新文件列表
+  * `[CONFIGURE_DEPENDS]`：可选参数，表示文件的配置是否会影响生成。通常在需要 CMake 重新运行配置时，使用这个选项，以便更新文件列表。**推荐启动这个选项**，这样不能更新cache也会自动检测
   * `...`（`<globbing-expressions>`）：通配符表达式，用于匹配文件名。可以使用多个通配符表达式，它们之间用空格分隔
 
   ```cmake
@@ -519,7 +540,7 @@ make
 
 不太推荐用 `file(GLOB) ...`，比较麻烦。用aux_source_directory比较清晰
 
-### include_directories
+### include_directories (deprecated)
 
 include_directories：向工程添加多个特定的**头文件搜索路径**，效果就是指定g++编译器的 `-I` 参数
 
@@ -539,7 +560,67 @@ include_directories(/usr/include/myincludefolder ./include)
 
 ### target_include_directories
 
+inlucde_directories 是一种被现代CMake废弃的特性，因为它会影响整个工程的所有目标（targets）
+
+现代CMake推荐使用 target_include_directories，它仅影响特定的目标
+
+```cmake
+target_include_directories(<target> [SYSTEM] [AFTER|BEFORE]
+  <INTERFACE|PUBLIC|PRIVATE> [items1...]
+  [<INTERFACE|PUBLIC|PRIVATE> [items2...] ...])
+```
+
+* `<target>`：指定目标的名称，为其设置头文件搜索路径
+* `[SYSTEM]`：可选项，表示将指定的目录视为系统目录。这通常用于将系统提供的头文件路径标记为系统路径，以便编译器不发出与用户头文件相同的警告
+* `[AFTER|BEFORE]`：可选项，用于指定添加的头文件路径是在之前还是之后
+  * `AFTER`：添加的路径将被追加到当前列表的末尾
+  * `BEFORE`：添加的路径将插入到当前列表的开头
+* `<INTERFACE|PUBLIC|PRIVATE>`：指定添加的头文件路径的可见性。这是一个关键的部分，控制着这些路径是如何传递给依赖目标的。具体解释如下：
+  * `PUBLIC`：路径将传递给目标及其依赖项
+  * `PRIVATE`：路径仅适用于当前目标
+  * `INTERFACE`：路径将传递给依赖于当前目标的目标
+* `[items1...]`、`[items2...]`等：指定要添加到头文件搜索路径的目录列表
+
+下面是一个例子
+
+```cmake
+add_library(my_library my_source.cpp)
+target_include_directories(my_library
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/private_include
+)
+```
+
+### 寻找系统中的包/库
+
+```cmake
+find_package(<PackageName> [version] [EXACT] [QUIET] [MODULE]
+             [REQUIRED] [[COMPONENTS] [components...]]
+             [OPTIONAL_COMPONENTS components...]
+             [REGISTRY_VIEW  (64|32|64_32|32_64|HOST|TARGET|BOTH)]
+             [GLOBAL]
+             [NO_POLICY_SCOPE]
+             [BYPASS_PROVIDER])
+```
+
+* `<PackageName>`：指定要查找的软件包的名称。这通常是软件包提供者定义的包名称，如 Boost、OpenCV、Qt 等
+* `[version]`：可选项，用于指定所需的软件包版本。可以是具体版本号，也可以是版本号的范围。例如，`[version "2.0"]` 或 `[version "2.0.1"]`
+* `[EXACT]`：可选项，要求找到的软件包版本必须与指定的版本号完全匹配
+* `[QUIET]`：可选项，如果找不到软件包，将不会产生错误，而是在静默模式下继续
+* `[MODULE]`：可选项，表示要查找的软件包是一个 CMake 模块。通常用于查找 CMake 模块文件而不是常规的软件包
+* `[REQUIRED]`：可选项，表示找不到指定的软件包时会引发致命错误。如果不使用此选项，CMake 将继续处理而不会停止
+* `[[COMPONENTS] [components...]]`：用于指定软件包的组件（例如库、工具等）。这使得你可以选择性地只找到软件包的部分组件
+* `[OPTIONAL_COMPONENTS components...]`：可选项，用于指定软件包的可选组件，这些组件可以不存在
+* `[REGISTRY_VIEW (64|32|64_32|32_64|HOST|TARGET|BOTH)]`：可选项，指定用于查找软件包的注册表视图。这通常用于 Windows 上的 64 位和 32 位软件包
+* `[GLOBAL]`：可选项，表示全局查找软件包，即在 CMakeLists.txt 文件之外的范围中查找
+* `[NO_POLICY_SCOPE]`：可选项，表示在查找时不应用策略范围（policy scope）
+* `[BYPASS_PROVIDER]`：可选项，绕过软件包提供者，直接使用系统上找到的软件包。通常用于测试目的
+
+现代 CMake 认为一个包 package 可以提供多个库，又称组件 components，比如 TBB 这个包，就包含了 tbb, tbbmalloc, tbbmalloc_proxy 这三个组件。因此为避免冲突，每个包都享有一个独立的名字空间，以 :: 的分割
+
 ## *生成目标*
+
+### add_executable
 
 * add_compile_options：添加编译参数
 
@@ -561,20 +642,48 @@ include_directories(/usr/include/myincludefolder ./include)
 
   `add_executable(hello ${SRC_LIST})` ⽣成的可执⾏⽂件名是hello，源⽂件读取变量SRC_LIST中的内容。也可以直接写 `add_executable(hello main.cpp)`
 
-  Demo可以简化的写成
+  **建议把头文件也加上**，这样在VS里可以出现在“Header Files”一栏
 
+  Demo可以简化的写成
+  
   ```cmake
   project(HELLO)
   add_executable(hello main.cpp)
   ```
-
+  
   注意：⼯程名的 HELLO 和⽣成的可执⾏⽂件 hello 是没有任何关系的
+
+### 先创建目标，稍后再添加源文件
+
+```cmake
+add_executable(main)
+target_sources(main PUBLIC main.cpp)
+```
+
+或者用变量来存储。如果要让文件夹中的所有文件都是源文件，就用 `file(GLOB)`，这个上面说过了
+
+```cmake
+add_executable(main)
+set(sources main.cpp other.cpp)
+target_sources(main PUBLIC ${sources})
+```
+
+### 添加宏
+
+```cmake
+target_add_definitions(myapp PUBLIC MY_MACRO=1)
+target_add_definitions(myapp PUBLIC -DMY_MACRO=1)
+＃添加一个宏定义
+#与 MY_MACRO=1 等价
+```
+
+`target_add_definitions(myapp PUBLIC MY_MACRO=1)`，DMY_MACRO 是完全等价的，因为makefile里用的是-D，所以cmake中也兼容了一样的写法
 
 ## *链接库*
 
 ### target_link_libraries
 
-* link_directories：向工程添加多个特定非标准的库文件搜索路径，相当于指定g++编译器的 `-L` 参数
+* link_directories (deprecated)：向工程添加多个特定非标准的库文件搜索路径，相当于指定g++编译器的 `-L` 参数
 
   ```cmake
   link_directories(dir1 dir2 ...)
@@ -592,8 +701,6 @@ include_directories(/usr/include/myincludefolder ./include)
   ```
 
   这里注意和 `LINK_LIBRARIES(绝对路径)` 的区别，这个命令要写要链接的库文件的绝对路径，不推荐使用它
-
-
 
 ## *返回码*
 

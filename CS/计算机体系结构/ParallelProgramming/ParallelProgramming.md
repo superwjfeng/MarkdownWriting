@@ -172,6 +172,26 @@ OpenMP提供了一些环境变量，用来在运行时对并行代码的执行�
 * OMP_DYNAMIC：通过设定变量值，来确定是否允许动态设定并行域内的线程数
 * OMP_NESTED：指出是否可以并行嵌套
 
+### 线程亲和性
+
+亲和性通常以掩码 mask 的形式表示，即描述线程被允许在哪些位置运行的说明。mask取决于采用哪种亲和性策略
+
+* close：适用于共享内存的线程
+
+  ```
+  Thread  Socket 0  Socket 1
+  0       0
+  1       1
+  ```
+
+* spread：适用于需要大的bandwidth的线程，这样可以进可以让它得到socket的bandwidth
+
+  ```
+  Thread  Socket 0  Socket 1
+  0       0
+  1                 1
+  ```
+
 ## *并行区域*
 
 ### Parallel
@@ -690,6 +710,199 @@ MPI的接口大致可以分为
 * 点对点通信：一组用于两个进程之间进行交互的调用
 * 集体调用：所有的处理器或者某个指定的处理器子集都会参与其中，比如广播调用
 
+# SIMD
+
+## *Intrinsic*
+
+### 什么是intrinsic
+
+intrinsic 指的是一种与硬件体系结构（如CPU指令集）紧密相关的、由编译器或编程语言提供的特殊函数或操作。这些函数或操作允许程序员直接使用底层硬件功能，而无需手动编写特定的汇编代码。Intrinsic 函数通常提供了对硬件指令的抽象，使得程序员能够以更高层次的抽象来使用底层硬件功能
+
+常见的应用场景包括优化程序的性能，利用硬件特性进行并行计算等。这些函数通常由编译器提供，并以一种与编程语言紧密集成的方式使用。不同的编程语言和编译器可能提供不同的 intrinsic 函数，以适应不同的硬件架构
+
+举个例子：SIMD ISA 中 C/C++ 提供 intrinsic，让程序员能够直接使用 SIMD 指令，而不必深入了解底层的汇编语言
+
+# 访存优化
+
+## *Memory-Bound*
+
+在 *操作系统理论.md* 中提到过应该用可以分为IO密集型和CPU（计算）密集型应用
+
+在并行计算的程序中其实大部分都是CPU密集型，但它们的瓶颈往往都是在内存的访问上。**并行只能加速计算的部分，不能加速内存读写的部分**。也就是说根据木桶理论，内存访问的限制拖累了系统达到最大的计算性能
+
+```c
+const size_t n = 1 << 26;
+std::vector<float> a(n); // 256MB
+std::vector<float> b(n);
+
+#omp parallel for
+for (int i = 0; i < n; i++) { a[i] = i; }
+
+#omp parallel for
+for (int i = 0; i < n; i++) { b[i] = std::sin(i); }
+```
+
+比如说上面第一个for循环这种没有任何计算量，纯粹只有访存的循环体，并行没有加速效果，称为内存瓶颈 memory-bound。而 sine 这种内部需要泰勒展开来计算，每次迭代计算量很大的循环体，并行才有较好的加速效果，此时限制性能的仅仅是我们有多少计算资源可以使用，因此称为计算瓶颈 cpu-bound
+
+并行能减轻计算瓶颈，但不减轻内存瓶颈，故后者是优化的重点
+
+### 浮点加法的计算量
+
+如果在上面的内存读写中加上一个浮点加法会怎么样？
+
+```c
+#omp parallel for
+for (int i = 0; i < n; i++) { a[i] = a[i] + 1; }
+```
+
+反而会比原来还慢，因为一次浮点加法的计算量和访存的超高延迟相比实在太少了。计算太简单，数据量又很大，并行只带来了多线程调度的额外开销
+
+一些经验公式，来自 *彭于斌（@archibate）*
+
+* 1次浮点读写 ≈ 8次浮点加法
+* 如果单核矢量化成功（SSE）：1次浮点读写 ≈ 32次浮点加法
+* 如果CPU有4核且矢量化成功：1次浮点读写 ≈ 128次浮点加法
+
+### 常见操作的计算消耗估计
+
+以读写一个cache line为基准
+
+<img src="常见浮点操作的消耗.png" width="50%">
+
+对于memory-bound的计算来说，应该达到 n 倍（n为物理核心数量）才算理想加速比
+
+## *结构体*
+
+### AOS
+
+```c
+struct MyClass {
+    float x;
+    float y;
+    float z;
+};
+```
+
+AOS, Array of Structure
+
+### SOA
+
+```c
+struct MyClass {
+    float x[4];
+    float y[4];
+    float z[4];
+};
+```
+
+SOA, Structure of Array
+
+### AOSOA
+
+## *预取 & 分页*
+
+## *多维度数组*
+
+### 二维数组的行主序 & 列主序
+
+<img src="VSTR.drawio.png" width="90%">
+
+列主序 Column-major order 和行主序 Row-major order 是描述二维数组在内存中存储顺序的两种方式
+
+* C和C++以及大部分编程语言中都采用行主序，行主序是更为常见的数组存储顺序。行主序的排列方式也称为YX序（越不连续的放在越前面，行方向，即Y方向是不连续的，所以称为YX序）
+* Fortran等一些编程语言中，列主序则它是默认的数组存储顺序。列主列的的排列方式也称为XY序
+
+### 高维数组的扁平化
+
+因为行列仅限于二维数组（矩阵），对高维数组（比如说三维Tensor）可以直接按照他们的 xyz 下标名这样称呼
+
+* **ZYX 序**：`(z * ny + y) * nx + x`
+* XYZ 序：`z + nz * (y + x * ny)`
+
+主流程序都会用 **YX** 序，**ZYX** 序
+
+### 遍历序
+
+二维数组在内存中的布局有 YX 序，XY 序（C和C++永远都是YX序，或者说行主序的）。二维数组的循环遍历也有 YX 序，XY 序之分
+
+* YX遍历序
+
+  ```c
+  int n = 3; // ny
+  int m = 4; // nx
+  
+  double *M = (double*)malloc(n * m * sizeof (double));
+  
+  for (int i = 0; i < n; i++) {
+  	for (int j = 0; j < m; j++) {
+  		M[i * m + j] = 0;
+  	}
+  }
+  // ----------------------- 等价 -----------------------
+  int ny = 3; 
+  int nx = 4; // nx
+  
+  double *M = (double*)malloc(nx * my * sizeof (double));
+  
+  for (int y = 0; y < ny; i++) {
+  	for (int x = 0; x < nx; j++) {
+  		M[y * nx + x] = 0;
+  	}
+  }
+  ```
+
+* XY遍历序
+
+  ```c
+  int ny = 3; 
+  int nx = 4;
+  
+  double *M = (double*)malloc(nx * my * sizeof (double));
+  
+  for (int x = 0; x < nx; i++) {
+  	for (int y = 0; y < ny; j++) {
+  		M[y * nx + x] = 0;
+  	}
+  }
+  ```
+
+**什么序的数组，就用什么序遍历**。比如说行主序或者说YX序的数组就应该用YX序遍历，因为可以利用到空间一致性（同一个cache block中）。否则跳着走的话，读一次cache block可能只会命中一次，即每次读取只用了 其中4字节，浪费了缓存行剩下的60字节，非常低效。同时还会影响预取器的效果
+
+* 对于 YX 序（行主序，C/C++）的数组，请用 YX 序遍历（x变量做内层循环体）
+* 对于 XY 序（列主序，Fortran）的数组，请用 XY 序遍历（y变量做内层循环体）
+
+## *ndarry*
+
+### 访问越界问题
+
+### 起始地址对齐问题
+
+## *Stencil与循环分块*
+
+### Stencil
+
+Stencil 操作是一种计算模式，通常在科学计算、数值模拟、图像处理等领域中广泛使用。**Stencil 操作基于一个中心元素周围的邻居元素，通过在这些邻居元素上应用某种计算规则来更新中心元素**
+
+比如求一个场的梯度、散度、旋度、拉普拉斯。如果场是用结构网格 structured grid 表示，那就是一个stencil操作。实际上图像处理中的模糊，信号处理、DL常用的卷积操作都是 stencil 操作
+
+有的插桩内核各轴向是对称的（比如高斯模糊），有的是单单往一 个方向延伸很长（比如径向模糊），有的内核是正方形（箱滤波）
+
+Stencil kernel 指的就是这个“周围范围”的形状和每个地方读取到值对修改自身值的权重等信息
+
+<img src="Stencil.png">
+
+这种操作的名称来自于类似于使用模板或薄膜刻刀（stencil）在图案上进行操作的概念。它中文可以翻译为模版计算或者插桩计算，感觉很别扭，所以下面直接说stencil
+
+### 循环分块
+
+## *矩阵乘法分块*
+
+<img src="TiledMatrixMultiplication.drawio.png">
+
+## *Memory Coalescing*
+
+网格跨步循环 grid-stride loop
+
 # GPU编程
 
 ## *Scaling*
@@ -708,7 +921,39 @@ Weak scaling是指令每个线程的problem size保持不变，HPC中最常用�
 
 Strong scaling在变得越来越重要，有些任务的problem size并不是一直在增长的，但对精确度、求解速度的要求越来越高
 
-## *GPU编程概览*
+## *GPU通用计算*
+
+### 异构计算
+
+GPU并不是一个独立运行的计算平台，而需要与CPU协同作工作，因此可以GPU可以看成是CPU的协处理器 coprocessor，因此当我们在说GPU并行计算时，其实是指的基于CPU+GPU的异构计算架构
+
+在异构计算架构中，GPU与CPU通过PCle总线连接在一起来协同工作
+
+CPU所在位置称为为主机端 host，而GPU所在位置称为设备端 device
+
+### GPGPU模型
+
+> 自2003年以来，人们一直在努力利用GPU进行非图形应用。通过使用高级着色语言，如DirectX、OpenGL和Cg，各种数据并行算法被移植到了GPU上。诸如蛋白质折叠、股票期权定价、SQL查询和MRI重建等问题在GPU上实现了显著的性能加速。这些早期使用图形API进行通用计算的努力被称为GPGPU程序。
+>
+> 虽然GPGPU模型展示了巨大的加速能力，但它面临着一些缺点。
+>
+> * 首先，它要求程序员对**图形API和GPU架构有深入的了解**。
+> * 其次，问题必须以顶点坐标、纹理和着色器程序的**形式表达**，大大增加了程序的复杂性。
+> * 第三，基本的编程特性，如对**内存的随机读写操作，并不支持**，这大大限制了编程模型。
+> * 最后，在最近之前**缺乏双精度**支持意味着一些科学应用无法在GPU上运行。
+>
+> 为解决这些问题，NVIDIA引入了两项关键技术
+>
+> * **G80**统一图形计算架构：（首次出现在GeForce 8800®、Quadro FX 5600®和Tesla C870® GPU中）
+> * **CUDA**：这是一种软件和硬件架构，使GPU能够使用各种高级编程语言进行编程。
+>
+> 这两项技术共同代表了一种使用GPU的新方式。程序员不再使用专用的图形API对图形单元进行编程，而是可以使用具有CUDA扩展的C程序，针对通用的、高度并行的处理器进行编程。我们把这种新的GPU编程方式称为“GPU计算”——它代表了更广泛的应用支持、更广泛的编程语言支持，与早期的“GPGPU”编程模型有着明显区分。 -- https://zhuanlan.zhihu.com/p/632718322
+
+### AI计算中的数据类型
+
+https://blog.csdn.net/qq_43799400/article/details/134182459
+
+## *GPU编程API*
 
 ### 多媒体API
 
@@ -734,119 +979,110 @@ GPU的API是一组允许软件与GPU进行通信和协作的软件函数和库�
   * AMD Mantle API
   * Intel One API
 
-
-### GPGPU 通用计算
+### GPU通用计算编程框架
 
 GPU通用计算 General-Purpose Graphics Processing Unit 的核心思想是利用 GPU 的大规模并行处理能力来加速计算任务，尤其是那些可以分解为许多小任务的工作负载。为了在 GPU 上进行通用计算，开发者使用 GPU 编程框架和 API 来编写并行计算代码，这些框架和 API 提供了对 GPU 资源的访问以及任务分发和同步的机制。以下是一些用于 GPGPU 的常见 API 和框架
 
 * CUDA Compute Unified Device Architecture：由NVIDIA开发的CUDA是GPGPU编程的一种流行框架。它允许开发者使用类C编程语言来编写通用计算代码，并在NVIDIA GPU上执行。CUDA 提供了丰富的库和工具，用于优化并行计算任务
-* HIP Heterogeneous-Computing Interface for Portability：由 AMD 开发的 HIP 是一个类似于 CUDA 的框架，旨在实现跨供应商的移植性，使开发者能够在不同供应商的 GPU 上运行通用计算代码
+* HIP Heterogeneous-Computing Interface for Portability：由 AMD 开发的 HIP 是一个类似于 CUDA 的框架
 * OpenCL Open Computing Language：OpenCL 是一个跨平台的 GPGPU 编程框架，允许在不同供应商的 GPU 上运行通用计算任务。它使用 C 样式的语言编写内核，并提供了广泛的设备支持
 * OpenMP ：从OpenMP 4.0版本开始，它还引入了对GPU通用计算的支持，允许将OpenMP用于GPU加速的应用程序开发。加速器被视为 targets 和 devices
 * OpenACC：脱胎于OpenMP
 * DirectCompute：DirectCompute 是 Microsoft DirectX 的一部分，用于在 Windows 平台上进行通用计算。它允许开发者使用 HLSL（High-Level Shading Language）编写并行计算内核
 * SYCL：SYCL 是一种基于 C++ 的编程模型，用于实现高性能并行计算，并在不同的硬件上运行。它允许开发者使用标准的 C++ 语言编写并行计算代码，然后将其映射到不同的加速器上，包括 GPU
 
-## *GPU通用计算的特点*
+# CUDA基础
 
-GPU并不是一个独立运行的计算平台，而需要与CPU协同作工作，因此可以GPU可以看成是CPU的协处理器 coprocessor，因此当我们在说GPU并行计算时，其实是指的基于CPU+GPU的异构计算架构
+https://godweiyang.com/2021/01/25/cuda-reading/
 
-在异构计算架构中，GPU与CPU通过PCle总线连接在一起来协同工作
-
-CPU所在位置称为为主机端 host，而GPU所在位置称为设备端 device
-
-
-
-# CUDA
+CUDA, Compute Unified Device Architecture
 
 cuda编程本身就对硬件依赖很大，不同的GPU架构必须要编写不同的代码，否则性能会下降很多甚至会出现负优化的情况
 
 CUDA提供了对其它编程语言的支持，如C/C++、Python、Fortran等语言
 
-## *CUDA程序层次结构*
+## *编译*
 
-<img src="CUDA软件架构.png">
+### nvcc编译器
 
-CUDA的软件架构在逻辑上可以分为thread，block，gird。注意：thread，block，gird的设定是为了方便程序员进行软件设计和组织线程，是CUDA编程上的概念
+NVCC, NVIDIA CUDA Compiler 是NVIDIA提供的专用于CUDA开发的编译器。它用于将CUDA C/C++源代码翻译为GPU二进制代码，以便在NVIDIA GPU上执行。以下是 nvcc 编译器的一些重要特点和用法：
 
-* kernel在device上执行时实际上是启动很多线程，一个kernel所后动的所有线程称为一个网格 grid。同一个grid上的线程共享相同的全局内存空间。grid是线程结构的第一层
-* Grid又可以分为很多线程块 block，一个线程块里面包含很多线程，这些线程运行在同一个SMP中。块不能太小以至于不能隐藏其调度开销，但是也不能太大，一般是128或256个线程（32的倍数）。block是第二层
-* 一个block里的线程按顺序排成一个一维向量，每32个线程称为一个warp，是CUDA最小的调度单位。warp是第三层
-* 单独的线程是第四层，线程是最小的逻辑单元
+* 支持CUDA C/C++：nvcc 主要用于编译CUDA C/C++源代码。CUDA C是一种基于C语言的扩展，允许开发者编写并行计算的核函数
+* 将host代码和device代码整合
+  * nvcc 能够识别CUDA源代码中的host代码（在CPU上执行）和device代码（在GPU上执行），并将它们整合在一起。这种整合的方法使得开发者可以方便地在同一个文件中编写包含主机和设备代码的CUDA程序
+  * 与常规C++编译器集成：通常 nvcc 会调用底层的C++编译器来处理主机代码部分。这意味着在编译CUDA程序时，`nvcc`可以处理主机代码，并调用适当的C++编译器处理主机代码的部分
+* 自动GPU代码生成： nvcc 会自动为目标GPU生成最佳的二进制代码。开发者通常无需手动优化生成的代码，因为 nvcc 会根据目标GPU的架构和特性进行优化
+* 支持多种架构：nvcc 支持编译针对多种NVIDIA GPU架构的代码。开发者可以通过指定`-arch`选项来选择目标GPU的架构版本，以便生成相应的二进制代码
+* 整合CUDA Runtime库：nvcc 会自动链接CUDA Runtime库，不需要像gcc一样自己去连接库这样开发者可以在程序中使用CUDA提供的运行时函数，如内存分配、核函数调用等
+* 调试支持：nvcc 提供了调试选项，使开发者能够使用GPU调试器（如NVIDIA Nsight）来调试CUDA程序。这对于定位并行计算中的错误和性能问题非常有帮助
 
-### 维度
+### build工具
 
-grid、block和warp的维度对GPU内存调度有着重要影响。不同GPU架构，grid 和 block 的维度限制是不同的
+最新版的CMake（3.18以上），只需在LANGUAGES 后面加上 CUDA 即可启用。然后在 add_executable 里直接加 `.cu`
+文件，和.cpp一样
 
-grid 和 block 都是定义为dim3类型的变量。dim3可以看成是包含三个无符号整数 x, y, z 成员的结构体变量。在定义时缺省值初始化为1
-
-grid和block 可以灵活地定义为1-dim、2-dim以及3-dim结构
-
-定义的grid和block如下所示，kernel 在调用时也必须通过执行配置 `<<<grid, block>>>` 来指定kernel所使用的线程数及结构
-
-```c++
-// 1-dim 的 grid 和 block
-dim3 grid(128,);
-dim3 block(256);
-kernel_fun<<< grid, block >>>(prams...);
-// 2-dim 的 grid 和 block
-dim3 grid(5, 4);
-dim3 block(4, 3)
-kernel_funs<< grid, block >>>(prams...);
-// 3-dim 的 grid 和 block
-dim3 grid(100, 100, 50);
-dim3 block(16, 16, 4)
-kernel_funs<< grid, block >>>(prams...);
+```cmake
+project(hellocuda LANGUAGES CXX CUDA)
+add_executable(main main.cu)
 ```
 
-### 各维度的排列顺序
+### CUDA、C、C++混编
 
-一个线程需要两个内置的坐标变量 `(blockldx, threadldx)` 来唯一标识，它们都是dim3类型变量
+CUDA 的语法，基本完全兼容C++。包括 C++17 新特性，都可以用。甚至可以把任何一个 C++ 项目的文件后缀名全部改成.cu，都能编译出来。这是 CUDA 的一大好处
 
-* blockldx指明线程所在grid中的位置，blockidx同样包含三个值：`blockldx.x, blockldx.y, blockldx.z`
-* threaldx指明线程所在block中的位置，threadldx包含三个值：`threadldx.x, threadldx.y, threadldx.z`
+CUDA和 C++ 的关系就像 C++和C的关系一样，大部分都兼容，因此能很方便地重用C++现有的任何代码库，引用 C++头文件等。host 代码和 device 代码写在同一个文件内，这是 OpenCL 做不到的
 
+## *PTX*
 
-在内存中各个维度的排列是有顺序的：`X -> Y -> Z`
+### 编译过程
+
+<img src="NVCC编译过程.drawio.png" width="50%">
+
+PTX, Parallel Thread Execution 是 CUDA 编译过程中的一种中间表示 IR，它处于高级CUDA C/C++源代码和底层GPU硬件指令之间，即一种高级语言和底层ISA之间的virtual ISA。**有点像GCC支持的C内联汇编**
+
+使用PTX，程序员可以编写与特定GPU架构无关的CUDA内核代码，而不必关心底层硬件细节。PTX代码经过NVCC生成，并且可以在不同的NVIDIA GPU架构上运行
+
+具体来说：nvcc会用g++对其中cpu部分的代码编译，余下gpu的部分使用cudacc进行编译，首先生成一个虚拟环境下的.ptx文件，之后再根据具体GPU类型生成不同的二进制码
+
+### 例子
 
 ```c
-lim3 grid(3, 2);
-dim3 block(5, 3);
-// block: (0, 0) -> (1, 0) -> (2, 0) -> (0, 1) -> (1, 1) -> (2, 1)
-// thread: (0, 0) -> (1, 0) -> (2, 0) -> (3, 0) -> (4, 0) -> (0, 1) -> (1, 1) -> (2, 1) -> (3, 1) -> (4, 1) -> (0, 2) -> (1, 2) -> (2, 2) -> (3, 2) -> (4, 2)
+__device__ __forceinline__ unsigned long long __globaltimer() {
+  unsigned long long globaltimer;
+  asm volatile("mov.u64 %0, %globaltimer;" : "=l"(globaltimer));
+  return globaltimer;
+}
 ```
 
-处理矩阵的时候可以选择二维grid和block来对齐，而矢量就用一维的grid和block来对齐
+* `__forceinline__`: 这是一个建议性的修饰符，它提示编译器尽可能地将函数内联。函数内联可以减少函数调用的开销，提高性能
 
-### warp调度
+* `unsigned long long __globaltimer()`: 这是函数的声明，表明该函数返回一个64位无符号长整型（`unsigned long long`）。函数名为`__globaltimer``
 
-<img src="FGMTofWarps.drawio.png" width="90%">
+* ``asm volatile("mov.u64 %0, %globaltimer;" : "=l"(globaltimer));`: 这是使用内联汇编语法嵌入汇编代码的部分，用于获取全局计时器的值
 
-Warp内的线程需要执行相同的指令
+  * `mov.u64 %0, %globaltimer;`: 这是汇编指令，将全局计时器的值移动到寄存器 `%0` 中。这里 `%0` 表示输出操作数（output operand），`%globaltimer` 表示全局计时器
 
-依靠硬件的warp调度器可以做到warp调度的零开销
+  * `: "=l"(globaltimer)`: 这是输出操作数的约束（constraint），指示编译器将 `%0` 中的值存储到`globaltimer` 变量中。`"=l"`表示将 `%0` 与一个64位整数相关联
 
-## *CUDA编程模型*
+* `return globaltimer;`: 函数返回获取到的全局计时器的值
+
+## *CUDA的函数执行环境限定符*
 
 在CUDA中，host和device是两个重要的概念。用host指代CPU及其内存，而用device指代GPU及其内存。CUDA程序中既包含host程序，又包含device程序，它们分别在CPU和GPU上运行。host与device之间可以进行通信，这样它们之间可以进行数据拷贝
 
-### CUDA程序执行流程
-
-1. 分配host内存，并进行数据初始化
-2. 分配device内存，并从host将数据拷贝到device上
-3. 调用CUDA的核函数在device上完成指定的运算
-4. 将device上的运算结果拷贝到host上（性能）
-5. 释放device和host上分配的内存
-
-### CUDA的函数类型限定符
-
 GPU是异构模型，所以需要区分host和device上的代码，在CUDA中是通函数类型限定词开区别host和device上的函数，主要的三个函数类型限定词如下：
 
-* `__global__ void func()`
-  * 在device上执行，从host中调用（一些特定的GPU也可以直接从device上调用）。返回类型必须是void，不支持可变参数参数，不能成为类成员函数
-  * 注意用 `__global__` 定义的kernel是异步的，这意味着host不会等待kernel执行完就会执行下一步
-* `__device__`：在GPU device上执行，但是仅可以从device中调用，不可以和 `__global__` 同时使用
-* `__host__`：在host上执行，也仅可以从host上调用，一般省略不写。不可以和 `__global__` 同时使用，但可以和 `__device__` 同时使用，此时函数在host和device上都会编译
+* `__host__`：在host上执行，也仅可以从host上调用，**函数默认都是 `__host__`，所以一般省略不写**。不可以和 `__global__` 同时使用，但可以和 `__device__` 同时使用，此时函数在host和device上都会编译
+* `__global__ void kernel()` **有点像是device上面的main函数**。在device上执行，从host中调用（一些特定的GPU也可以直接从device上调用）。返回类型必须是void，不支持可变参数参数，不能成为类成员函数
+* `__device__`：只能在GPU device上调用和执行，不可以和 `__global__` 同时使用，因为CPU不能调用它。和普通函数用起来 一样，可以有参数和返回值
+
+<img src="CUDA的函数执行环境限定符.drawio.png">
+
+```
+host -> global -> device
+```
+
+host 可以调用 global；global 可以调用 device；device 可以调用 device
 
 ### 核函数
 
@@ -854,7 +1090,7 @@ GPU是异构模型，所以需要区分host和device上的代码，在CUDA中是
 
 核函数 kernel 是CUDA 中一个重要的概念，kernel 是 在device 上线程中并行执行的函数
 
-核函数用 `__global__` 符号声明，在调用时需要用 `<<<grid, block>>>` 来指定kernel要执行的线程数量。用 `__global__` 声明的核函数必须要返回void
+核函数用 `__global__` 符号声明，在调用时需要用 **`<<<gridDim, blockDim>>>`** 来指定kernel要执行的线程数量。用 `__global__` 声明的核函数必须要返回void
 
 在CUDA中，每一个线程都要执行核函数，并且每个线程会分配一个唯一的线程是thread ID，这个ID值可以通过核函数的內置变量threadldx来获得
 
@@ -873,22 +1109,355 @@ int main() {
 }
 ```
 
-## *GPU的内存*
+注意用 `__global__` 定义的**kernel是异步的，这意味着host只是把任务加入GPU的任务队列中，不会等待kernel执行完就会执行下一步，所以返回值也只能是void**。也就是 CPU 调用 `kernel<<<>>>()` 后，核函数并不会立即在 GPU 上执行完毕后再返回。实际上只是把kernel 这个任务推送到 GPU 的执行队列上，然后立即返回，并不会等待执行完毕
 
-## *CUDA工具*
+如果需要同步调用，就在调用kernel的host中使用 `cudaDeviceSynchronize()`，让CPU陷入等待，等 GPU 完成队列的所有任务后返回
 
-### 编译器
+### `__device__` 的声明定义分离问题
 
-nvcc（C/C++）
-### 调试器
+不建议分离，分离了之后不容易优化
 
-nvcc-gdb
-### 性能分析
+### 同时为CPU和GPU定义函数
 
-nsight, nvprof
-### 函数库
+`__device__` 不能和 `__global__` 一起使用，但可以和 `__host__` 一块用，这时候会同时为CPU和GPU分别生成功能相同的代码
+
+如果直接将函数声明为 `constexpr`，效果等同于同时声明 `__device__` 和 `__host__`。不过这样用的话要打开 `--expt-relaxed--constexpr` 这个选项
+
+```cmake
+target_compile_options(main PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)
+# $<$ 是生成器表达式，只对 .cu 后缀的生效
+```
+
+## *版本号问题 Compute Capabilities*
+
+具体的内容可以查看 CUDA C++ Programming Guide
+
+Compute Capability（计算能力）是NVIDIA GPU架构的一个标识，用于指示GPU支持的硬件和特性。每个NVIDIA GPU都有一个特定的计算能力版本，它反映了该GPU架构的功能和性能水平。CUDA Compute Capabilities通常以主版本号和次版本号的形式表示
+
+以下是一些常见的CUDA Compute Capabilities及其代表的架构：
+
+1. 1.x：Tesla架构，代表型号：Tesla C1060, Tesla S1070
+2. Compute Capability 2.x：Fermi架构，代表型号：GeForce GTX 480, Tesla C2050
+3. Compute Capability 3.x：Kepler架构，代表型号：GeForce GTX 680, Tesla K20
+4. Compute Capability 5.x：Maxwell架构，代表型号：GeForce GTX 980, Tesla M40
+5. Compute Capability 6.x：Pascal架构，代表型号：GeForce GTX 1080, Tesla P100
+6. Compute Capability 7.x：Volta架构，代表型号：Tesla V100, Titan V
+7. Compute Capability 8.x：Turing架构，代表型号：GeForce RTX 2080 Ti, Tesla T4
+8. Compute Capability 9.x：Ampere架构、Hooper架构，代表型号：GeForce RTX 30系列，A100 Tensor Core GPU、H100 
+
+### `__CUDA__ARCH__`
+
+每个计算能力版本引入了新的硬件特性和优化，开发者可以根据目标GPU的计算能力来优化其CUDA代码，以实现最佳性能。CUDA Toolkit通常会提供相应计算能力版本的编译器，确保开发者可以充分利用目标GPU的硬件特性
+
+`__CUDA_ARCH__`宏提供了在编译时确定GPU架构的能力，从而允许在代码中进行条件编译，以根据不同的GPU架构选择不同的代码路径。这是一种在单一代码库中支持多个CUDA Compute Capabilities的方法
+
+以下是一个简单的示例，演示了如何使用`__CUDA_ARCH__`宏进行条件编译：
+
+```c++
+#include <iostream>
+
+__device__ void exampleFunction() {
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 500)
+    // Code specific to CUDA Compute Capability 5.0 and above
+    printf("Running on a GPU with Compute Capability 5.0 or higher.\n");
+#else
+    // Code for older CUDA Compute Capabilities
+    printf("Running on a GPU with Compute Capability less than 5.0.\n");
+#endif
+}
+
+int main() {
+    exampleFunction();
+    return 0;
+}
+```
+
+在上述示例中，`__CUDA_ARCH__`被用于检查GPU的计算能力，并根据不同的计算能力版本选择不同的代码路径。在这里，代码检查了是否为5.0及以上的计算能力，并执行了相应的代码块
+
+请注意，`__CUDA_ARCH__`宏仅在设备代码（`__device__`函数）中有效，而在主机代码中不可用。这是因为这个宏主要用于在设备代码中执行特定的GPU架构相关的操作
+
+### 通过CMake来设置版本号
+
+## *CUDA编程模型的线程结构*
+
+<img src="CUDA软件架构.png" width="50%">
+
+CUDA的软件架构在逻辑上可以分为thread，block，gird。注意：thread，block，gird的设定是为了方便程序员进行软件设计和组织线程，是CUDA编程上的概念
+
+* kernel在device上执行时实际上是启动很多线程，一个kernel所后动的所有线程称为一个网格 grid。同一个grid上的线程共享相同的全局内存空间。grid是线程结构的第一层
+* Grid又可以分为很多线程块 block，一个线程块里面包含很多线程，这些线程运行在同一个SMP中。块不能太小以至于不能隐藏其调度开销，但是也不能太大，一般是128或256个线程（32的倍数）。block是第二层
+* 一个block里的线程按顺序排成一个一维向量，每32个线程称为一个warp，是CUDA最小的调度单位。warp是第三层
+* 单独的线程是第四层，线程是最小的逻辑单元
+
+### 维度
+
+grid、block和warp的维度对GPU内存调度有着重要影响。不同GPU架构，grid 和 block 的维度限制是不同的
+
+grid 和 block 都是定义为 `dim3` 类型的变量。dim3可以看成是包含三个无符号整数 x, y, z 成员的结构体变量。在定义时缺省值初始化为1
+
+```c++
+struct dim3 {
+    uint3 x = 1;
+    uint3 y = 1;
+    uint3 z = 1;
+} dim3;
+```
+
+grid和block 可以灵活地定义为1-dim、2-dim以及3-dim结构。3-dim就是整个执行空间被划分为一个三维的grid，而每个grid又由多个三维的block组成
+
+定义的grid和block如下所示，kernel 在调用时也必须通过执行配置 `<<<grid, block>>>` 来指定kernel所使用的线程数及结构
+
+```c++
+// 1-dim 的 grid 和 block
+dim3 gridDim(128,);
+dim3 blockDim(256);
+kernel_fun<<< grid, block >>>(prams...);
+// 2-dim 的 grid 和 block
+dim3 gridDim(5, 4);
+dim3 blockDim(4, 3)
+kernel_funs<< grid, block >>>(prams...);
+// 3-dim 的 grid 和 block
+dim3 gridDim(100, 100, 50);
+dim3 blockDim(16, 16, 4)
+kernel_funs<< grid, block >>>(prams...);
+```
+
+### 各维度的排列顺序
+
+一个线程需要两个内置的坐标变量 `(blockldx, threadldx)` 来唯一标识，它们都是dim3类型变量
+
+* blockIdx指明线程所在grid中的位置，blockIdx同样包含三个值：`blockIdx.x, blockIdx.y, blockIdx.z`
+* threaIdx指明线程所在block中的位置，threadIdx包含三个值：`threadIdx.x, threadIdx.y, threadIdx.z`
+
+
+在内存中各个维度的排列是有顺序的：`X -> Y -> Z`
+
+```c
+lim3 grid(3, 2);
+dim3 block(5, 3);
+// block: (0, 0) -> (1, 0) -> (2, 0) -> (0, 1) -> (1, 1) -> (2, 1)
+// thread: (0, 0) -> (1, 0) -> (2, 0) -> (3, 0) -> (4, 0) -> (0, 1) -> (1, 1) -> (2, 1) -> (3, 1) -> (4, 1) -> (0, 2) -> (1, 2) -> (2, 2) -> (3, 2) -> (4, 2)
+```
+
+处理矩阵的时候可以选择二维grid和block来对齐，而矢量就用一维的grid和block来对齐
+
+### 拉平线程
+
+cuda的三级分块依次是grid，block，thread，当前层级的大小是上一层级的dimension。所以获取thread的总数用 `blockDim.x`
+
+## *Warp分组 & 边角料问题*
+
+### Block的大小
+
+Block的大小设置和硬件有关系，实际中的线程调度笔者到现在还没有完全弄清楚，可以看一下 *计算机体系结构.md* - GPU/加速卡 - Warp-based SIMD & Warp调度
+
+Warp是GPU计算的最小调度单位，Nvidia都是以32个线程为一个warp。所以 **block 的大小通常应该是warp大小的整数倍，以充分利用 warp 的执行特性**
+
+如果不是整数的话，此时warp会有一些闲置的threads，这些threads同一时间不会被调度给其他的warp使用，原因在于一次调度是以一个warp scheduler管理的数量为最小值的，比如说32，不会同时管理两个block的threds。相当于浪费了这些 threads 的计算能力
+
+如果一个block超过一个基本warp size的话，即大于32个线程，那么就要对block进行分组以映射到不同的warp上。基本上 warp 分组的动作是由 SM 自动进行的，会以连续的方式来做分组。比如说如果有一个 block 里有 128 个 thread 的话，就会被分成四组 warp，第 0-31 个 thread 会是 warp 1、32-63 是 warp 2、64-95 是 warp 3、96-127 是 warp 4
+
+注意：**同一个block中的不同warp不会被分配到不同的SMs中执行，而是在同一个SM中以 `Num of SPs per SM / Num of Warp Schedulers` 为一组来流水线进行**
+
+```
+Block 0 / SM 1
+Warp 1        | Warp 2         | Warp 3         | Warp 4 
+Thread 0 ~ 31 | Thread 32 ~ 63 | Thread 64 ~ 95 | Thread 96 ~ 127 |
+```
+
+### 边角料问题
+
+### 优化：网格跨步循环
+
+### 实战建议
+
+配置建议：https://zhuanlan.zhihu.com/p/653918968
+
+* 保证block中thread数目是32的倍数
+* 避免block太小：每个blcok最少128或256个thread，以达成延迟隐藏的能力
+* 根据kernel需要的资源调整block
+* 保证block的数目远大于SM的数目
+* 多做实验来挖掘出最好的配置，可以通过CUDA Toolkit里面的Occupancy_Calculator来进行计算
+
+# CUDA内存管理
+
+## *CUDA程序执行流程*
+
+1. 分配host内存，并进行数据初始化
+2. 分配device内存，并从host将数据拷贝到device上
+3. 调用CUDA的核函数在device上完成指定的运算
+4. 将device上的运算结果拷贝到host上（性能）
+5. 释放device和host上分配的内存
+
+### Remainder： GPU的物理内存结构
+
+## *在GPU上分配内存*
+
+### 在GPU上分配内存：cudaMalloc
+
+GPU 和 CPU 使用不同的内存，两者之间虽然通过PCIe总线来传输数据，但是不能跨越访问
+
+在GPU上申请内存要用专用的cudaMalloc
+
+```c++
+__host__ __device__ cudaError_t cudaMalloc ( void** devPtr, size_t size );
+```
+
+cudaMalloc的返回值已经用来表示错误代码了，所以返回的内存指针只能通过 `&pret` 二级指针
+
+和malloc/free一样，释放 GPU 上申请的内存用对应的cudaFree
+
+### 在CPU和GPU之间拷贝数据：cudaMemcpy
+
+```c++
+__host__ cudaError_t cudaMemcpy ( void* dst, const void* src, size_t count, cudaMemcpyKind kind );
+
+enum cudaMemcpyKind {
+    cudaMemcpyHostToHost = 0,     // Host -> Host
+    cudaMemcpyHostToDevice = 1,   // Host -> Device
+    cudaMemcpyDeviceToHost = 2,   // Device -> Host
+    cudaMemcpyDeviceToDevice = 3, // Device -> Device
+    cudaMemcpyDefault = 4         // Direction of the transfer is inferred from the pointer values.
+        						  // Requires unified virtual addressing  
+};
+```
+
+注意：**cudaMemcpy 会自动进行同步操作**， 即内部默认包含了 `cudaDeviceSynchronize()`
+
+### cudaMemcpy的变种
+
+```c++
+__host__ cudaError_t cudaMemcpy2D ( void* dst, size_t dpitch, const void* src, size_t spitch, 
+                                   size_t width, size_t height, cudaMemcpyKind kind );
+```
+
+按照二维的方式在主机和设备之间传输数据
+
+* dst：目标地址，即数据将要传输到的设备内存地址
+* dpitch：目标内存的行跨度，通常以字节为单位
+* src：源地址，即数据将要从中传输的主机内存地址
+* spitch：源内存的行跨度，通常以字节为单位
+* width：数据的宽度（每行的元素数）
+* height：数据的高度（行数）
+
+```c++
+__host__ cudaError_t cudaMemcpy2DArrayToArray ( cudaArray_t dst, size_t wOffsetDst, size_t hOffsetDst,
+                                               cudaArray_const_t src, size_t wOffsetSrc, 
+                                               size_t hOffsetSrc, size_t width, size_t height,
+                                               cudaMemcpyKind kind = cudaMemcpyDeviceToDevice );
+```
+
+在两个二维数组之间进行数据传输
+
+```c++
+__host__ __device__ cudaError_t cudaMemcpy2DAsync ( void* dst, size_t dpitch, const void* src,
+                                                   size_t spitch, size_t width, size_t height,
+                                                   cudaMemcpyKind kind, cudaStream_t stream = 0 );
+```
+
+异步执行二维数据传输操作
+
+### 统一内存地址技术
+
+<img src="UnifiedMemory.png">
+
+统一内存地址 unified memory 是一种在比较新的显卡上支持的特性，只需把 cudaMalloc 换成 cudaMallocManaged即可，释放时也是通过 cudaFree
+
+```c++
+__host__ cudaError_t cudaMallocManaged ( void** devPtr, size_t size,
+                                        unsigned int  flags = cudaMemAttachGlobal );
+```
+
+flags
+
+* cudaMemAttachGlobal：允许内存在多个设备之间共享，默认是这个选项
+* cudaMemAttachHost：内存只能在主机上访问
+
+这样分配出来的地址，从开发者的角度看不论在不存在CPU和GPU内存的区别，在host和device傻姑娘都可以直接访问。而且拷贝也会自动按需进行（当从 CPU 访问时），无需手动调用 cudaMemcpy，大大方便了开发者，特别是含有指针的一些数据结构
+
+但是统一内存地址也会引入一些开销，所以可以的话还是尽量用分离的设备内存和主机内存
+
+## *优化数据转移*
+
+https://developer.nvidia.com/blog/how-optimize-data-transfers-cuda-cc/
+
+### Guidelines
+
+* 尽量在可能的情况下减少主机和设备之间的数据传输量，即使这意味着在 GPU 上运行的核函数与在主机 CPU 上运行的核函数相比速度提升不大或几乎没有
+* 使用page-locked memory 或者叫做 pinned memory 时，主机和设备之间的带宽更高
+* 将许多小的传输合并为一个较大的传输（Batching）执行性能更好，因为它消除了大部分传输的开销
+* 在主机和设备之间的数据传输中，有时可以用核函数执行和其他数据传输来隐藏
+
+### Pinnend Memory
+
+# CUDA工具
+
+https://developer.nvidia.com/tools-overview
+
+<img src="NsightTools.png">
+
+> NVIDIA Nsight™ tools are a powerful set of libraries, SDKs, and developer tools spanning across desktop and mobile targets that enable developers to build, debug, profile, and develop software that utilizes the latest accelerated computing hardware.
+
+## *调试器*
+
+### 错误分析
+
+CUDA的函数调用出错时，并不会直接终止程序，也不会抛出 C++ 的异常，而是类似于C系统调用的风格，返回一个错误代码，告诉用户具体除了什么错误，这是出于通用性考虑
+
+这个错误代码的类型是 `cudaError_t`，其实就是个 enum 类型，相当于 int
+
+可以通过 `cudaGetErrorName()` 获取该enum的具体
+
+### nvcc-gdb
+
+## *Nsight Systems*
+
+### Event
+
+```c++
+// Creates an event object.
+__host__ cudaError_t cudaEventCreate ( cudaEvent_t* event ); 
+// Creates an event object with the specified flags.
+__host__ __device__ cudaError_t cudaEventCreateWithFlags ( cudaEvent_t* event, unsigned int  flags );
+// Destroys an event object.
+__host__ __device__ cudaError_t cudaEventDestroy ( cudaEvent_t event );
+// Computes the elapsed time between events.
+__host__ cudaError_t cudaEventElapsedTime ( float* ms, cudaEvent_t start, cudaEvent_t end );
+// Queries an event's status.
+__host__ cudaError_t cudaEventQuery ( cudaEvent_t event );
+// Records an event.
+__host__ __device__ cudaError_t cudaEventRecord ( cudaEvent_t event, cudaStream_t stream = 0 );
+// Records an event.
+__host__ cudaError_t cudaEventRecordWithFlags ( cudaEvent_t event, cudaStream_t stream = 0, unsigned int  flags = 0 );
+// Waits for an event to complete.
+__host__ cudaError_t cudaEventSynchronize ( cudaEvent_t event );
+```
+
+用event来分析测量性能需要改动代码，用nvprof可以直接测量。`nvprof` 是 NVIDIA 提供的用于分析和优化 CUDA 程序性能的命令行工具
+
+但是 `nvprof` is not supported on devices with compute capability 8.0 and higher. Use NVIDIA Nsight Systems for GPU tracing and CPU sampling and NVIDIA Nsight Compute for GPU profiling
+
+### 测量数据传输
+
+## *工具库*
+
+### cublas
+
+CuBLAS, CUDA Basic Linear Algebra Subroutines 是NVIDIA提供的一个基于CUDA的线性代数库，用于在GPU上执行各种常见的线性代数运算。它提供了针对NVIDIA GPU优化的高性能BLAS（Basic Linear Algebra Subprograms）实现，其中包括矩阵乘法、矩阵-向量乘法、矩阵操作等
 
 cublas, nvblas, cusolver, cufftw, cusparse, nvgraph
+
+## *Hipify*
+
+### AMD GPU简介
+
+### 架构
+
+* `fiji`: Compile for GCN3 Fiji devices (gfx803)
+* `gfx900`: Compile for GCN5 Vega 10 devices (gfx900)
+* `gfx906`: Compile for GCN5 Vega 20 devices (gfx906)
+* `gfx908`: Compile for CDNA1 Instinct MI100 series devices (gfx908)
+* `gfx90a`: Compile for CDNA2 Instinct MI200 series devices (gfx90a)
 
 # OpenMP用于GPU编程
 
