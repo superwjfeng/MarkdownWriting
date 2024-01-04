@@ -700,6 +700,191 @@ for (int i = 2; i < 9; i++) {
 a[9] = b[9] + 2;
 ```
 
+# SIMD
+
+## *多媒体SIMD扩展*
+
+### 多媒体SIMD扩展起源
+
+SIMD ISA多媒体扩展源于这样一个事实：许多多媒体应用程序操作的数据类型要比对32或64位CPU进行针对性优化的数据类型要更窄一些，使用一个完整的32位或者64位寄存器来存储单元来进行操作实际上浪费了运算能力。**此时通过划分这个加法器中的进位链，CPU可以同时对一些短向量进行操作**
+
+* 图像、视频中大量使用8位（0-255）数据来表示RGB通道和透明度
+* 音频采样则通常采用16位、24位、32位数据来表示
+  * 16位：这是最常见的音频采样位数之一，通常用于CD音质（44.1 kHz，16位，立体声）。它提供了65536个不同的音量级别，可以捕捉大部分听觉范围的细微差异
+  * 24位：24位音频采样通常被认为是高分辨率音频，它提供了更大的动态范围和更高的精度。它用于专业音频录制和音乐制作
+  * 32位浮点：32位浮点音频采样具有非常高的精度，它们使用浮点数格式来表示音频样本，允许超过24位的动态范围和更高的精度。这在音频处理中非常有用，因为它可以避免损失音频质量
+
+### 多媒体SIMD扩展相比于向量结构体系的简化
+
+* **多媒体SIMD扩展固定了操作代码中数据操作数的数目，从而在x86体系结构的MMX、SSE和AVX扩展中添加了数百条指令**。向量体系结构有一个VLR，用于指定当前操作的操作数个数。一些程序的向量长度小于体系结构的最大支持长度，由于这些向量寄存器的长度可以变化，所以也能够很轻松地适应此类程序。此外，向量体系结构有一个隐含的MVL，它与向量长度寄存器相结合，可以避免使用大量操作码
+* **多媒体SIMD扩展没有提供向量体系结构的更复杂寻址模式**，也就是步幅访问和集中一分散访问。这些功能增加了向量编译器成功向量化的程序数目
+* **多媒体SIMD扩展通常不会像向量体系结构那样，为了支持元素的条件执行而提供遮罩寄存器**。这些省略增大了编译器生成 SIMD 代码的难度，也加大了 SIMD 汇编语言编程的难度
+
+这些省略增大了编译器生成SIMD代码的难度，也加大了SIMD汇编语言编程的难度，那么为什么多媒体SIMD扩展还是如此流行呢，因为相比于向量结构体系，多媒体SIMD扩展具有如下优点
+
+### x86-64的多媒体SIMD扩展演进
+
+MMX `->` SSE `->` SSE2 `->` AVX\*
+
+SIMD简介 - 吉良吉影的文章 - 知乎 https://zhuanlan.zhihu.com/p/55327037
+
+SIMD于20世纪70年代首次引用于ILLIAC IV大规模并行计算机上。而大规模应用到消费级计算机则是在20实际90年代末
+
+* 1996年集成在Pentium CPU上的MMX SIMD多媒体指令集
+
+  引入MMX Multi Media eXtensions 的目的旨在提高多媒体和图像处理性能。MMX引入**了8个64位寄存器 MM0 ~ MM7 (stands for MultiMedia register)**，用于存储多媒体数据，以及一组指令，用于执行各种多媒体操作。它最初被广泛应用于多媒体应用程序，如音频编解码和图像处理
+
+  然而MMX没有提供独立的矢量寄存器，它的8个寄存器MM0-MM8实际上就是浮点数寄存器st0-st7用来存放尾数的部分，从而导致MMX指令和浮点数操作不能同时工作
+
+* SSE于1999年集成在Pentium III CPU上发布
+
+  SSE Streaming SIMD Extensions 流式SIMD扩展是对MMX的进一步扩展，引入了**8个128位的XMM寄存器 XMM0 ~ XMM7，后来的X86-64扩展又在原来的基础上添加了8个寄存器 XMM8 ~ XMM15**。同时引入了一组新的指令，支持单精度浮点数运算和更广泛的SIMD操作。SSE提供了更多的并行性和性能，适用于一系列应用，包括3D图形渲染和数字信号处理。SSE的不同版本（如SSE2、SSE3、SSSE4等）在后续的处理器中陆续发布，增加了功能和性能，比如双精度SIMD浮点数据
+
+* AVX于2011年第一季度发布的Sandy Bridge系列处理器中首次支持
+
+  AVX Advanced VEctor Extension 高级向量扩展引入了**16个256位的YMM寄存器 YMM0 ~ YMM15**，并提供了更多的SIMD指令，以支持更大规模的并行计算。AVX广泛用于高性能计算、虚拟化、人工智能等领域，它加速了复杂的浮点数运算任务
+
+* AVX2于2013年发布的Core i7 Haswell CPU中引入
+
+* AVX-512：AVX-512是AVX的进一步扩展，引入了**16个512位的ZMM寄存器 ZMM0 ~ ZMM15** 和广泛的指令集，支持更大规模的数据并行性。使用新的EVEX前缀编码将AVX指令进一步扩展到512位
+
+* AMX, Advanced Matrix Extensions：Designed for AI/ML workloads, 2-dimensional registers, Tiled matrix multiply unit (TMUL)
+
+以笔者这台使用Intel(R) Core(TM) i5-8257U CPU @ 1.40GHz的macOS为例，通过 `sysctl machdep.cpu` 可以看到它支持下面的SIMD指令集
+
+```
+machdep.cpu.features: FPU VME DE PSE TSC MSR PAE MCE CX8 APIC SEP MTRR PGE MCA CMOV PAT PSE36 CLFSH DS ACPI MMX FXSR SSE SSE2 SS HTT TM PBE SSE3 PCLMULQDQ DTES64 MON DSCPL VMX EST TM2 SSSE3 FMA CX16 TPR PDCM SSE4.1 SSE4.2 x2APIC MOVBE POPCNT AES PCID XSAVE OSXSAVE SEGLIM64 TSCTMR AVX1.0 RDRAND F16C
+machdep.cpu.leaf7_features: RDWRFSGS TSC_THREAD_OFFSET SGX BMI1 AVX2 SMEP BMI2 ERMS INVPCID FPU_CSDS MPX RDSEED ADX SMAP CLFSOPT IPT MDCLEAR TSXFA IBRS STIBP L1DF ACAPMSR SSBD
+```
+
+## *SIMD的使用方法*
+
+<img src="SIMD编程方法.drawio.png" width="60%">
+
+### IPP
+
+Intel开发了跨平台函数库 IPP, Intel Integrated Performance Primitives ，里面的函数实现都使用了SIMD指令进行优化。它是一套用于加速图像、信号处理、数据压缩等应用的库。它包含了一系列的高性能函数，用于执行各种基本的数学运算和数据处理任务
+
+还有MKL, Intel Math Kernel Library，数学核心库，用于执行高性能数学和线性代数计算。它包含了对 BLAS（Basic Linear Algebra Subprograms）、FFT（Fast Fourier Transform）、线性代数、随机数生成等的高度优化实现。 MKL 也是为英特尔处理器优化的
+
+### Auto-Vectorization
+
+Auto-vectorization 是一种编译器优化技术，旨在自动将代码转换为使用矢量指令集（如SSE、AVX等）的形式，以便在现代处理器上实现并行执行
+
+### Directive
+
+* OpenMP
+
+  ```c
+  void add_floats(float * a，float * b，float * c，float * d，float * e，int n)
+  {
+      int i;
+  #pragma simd
+      for(i = 0; i < n; i ++) {
+          a [i] = a [i] + b [i] + c [i] + d [i] + e [i];
+      }
+  }
+  ```
+
+* Click Plus
+
+  Cilk Plus 是由 Intel 开发的，并在 icc 编译器中提供支持。Cilk Plus 最初是由 Cilk Arts 公司开发的，而后该公司于 2009 年被 Intel 收购
+
+### intrinsic
+
+intrinsic 指的是一种与硬件体系结构（如CPU指令集）紧密相关的、由编译器或编程语言提供的特殊函数或操作。这些函数或操作允许程序员直接使用底层硬件功能，而无需手动编写特定的汇编代码。Intrinsic 函数通常提供了对硬件指令的抽象，使得程序员能够以更高层次的抽象来使用底层硬件功能
+
+常见的应用场景包括优化程序的性能，利用硬件特性进行并行计算等。这些函数通常由编译器提供，并以一种与编程语言紧密集成的方式使用。不同的编程语言和编译器可能提供不同的 intrinsic 函数，以适应不同的硬件架构
+
+举个例子：SIMD ISA 中 C/C++ 提供 intrinsic，让程序员能够直接使用 SIMD 指令，而不必深入了解底层的汇编语言
+
+```c
+float x = 2.6f;
+float y = 5.6f;
+float z = -3.6f;
+float w = 2.8f;
+// __m128 m = _mm_set_ps{w, z, y, x}; // 注意，函数内部的实现把顺序反了过来
+__m128 m = _mm_setr_ps(x, y, z, w);
+__m128 one = _mm_set1_ps(1.0f); // 广播
+m = _mm_add_ps(m, one);
+```
+
+GCC允许这么写，因为Linux里SSE/AVX是内置指令，而win的MSVC就要用函数来调用
+
+## *SSE/AVX Intrinsics*
+
+https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html
+
+SIMD简介 - 吉良吉影的文章 - 知乎 https://zhuanlan.zhihu.com/p/55327037
+
+### 头文件
+
+SSE/AVX指令主要定义于以下一些头文件中：
+
+* <xmmintrin.h> : SSE, 支持同时对4个32位单精度浮点数的操作
+* <emmintrin.h> : SSE 2, 支持同时对2个64位双精度浮点数的操作
+* <pmmintrin.h> : SSE 3, 支持对SIMD寄存器的水平操作 horizontal operation，如hadd, hsub等
+* <tmmintrin.h> : SSSE 3, 增加了额外的instructions
+* <smmintrin.h> : SSE 4.1, 支持点乘以及更多的整形操作
+* <nmmintrin.h> : SSE 4.2, 增加了额外的instructions
+* <immintrin.h> : AVX, 支持同时操作8个单精度浮点数或4个双精度浮点数。
+
+每一个头文件都是向前兼容的，包含了之前的所有头文件，比方说如果想要使用SSE4.2以及之前SSE3, SSE2, SSE中的所有函数就只需要包含<nmmintrin.h>头文件
+
+### 命名规则
+
+* 数据类型通常以 `__mxxx(T)` 的方式进行命名，其中xxx代表数据的位数，如SSE提供的 `__m128` 为128位，AVX提供的 `__m256` 为256位。T为类型，若为单精度浮点型则省略（即**默认是单精度浮点类型**），若为整形则为i，比如 `__m128i`，若为双精度浮点型则为d，如 `__m256d`
+* 操作浮点数的内置函数命名方式为：`_mm(xxx)_name_PT`
+  * xxx为SIMD寄存器的位数，若为128m则省略，比如`_mm_addsub_ps`，若为 `_256m` 则为256，如`_mm256_add_ps`
+  * name为函数执行的操作的名字，如加法为`_mm_add_ps`，减法为 `_mm_sub_ps`
+  * P代表的是对矢量 packed data vector 还是对标量 scalar 进行操作，如`_mm_add_ss` 是只对最低位的32位浮点数执行加法，而 `_mm_add_ps` 则是对4个32位浮点数执行加法操作
+  * T代表浮点数的类型，若为s则为单精度浮点型，若为d则为双精度浮点，如 `_mm_add_pd` 和 `_mm_add_ps`
+* 操作整形的内置函数命名方式为：`_mm(xxx)_name_epUY`。xxx为SIMD寄存器的位数，若为128位则省略。 name为函数的名字。U为整数的类型，若为无符号类型则为u，否则为i，如 `_mm_adds_epu16` 和 `_mm_adds_epi16`。Y为操作的数据类型的位数，如 `_mm_cvtpd_pi32`。之所以加一个 `e` 是历史遗留问题，是为了和 MMX 的指令做区别
+
+## *Intrinsic类型*
+
+### 存取操作 load/store/set
+
+### 乘法
+
+* `_mm_mul_epi32()` 注意溢出时的问题
+* `_mm_mullo_epi32()`
+* `_mm_mulhi_epi32()`
+
+### 数据类型转换
+
+`_mm_castps_si128()` 是直接按位转换，不会生成任何指令
+
+https://www.toolhelper.cn/Digit/FractionConvert
+
+如果要实现强转的效果应该要用 `_mm_cvtps_si128()`（convert），这是向上取整，向下取整用 `_mm_cvttps_si128()`，多出来的一个t表示truncate
+
+设置round模式 `_MM_SET_ROUNDING_MODE()`，可以选择 `_MM_ROUND_DOWN`、`_MM_ROUND_UP`、`_MM_ROUND_TOWARD_ZERO`，默认的模式是 `_MM_ROUND_NEAREST`（向偶数偏移，减少平均值误差偏移）
+
+### 比较运算
+
+### 逻辑运算
+
+### Swizzle运算
+
+### shuffle
+
+`__m128i _mm_shuffle_epi32(__m128i a, int imm8);` 就是对数据重排，它将四个字段都复制一份同样的值
+
+排列掩码 `imm8` 的四个字节中的每个字节都指定了相应结果向量中的一个元素。每个字节的值范围是0到3，用于选择输入向量中相应位置的元素
+
+`_MM_SHUFFLER` 这个宏也是异常恶心，顺序又是反过来的，建议自己定义一个宏把它的顺序反过来。比如
+
+```c
+#define _MM_SHUFFLER(w, x, y, z) _MM_SHUFFLE(z, y, x, w)
+```
+
+其实里面的index可以是相同的，这时候的效果就是进行复制/广播。其实之前的广播操作里面就是利用了 `_MM_SHUFFLE(0, 0, 0, 0)`
+
+## *SIMD优化*
+
+# TBB
+
 # MPI
 
 Message Passing Interface, MPI 消息传递接口库 顾名思义用于消息传递型的多处理器
@@ -710,19 +895,13 @@ MPI的接口大致可以分为
 * 点对点通信：一组用于两个进程之间进行交互的调用
 * 集体调用：所有的处理器或者某个指定的处理器子集都会参与其中，比如广播调用
 
-# SIMD
-
-## *Intrinsic*
-
-### 什么是intrinsic
-
-intrinsic 指的是一种与硬件体系结构（如CPU指令集）紧密相关的、由编译器或编程语言提供的特殊函数或操作。这些函数或操作允许程序员直接使用底层硬件功能，而无需手动编写特定的汇编代码。Intrinsic 函数通常提供了对硬件指令的抽象，使得程序员能够以更高层次的抽象来使用底层硬件功能
-
-常见的应用场景包括优化程序的性能，利用硬件特性进行并行计算等。这些函数通常由编译器提供，并以一种与编程语言紧密集成的方式使用。不同的编程语言和编译器可能提供不同的 intrinsic 函数，以适应不同的硬件架构
-
-举个例子：SIMD ISA 中 C/C++ 提供 intrinsic，让程序员能够直接使用 SIMD 指令，而不必深入了解底层的汇编语言
-
 # 访存优化
+
+查看系统的Cache大小
+
+```cmd
+$ lscpu -p=cpu,core,socket
+```
 
 ## *Memory-Bound*
 
@@ -781,9 +960,13 @@ struct MyClass {
     float y;
     float z;
 };
+
+MyClass mc[4];
 ```
 
-AOS, Array of Structure
+AOS, Array of Structure 是单个对象的属性紧挨着存
+
+如果每次都只需要访问每个结构体中的一个属性，比如说x属性的话，此时相当于在跳步访问，cache line的利用率很低
 
 ### SOA
 
@@ -793,15 +976,127 @@ struct MyClass {
     float y[4];
     float z[4];
 };
+MyClass mc;
 ```
 
-SOA, Structure of Array
+SOA, Structure of Array 属性分离存储在多个数组中
 
 ### AOSOA
 
+```c++
+struct MyClass {
+    float x[1024]; // 1 page = 4KB
+    float y[1024];
+    float z[1024];
+};
+std::vector<MyClass> mc(n/1024);
+```
+
+AOSOA：让MyClass内部是SOA，而外部仍然是一个 `vector<MyClass>` 的AOS，这样外面可以继续扩展数组
+
+缺点是必须保证AOS数组的长度是1024的整数倍，而且索引的时候要进行两次索引
+
+之所以是1024的整数倍是因为，1024个float是4KB，这是一个page的大小（如下所述，预取一次最多就是一页）
+
+如果内部的SOA太小，比如说内部循环只有16次连续的读取。假设现在只读写x，那么每16次x的读写结束后就会跳跃一段，然后再继续连续的读取。**这会导致CPU预取机制失效**，无法预测下一次要读哪里，等发现跳跃时已经来不及了，从而计算的延迟无法隐藏
+
+### 使用建议
+
+* 若结构体的几个属性几乎总是同时一起被使用的，比如位置矢量pos的xyz分量，可能都是同时读取同时修改的，这时用AOS，减轻预取压力
+* 若结构体的几个属性有时只用到其中几个，不一定同时写入，比如pos和vel，通常的情况都是pos+=vel，也就是pos是读写，vel是只读，那这时候就用SOA比较好，省内存带宽
+* 不过“pos的xyz分量用AOS”这个结论，是单从内存访问效率来看的，需要SIMD矢量化的话可能还是要SOA或AOSOA，比如hwO4那种的。而“pos和vel应该用SOA分开存” 是没问题的
+* 而且SOA在遇到存储不是vector，而是稀疏的哈希网格之类索引有一定开销的数据结构，可能就不适合了
+
+SOA和AOSOA基本在大部分情况都不会很差，但AOS只在一些情况下比较有利，所以尽量还是用AOSOA。可以在高层保持AOS的统一索引，底层又享受SOA带来的矢量化和缓存行预取等好处，只不过就是就是两层的随机索引比较麻烦
+
 ## *预取 & 分页*
 
-## *多维度数组*
+一次预取的量最多就是预取触发预取所在的数据的那一页数据：这是因为出于安全考虑，预取不能跨越页边界，否则可能会触发不必要的 page fault
+
+### 页对齐的增益
+
+<img src="地址对齐对预取的帮助.drawio.png">
+
+如果我们请求分配的内存块没有对齐到4KB的页大小，比如说在一个页的中间，因为上面说的预取不会跨越页边界，那么之后在用到这段分配的内存块的时候，预取会在两页的中间被强行中断，这就要进行两次不连续的预取
+
+所以可以用 `_mm_alloc` 申请起始地址对齐到页边界的一段内存，真正做到每个块内部不出现跨页现象
+
+### _mm_prefetch 手动预取
+
+对于不得不随机访问很小一块的情况，可以通过x86提供的 `_mm_prefetch` intrinsic指令手动预取一个缓存行来弥补硬件预取的实效
+
+```c
+void _mm_prefetch(const void* p, int i);
+```
+
+Fetch the line of data from memory that contains address p to a location in the cache hierarchy specified by the locality hint i, which can be one of:
+
+* _MM_HINT_ET0 // 7, move data using the ET0 hint. The PREFETCHW instruction will be generated
+* _MM_HINT_T0 // 3, move data using the T0 hint. The PREFETCHT0 instruction will be generated
+* _MM_HINT_T1 // 2, move data using the T1 hint. The PREFETCHT1 instruction will be generated
+* _MM_HINT_T2 // 1, move data using the T2 hint. The PREFETCHT2 instruction will be generated
+* _MM_HINT_NTA // 0, move data using the non-temporal access (NTA) hint. The PREFETCHNTA instruction will be generated
+
+```c
+#include <xmmintrin.h>
+
+void prefetchData(const float* data, int index) {
+    _mm_prefetch((const char*)&data[index], _MM_HINT_T0);
+    // 后续的代码
+}
+```
+
+### 汇编指令
+
+* REFETCHT0：将缓存行预取到L1
+* PREFETCHT1：将缓存行预取到L2
+* PREFETCHT2：将缓存行预取到L3
+* PREFETCHNTA：将缓存行预取，但不会让缓存行成为“专有”（non-temporal）
+
+这些指令通常是通过在代码中插入相应的汇编指令或者使用编译器内置函数（例如，`_mm_prefetch`）来实现的
+
+## *直写*
+
+### 写入的粒度太小造成的浪费
+
+## *合并循环*
+
+### Toy Example
+
+```c++
+#pragma omp parallel for
+	for (size_t i = 0; i < n; i++) {
+        a[i] = a[i] * 2;
+    }
+#pragma omp parallel for
+	for (size_t i = 0; i < n; i++) {
+        a[i] = a[i] + 1;
+    }
+```
+
+第一遍循环过了 1GB 的数据，执行到 `a[n-1]` 时， 原本 `a[0]` 处的缓存早已失效，因此第二遍循环开始读取 `a[0]` 时必须重新从主内存读取，然后再次写回主内存
+
+这种代码在主内存看来，CPU做的事情相当于：读+写+ 读+写，每个元素都需要访问四遍内存
+
+这时候应该进行合并循环 loop fusion 的优化，这是利用了时间局域性
+
+```c++
+#pragma omp parallel for
+	for (size_t i = 0; i < n; i++) {
+        a[i] = a[i] * 2;
+        a[i] = a[i] + 1;
+    }
+```
+
+### Jacobi
+
+## *语言层面优化内存分配*
+
+vector经历了3次写入，第一次是构造函数初始化为0。所以其实总时间上还是用malloc快
+
+### 对齐问题
+
+## *多维数组*
 
 ### 二维数组的行主序 & 列主序
 
@@ -811,15 +1106,6 @@ SOA, Structure of Array
 
 * C和C++以及大部分编程语言中都采用行主序，行主序是更为常见的数组存储顺序。行主序的排列方式也称为YX序（越不连续的放在越前面，行方向，即Y方向是不连续的，所以称为YX序）
 * Fortran等一些编程语言中，列主序则它是默认的数组存储顺序。列主列的的排列方式也称为XY序
-
-### 高维数组的扁平化
-
-因为行列仅限于二维数组（矩阵），对高维数组（比如说三维Tensor）可以直接按照他们的 xyz 下标名这样称呼
-
-* **ZYX 序**：`(z * ny + y) * nx + x`
-* XYZ 序：`z + nz * (y + x * ny)`
-
-主流程序都会用 **YX** 序，**ZYX** 序
 
 ### 遍历序
 
@@ -839,8 +1125,9 @@ SOA, Structure of Array
   	}
   }
   // ----------------------- 等价 -----------------------
+  // 3行4列 -> y方向有3个，x方向有4个
   int ny = 3; 
-  int nx = 4; // nx
+  int nx = 4;
   
   double *M = (double*)malloc(nx * my * sizeof (double));
   
@@ -871,13 +1158,65 @@ SOA, Structure of Array
 * 对于 YX 序（行主序，C/C++）的数组，请用 YX 序遍历（x变量做内层循环体）
 * 对于 XY 序（列主序，Fortran）的数组，请用 XY 序遍历（y变量做内层循环体）
 
-## *ndarry*
+### ndarray来高维数组的扁平化
 
-### 访问越界问题
+因为行列仅限于二维数组（矩阵），对高维数组（比如说三维Tensor）可以直接按照他们的 xyz 下标名这样称呼
 
-### 起始地址对齐问题
+* **ZYX 序**：`(z * ny + y) * nx + x`
+* XYZ 序：`z + nz * (y + x * ny)`
 
-## *Stencil与循环分块*
+主流程序都会用 **YX** 序，**ZYX** 序
+
+*彭于斌（@archibate）* 提供了一个ndarray的扁平化高维数组的封装
+
+* 访问越界问题：ndarray的第三个模版参数是用来padding的，做法是向外扩张，即多分配点空间
+* 起始地址对齐问题
+
+## *多核伪共享*
+
+### 现象
+
+<img src="伪共享.drawio.png" width="70%">
+
+伪共享 false sharing 指的是在多线程或者说多核的情况下，当多线程修改看似互相独立的变量时，但实际上这些变量在在物理内存上可能靠的比较近，所以它们共享同一个缓存行
+
+如果一个线程修改了缓存行中的一个变量，其他线程可能需要通过缓存一致性协议将缓存行无效，导致其他线程不得不重复地重新从主内存加载整个缓存行，即使它们访问的变量并未被修改。这种缓存行的无效和重新加载会引起额外的开销，降低程序的性能
+
+### 消除方法
+
+增大元素的间隔使得由不同线程存取的元素位于不同的缓存行上，以空间换时间
+
+## *Memory Coalescing*
+
+https://zhuanlan.zhihu.com/p/300785893?utm_id=0
+
+Memory Coalescing 内存合并的核心思想是：因为在任何给定的时间点上，warp中的线程都执行相同的指令，那么当**warp中的所有线程访问全局内存的位置是连续的**时，将大大提高内存利用率
+
+当warp中的所有线程执行load指令时，硬件会检测它们访问的全局内存位置是否是连续的。如果是的话，硬件会将这些访问合并成一个对连续位置的访问。所有这些访问都会被合并为单个请求。这种合并访问允许DRAMs 以 burst 方式传递数据
+
+内存合并 Memory Coalescing 可以更高效地将数据从GPU的 global memory 移动到 shared memory 和寄存器中
+
+<img src="MemoryCoaleasing.drawio.png" width="80%">
+
+### 网格跨步循环
+
+网格跨步循环 grid-stride loop
+
+# 循环分块
+
+Remainder：C/C++为Row-major，Fortran为Column-major，下面全部假设为Row-major
+
+## *场景*
+
+### 循环分块要解决的问题
+
+<img src="y方向分块.drawio.png">
+
+tile的本质是当总的数据量无法fit in cache的时候，把数据分成一个一个tile，比如说假设上图做一次操作总共需要12行中的值/12个cache line。y轴的一次径向模糊需要用到这12个值，所以要把它们所属的cache lines都加载进caceh。但是我们的L1 cache的容量不够在下一次轮到它们的时候，它们还留在Cache中，甚至在执行本轮y轴径向模糊的时候，头上的cache line就已经被驱逐出去了，因此它们完全无法利用 cache line带来的空间局部性
+
+此时分成tile，让每一个tile的数据fit in the cache。相比于完全无法利用y方向的cache line，分块后可以部分利用y方向的cache line
+
+所以tiling一般从最内层循环开始（tile外层循环的话一个tile就包括整个内层循环，这样的tile太大
 
 ### Stencil
 
@@ -893,15 +1232,108 @@ Stencil kernel 指的就是这个“周围范围”的形状和每个地方读�
 
 这种操作的名称来自于类似于使用模板或薄膜刻刀（stencil）在图案上进行操作的概念。它中文可以翻译为模版计算或者插桩计算，感觉很别扭，所以下面直接说stencil
 
-### 循环分块
+### 场景：y方向的径向模糊
 
-## *矩阵乘法分块*
+上面的例子中的就是y方向的径向模糊，它是一个典型的Stencil应用，需要用y方向的循环分块来加速
+
+注意：如果假设cache size过小很容易被误导，现在问题不是出在cache line上，因为cache line不过是64 Byte，问题是出在一次y方向的径向模糊需要的多个数据无法通过1次cache加载而同时存在于L1 cache中，更不要说连续的y方向的插桩了
+
+循环分块实现的就是降低L1 cache命中所需的数据量。注意：上图中表示的是一次y方向的插桩需要加载入内存的
+
+我们可以对其进行理论分析，计算一下分块和不分块的cache miss数据级。我们假设为
+
+* Cache line 中包含b个数据元素
+* Tile size 为 T，T为b的倍数，否则要考虑边角料带来的问题
+* 矩阵的大小为N，$N\gg T,b$
+
+现在对其分析
+
+* 不分块
+  $$
+  \#Cache\ Miss=N\times N=N^2
+  $$
+
+* y轴分块
+  $$
+  \#Cache\ Miss=\frac{T}{b}\times\frac{N}{T}\times N=\frac{N^2}{b}
+  $$
+  
+
+虽然理论上通过分块，y方向的径向模糊能和x方向的径向模糊一样快，但是总体上y方向的径向模糊肯定是被x方向慢一些的，因为无法像x方向一样完全利用空间局域性带来的预取和一次cache line的完全利用
+
+### 场景：矩阵转置
+
+矩阵转置是一个二层循环
+
+## *分块矩阵乘法*
 
 <img src="TiledMatrixMultiplication.drawio.png">
 
-## *Memory Coalescing*
+### 矩阵乘法的访存规律
 
-网格跨步循环 grid-stride loop
+```c++
+ndarray<2, float> a(n, n);
+ndarray<2, float> b(n, n);
+ndarray<2, float> c(n, n);
+
+for (int j = 0; j < n; j++) {
+    for (int i = 0; i < n; i++) {
+        for (int t = 0; t < n; t++) {
+            a(i, j) += b(i, t) * c(t, j);
+        }
+    }
+}
+```
+
+* `a(i, j)` 始终在一个地址不动
+* `b(i, t)` 每次跳跃 n strides 的访问
+* `c(t, j)` 连续的顺序访问
+
+因为存在不连续的 b 和一直不动的 a，会导致矢量化失败，一次只能处理一个标量， CPU也无法启动指令级并行 ILP
+
+所以相比于上面的循环分块，矩阵乘法除了是一个三层的循环外，还要用到寄存器分块，或者说是 loop interchange
+
+
+
+
+
+如果是矩阵相乘的话，实际上降低了A矩阵的局部性，但是提升了B矩阵的局部性，
+
+## *分块模式*
+
+如何分块和分块的大小决定了获得的增益
+
+### 固定分块技术
+
+### 参数化分块技术
+
+### Morton Code
+
+莫顿码 Morton Code，也称为 Z-顺序（Z-order），是一种空间填充曲线的编码方法。这种编码方法常用于将多维空间的坐标映射到一维编码，从而使得在N维空间中对于彼此接近的坐标具有彼此接近的莫顿码。莫顿码的基本思想是通过将多维坐标的各个位按位交错排列，将多维问题转化为一维问题，以便于在一维的情况下更高效地处理和检索
+
+分形自相似是分形 fractal 的一个特性，描述了分形结构在不同尺度上具有相似性的性质。具体而言，自相似性表示在分形对象的不同部分或尺度上，都可以找到类似整体的形状或结构
+
+<img src="MortenCode.png" width="50%">
+
+莫顿码的生成过程通常是通过将多维坐标的二进制表示中的位逐位交错组合而成。例如，对于二维空间中的坐标 `(x, y)`，其莫顿码可以通过如下的方式生成
+
+1. 将x和y的二进制表示展开为二进制位串
+2. 将x和y的对应位按位交错组合
+
+例如，若 `(x, y) = (5, 3)`。其二进制展开为：
+
+* x = 101（二进制）
+* y = 011（二进制）
+
+将对应位按位交错组合得到莫顿码 = 011011（二进制）
+
+因此，坐标 `(5, 3)` 的莫顿码为011011。这种编码方法的主要优点在于，相邻的坐标在莫顿码中的表示也是相邻的，从而在一维的表示下，相邻的数据在空间中也是相邻的，有助于提高局部性，使得数据访问更加连续，有助于空间数据结构的构建和查询
+
+我们上面的提到的分块都需要做实验的到分块相对较优的大小，而利用莫顿码则可以自适应地最大化利用任意大小的多级缓存
+
+## *块大小*
+
+分块的大小要接近Cache的大小
 
 # GPU编程
 
@@ -1447,7 +1879,32 @@ CuBLAS, CUDA Basic Linear Algebra Subroutines 是NVIDIA提供的一个基于CUDA
 
 cublas, nvblas, cusolver, cufftw, cusparse, nvgraph
 
-## *Hipify*
+# AMD
+
+## *ROCm*
+
+<img src="ROCm.png">
+
+ROCM, Radeon Open Compute 是由 AMD 开发的开源平台，旨在支持 GPU 计算和高性能计算工作负载。ROCM 提供了一套工具、驱动程序和库，使开发者能够更好地利用 AMD GPU 进行通用目的计算，而不仅仅是用于图形渲染
+
+* 部署工具
+  * ROCm Validation Suite, RVS：RVS 是一个测试和验证工具，旨在帮助用户确保他们的 ROCm 环境和应用程序能够正常运行。它包含一系列测试和验证套件，用于检查 ROCm 软件栈的正确性、性能和稳定性
+  * ROCm Data Center Tool：ROCM 提供了用于监视和管理 GPU 集群的工具，以帮助优化性能和资源使用
+  * ROCm System Management Interface, ROCm SMI：ROCm SMI 是一个系统管理接口，允许用户监视和调整 AMD GPU 的各种设置。它提供了命令行工具，使用户能够查看 GPU 的状态、性能和健康状况，以及对某些参数进行调整
+* ROCm Libraries：ROCm 包括一系列针对高性能计算的开源库，如 ROCBLAS（基本线性代数子程序）、ROCFFT（快速傅立叶变换）、MIOpen（深度学习和神经网络库）等
+* 编程模型
+  * HIP, Heterogeneous-Compute Interface for Portability：类似于 CUDA 的通用GPU编程模型
+  * ROCM 支持 OpenCL，这是一种通用目的计算的开放标准，允许开发者使用不同的 GPU 架构进行并行编程
+
+## *HIP*
+
+### Hipify
+
+hipify 是由 AMD 提供的一个工具，用于将 CUDA C/C++ 代码转换为 HIP 代码，从而使之能够在 AMD GPU 上运行
+
+```cmd
+$ hipify-perl <input-file> -o=<output-file>
+```
 
 ### AMD GPU简介
 
@@ -1591,11 +2048,168 @@ Teams construct 只是生成了league of teams
     #pragma omp target exit data map(from : a[0 : datasetSize]) map(delete: b[0:datasetSize], c[0:datasetSize],d[0:datasetSize])
 ```
 
+# 基准测试 & 性能调优工具
 
+## *Google性能评估框架*
 
+google/benchmark
 
+### 安装
 
+````cmd
+$ git clone git@github.com:google/benchmark.git
+````
 
+### 使用
 
+```c++
+#include <vector>
+#include <cmath>
+#include <benchmark/benchmark.h>
 
+constexpr size_t n = 1<<27;
+std::vector<float> a(n);
+
+void BM_for(benchmark::State &bm) {
+    for (auto _: bm) {
+        // fill a with sin(i)
+        for (size_t i = 0; i < a.size(); i++) {
+            a[i] = std::sin(i);
+        }
+    }
+}
+
+BENCHMARK(BM_for);
+
+void BM_reduce(benchmark::State &bm) {
+    for (auto _: bm) {
+        // calculate sum of a 
+        for (size_t i = 0; i < a.size(); i++) {
+            res += a[i];
+        }
+        benchmark::DoNotOptimize(res);
+    }
+}
+
+BENCHMARK(BM_reduce);
+
+BENCHMARK_MAIN();
+```
+
+使用起来很方便，只需将需要测试的代码放在 `for (auto _: bm)` 里面即可。它会自动决定要重复多少次， 保证结果是准确的，同时不浪费太多时间
+
+BENCHMARK_MAIN 会自动生成了一个 main 函数， 从而生成一个可执行文件供你运行。运行后会得到测试的结果打印在终端上
+
+google/benchmark 还提供了一些 helper 函数/方法，比如说DoNotOptimize，因为BM_reduce中是一个计算任务，如果不使用res的话编译器会把它优化掉，所以要用DoNotOptimize禁止优化。如果不使用google/benchmark的话就得打印一下res来强制使用它
+
+### 编译
+
+使用编译器编译你的测试代码，确保链接 Google Benchmark 库。需要添加 `-lbenchmark` 和 `-lpthread` 等链接选项
+
+```cmd
+$ g++ -o mybenchmark mybenchmark.cpp -lbenchmark -lpthread
+```
+
+### 命令行参数
+
+google/benchmark 提供了一些命令行参数，来更好的控制测试的输出行为
+
+## *perf*
+
+perf是Linux操作系统中内置的性能分析工具。它通过使用硬件性能监测器和事件计数器，提供了对程序运行时的诸多性能指标的收集
+和分析能力。Perf工具可以用于测量和分析各种系统层面的性能指标，包括CPU利用率、指令执行次数、缓存命中率、内存访问模式等
+
+<img src="perf_events_map.png" width="80%">
+
+* 综合性能分析：pert提供了广泛的性能分析功能，包括CPU性能分析、内存分析、事件采样、调用图等。
+* 功能强大：通过硬件性能检测器来收集性能数据，可以独立的为每个线程计数，提供更全面的多线程性能分析
+* 可扩展性好：perf支持多种分析和报告输出格式，可以根据需要生成文本、图形或其他格式的分析结果。它还可以与其他工具（如gprof2dot）进一步生成多种形式的分析结果
+
+## *gprof*
+
+### intro
+
+gprof是GNU项目中的一个性能分析工具，可用于C和C++程序。它通过在程序中插入计时代码和函数调用跟踪来测量程序执行时间，并生成函数调用图和剖析报告，以帮助确定程序的性能瓶颈
+
+* Pros
+  * 和GNU集成，可以跨平台使用
+  * 配合第三方工具可以实现比较好的可视化效果
+  * 没有perf那么复杂，比较容易使用
+* Cons
+  * 不能像perf一样通过硬件性能检测器收集数据，其精准度有限，对程序执行时间较短或细粒度性能问题的分析方面可能不够准确
+  * 对于多线程和并发程序的性能分析能力有限
+  * 主要针对C/C++程序
+
+### 使用
+
+* 使用-pg参数编译程序
+
+  ```cmd
+  $ g++ -pg main.cpp-o main.exe
+  ```
+
+* 运行程序并正常退出，执行完成后会生成gmon.out文件
+
+  ```cmd
+  $ ./main.exe
+  ```
+
+* 对使用gprof将生成的gmon.out文件转成可读文件
+
+  ```cmd
+  $ gprof main.exe gmon.out > result.txt
+  ```
+
+### 函数调用可视化
+
+可以通过gprof2dot工具将 result.txt 转换成调用关系图。Gprof2dot是一个开源的工具，可以将多种性能分析工具分析结果进行可视化。支持pert、valgrid、gprof、vtune等等
+
+* 安装：需要有python环境和graphviz环境
+
+  ```cmd
+  $ sudo apt-get install python3 graphviz
+  $ pip install gprof2dot
+  ```
+
+* 使用
+
+  ```cmd
+  $ gprof2dot result.txt | dot -Tpng-o output.png
+  ```
+
+## *likwid*
+
+## *火焰图*
+
+火焰图是由 Linux 性能优化大师 Brendan Gregg 发明的，从宏观角度查看时间花在了哪里
+
+* X轴
+  * 由多个方块组成，每个方块表示一个函数
+  * 函数在X轴占据的宽度越宽，表示它被采样到的次数越多，可以简单的粗暴的近似理解为执行时间
+* Y轴
+  * 表示函数调用栈，调用栈越深，火焰就越高
+  * 顶部是 CPU 正在执行的函数，下方都是它的父函数
+
+### 生成火焰图
+
+1. 采集堆栈：perf、SystemTap、sample-bt
+2. 折叠堆栈：stackcollapse.pl
+3. 生成火焰图：flamegraph.pl
+
+## *bpf*
+
+## *SystemTap*
+
+https://blog.csdn.net/han2529386161/article/details/103428728
+
+## *Intel Vtune profiler*
+
+Intel VTune profiler是一款功能强大的性能分析工具，针对Intel处理器和架构进行了优化。它可以提供广泛的性能分析功能，包括CPU
+使用率、内存访问模式、并行性分析等。VTune profiler支持Windows和Linux操作系统
+
+* 性能强大，和pert一样可以通过硬件事件采样，而且可以对多个维度分析线程、内存、cache、ofiload
+* 用户友好：提供使用简便的GUI，使用起来非常方便，也支持命令行
+* 丰富的可视化和报告功能：VTune提供直观的可视化界面和丰富的报告功能，使得性能数据和分析结果易于理解和解释。开发人员可以通过图表、图形化界面和报告来展示和分享性能分析的结果。
+* 跨平台，支持Windows和linux系统
+* 支持本地和远程调试
 

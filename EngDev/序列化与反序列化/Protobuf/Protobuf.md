@@ -353,6 +353,10 @@ public:
 ```
 
 * `bool ParseFromString(const string& data)`: Parse the message from the given serialized binary string (also known as wire format)
+* `bool SerializeToArray(void *data, int size) const;` 将消息序列化到字节数组
+  * `data`: 是一个指向要写入序列化数据的内存块的指针
+  * `size`: 是要写入的最大字节数
+
 * `bool SerializeToString(string* output) const`: Serialize the given message to a binary string
 * `string DebugString()`: Return a string giving the `text_format` representation of the proto (should only be used for debugging)
 

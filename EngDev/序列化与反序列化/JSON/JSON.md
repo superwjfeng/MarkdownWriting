@@ -1,0 +1,1 @@
+Tencent/rapidjson - 单纯的 JSON 库，甚至没依赖 STL

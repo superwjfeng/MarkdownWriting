@@ -612,15 +612,17 @@ Deployment: Process of delivering software from a development environment to a l
 
 ### serverless
 
-# 容器虚拟化实操
+# Docker技术基石
 
-容器虚拟化是操作系统层的虚拟化。通过namespace进行各程序的隔离，通过cgroups进行资源的控制
+<img src="Docker技术底座.drawio.png" width="60%">
 
-## *空间隔离实战*
+容器虚拟化是操作系统层的虚拟化。它通过namespace进行各程序的隔离，通过cgroups进行资源的控制，UnionFS来提供一个可读写的文件系统
 
-### NameSpace
+## *空间隔离*
 
-Linux的Namespace（命名空间）是一种操作系统级别的隔离机制，用于将系统资源抽象成独立的命名空间。每个命名空间提供了一种隔离的环境，使得在一个命名空间中的进程无法感知或影响到其他命名空间中的资源。Linux内核通过使用不同类型的命名空间，实现了对进程、网络、文件系统、用户、进程ID和挂载点等多个系统资源的隔离
+### namespace
+
+Linux的namespace（命名空间）是一种操作系统级别的隔离机制，用于将系统资源抽象成独立的命名空间。每个命名空间提供了一种隔离的环境，使得在一个命名空间中的进程无法感知或影响到其他命名空间中的资源。Linux内核通过使用不同类型的命名空间，实现了对进程、网络、文件系统、用户、进程ID和挂载点等多个系统资源的隔离
 
 Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()` 和 `unshare()` 函数，为了确定隔离的到底是哪项namespace，在使用这些API 时，通常需要指定下面使用一些参数宏。如果要同时隔离多个namespace，和 `open` 一样可以使用 `|` 组合这些参数
 
@@ -652,13 +654,9 @@ Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()`
 
 
 
-
-
-
-
 要先挂载一个文件，否则隔离不彻底，还是能看到其他文件
 
-## *资源控制实战*
+## *资源控制*
 
 ### cgroups
 
@@ -667,7 +665,7 @@ Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()`
 * `pidstat`
 * `stress`
 
-## *LXC容器实战*
+## *LXC容器*
 
 ### 需要用到的命令
 
@@ -680,130 +678,23 @@ Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()`
 * `lxc-stop`：停止容器
 * `lxc-destroy`：删除处于停机状态的容器
 
+## *UnionFS*
+
+UnionFS（Union File System）是一种文件系统层叠技术，允许将多个文件系统（通常是只读的）合并为一个单一的文件系统。这种技术的主要优势是它能够将多个文件系统以一种透明的方式组合在一起，使它们看起来像一个单一的文件系统
+
+在容器技术中，UnionFS被广泛应用，它允许在构建和运行容器时，将多个文件系统层叠在一起，形成一个容器镜像。这样，可以将基础操作系统层（通常是只读的）与容器应用程序的定制层合并在一起，形成一个可读写的文件系统，而不需要复制大部分数据
+
+UnionFS 的一些主要实现包括：
+
+1. **AUFS（Advanced Multi-Layered Unification Filesystem）**：AUFS 是最早流行的UnionFS实现之一。它支持将多个目录挂载到同一个目录，使其内容看起来像是一个目录。但是，AUFS 并没有被 Linux 官方内核接受，因此需要额外的内核模块。
+2. **OverlayFS**：OverlayFS 是 Linux 内核的一部分，从 Linux 3.18 版本开始成为官方支持的UnionFS实现。它能够将多个文件系统层以只读或读写的方式进行合并。OverlayFS 较为简单，并且成为容器技术中 Docker 镜像层的默认选择。
+3. **Overlay2**：Overlay2 是 OverlayFS 的第二个版本，它在 OverlayFS 的基础上进行了改进和优化。Overlay2 通常作为 Docker 默认的存储驱动。
+
+在容器中，UnionFS的使用使得容器可以更加轻量、快速，因为它允许共享相同的文件系统层，避免了不必要的复制。这对于容器的启动时间和磁盘占用都有着显著的影响。
+
 # Docker的使用
 
-## *Docker简介*
-
 Docker是一个开放平台，用于开发、发布和运行应用程序。 Docker允许用户将应用程序与基础架构分离，以便快速交付软件。使用Docker，用户可以以与管理应用程序相同的方式管理基础架构。通过利用Docker的代码快速发布、测试和部署方法，可以显著缩短编写代码和在生产环境中运行代码之间的延迟
-
-### `Docker run` 命令的使用
-
-```shell
-docker run -i -t ubuntu /bin/bash
-```
-
-当键入上面的命令时，发生了下面这些事
-
-1. 如果用户没有本地的ubuntu镜像，Docker会从用户配置的registry中拉取它，就像手动运行 `docker pull ubuntu` 一样
-2. Docker创建一个新的容器，就像手动运行了 `docker container create` 命令一样
-3. Docker为容器分配一个读写文件系统，作为其最终层。这允许正在运行的容器在其本地文件系统中创建或修改文件和目录
-4. Docker创建一个网络接口，将容器连接到默认网络，因为用户没有指定任何网络选项。这包括分配容器的IP地址。默认情况下，容器可以使用主机机器的网络连接连接到外部网络
-5. Docker启动容器并执行 `/bin/bash`。因为容器正在交互式地运行并附加到用户的终端（由于 `-i` 和 `-t` 标志），用户可以使用键盘提供输入，同时将输出记录到其终端
-6. 当用户输入 `exit` 以终止 `/bin/bash` 命令时，容器停止但不被删除。用户可以再次启动它或将其删除
-
-## *Docker的命令*
-
-<img src="docker常用命令.png" width="70%">
-
-### 镜像的命令
-
-* `docker pull` 下载镜像。如果不写tag，就默认下载latest
-* `docker rmi -f 镜像ide` 删除指定的镜像 
-* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
-
-### 容器的命令
-
-有了镜像才可以创建容器
-
-* `docker run [可选参数] image`
-
-  * --name="Name" 容器名字
-
-  * -d 后台方式运行
-
-  * -it 使用交互方式运行，进入容器查看内容。需要指定一个shell，比如 `/bin/bash`
-
-  * -p 指定容器的端口
-
-* `docker ps` 查看目前运行的容器
-
-  * `docker ps -a` 查看运行过的所有容器
-  * `docker ps -a -n=1` 查看最近运行过的1个容器
-  * `docker ps -q` 显示容器编号
-
-* 退出容器
-
-  * exit 直接停止并退出容器
-  * Ctrl+P+Q 容器不停止退出
-
-* 删除容器 
-
-  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
-  * `docker rm -f $(docker ps -aq) ` 删除所有的容器
-
-* 启动和停止容器的操作
-
-  * 启动容器 `docker start 容器id`
-  * 重启容器 `docker restart 容器id`
-  * 停止当前正在运行的容器 `docker sotp 容器id`
-  * 强制停止当前容器 `docker kill 容器id`
-
-### 常用其他命令
-
-* 后台启动容器
-* 日志 `docker logs -f -t --tail NUM` 显示日志条数
-* 查看容器中进程信息 `docker top 容器id`
-* 查看镜像原数据 `docker inspect`
-
-### 进入容器的命令和拷贝命令
-
-* `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
-* `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
-* `docker cp 容器id:容器内路径` 目的主机路径
-
-## *Workflow*
-
-<img src="docker_workflow.png" width="50%">
-
-编写Dockerfile -> build 生成 images -> run 形成 containers -> push 到远程库
-
-### Dockerfile编写
-
-https://docs.docker.com/engine/reference/builder/
-
-https://docs.docker.com/build/building/packaging/#dockerfile
-
-Cheatsheet: https://kapeli.com/cheat_sheets/Dockerfile.docset/Contents/Resources/Documents/index
-
-Docker 可以通过读取 Dockerfile 中的指令自动构建镜像。Dockerfile 是一个文本文件，包含了用户可以在命令行上调用的所有命令，以组装镜像
-
-```dockerfile
-# Comment
-INSTRUCTION arguments
-```
-
-Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令写成大写的。**指令必须要从 `FROM` 开始**
-
-* `FROM <image>`：指定初始镜像
-
-  > An image’s **parent image** is the image designated in the `FROM` directive in the image’s Dockerfile. All subsequent commands are based on this parent image. A Dockerfile with the `FROM scratch` directive uses no parent image, and creates a **base image**.
-
-* `RUN <command>`：在容器内执行指定的指令，并把结果保存下来
-
-* `WORKDIR <directory>`：对任何后续的RUN、CMD、ENTRYPOINT、ADD或COP指令设置工作目录，该命令可以多次使用
-
-* `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
-
-* `CMD <command>`
-
-  * 用来定义当启动基于某个镜像的容器时的默认程序
-  * 每一个Dockerfile只能有一个CMD
-
-
-
-## *用Java开发*
-
-# Docker原理
 
 ## *Docker架构*
 
@@ -845,28 +736,170 @@ Docker中有镜像、容器、网络、volume、插件等对象
 
   一个容器就是在用户的计算机上运行的与主机机器上所有其他进程隔离的沙盒进程。该隔离利用了 Linux 内核名称空间和 cgroups 的功能，这些功能已经存在于 Linux 中很长时间。Docker 已经努力让这些功能易于使用和管理。总结一下，一个容器：
 
-  * 是一个可运行的映像的实例。您可以使用 DockerAPI 或 CLI 创建、启动、停止、移动或删除容器
+  * 是一个可运行的映像的实例。可以使用 DockerAPI 或 CLI 创建、启动、停止、移动或删除容器
   * 可以在本地机器、虚拟机或云中运行
-  * 可移植（可在任何操作系统上运行。
+  * 可移植（可在任何操作系统上运行）
   * 与其他容器隔离，运行自己的软件、二进制文件和配置
 
-## *Build*
+## *Docker的命令*
+
+<img src="docker常用命令.png" width="70%">
+
+### 镜像的命令
+
+* `docker pull` 下载镜像。如果不写tag，就默认下载latest
+* `docker rmi -f 镜像ide` 删除指定的镜像 
+* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
+
+### 容器的命令
+
+有了镜像才可以创建容器
+
+* `docker run [可选参数] image`
+
+  * --name="Name" 容器名字
+
+  * -d 后台方式运行
+
+  * -it 使用交互方式运行，进入容器查看内容。需要指定一个shell，比如 `/bin/bash`
+
+  * -p 指定容器的端口
+
+* `docker ps` 查看目前运行的容器
+  * `docker ps -a` 查看运行过的所有容器
+  * `docker ps -a -n=1` 查看最近运行过的1个容器
+  * `docker ps -q` 显示容器编号
+  
+* 退出容器
+
+  * exit 直接停止并退出容器
+  * Ctrl+P+Q 容器不停止退出
+
+* 删除容器 
+
+  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
+  * `docker rm -f $(docker ps -aq) ` 删除所有的容器
+
+* 启动和停止容器的操作
+
+  * 启动容器 `docker start 容器id`
+  * 重启容器 `docker restart 容器id`
+  * 停止当前正在运行的容器 `docker sotp 容器id`
+  * 强制停止当前容器 `docker kill 容器id`
+
+### 常用其他命令
+
+* 后台启动容器
+* 日志 `docker logs -f -t --tail NUM` 显示日志条数
+* 查看容器中进程信息 `docker top 容器id`
+* 查看镜像原数据 `docker inspect`
+
+### 进入容器的命令和拷贝命令
+
+* `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
+* `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
+* `docker cp 容器id:容器内路径` 目的主机路径
+
+## *Workflow*
+
+<img src="docker_workflow.png" width="50%">
+
+编写Dockerfile `->` build 生成 images `->` run 形成 containers `->` push 到远程库
+
+### Dockerfile编写
+
+https://docs.docker.com/engine/reference/builder/
+
+https://docs.docker.com/build/building/packaging/#dockerfile
+
+Cheatsheet: https://kapeli.com/cheat_sheets/Dockerfile.docset/Contents/Resources/Documents/index
+
+Docker 可以通过读取 Dockerfile 中的指令自动构建镜像。Dockerfile 是一个文本文件，包含了用户可以在命令行上调用的所有命令，以组装镜像
+
+```dockerfile
+# 使用基础镜像
+FROM base_image:tag
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制文件到容器中
+COPY source destination
+
+# 执行命令
+RUN command
+
+# 暴露端口
+EXPOSE port
+
+# 设置环境变量
+ENV key=value
+
+# 容器启动时执行的命令
+CMD ["executable","param1","param2"]
+
+# 定义卷
+VOLUME ["/data"]
+
+# 设置标签
+LABEL key=value
+```
+
+Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令写成大写的。**指令必须要从 `FROM` 开始**
+
+* `FROM <image>`：指定初始镜像
+
+  > An image’s **parent image** is the image designated in the `FROM` directive in the image’s Dockerfile. All subsequent commands are based on this parent image. A Dockerfile with the `FROM scratch` directive uses no parent image, and creates a **base image**.
+
+* `WORKDIR <directory>`：对任何后续的RUN、CMD、ENTRYPOINT、ADD或COP指令设置工作目录，该命令可以多次使用
+
+* `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
+
+* `RUN <command>`：在容器内执行指定的指令，并把结果保存下来
+
+* `EXPOSE`：暴露容器的端口，使得可以从主机访问容器内的服务
+
+* `CMD <command>`
+
+  * 用来定义当启动基于某个镜像的容器时的默认程序
+  * 每一个Dockerfile只能有一个CMD
+  
+* LABEL：以键值对的形式为镜像添加元数据
+
+### Build
 
 
 
 <img src="DockerBuild架构.png" width="60%">
 
-
-
-
-
 instance 实例 一个虚拟机
 
-# Swarm
+### `Docker run` 命令的使用
+
+```shell
+docker run -i -t ubuntu /bin/bash
+```
+
+当键入上面的命令时，发生了下面这些事
+
+1. 如果用户没有本地的ubuntu镜像，Docker会从用户配置的registry中拉取它，就像手动运行 `docker pull ubuntu` 一样
+2. Docker创建一个新的容器，就像手动运行了 `docker container create` 命令一样
+3. Docker为容器分配一个读写文件系统，作为其最终层。这允许正在运行的容器在其本地文件系统中创建或修改文件和目录
+4. Docker创建一个网络接口，将容器连接到默认网络，因为用户没有指定任何网络选项。这包括分配容器的IP地址。默认情况下，容器可以使用主机机器的网络连接连接到外部网络
+5. Docker启动容器并执行 `/bin/bash`。因为容器正在交互式地运行并附加到用户的终端（由于 `-i` 和 `-t` 标志），用户可以使用键盘提供输入，同时将输出记录到其终端
+6. 当用户输入 `exit` 以终止 `/bin/bash` 命令时，容器停止但不被删除。用户可以再次启动它或将其删除
+
+# Docker网络
+
+## *沙盒模型*
+
+<img src="ContainerNetworkModel.jpeg">
 
 # Kubernetes
 
 <https://www.redhat.com/zh/topics/containers/what-is-kubernetes>
+
+## *Swarm*
 
 # 云安全
 

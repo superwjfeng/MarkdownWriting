@@ -114,9 +114,6 @@ Samba 是一个开源的**局域网络协议套件**，允许不同操作系统�
   $ sudo service smbd stop # 关闭Samba服务器
   ```
 
-  
-
-
 
 # gdb调试器
 
@@ -135,7 +132,23 @@ gcc/g++编译出来的二进制程序默认是release模式，**要使用gdb调�
 * 两种加载调试文件的方式
   * 直接 `gdb file_name` 来加载调试文件
   * 如果是先打开了gdb，可以通过 `file file_name` 来加载调试文件 
-* 退出GDB：当完成调试时，可以使用 `q` 或者 `quit` 命令退出GDB
+  
+* 调试需要参数的程序退出GDB
+
+  * gdb打开程序后，使用 `run` 命令并附带程序需要的参数
+
+    ```
+    run arg1 arg2 arg3
+    ```
+
+  * 使用 `set args` 命令设置参数后再run
+
+    ```
+    set args arg1 arg2 arg3
+    run
+    ```
+
+* 当完成调试时，可以使用 `q` 或者 `quit` 命令退出GDB
 
 ### 附加到进程
 
@@ -279,27 +292,70 @@ Coredump文件相当于是程序在眼中错误发生时刻的快照。注意：
 
 ### 前期设置
 
-默认会在程序的当前目录生成coredump文件
-
-1. 设置coredump文件生成的目录：其中 `%e` 表示程序文件名，`%p` 表示进程ID
-
-   ```cmd
-   $ echo /data/coredump/core.%e.%p > /proc/sys/kernel/core_pattern
-   ```
-
-2. 保证当前执行程序的用户对 coredump 目录有写权限且有足够的空间存储来 coredump 文件
-
-3. 生成不受限制的 coredump 文件（默认是0）
+1. 允许生成大小不受限制的 coredump 文件（默认是0，也就是不会生成 coredump 文件）
 
    ```cmd
    $ ulimit -c unlimited
    ```
 
+   如果想要长期生效的话需要写入shell配置文件
+
+   ```cmd
+   $ echo ulimit -c unlimited >> ~/.zshrc
+   ```
+
+   但是不建议这么做，因为每次程序崩溃都产生 core dump 会严重挤压系统资源，因为 core dump 文件通常是比较大的，特别是在公司和生产环境中。所以建议只在真正需要调试程序的时候打开
+
+2. 保证当前执行程序的用户对 coredump 目录有写权限且有足够的空间存储来 coredump 文件
+
+3. 设置coredump文件生成的目录
+
+   ```cmd
+   $ cat /proc/sys/kernel/core_pattern
+   
+   |/usr/share/apport/apport -p%p -s%s -c%c -d%d -P%P -u%u -g%g -- %E
+   ```
+
+   上面是笔者的云服务器 coredump 文件的默认所在地，它的意思是将生成的 coredump 文件通过管道喂给 apport 程序，该工具在 Ubuntu 等一些 Linux 发行版中用于收集应用程序崩溃信息并提供用户反馈
+
+   但是笔者至今没有搞清楚coredump文件默认生成在哪里，所以也没办法通过apport程序来分析它。因此只能重新设置 coredump 文件的生成地址
+
+   ```cmd
+   $ sudo sh -c 'echo /home/wjfeng/core/core.%e.%p > /proc/sys/kernel/core_pattern'
+   ```
+
+   `sh -c '...'`：这部分使用了 `sh`（shell）命令，它允许我们以单个命令的方式运行一系列命令。`-c` 选项表示后面跟着一个命令字符串。
+
+   <img src="coredump文件说明符.png">
+
+一些注意事项
+
+* 不要使用下面的重定向，会出现权限不够的问题
+
+  ```cmd
+  $ echo /home/wjfeng/core/core.%e.%p > /proc/sys/kernel/core_pattern
+  zsh: permission denied: /proc/sys/kernel/core_pattern
+  ```
+
+  这个问题是因为 `sudo` 只应用于 `echo` 命令，而不是对重定向 `>` 的权限。因此，`echo /data/coredump/core.%e.%p` 是以超级用户权限执行的，但重定向到 `/proc/sys/kernel/core_pattern` 的部分仍然是以当前用户权限执行的
+
+* TODO：如果将 coredump 重定向到系统文件夹中不会产生coredump文件，笔者还没有搞懂为什么，可能是因为权限问题
+
+### 手动触发coredump
+
+```cmd
+$ kill -s SIGSEGV `pidof <my_program>`
+```
+
+SIGSEGV, Segmentation Violation，表示发生了一次段错误
+
 ### 调试
 
 ```cmd
-$ gdb program core_file
+$ gdb <program> <core_file>
 ```
+
+使用 `bt` 或 `backtrace` 打印崩溃时的堆栈信息
 
 ### 直接打印堆栈信息
 
@@ -335,60 +391,15 @@ signal(SIGABRT, handle_segv);  // SIGABRT 6 Core Abort signal from
 $ addr2line -a <堆栈地址> -e <程序名>
 ```
 
-
-
 ## *Win Coredump*
 
-# VS Code中配置开发环境
+# VS Code中配置开发环境（通用语言）
 
-## *CMake*
+## *Console*
 
-### CMake Generator
-
-CMake Generator 是 CMake 工具的一个组件，用于控制如何生成构建系统的文件。简单来说，CMake 是一个跨平台的自动化构建系统，它使用  CMakeLists.txt 定义项目的构建过程。当运行 CMake 时它读取这些文件，并根据指定的生成器生成相应的构建系统文件
-
-生成器决定了 CMake 生成哪种类型的构建文件。比如说若使用的是 Visual Studio，CMake 可以生成 Visual Studio 解决方案和项目文件；若使用的是 Make，它可以生成 Makefile。这意味着可以在一个项目中使用相同的 CMakeLists.txt 文件，并根据需要生成不同的构建系统文件
-
-在Ubuntu中输入 `cmake` 可以看到它支持下面的生成器
-
-```
-  Green Hills MULTI            = Generates Green Hills MULTI files
-                                 (experimental, work-in-progress).
-* Unix Makefiles               = Generates standard UNIX makefiles. 适用于 Unix-like 系统上的 Make 工具
-  Ninja                        = Generates build.ninja files. 一个小型但非常快速的构建系统
-  Ninja Multi-Config           = Generates build-<Config>.ninja files.
-  Watcom WMake                 = Generates Watcom WMake makefiles.
-  CodeBlocks - Ninja           = Generates CodeBlocks project files.
-  CodeBlocks - Unix Makefiles  = Generates CodeBlocks project files.
-  CodeLite - Ninja             = Generates CodeLite project files.
-  CodeLite - Unix Makefiles    = Generates CodeLite project files.
-  Eclipse CDT4 - Ninja         = Generates Eclipse CDT 4.0 project files.
-  Eclipse CDT4 - Unix Makefiles= Generates Eclipse CDT 4.0 project files.
-  Kate - Ninja                 = Generates Kate project files.
-  Kate - Unix Makefiles        = Generates Kate project files.
-  Sublime Text 2 - Ninja       = Generates Sublime Text 2 project files.
-  Sublime Text 2 - Unix Makefiles
-                               = Generates Sublime Text 2 project files.
-```
-
-**在Linux上使用VS Code时默认的生成器是Ninja**
-
-选择哪个生成器通常取决于具体所使用的开发环境和平台。CMake 通过提供这种灵活性，使得开发者可以轻松地在不同的平台和工具之间移植他们的项目
-
-### Ninja
-
-https://ninja-build.org
-
-Ninja是一个专注于速度的小型构建系统，它被设计用来运行与其他构建系统（如CMake）的生成规则。Ninja的主要目标是提高重建的速度，尤其是对于那些大型代码库的小的增量更改。在实践中，Ninja通常不是直接由开发人员手动使用，而是作为更高级别工具（如CMake）的一部分自动调用，以提供更快的构建时间和更高效的增量构建
-
-以下是Ninja的一些关键特点：
-
-* 快速性能：Ninja的核心优势在于它的速度。它通过最小化磁盘操作和重新计算依赖性来实现快速的构建时间。这对于大型项目尤其重要，其中即使很小的更改也可能触发大量的重新编译
-* 简单性：Ninja的设计哲学强调简单性。它的配置文件（Ninja文件）简洁易懂。这种设计使得Ninja作为底层构建系统的理想选择，可以被更复杂的系统（如CMake）作为后端使用
-* 非递归：Ninja使用非递归模型来处理构建规则，这有助于提高性能并减少复杂性
-* 依赖处理：Ninja可以精确地处理依赖关系，以确保在构建过程中只重建必要的部分
-* 跨平台支持：Ninja支持多种操作系统，包括Linux, Windows和macOS，这使得它成为在不同平台上进行项目构建的理想工具
-* 用于大型项目：Ninja特别适合大型项目，如Chrome或Android。这些项目可以从Ninja的快速迭代和构建过程中受益
+* Terminal：是一个实际的命令行终端，可以在其中执行命令，并与命令行界面进行交互。可以在其中运行各种命令，例如编译、运行脚本、Git 操作等
+* Output：用于显示各种工具的输出，例如编译器、调试器、任务运行器等的输出。它是一个记录工具生成信息的地方，而不是用于交互的命令行界面
+* Debug Console：专门用于显示调试器输出的面板
 
 ## *自动化构建任务*
 
@@ -572,6 +583,10 @@ vscode 中的配置是可以移植的，若想让配置更加通用，最好使�
 
 ## *run & debug*
 
+### MI Engine
+
+MI Engine并不是 VS Code 本身支持的功能，而是由 C/C++ 插件提供的。卸载了 C/C++ 插件 之后，MI 引擎就不存在了。C/C++ 插件中的 cppdbg adapater 是使用 MI 引擎的一个客户端
+
 ### `launch.json` 配置
 
 控制如何启动调试会话
@@ -587,7 +602,7 @@ vscode 中的配置是可以移植的，若想让配置更加通用，最好使�
 * request：调试配置的请求类型。目前支持 "launch”和"attach”两种请求类型
 * name：调试配置的名称
 
-### 可选属性
+### configurations中的可选属性
 
 * presentation：使用 presentation 对象中的order、group和hidden 属性，可以对调试配置和組合进行排序、分组和隐藏，以在调试配置下拉菜单和调试快速选择中进行管理
 * preLaunchTask：在调试会话开始之前启动任务。将该属性设置为 tasks,json 文件中指定的任务标签，或者设置为 `${defaultBuildTask}` 来使用默认的构建任务
@@ -600,30 +615,34 @@ vscode 中的配置是可以移植的，若想让配置更加通用，最好使�
 
 ```json
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Launch Program",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/myProgram",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ],
-            "preLaunchTask": "build my project",
-            "miDebuggerPath": "/usr/bin/gdb"
-        }
-    ]
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+        "name": "(gdb) Launch", //配置的名称，将在 Visual Studio Code 的调试视图中显示
+        //"preLaunchTask": "Build",  //在launch之前运行的任务名，这个名字一定要跟tasks.json中的任务名字大小写一致
+        "purpose": ["debug-in-terminal"],
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${fileDirname}/${fileBasenameNoExtension}.exe", //需要运行的是当前打开文件的目录中，名字和当前文件相同，但扩展名为exe的程序
+        "args": ["../conf/shared_bike.ini", "../conf/log.conf"],
+        "stopAtEntry": false, // 选为true则会在打开控制台后停滞，暂时不执行程序
+        "cwd": "${workspaceFolder}", // 当前工作路径：当前文件所在的工作空间
+        "environment": [],
+        "externalConsole": true,  // 是否使用外部控制台，选false的话，我的vscode会出现错误
+        "MIMode": "gdb",
+        "miDebuggerPath": "c:/MinGW/bin/gdb.exe",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    }]
 }
 ```
 
@@ -642,6 +661,8 @@ VS Code 中的设置结构是以 JSON 格式组织的，用于配置编辑器的
 注意：在项目级别的设置文件中，只需包含需要自定义的设置，而不需要将所有设置都复制到项目文件中。只有在设置文件中指定的设置项才会覆盖全局设置
 
 这种组织结构允许你根据不同的层次和需求来配置 VS Code，使其适应不同的工作流和项目
+
+# VS Code开发C/C++
 
 ## *c_cpp_properties.json*
 
@@ -733,6 +754,40 @@ VS Code为C++项目提供了强大的支持
   "version": 4
 }
 ```
+
+## *Build with CMake*
+
+https://github.com/microsoft/vscode-cmake-tools/blob/5c2fd6ed3b990e97e4df10568ba27481a4d9b808/docs/README.md
+
+CMake工具不会用到VS的build和debug系统（即tasks.json和launch.json），实际上VS Code的build和debug系统是通用的，适用于任何语言的build和debug
+
+使用CMake时需要使用CMake工具提供的UI或者F1的命令或者侧边栏（默认快捷键为F7），而不是VS Code提供的构建系统，即通过快捷键，比如说F5来唤起
+
+对于C++工程来说，VS Code提供的这套构建和debug系统并不好用，所以还是推荐直接使用CMake tools 扩展
+
+### debug
+
+* debug without launch.json（推荐）：在安装了相关的CMake扩展后（其依赖于Host的本地CMake），就可以使用CMake的UI工具了。不需要像之前的VS构建系统写麻烦的json文件，在编写完CMakeLists.txt之后直接用UI工具就可以了。快捷键为 ctrl + F5
+
+> Only the debugger from Microsoft's `vscode-ms-vscode.cpptools` extension supports quick-debugging -- doc
+
+* debug with launch.json
+
+### `cmake.debugConfig`
+
+在settings.json中设置
+
+如果要debug需要传命令行参数参数的程序
+
+```json
+"cmake.debugConfig": {
+	"args": []
+}
+```
+
+### tasks.json with CMake
+
+当然如果想要用tasks.json来使用CMake也是可以的
 
 # 远程调试
 

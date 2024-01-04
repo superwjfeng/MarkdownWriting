@@ -27,7 +27,11 @@ Win10专业版需要在计算机管理 - Administrators 属性中添加 `NETWORK
 
 安装完成后将 `MySQL Server 8.0/bin` 加入PATH中
 
-### Linux
+### Ubuntu
+
+```cmd
+$ sudo apt-get install mysql-server
+```
 
 ### MySQL Shell
 
@@ -86,9 +90,40 @@ MySQL Shell是Oracle官方提供的交互式命令行工具，用于与MySQL数�
 ### Linux
 
 * `ps ajx | grep mysqld` 看一下 `mysqld` 有没有在运行
-* 启动服务 `systemctl start mysqld.service`
+* Optional：如果安装之后服务没有启动，可以 `systemctl start mysqld.service` 启动服务
   * 因为安装的时候是用root身份安装的，所以启动服务要用root身份来启动
   * 当然也可以以普通用户身份启动，然后输入root密码
+
+
+关于第一次登陆时root的密码问题，**ubuntu上8.0.35root的默认密码应该是空**
+
+```cmd
+$ sudo cat /etc/mysql/debian.cnf
+# Automatically generated for Debian scripts. DO NOT TOUCH!
+[client]
+host     = localhost
+user     = debian-sys-maint
+password = EhOQXglE2rlmVVDP
+socket   = /var/run/mysqld/mysqld.sock
+[mysql_upgrade]
+host     = localhost
+user     = debian-sys-maint
+password = EhOQXglE2rlmVVDP
+socket   = /var/run/mysqld/mysqld.sock 
+```
+
+在默认情况下，MySQL 在 Debian 系统上使用了一个特殊的用户 `debian-sys-maint` 用于系统维护任务。该用户在 `/etc/mysql/debian.cnf` 文件中有对应的登录凭据，包括用户名 `debian-sys-maint` 和密码 `EhOQXglE2rlmVVDP`
+
+但这个用户通常是为系统维护用途而不是直接用于一般数据库操作的。在 Debian 系统上，如果要使用 `root` 用户登录 MySQL，应该使用 MySQL `root` 用户的凭据，而不是 `debian-sys-maint` 的凭据
+
+修改root密码
+
+```mysql
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'new_password';
+FLUSH PRIVILEGES;
+```
+
+之后的使用
 
 * 连接服务器 `mysql -h 127.0.0.1 -P 3306 -u root -p`
 * 关闭服务器 `systemctl stop mysqld`
@@ -116,6 +151,15 @@ MySQL Shell是Oracle官方提供的交互式命令行工具，用于与MySQL数�
 
 ## *用户 & 权限管理*
 
+### 用户信息
+
+MySQL中的用户都存储在系统数据库mysql的user表中。管理用户也就是管理user表
+
+* host：表示这个用户可以从哪个主机登陆，如果是localhost，表示只能从本机登陆
+* user：用户名
+* authentication_string：用户密码通过password函数加密后的
+* *_priv：用户拥有的权限
+
 查看当前用户
 
 ```mysql
@@ -123,6 +167,8 @@ SELECT CURRENT_USER();
 ```
 
 ### 创建用户 & 赋予权限
+
+可以通过 `INSERT user` 来添加用户，但不建议用这种方式，因为它们是不受管控的。应该用下面的语句
 
 1. 以root身份登陆
 
@@ -135,6 +181,9 @@ SELECT CURRENT_USER();
    ```mysql
    CREATE USER 'new_user'@'localhost' IDENTIFIED BY 'user_password';
    ```
+
+   * 注意：明文密码会自动通过MD5哈希函数加密后放到authentication_string中
+   * 可以用 '%' 来表示允许包括本地的任意地址用户登陆
 
 3. 添加权限
 
@@ -161,6 +210,22 @@ SELECT CURRENT_USER();
    ```mysql
    FLUSH PRIVILEGES;
    ```
+
+### 修改用户密码
+
+在MySQL 5.7版本及以后，推荐使用`ALTER USER`语句来更改密码
+
+* 自己改自己密码
+
+  ```mysql
+  SET password=password('新的密码');
+  ```
+
+* root用户修改指定用户的密码
+
+  ```mysql
+  SET password for 用户名@主机名=password('新的密码');
+  ```
 
 ### 删除用户 & 撤销权限
 
@@ -236,7 +301,7 @@ SELECT CURRENT_USER();
 ### 删除数据库
 
 ```mysql
-drop database [if exists] DatabaseName;
+DROP DATABASE [IF EXISTS] DatabaseName;
 ```
 
 * :warning: **轻易不要删库！！！MySQL删除数据库时也不会确认！！！**
@@ -278,7 +343,7 @@ MySQL的数据类型，除了能满足各种应用场景，其本身就是一种
   * 如果要有填充的效果要配合zerofill使用，否则是没有效果的，只会按默认宽度显示
 
     ```mysql
-    create table my_table(id int(5) zerofill);
+    CREATE TABLE my_table(id int(5) ZEROFILL);
     ```
 
   * **注意：若一个列被指定为zerofill，则MySQL会自动为该列添加unsigned属性**
@@ -294,16 +359,16 @@ MySQL的数据类型，除了能满足各种应用场景，其本身就是一种
   * 如果想要定义为auto_increment，应该定义为 not null，且同时应被定义为 primary key 或 unique
 
     ```mysql
-    create table my_table(id int auto_increment PRIMARY KEY)
-    create table my_table(id int auto_increment UNIQUE)
+    CREATE TABLE my_table(id int AUTO_INCREMENT PRIMARY KEY)
+    CREATE TABLE my_table(id int AUTO_INCREMENT UNIQUE)
     ```
 
   * 在插入的时候如果想要实现自增长的效果，就不能自己指定自增长属性的值，为了正确解析，要给出指定了哪些属性来进行匹配
 
     ```mysql
-    create table my_table(id int auto_increment PRIMARY KEY, name varchar(128))
+    CREATE TABLE my_table(id int AUTO_INCREMENT PRIMARY KEY, name varchar(128))
     
-    insert into my_table (name) values ('wjfeng'); # id 会自增长
+    INSERT INTO my_table (name) VALUES ('wjfeng'); # id 会自增长
     ```
 
 * 如果中间有不连续的自增值，下一次插入自增属性会从当前最大的值+1开始
@@ -440,6 +505,8 @@ float和double大部分应用场景下都没有自己设置精度，默认情况
 | :-----: | :------: | :--------: |
 |  CHAR   |  0-255   | 定长字符串 |
 | VARCHAR | 0-65535  | 变长字符串 |
+
+注意：MySQL对于字符串的处理严重便宜SQL标准，它是 case-insensitive，并且既可以使用 single quote 也可以使用 double quotes
 
 ### char 和 varchar
 
@@ -625,7 +692,7 @@ field3 datatype
 * 用户在创建表时必须拥有创建表的权限
 * 可以使用 `database_name.table_name` 的方式来在特定的数据库中创建表
 
-### 查看表结构
+### 查看表的结构
 
 ```mysql
 create table users (
@@ -638,9 +705,11 @@ create table users (
 
 * `NULL` 代表没有，`` 代表空串
 
-* 查看 comment 内容 `show create tabl e XXX;`
+* 用 `show tables;` 查看数据库中的表
 
-* 用 `desc users;` 查看表结构
+* 查看创建表的语句和 comment 内容 `show create tablename;`
+
+* 用 `desc [tablename];`（describe） 查看表结构
 
   <img src="查看表结构.png">
 
@@ -1326,14 +1395,249 @@ FROM tablename WHERE CONDITION GROUP BY field;
 
 ## *联合查询*
 
-在实际开发中，我们会联合多个表来实现查询，比如把班级表和学生表联合起来就同时可以看到班级、老师和学员的信息
+在实际开发中，我们会联合多个表来实现查询，比如把班级表和学生表联合起来就同时可以看到班级、老师和学员的信息。联合查询分为内连接和外连接查询
+
+以下面的班级表和学生表为例
+
+```mysql
+create database school;
+use school;
+create table class ( `id` int not null auto_increment,
+                    `name` varchar(128) default null,
+                    `teacher` varchar(64) default null,
+                    unique key `id`(`id`) 
+); # 创建班级表 class
+insert into class values(101, 'class 1', 'Jack'), (102, 'class 2', 'Rose'), (103, 'class 3', 'Tom');
+```
+
+```mysql
+create table student ( `id` int not null auto_increment unique,
+                      `name` varchar(64) default null,
+                      `class_id` int default null,
+                      `sex` enum('F', 'M') default null 
+); # 创建学生表 student
+insert into student values(1, 'A', 101, 'M'), (2, 'B', 102, 'M'), (3, 'C', 102, 'F'), (4, 'D', 101, 'F');
+```
 
 ### 内连接查询
 
+只有 2 张表匹配的行才能显示的连接方式在 MySQL 中称之为内连接 INNER JOIN。内连接数据查询通过 `INNER JOIN ON` 语句来实现，其中on是内连接的条件（类似于简单查询中的where）
+
+```mysql
+INNER JOIN tablename [INNER JOIN tablenamen] ON CONDITION
+```
+
+```mysql
+mysql> select b.id AS student_id, b.name, b.class_id, b.sex, a.name AS class_name, a.teacher from class AS a inner join student AS b on a.id=b.class_id;
++------------+------+----------+------+------------+---------+
+| student_id | name | class_id | sex  | class_name | teacher |
++------------+------+----------+------+------------+---------+
+|          1 | A    |      101 | M    | class 1    | Jack    |
+|          2 | B    |      102 | M    | class 2    | Rose    |
+|          3 | C    |      102 | F    | class 2    | Rose    |
+|          4 | D    |      101 | F    | class 1    | Jack    |
++------------+------+----------+------+------------+---------+
+```
+
+* 内连接的顺序是无所谓的，影响的只不过是哪些字段排在前面
+* 用 AS 给属性或表起别名，AS可以省略
+* 等值连接就是 on 后面是一个 `=` 等式，不等值连接就是 on 后面是一个不等式
+
+内连接查询还有一种写法是直接 `select 多张表`，自动会拼接到一张表
+
+### 自连接查询
+
+内连接查询中存在一种特殊的等值连接：自连接。所谓自连接，就是指表与其自身进行连接
+
+假设我们在不知道A君所属班级的情况下（不能用 `select * from student where class_id=101;`），要查A君的同班同学就可以用自连接
+
+```mysql
+mysql> select * from student as s1 inner join student as s2 on s1.name='A' and s1.class_id=s2.class_id;
++----+------+----------+------+----+------+----------+------+
+| id | name | class_id | sex  | id | name | class_id | sex  |
++----+------+----------+------+----+------+----------+------+
+|  1 | A    |      101 | M    |  1 | A    |      101 | M    |
+|  1 | A    |      101 | M    |  4 | D    |      101 | F    |
++----+------+----------+------+----+------+----------+------+
+```
+
 ### 外连接查询
 
-* 左外连接
-* 右外连接
+外连接是内连接的扩展，它不仅返回符合联接条件的行，同时还包括那些在一个表中存在而在另一个表中不存在的行
+
+```mysql
+FROM tablename1 LEFT | RIGHT [OUTER] JOIN tablename2
+```
+
+左外连接以关键字 LEFT JOIN 左边的表为参考表。左外连接的结果包括 `LEFT [OUTER]` 指定的左表的所有行，**而不仅仅是连接列所匹配的行**，如果左表的某行在右表中没有匹配行，则在相关联的结果行中，右表的所有选择列表均为空值
+
+```mysql
+mysql> select * from student as a left join class as b on a.class_id = b.id;
++----+------+----------+------+------+---------+---------+
+| id | name | class_id | sex  | id   | name    | teacher |
++----+------+----------+------+------+---------+---------+
+|  1 | A    |      101 | M    |  101 | class 1 | Jack    |
+|  2 | B    |      102 | M    |  102 | class 2 | Rose    |
+|  3 | C    |      102 | F    |  102 | class 2 | Rose    |
+|  4 | D    |      101 | F    |  101 | class 1 | Jack    |
++----+------+----------+------+------+---------+---------+
+```
+
+```mysql
+mysql> select * from class as a left join student as b on a.id = b.class_id;
++-----+---------+---------+------+------+----------+------+
+| id  | name    | teacher | id   | name | class_id | sex  |
++-----+---------+---------+------+------+----------+------+
+| 101 | class 1 | Jack    |    1 | A    |      101 | M    |
+| 101 | class 1 | Jack    |    4 | D    |      101 | F    |
+| 102 | class 2 | Rose    |    2 | B    |      102 | M    |
+| 102 | class 2 | Rose    |    3 | C    |      102 | F    |
+| 103 | class 3 | Tom     | NULL | NULL |     NULL | NULL |
++-----+---------+---------+------+------+----------+------+
+```
+
+同理右外连接以关键字 RIGHT JOIN 右边的表为参考表，如果右表的某行在左表中没有匹配行，左表将返回空值。内容差不多，这边就不赘述了
+
+### 合并查询结果
+
+通过关键字 UNION 来实现合并操作，即可以通过其将多个 SELECT 语句的查询结果合并在一起，组成新的关系。多个选择语句 select 的**列数相同就可以合并**
+
+```mysql
+SELECT field1, field2, ..., fieldn FROM tablename1
+UNION | UNION ALL
+SELECT field1, field2, ..., fieldn FROM tablename2
+[UNION | UNION ALL] # 继续合并其他的select
+```
+
+union 和 union all 的主要区别是 union all 是把结果集直接合并在一起，而 union 是将 union all 后的结果再执行一次 distinct，去除重复的记录后的结果
+
+```mysql
+mysql> select teacher from class union all select name from student;
++---------+
+| teacher |
++---------+
+| Jack    |
+| Rose    |
+| Tom     |
+| A       |
+| B       |
+| C       |
+| D       |
++---------+
+```
+
+## *嵌套查询*
+
+子查询/嵌套查询是一种嵌套在其他SQL查询语句内部的查询。子查询通常位于主查询的WHERE子句、FROM子句、SELECT子句或HAVING子句中，用于检索满足特定条件的数据
+
+### 带比较运算符的嵌套查询
+
+较运算符包括 `=, !=, >, >=, <, <=` 和 `<>`等。其中 `<>` 与 `!=` 是等价的
+
+比如查询 student 表中A君所在班级班主任的名字
+
+```mysql
+mysql> select teacher from class where id = (select class_id from student where name='A');
++---------+
+| teacher |
++---------+
+| Jack    |
++---------+
+```
+
+* 建议将嵌套查询带上 `()`，让层次关系更清晰
+* **使用比较运算符时，select 子句获得的记录数不能大于 1 条**。如果大于1条会被拒绝查询
+
+### 关键字 IN
+
+使用 IN 和 NOT IN 也能完成嵌套查询，和用比较运算符的差别在于IN不限制只能得到1条记录
+
+```mysql
+mysql> select teacher from class where id = (select class_id from student where name='A');
++---------+
+| teacher |
++---------+
+| Jack    |
++---------+
+```
+
+### 关键字 EXISTS
+
+系统对嵌套查询进行运算以判断它是否返回行
+
+* 若至少返回一行，那么 EXISTS 的结果为 true，此时外层语句将进行查询
+* 若子查询没有返回任何行，那么 EXISTS 返回的结果是 false，此时外层语句将不进行查询
+
+### 关键字 ANY & ALL
+
+使用关键 ANY 时，只要满足内层查询语句返回的结果中的任何一个就可以通过该条件来执行外层查询语句
+
+比如需要查询哪些学生可以获取奖学金，那么首先要有一张奖学金表，从表中查询出各种奖学金要求的最低分，只要一个同学的成绩大于等于不同奖学金最低分的任何一个，这个同学就可以获得奖学金
+
+ANY 通常和比较运算符一起使用。比如 `>ANY(select)` 表示大于任何一个值，`=ANY(select)` 表示等于任何一个值
+
+关键字 ALL 表示满足所有条件。使用关键字 ALL 时，只有满足内层查询语句返回的所有结果才可以执行外层查询语句
+
+# 高级查询
+
+## *视图*
+
+### 视图的作用
+
+视图 View 是一种虚拟的表，它是由一个或多个基本表的行和列的子集组成的。视图是对基本表的抽象，通过视图可以以一种特定的方式呈现数据，而不必实际修改基本表的结构。视图提供了一种安全、简便和灵活的方式来查询和修改数据库中的数据
+
+视图是从一个或多个表中导出的表，是一种虚拟存在的表，也就是说MySQL并不会在物理上分配位置来存储视图。视图就像一个窗口，通过这个窗口可以看到由系统专门提供的数据，这样用户看不到整个数据库表中的数据，而只能看到自己关心的数据。视图相当于是在更细的粒度上修改了权限，可以保障数据库系统的安全性
+
+视图还可以简化复杂表的查询，只要提供了一次原始的查询语句来生成一个视图后，之后都可以在视图上用简单的查询语句来操作了
+
+### 权限
+
+查看是否有创建试图的权限
+
+```mysql
+select user, Select_priv, Create_view_priv from mysql.user;
+```
+
+### 创建视图
+
+根据视图的概念可以发现其数据来源于查询语句，因此创建视图的基本语法
+
+```mysql
+CREATE[OR REPLACE] VIEW viewname[columnlist] AS SELECT statement;
+```
+
+CREATE 表示创建新的视图，REPLACE 表示替换已经创建的视图，viewname 为视图的名称，columnlist 为属性列，SELECT statement 表示 SELECT 语句
+
+也可以在多表上创建视图，只要把 SELECT 子句改为在多表的联合查询语句就可以了
+
+### 修改视图
+
+视图基于的原表结构上被改变后，视图也要做出相应的修改
+
+### 删除视图
+
+## *触发器*
+
+```mysql
+CREATE trigger trigger_name BEFORE | AFTER trigger_EVENT
+ON table_name FOR EACH ROW trigger_STMT
+```
+
+参数 BEFORE 和 AFTER 指定了触发器执行的时机，前者在触发器事件之前执行触发器语句，后者在触发器事件之后执行触发器语句
+
+trigger_EVENT 表示触发事件，即触发器执行条件，包含 DELETE、INSERT 和 UPDATE 语句；FOR EACH ROW 表示任何一条记录上的操作满足触发事件都会触 发该触发器
+
+trigger_STMT 表示激活触发器后被执行的语句。执行语句中如果要引用更新记录中的字段，对于 INSERT 语句，只有 NEW 是合法的，表示当前已插入的记录；对于 DELETE 语句，只有 OLD 才合法，表示当前删除的记录；而 UPDATE 语句可以和 NEW(更新后)以及 OLD(更新前)同时使用
+
+### 多个触发器的结束符问题
+
+MySQL 中，一般情况下用 `;` 符号作为语句的结束符号，可是在创建触发器时，需要用到 `;`  符号作为执行语句的结束符号。为了解决该问题，可以使用关键字 DELIMITER 语句
+
+比如  `DELIMITER $$` 可以将结束符号设置成 `$$` 
+
+在触发器定义完毕后用 `DELIMITER;` 把结束符定义回来
+
+## *查询优化*
 
 # 日志
 
@@ -1872,77 +2176,26 @@ Next-key Lock是一种Record+Gap的组合锁，它锁定一个范围，同时也
 
 ## *死锁*
 
-# 用户管理
-
-## *用户*
-
-### 用户信息
-
-MySQL中的用户都存储在系统数据库mysql的user表中。管理用户也就是管理user表
-
-* host：表示这个用户可以从哪个主机登陆，如果是localhost，表示只能从本机登陆
-* user：用户名
-* authentication_string：用户密码通过password函数加密后的
-* *_priv：用户拥有的权限
-
-### 创建和删除用户
-
-可以通过insert user来添加用户，但不建议用这种方式，因为它们是不受管控的。应该用下面的语句
-
-```mysql
-create user '用户名'@'登陆主机/ip' identified by '密码';
-```
-
-* 注意：明文密码会自动通过MD5哈希函数加密后放到authentication_string中
-* 可以用 '%' 来表示允许包括本地的任意地址用户登陆
-
-登陆：`mysql -u用户名 -h '登陆主机/ip' -p`
-
-删除用户
-
-```mysql
-drop user '用户名'@'主机名';
-```
-
-### 修改用户密码
-
-* 自己改自己密码
-
-  ```mysql
-  set password=password('新的密码');
-  ```
-
-* root用户修改指定用户的密码
-
-  ```mysql
-  set password for '用户名'@'主机名'=password('新的密码')；
-  ```
-
-## *数据库权限*
-
-### 授予权限
-
-```mysql
-grant 权限列表 on 库.对象名 to '用户名'@'登陆位置' [identified by '密码']
-```
-
-* `*.*`：代表本系统中的所有数据库的所有对象（表，视图，存储过程等）
-* `库.*`：表示某个数据库中的所有数据对象(表，视图，存储过程等)
-* identified by可选。 如果用户存在，赋予权限的同时修改密码,如果该用户不存在，就是创建用户
-
-如果发现赋权限后，没有生效，执行指令 `flush privileges;` 冲刷一下
-
-### 回收权限
-
-```mysql
-revoke 权限列表 on 库.对象名 from '用户名'@'登陆位置'；
-```
-
 # MySQL API
 
-## *C*
+## *C/C++*
 
 ### 库
+
+* Windows
+
+* Linux
+
+  ```cmd
+  $ sudo apt-get install libmysqlclient-dev
+  ```
+
+  找出 libmysqlclient.so 装在哪里
+
+  ```cmd
+  $ /sbin/ldconfig -p | grep mysql | cut -d\> -f2
+  ```
+
 
 安装mysql的时候已经把C的MySQL API库装到/lib64/mysql了，因为不是直接在lib目录下，所以编译的时候要指定链接的地址
 
@@ -1951,7 +2204,23 @@ mysqlClient: mysqlClient.cc
 	g++ -o $@ $^ -std=c++11 -L/lib64/mysql -lmysqlclient
 ```
 
-### 初始化和关闭
+### 连接数据库
+
+```c++
+bool connect_db(MYSQL& mysql) {
+    // 1. 初始化数据库句柄
+    mysql_init(&mysql);
+    // 2. 设置字符编码
+    mysql_options(&mysql, MYSQL_SET_CHARSET_NAME, "gbk");
+    // 3. 连接数据库
+    if (mysql_real_connect(&mysql, DB_HOST, DB_USER, DB_USER_PASSWD, 
+                           DB_NAME, DB_PORT, NULL, 0) == NULL) {
+        printf("数据库连接出错， 错误原因: %s\n", mysql_error(&mysql));
+        return false;
+    }
+    return true;
+}
+```
 
 * 初始化
 
@@ -1959,7 +2228,39 @@ mysqlClient: mysqlClient.cc
   MYSQL *mysql_init(MYSQL *mysql);
   ```
 
-  `MYSQL* ` 结构体里封装了一个socket fd
+  `MYSQL* ` 结构体是一个句柄，用于存储与 MySQL 服务器通信的信息和状态，比如里面封装了一个socket fd
+
+* 编码
+
+  ```c++
+  //设置链接的默认字符集是utf8，原始默认是latin1
+  mysql_set_character_set(myfd, "utf8");
+  ```
+
+* 连接到数据库
+
+  ```c++
+  MYSQL *mysql_real_connect(MYSQL *mysql, const char *host,
+                              const char *user,
+                              const char *passwd,
+                              const char *db,
+                              unsigned int port,
+                              const char *unix_socket,
+                              unsigned long clientflag);
+  ```
+
+  * 参数
+    * `MYSQL *mysql`: 是一个指向 MYSQL 结构体的指针，用于存储连接句柄，该结构体包含了与 MySQL 服务器通信所需的信息和状态
+    * `const char *host`: 是 MySQL 服务器的主机名或 IP 地址。可以是本地主机（"localhost" 或 "127.0.0.1"）或远程主机
+    * `const char *user`: 是连接 MySQL 服务器的用户名
+    * `const char *passwd`: 是连接 MySQL 服务器的密码
+    * `const char *db`: 是连接到的数据库名称。连接成功后，该数据库将成为默认数据库
+    * `unsigned int port`: 是 MySQL 服务器的端口号。通常情况下，MySQL 使用默认端口 3306
+    * `const char *unix_socket`: 是 UNIX 套接字文件的路径。通常情况下，这个参数可以设置为 `NULL``
+    * ``unsigned long clientflag`: 是客户端标志，用于指定连接的一些选项，例如启用或禁用SSL，设置连接字符集等。可以通过按位或运算设置多个选项
+  * 函数返回一个指向 MYSQL 结构体的指针，表示连接成功建立。如果连接失败，返回 `NULL`，并且可以通过调用 `mysql_error` 函数获取详细的错误信息。
+
+  `mysql_real_connect()` 会做很多工作，比如说进行网络连接等等
 
 * 关闭
 
@@ -1967,114 +2268,74 @@ mysqlClient: mysqlClient.cc
   mysql_close(MYSQL *);
   ```
 
-### 编码
+### 查询 & 处理返回
 
-```c
-//设置链接的默认字符集是utf8，原始默认是latin1
-mysql_set_character_set(myfd, "utf8");
-```
-
-### 链接
-
-```c
-MYSQL *mysql_real_connect(MYSQL *mysql, const char *host,
-                            const char *user,
-                            const char *passwd,
-                            const char *db,
-                            unsigned int port,
-                            const char *unix_socket,
-                            unsigned long clientflag);
-```
-
-### 处理返回
-
-结果会存储在 `MYSQL_RES` 结构体中
-
-```c
-MYSQL_RES *mysql_store_result(MYSQL *mysql);
-```
-
-
-
-### 综合
-
-```c
-#include <iostream>
-#include <cstdlib>
-#include <string>
-#include <cstdio>
-#include <cstring>
-#include <mysql/mysql.h>
-
-using namespace std;
-
-string host = "127.0.0.1"; //'localhost'
-string user = "whb";
-string passwd = "123456";
-string db = "104_105_db";
-unsigned int port = 8080;
-
-int main() {
-    // cout << "mysql client version: " << mysql_get_client_info() << endl;
-    // 0. 初始化mysql对象
-    MYSQL *msql = mysql_init(nullptr);
-    if (msql == nullptr) {
-        cerr << "mysql_init error" << endl;
-        exit(1);
+```c++
+/************************************************** 
+* 功能：通过用户名和密码从数据库获取用户信息
+* 输入：user - 用户信息结构体
+* 返回值：获取成功返回 true, 失败 false 
+***************************************************/
+bool fetch_user_info(userinfo& user) {
+    MYSQL mysql;
+    MYSQL_RES* res; //查询结果集 
+    MYSQL_ROW row; //记录结构体
+    char sql[256];
+    bool ret = false;
+	// 1. 连接到数据库
+    if (connect_db(mysql) == false) { return false; }
+	// 2. 根据用户名和密码获取用户信息(id, level_id)
+    snprintf(sql, 256, "select id, level_id from users where username='%s' and \
+             password=md5('%s');", user.username.c_str(), user.passwd.c_str());
+    ret = mysql_query(&mysql, sql); //成功返回 0
+    if (ret) {
+        printf("数据库查询出错，%s 错误原因: %s\n", sql, mysql_error(&mysql));
+        mysql_close(&mysql);
+        return false;
     }
-    
-    // 1. 登陆认证
-    if (mysql_real_connect(msql, host.c_str(), user.c_str(), passwd.c_str(), db.c_str(), port, nullptr, 0) == nullptr) {
-        cerr << "mysql_real_connect error" << endl;
-        exit(2);
+    // 3. 获取结果
+    res = mysql_store_result(&mysql);
+    row = mysql_fetch_row(res);
+    if (row == NULL) { //没有查找到记录
+        mysql_free_result(res);
+        mysql_close(&mysql);
+        return false;
     }
-    mysql_set_character_set(msql, "utf8");
-    cout << "mysql_real_connect success" << endl;
-
-    // string sql = "insert into emp values (666, '张飞', 789.987)";
-    // string delSql = "delete from emp where id=666";
-    // string updateSql = "update emp set name='赵云' where id=666";
-    // string selectSql = "select * from emp";
-    char sql[1024];
-    while (true) {
-        printf("mysql> ");
-        fgets(sql, sizeof sql, stdin); //'    select  * from user   ' 
-
-        // 调用成功的时候，返回值是0， 否则就是1
-        int n = mysql_query(msql, sql);
-        if (strcasestr(sql, "select") && n == 0) {
-            cout << "result: " << n << endl;
-            // 对结果进行解析
-            MYSQL_RES *res = mysql_store_result(msql);
-            if (res == nullptr)
-                exit(0);
-            int rows = mysql_num_rows(res);
-            int fields = mysql_num_fields(res);
-
-            MYSQL_FIELD *fname = mysql_fetch_fields(res);
-
-            for (int j = 0; j < fields; j++)
-                cout << fname[j].name << "\t|\t";
-            cout << endl;
-
-            MYSQL_ROW line;
-            for (int i = 0; i < rows; i++) {
-                line = mysql_fetch_row(res); // 按行获取文件的内容，自动会更新行数
-                for (int j = 0; j < fields; j++)
-                    cout << line[j] << "\t|\t";
-                cout << endl;
-            }
-
-            printf("%d rows in set\n", rows);
-        } else {
-            cout << "execl sql : " << sql << " done" << endl;
-        }
-    }
-    // 关闭mysql对象
-    mysql_close(msql);
-    return 0;
+    user.id = atoi(row[0]);
+    user.level_id = atoi(row[1]);
+    printf("userid: %d level_id: %d\n", user.id, user.level_id); //打印 ID
+    // 4. 返回结果
+    //释放结果集
+    mysql_free_result(res);
+    //关闭数据库
+    mysql_close(&mysql);
+    return true;
 }
 ```
+
+* 使用 `mysql_query` 函数发送 SQL 查询语句。SQL语句在C/C++中以字符串的形式的存在
+
+  ```c++
+  int mysql_query(MYSQL *mysql, const char *stmt_str);
+  ```
+
+* 使用 `mysql_store_result` 函数将查询结果存储在客户端，并返回一个指向 MYSQL_RES 结构体的指针
+
+  ```c++
+  MYSQL_RES *mysql_store_result(MYSQL *mysql);
+  ```
+
+  MYSQL_RES 结构体用于存储查询结果集的信息，该结构体包含了查询结果的列信息、行数据等
+
+* 使用 `mysql_fetch_row` 函数遍历查询结果集，获取每一行的数据
+
+  ```c++
+  MYSQL_ROW mysql_fetch_row(MYSQL_RES *result);
+  ```
+
+  MYSQL_ROW 用于表示查询结果集中的一行数据，它是一个字符串数组（row里面保存的都是字符串），每个元素对应一列的数据
+
+* 在使用完查询结果后，使用 `mysql_free_result` 函数释放结果集占用的内存
 
 ## *Java*
 
