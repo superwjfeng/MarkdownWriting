@@ -299,6 +299,8 @@ Greenplum、TiDB、Postgresql XC、HAWQ等，商用的如南大通用的GBase、
 
 ### 云原生 Cloud Native
 
+**云原生一词是指从一开始就设计为驻留在云中的应用程序**。 云原生涉及云技术，例如微服务、容器编排工具和自动扩缩
+
 **云时代解决了服务的打包上线问题，而云原生解决容器上层的管理和编排问题**。在云原生时代发生了两场争夺标准制定权的大战，分别用来争夺容器标准和运行时、编排的标准
 
 **容器编排是指管理和协调容器化应用程序的自动化过程**。它涉及将多个容器组合成一个分布式应用，并负责处理容器的调度、部署、扩展、监控和治理等任务。容器编排旨在简化分布式应用的管理，并提供高可用性、弹性和可靠性
@@ -529,7 +531,7 @@ containerd实现CRI，成为CRI的事实标准
 
 而容器非常轻量化。容器引擎 container engine负责启动及停止容器，作用和VMM比较相似
 
-* 容器是对应用程序及其依赖关系的封装，属于操作系统级的虚拟化
+* 容器是对应用程序及其依赖关系的封装，属于操作系统级的虚拟化。具体地说容器是一种轻量级、可移植的虚拟化技术，用于打包、部署和运行应用程序及其所有依赖。容器技术的核心思想是将应用程序及其运行环境、依赖项等打包到一个独立的单元中，该单元被称为容器
 * 容器解决的问题就是环境依赖造成部署困难的问题，或者说“程序能在我的OS上运行，但是在别人的OS上却运行不了”
 
 容器的一个主要缺点在于所有容器共享主机的内核，所以容器只能运行与主机一样的内核
@@ -620,6 +622,16 @@ Deployment: Process of delivering software from a development environment to a l
 
 ## *空间隔离*
 
+### chroot
+
+```c
+#include <unistd.h>
+int chroot(const char *path);
+			// Returs O on success, or -1 on error
+```
+
+chroot 将进程的根目录改为由 pathname 指定的目录（如果 pathname 是符号链接，还将对其解引用）。自此对所有绝对路径名的解释都将以该文件系统的这一位置作为起点
+
 ### namespace
 
 Linux的namespace（命名空间）是一种操作系统级别的隔离机制，用于将系统资源抽象成独立的命名空间。每个命名空间提供了一种隔离的环境，使得在一个命名空间中的进程无法感知或影响到其他命名空间中的资源。Linux内核通过使用不同类型的命名空间，实现了对进程、网络、文件系统、用户、进程ID和挂载点等多个系统资源的隔离
@@ -660,6 +672,20 @@ Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()`
 
 ### cgroups
 
+
+
+限制CPU的使用率
+
+内存，比如说K8S会因为容器的OOM将其杀死
+
+
+
+sched_autogroup 的原理是把同一个session中的进程放入同一个cgroup中，以cgroup为单位进行进程调度，避免了声明需要很多线程的进程抢占大部分CPU资源
+
+
+
+Docker本质就是一个特殊的进程，里面用 clone 来创建、管理其他的进程，即容器
+
 ### 需要用到的命令
 
 * `pidstat`
@@ -680,17 +706,283 @@ Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()`
 
 ## *UnionFS*
 
-UnionFS（Union File System）是一种文件系统层叠技术，允许将多个文件系统（通常是只读的）合并为一个单一的文件系统。这种技术的主要优势是它能够将多个文件系统以一种透明的方式组合在一起，使它们看起来像一个单一的文件系统
+### UnionFS的实现
+
+UnionFS（Union File System）是一种文件系统层叠技术，**它能够将多个不同的文件系统合并成一个单一的逻辑文件系统**。这种技术通常用于操作系统中，以透明的方式提供一个统一的视图，将多个目录或文件系统挂载到一个目录下，用户在使用时不会感受到有很大的区别
 
 在容器技术中，UnionFS被广泛应用，它允许在构建和运行容器时，将多个文件系统层叠在一起，形成一个容器镜像。这样，可以将基础操作系统层（通常是只读的）与容器应用程序的定制层合并在一起，形成一个可读写的文件系统，而不需要复制大部分数据
 
 UnionFS 的一些主要实现包括：
 
-1. **AUFS（Advanced Multi-Layered Unification Filesystem）**：AUFS 是最早流行的UnionFS实现之一。它支持将多个目录挂载到同一个目录，使其内容看起来像是一个目录。但是，AUFS 并没有被 Linux 官方内核接受，因此需要额外的内核模块。
-2. **OverlayFS**：OverlayFS 是 Linux 内核的一部分，从 Linux 3.18 版本开始成为官方支持的UnionFS实现。它能够将多个文件系统层以只读或读写的方式进行合并。OverlayFS 较为简单，并且成为容器技术中 Docker 镜像层的默认选择。
-3. **Overlay2**：Overlay2 是 OverlayFS 的第二个版本，它在 OverlayFS 的基础上进行了改进和优化。Overlay2 通常作为 Docker 默认的存储驱动。
+* **AUFS（Advanced Multi-Layered Unification Filesystem）**：AUFS 是最早流行的UnionFS实现之一。它支持将多个目录挂载到同一个目录，使其内容看起来像是一个目录。但是 AUFS 并没有被 Linux 官方内核接受，因此需要额外的内核模块
+* **OverlayFS**：OverlayFS 是 Linux 内核的一部分，从 Linux 3.18 版本开始成为官方支持的UnionFS实现。它能够将多个文件系统层以只读或读写的方式进行合并。OverlayFS 较为简单，并且成为容器技术中 Docker 镜像层的默认选择
+* **Overlay2**：Overlay2 是 OverlayFS 的第二个版本，它在 OverlayFS 的基础上进行了改进和优化。Overlay2 通常作为 Docker 默认的存储驱动
 
-在容器中，UnionFS的使用使得容器可以更加轻量、快速，因为它允许共享相同的文件系统层，避免了不必要的复制。这对于容器的启动时间和磁盘占用都有着显著的影响。
+注意：不同Linux发型版用的UnionFS实现是不同的，比如CentOS和Ubuntu用的是Overlay2，Debian用的是AUFS
+
+```cmd
+$ docker info | grep "Storage Driver"
+```
+
+在容器中，UnionFS的使用使得容器可以更加轻量、快速，因为它允许共享相同的文件系统层，避免了不必要的复制。这对于容器的启动时间和磁盘占用都有着显著的影响
+
+### 使用UnionFS的例子
+
+https://juejin.cn/post/7068912318028972040
+
+一个简单的例子是，假设有一个基础的只读文件系统（例如，CD-ROM或网络共享），但也希望有一个可写的文件系统来保存一些个人数据。使用UnionFS可以将这两个文件系统合并，使其看起来像一个单一的文件系统，同时保留只读和可写的特性
+
+overlay实现会将文件路径分为三类:
+
+* lowerdir：lowerdir作为最底层，lowerdir里面的文件是**只读文件**，lowerdir可以由多个路径组成（一个路径表示一层）；
+* upperdir：upperdir在lowerdir之上，upperdir里面的文件可以**读写**
+* merged：merged为lower和upper合并之后暴露给用户的逻辑视图，在merged层的修改内容最终会反馈到upperdir
+
+以下是一个使用OverlayFS（Overlay文件系统）的简单例子，从中可以总结一些规律
+
+1. 准备文件系统：
+
+   ```cmd
+   ❯ tree
+   .
+   ├── ImageBaseLayer
+   │   ├── 1.txt
+   │   └── image.txt
+   ├── ImageLayer
+   │   ├── 1.txt
+   │   └── layer.txt
+   ├── merge
+   ├── upper
+   └── work
+   $ cat ImageBaseLayer/1.txt
+   this is ImageBase text
+   $ cat ImageLayer/1.txt
+   this is Image text
+   ```
+
+2. 使用OverlayFS合并这两个文件系统
+
+   ```cmd
+   $ sudo mount -t overlay overlay -o lowerdir=ImageLayer:ImageBaseLayer,upperdir=upper,workdir=work merge
+   ```
+
+   * `-t overlay`：指定要使用的文件系统类型，这里是 OverlayFS
+   * `overlay`：挂载类型，告诉操作系统要执行 overlay 挂载
+   * `-o lowerdir=base,upperdir=overlay,workdir=overlay/work`：通过 `-o` 选项传递一系列参数：
+     * `lowerdir=base`：指定底层（只读）文件系统的目录
+     * `upperdir=overlay`：指定可写层的目录，该目录中的文件将覆盖底层文件系统中的同名文件
+     * `workdir=overlay/work`：指定OverlayFS内部使用的工作目录，用于存储临时文件和元数据
+   * `merged`: 指定联合文件系统的挂载点，即合并了底层和可写层的文件系统的目录
+
+现在`merged` 目录就是合并后的联合文件系统。可以在这个目录下看到两个文件系统的内容
+
+```cmd
+❯ tree
+.
+├── ImageBaseLayer
+│   ├── 1.txt
+│   └── image.txt
+├── ImageLayer
+│   ├── 1.txt
+│   └── layer.txt
+├── merge
+│   ├── 1.txt
+│   ├── image.txt
+│   └── layer.txt
+├── upper
+└── work
+    └── work
+```
+
+同时因为在moutn的时候顺序是 `ImageLayer:ImageBaseLayer`，所以 `ImageLayer/1.txt` 文件会覆盖 `ImageBaseLayer/1.txt` 因为 OverlayFS 会以上层的内容优先显示
+
+<img src="UnionFS.drawio.png" width="70%">
+
+```cmd
+$ cat merge/1.txt
+this is Image text
+```
+
+如果更改merge的内容，merged层的修改内容最终会反馈到upperdir
+
+```cmd
+$ echo "update in merge folder" > merge/1.txt
+$ echo helloworld > merge/2.txt
+$ tree
+.
+├── ImageBaseLayer
+│   ├── 1.txt
+│   └── image.txt
+├── ImageLayer
+│   ├── 1.txt
+│   └── layer.txt
+├── merge
+│   ├── 1.txt
+│   ├── 2.txt
+│   ├── image.txt
+│   └── layer.txt
+├── upper
+│   ├── 1.txt
+│   └── 2.txt
+└── work
+    └── work
+$ cat upper/1.txt
+update in merge folder
+```
+
+### Docker中使用UnionFS
+
+一个完整的Ubuntu镜像要4-5G，而CentOS更是要10G，但是官方提供的镜像却分别只有300MB和800MB。Docker是通过UnionFS借用Host Kernel来实现的
+
+<img src="Docker镜像的分层结构.png">
+
+典型的Linux文件系统包含两个文件系统，bootfs 和 rootfs
+
+* bootfs包含了kernel和bootloader，bootloader会引导加载Kernel
+* rootfs包含了典型Linux的命令、目录和文件：/dev /bin /etc等
+
+## *Win & Mac的OS级虚拟化*
+
+不同于Linux通过容器技术来原生支持docker；windows既可以通过系统/硬件虚拟层支持Linux容器，也支持Win平台的原生容器；而mac不支持原生容器，需要一层系统/硬件虚拟层来间接支持docker（也就是说本质上还是在Linux上跑，通过Linux的系统调用实现），因此使用方面也有一定的限制
+
+### Win
+
+Win 使用了 Hyper-V 来支持 Linux 容器，这是 Win 上的虚拟化解决方案：在安装 Docker Desktop 后，它会通过 WSL2 启动一个虚拟机（LinuxKit VM），在该虚拟机中运行 Docker 守护进程。这样，Docker 容器就可以在这个虚拟机上运行，而不是直接在 Windows 操作系统上
+
+WSL2（Windows Subsystem for Linux 2）是微软开发的 Windows 子系统，旨在提供在 Windows 操作系统上运行本机 Linux 内核的功能
+
+### Mac
+
+https://breaklimit.me/2017/04/14/mac-osx-vm-1/
+
+使用了 macOS 上的 Hypervisor.framework，该框架提供了虚拟化功能
+
+xhyve出现以后，Docker for Mac也从原来的Oracle virtual box（Boot2Docker镜像）的虚拟机切换到xhyve虚拟机，大大提升了对应性能和用户体验
+
+# Docker的安装
+
+## *Docker组件*
+
+Ubuntu下一般只会安装基础的 Docker Engine，而 WIn/Mac下安装完整的 Docker Desktop
+
+### Docker Engine
+
+Docker Engine 是一个 Client-Server架构，具有以下内容
+
+* 一个带有长期运行的守护进程 dockerd 服务器
+* 指定程序可以使用的API，用于与Docker守护进程进行通信和指令
+* CLI 客户端docker：CLI使用Docker API通过脚本或直接CLI命令来控制或与Docker守护进程交互。许多其他Docker应用程序使用底层API和CLI。守护进程创建和管理Docker对象，如镜像、容器、网络和卷
+
+### Docker Desktop
+
+Docker Desktop 提供了一个 GUI，它有下面这些组件
+
+* Docker Engine
+* Docker Scout 是一个可能需要额外订阅的工具，用于更强大的容器监控和管理功能。它提供了对Docker环境的详细监控和分析，以帮助用户更有效地运行他们的容器化应用
+* Docker Buildx 是一个用于构建多平台镜像的工具。它扩展了Docker CLI的功能，使用户能够在多个平台上构建和推送容器镜像，以满足不同系统架构的需求
+* Docker Extensions 是一组扩展功能，用于增强Docker的能力。这些扩展可能包括额外的工具、插件或功能，使用户能够更灵活地使用和扩展Docker
+* Docker Compose 是一个工具，允许用户使用YAML文件定义和管理多容器的Docker应用。通过定义服务、网络和卷等元素，用户可以轻松地部署和管理复杂的多容器应用
+* Kubernetes
+* Docker Content Trust 是一项安全功能，用于验证Docker镜像的真实性和完整性。它通过数字签名确保镜像在构建和传输过程中没有被篡改
+* Credential Helper是一个用于简化和安全管理Docker凭据的工具。它可以用于存储和检索访问Docker仓库所需的认证信息
+
+## *Ubuntu*
+
+```
+Ubuntu Kinetic 22.10
+Ubuntu Jammy 22.04 (LTS)
+Ubuntu Focal 20.04 (LTS)
+Ubuntu Bionic 18.04 (LTS)
+```
+
+https://docs.docker.com/engine/install/ubuntu/#install-from-a-package
+
+### 安装目录问题
+
+Docker 默认的安装目录为/var/lib/docker，这里面会存放很多很多镜像，所以我们在安装的时候需要考虑这个目录的空间
+
+### 通过包管理工具安装
+
+### 直接通过安装文件安装
+
+### 通过脚本文件安装
+
+Docker提供了一个方便的脚本，位于 https://get.docker.com/，用于在开发环境中以非交互方式安装Docker。虽然不建议在生产环境中使用这个便利脚本，但它对于创建适合用户需求的配置脚本非常有用
+
+注意：在本地运行之前，始终检查从互联网下载的脚本。该利脚本的潜在风险和限制为
+
+* 该脚本需要root或sudo权限来运行
+* 该脚本试图检测Linux发行版和版本，并为用户配置包管理系统
+* 该脚本不允许用户自定义大多数安装参数
+* 该脚本在没有确认的情况下安装依赖项和推荐项。这可能会根据主机机器的当前配置安装大量软件包
+* 默认情况下，该脚本安装Docker、containerd和runc的最新稳定版本。当使用此脚本为机器配置时，这可能导致意外的Docker主要版本升级。始终在测试环境中测试升级，然后再部署到生产系统中
+* 该脚本并非用于升级现有的Docker安装。当使用脚本更新现有安装时，依赖关系可能不会更新到预期版本，导致使用过时的版本
+
+```cmd
+$ curl -fsSL https://get.docker.com -o get-docker.sh
+# $ sudo sh ./get-docker.sh --dry-run # --dry-run option to learn what steps the script will run when invoked
+$ sudo sh ./get-docker.sh
+```
+
+curl 命令的一些选项参数
+
+* `-f`：表示在发生错误时不生成任何输出
+* `-s`：表示“静默模式”（silent mode），不显示进度或错误信息
+* `-S`：在发生错误时仍然显示错误信息。这与`-s`相反
+* `-L` ：告诉 curl 在遇到 HTTP 3xx（重定向）响应时，继续跟随重定向，获取重定向后的内容
+* `-o`：重命名下载的文件
+
+安装 pre-release 版本的 docker engine：使用脚本 https://test.docker.com/
+
+```cmd
+$ curl -fsSL https://test.docker.com -o test-docker.sh
+$ sudo sh test-docker.sh
+```
+
+安装完成后检查是否安装成功
+
+```cmd
+$ sudo service docker start
+$ sudo docker run hello-world
+```
+
+### 安装后的Docker权限问题
+
+Docker daemon绑定到一个Unix socket，而不是一个TCP port。默认情况下Unix套接字的所有权归属于root用户，因此Docker守护进程始终以root用户身份运行，其他用户只能通过sudo访问它
+
+如果不想每次在docker命令之前加上sudo，可以创建一个名为docker的Unix用户组，并将用户添加到其中。当Docker daemon启动时，它会创建一个Unix socket，只有docker组的成员可以访问。在某些Linux发行版上，使用软件包管理器安装Docker Engine时，系统会自动创建这个组。在这种情况下无需手动创建该组
+
+```cmd
+$ sudo groupadd docker # 创建一个名为docker的用户组
+$ sudo usermod -aG docker ${USER} # 将当前用户添加到docker用户组
+$ sudo systemctl restart docker
+$ newgrp docker # 使当前用户无需重新登录，立即切换到docker用户组
+$ docker ps
+```
+
+## *Mac & Win*
+
+### Mac
+
+在 macOS 上，Docker for Mac 通过一个名为 `com.docker.docker` 的用户空间进程运行。Docker for Mac在 macOS 上使用了一种不同的架构，它利用了 macOS 的内核特性（如 HyperKit）来实现容器运行
+
+Docker for Mac 将 Docker 守护进程（dockerd）和相关组件集成到了一个应用程序中，这个应用程序可以在 macOS 上直接运行。所以在 macOS 上通常不会像在 Linux 上那样找到一个名为 `dockerd` 的独立进程
+
+在安装完 Docker Desktop并打开它后可以运行下面的命令来验证是否安装成功
+
+```cmd
+$ docker run hello-world
+```
+
+### Mac的镜像文件问题
+
+Docker Desktop将容器和镜像存储在Mac文件系统中的单个预先分配的大型磁盘映像文件 Docker.raw 中，位置默认是 `/Users/wjfeng/Library/Containers/com.docker.docker/Data/vms/0/data` 中
+
+可以在 Docker Desktop - Settings - Resources 中修改
+
+注意⚠️：缩小 Docker.raw 会导致丢失所有的镜像和容器
+
+### Win
 
 # Docker的使用
 
@@ -726,7 +1018,7 @@ Docker中有镜像、容器、网络、volume、插件等对象
 
 * 镜像 image
 
-  在运行容器时，它使用一个独立的文件系统。这个自定义的文件系统由一个容器镜像提供。由于镜像包含了容器的文件系统，所以它必须包含运行应用程序所需的一切——所有依赖项、配置、脚本、二进制文件等等。镜像还包含了容器的其他配置，如环境变量、默认运行命令和其他元数据
+  在运行容器时，它使用一个独立的文件系统。这个自定义的文件系统由一个容器镜像提供。由于镜像包含了容器的文件系统，所以它必须包含运行应用程序所需的一切——所有依赖项、配置、脚本、二进制文件等等。镜像还包含了容器的其他配置，如环境变量、默认运行命令和其他元数据。**镜像是不可更改的，要修改一个镜像，需要重新构建**
 
   **Docker镜像就好像是一个模版**，可以通过这个模版来创建容器服务，即通过镜像来创建容器服务
 
@@ -741,70 +1033,13 @@ Docker中有镜像、容器、网络、volume、插件等对象
   * 可移植（可在任何操作系统上运行）
   * 与其他容器隔离，运行自己的软件、二进制文件和配置
 
-## *Docker的命令*
-
-<img src="docker常用命令.png" width="70%">
-
-### 镜像的命令
-
-* `docker pull` 下载镜像。如果不写tag，就默认下载latest
-* `docker rmi -f 镜像ide` 删除指定的镜像 
-* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
-
-### 容器的命令
-
-有了镜像才可以创建容器
-
-* `docker run [可选参数] image`
-
-  * --name="Name" 容器名字
-
-  * -d 后台方式运行
-
-  * -it 使用交互方式运行，进入容器查看内容。需要指定一个shell，比如 `/bin/bash`
-
-  * -p 指定容器的端口
-
-* `docker ps` 查看目前运行的容器
-  * `docker ps -a` 查看运行过的所有容器
-  * `docker ps -a -n=1` 查看最近运行过的1个容器
-  * `docker ps -q` 显示容器编号
-  
-* 退出容器
-
-  * exit 直接停止并退出容器
-  * Ctrl+P+Q 容器不停止退出
-
-* 删除容器 
-
-  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
-  * `docker rm -f $(docker ps -aq) ` 删除所有的容器
-
-* 启动和停止容器的操作
-
-  * 启动容器 `docker start 容器id`
-  * 重启容器 `docker restart 容器id`
-  * 停止当前正在运行的容器 `docker sotp 容器id`
-  * 强制停止当前容器 `docker kill 容器id`
-
-### 常用其他命令
-
-* 后台启动容器
-* 日志 `docker logs -f -t --tail NUM` 显示日志条数
-* 查看容器中进程信息 `docker top 容器id`
-* 查看镜像原数据 `docker inspect`
-
-### 进入容器的命令和拷贝命令
-
-* `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
-* `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
-* `docker cp 容器id:容器内路径` 目的主机路径
-
 ## *Workflow*
 
 <img src="docker_workflow.png" width="50%">
 
 编写Dockerfile `->` build 生成 images `->` run 形成 containers `->` push 到远程库
+
+<img src="docker常用命令.png" width="70%">
 
 ### Dockerfile编写
 
@@ -868,19 +1103,81 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
 ### Build
 
+用 `docker build --build` 来查看 `docker build <dockerfile>` 命令的常用选项
 
+* `-t, --tag`：用于为生成的镜像指定名称和标签。例如：`docker build -t myimage:1.0 .`
+* `-f, --file`：指定用于构建镜像的Dockerfile路径。**默认情况下，Docker将在当前目录查找名为`Dockerfile`的文件**。使用此选项可以指定其他文件名或路径。例如：`docker build -f Dockerfile.prod .`
+* `--build-arg`：允许在构建过程中设置构建参数。这对于在构建过程中动态传递参数非常有用。例如：`docker build --build-arg HTTP_PROXY=http://proxy.example.com:80 .`
+* `--no-cache`：禁用构建缓存，强制重新构建整个镜像。例如：`docker build --no-cache .`
+* `--rm`：在构建完成后删除中间容器。默认情况下，Docker会保留用于构建的中间容器，使用此选项可以在构建完成后删除这些容器。例如：`docker build --rm .`
+* `--network`：指定构建时要使用的网络模式。例如：`docker build --network=host .`
+* `--pull`：在构建之前尝试拉取最新的基础镜像。例如：`docker build --pull .`
+* `--quiet, -q`：减少构建输出，仅显示最终镜像的ID。例如：`docker build -q .`
 
-<img src="DockerBuild架构.png" width="60%">
+### 镜像控制
 
-instance 实例 一个虚拟机
+* 查看镜像信息
 
-### `Docker run` 命令的使用
+  * `docker images` 查看镜像信息
+
+    ```cmd
+    $ docker images
+    REPOSITORY                                   TAG    IMAGE ID     CREATED        SIZE
+    gitlab.lrz.de:5005/cdb-23/gr18/ms4/kv-server latest f151d15bf79e 5 months ago   345MB
+    ```
+
+    * REPOSITORY：表示镜像的仓库名称。这通常是镜像的来源或名称空间
+
+    * TAG：镜像的标签，表示该镜像的版本
+
+    * IMAGE ID：镜像的唯一标识符，是一个较短的哈希值
+
+    * CREATED：镜像创建的时间，如果是从远程仓库中拉取的镜像，那么这个时间表示镜像在远程仓库中创建的时间，而不是本地构建的时间
+
+  * `docker history`：显示一个镜像的历史记录，包括各个层的详细信息
+
+  * `docker inspect`：查看详细的镜像信息，包括配置、挂载点等
+
+* `docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]` 给一个镜像打标签
+
+* `docker pull` 下载镜像。如果不写tag，就默认下载latest
+
+* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
+
+* `docker rmi -f 镜像ide` 删除指定的镜像
+
+* `docker save [OPTIONS] IMAGE [IMAGE...]`：将一个或多个镜像保存成一个 tar 归档文件
+
+* `docker load [OPTIONS]`：从一个 tar 归档文件中加载镜像到本地
+
+### `Docker run` 启动容器
+
+注意：`docker container *` 和 `docker *` 是相同的命令，可以互换使用。在较新版本的 Docker 中，为了提高命令行的组织结构，`docker container` 子命令被引入，但为了保持向后兼容性，`docker run` 仍然有效，并且与 `docker container run` 具有相同的功能。下面笔者还是统一使用不带 container 的命令
+
+```cmd
+$ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+```
+
+`docker run` 是容器最重要的命令之一，它的选项为
+
+*  `-d, --detach`：在后台运行容器，即使终端关闭，容器也会继续运行
+*  `-p, --publish`：将容器内部端口映射到主机的端口
+*  `-v, --volume`：挂载主机文件或目录到容器内部，实现数据持久化
+*  `--name`：为容器指定一个名称
+*  `-e, --env`：设置环境变量
+*  `--rm`：容器退出时自动删除容器实例
+*  `--network`：指定容器连接的网络，默认是 bridge
+*  `--link`：连接到另一个容器，已被弃用，建议使用用户定义的网络
+*  `-i -t：以交互模式运行容器，通常与终端一起使用
+*  `--restart`：设置容器的重启策略，默认是无限重启。
+
+我们以下面这个命令来说明一下 `docker run` 的时候都发生了什么
 
 ```shell
 docker run -i -t ubuntu /bin/bash
 ```
 
-当键入上面的命令时，发生了下面这些事
+当输入上面的命令时，发生了下面这些事
 
 1. 如果用户没有本地的ubuntu镜像，Docker会从用户配置的registry中拉取它，就像手动运行 `docker pull ubuntu` 一样
 2. Docker创建一个新的容器，就像手动运行了 `docker container create` 命令一样
@@ -889,11 +1186,166 @@ docker run -i -t ubuntu /bin/bash
 5. Docker启动容器并执行 `/bin/bash`。因为容器正在交互式地运行并附加到用户的终端（由于 `-i` 和 `-t` 标志），用户可以使用键盘提供输入，同时将输出记录到其终端
 6. 当用户输入 `exit` 以终止 `/bin/bash` 命令时，容器停止但不被删除。用户可以再次启动它或将其删除
 
+### 容器的周期控制
+
+* `docker ps` 查看目前运行的容器，`docker ps -a` 查看运行过的所有容器
+  
+  ```cmd
+  $ docker ps -a
+  CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS         PORTS                    NAMES
+  abc123456789   nginx:latest   "nginx -g 'daemon of…"   2 hours ago      Up 2 hours     0.0.0.0:80->80/tcp       web_server
+  def987654321   ubuntu:20.04   "/bin/bash"              3 days ago        Exited (0)     0.0.0.0:8080->8080/tcp   my_container
+  ```
+  
+  * CONTAINER ID：每个容器的唯一标识符。可以使用这个ID来执行其他与容器相关的操作，例如停止、删除等
+  * IMAGE：用于创建容器的镜像名称或ID。镜像是一个包含应用程序和其依赖项的文件系统快照
+  * COMMAND：启动容器时运行的命令。这通常是容器的入口点，决定容器的主要操作
+  * CREATED：容器的创建时间。这是一个相对于当前时间的时间戳，表示容器何时启动
+  * STATUS：容器的当前状态。可能的值包括运行中（`Up`）、已停止（`Exited`）、挂起（`Paused`）等。如果是Exited，括号里的是它的推出码
+  * PORTS：映射到容器内部端口的端口号。这个字段显示了容器内部应用程序的端口和映射到主机的端口
+  * NAMES：容器的名称。Docker容器可以使用名称来引用，而不仅仅是使用容器ID。这使得与容器进行交互更加方便。如果在运行容器时没有显式指定名称，Docker将为容器分配一个随机的、唯一的名称。这个名称通常是以形容词和名词的（毫无意义的）组合，如"admiring_bell"，"furious_beaver"等，以确保其唯一性
+  
+* 退出容器
+
+  * exit 直接停止并退出容器
+  * Ctrl+P+Q 容器不停止退出
+
+* 删除容器 
+
+  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
+  * `docker rm -f $(docker ps -aq) ` 删除所有的容器
+
+* 启动和停止容器的操作
+
+  * 启动容器 `docker start 容器id`
+  * 重启容器 `docker restart 容器id`
+  * 停止当前正在运行的容器 `docker sotp 容器id`
+  * 强制停止当前容器 `docker kill 容器id`
+
+## *其他命令*
+
+### 查看信息
+
+* 日志 `docker logs -f -t --tail NUM` 显示日志条数
+* 查看容器中进程信息 `docker top 容器id`
+* 查看镜像原数据 `docker inspect`
+
+### 进入容器的命令和拷贝命令
+
+* `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
+* `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
+* `docker cp 容器id:容器内路径` 目的主机路径
+
+# Build详解
+
+## *Build Drivers*
+
+<img src="DockerBuild架构.png" width="60%">
+
+## *多阶段构建*
+
+多阶段构建 Multi-stage build 是指在一个Dockerfile中定义多个构建阶段，每个阶段都可以执行一组特定的操作，生成中间产物，然后将这些中间产物传递到下一个阶段。这样可以有效地减小最终Docker镜像的大小，只包含运行时所需的组件，而不包括构建时使用的工具和中间文件
+
+多阶段构建有助于减小Docker镜像的大小，提高安全性，并减少潜在的攻击面。一般情况下，构建阶段可以包含用于编译、测试和生成中间产物的工具，而最终阶段则只包含应用程序和运行时所需的依赖项
+
+以下是一个简单的多阶段构建的例子，使用一个基于Node.js的应用程序：
+
+```dockerfile
+# 构建阶段1：使用Node.js镜像安装依赖和编译应用
+FROM node:14 AS builder
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+RUN npm run build
+
+# 构建阶段2：使用更轻量的Node.js镜像，只包含运行时依赖
+FROM node:14-alpine
+WORKDIR /app
+COPY --from=builder /app/dist /app
+COPY --from=builder /app/node_modules /app/node_modules
+
+# 设置环境变量
+ENV NODE_ENV production
+
+# 暴露应用程序的端口
+EXPOSE 3000
+
+# 启动应用程序
+CMD ["node", "app.js"]
+```
+
+在这个例子中，第一个阶段使用`node:14`基础镜像构建应用程序，安装依赖，编译应用，并生成中间产物。第二个阶段则使用更轻量的`node:14-alpine`基础镜像，并从第一个阶段复制只需的文件，最终构建一个更小的镜像，只包含运行时所需的内容。
+
+## *构建缓存*
+
+### dangling
+
 # Docker网络
+
+Docker 提供了五种不同的网络模式：bridge 桥接模式、host 主机模式、container 容器模式、none 模式、overlay 覆盖模式，用于定义容器如何与主机和其他容器进行网络通信
 
 ## *沙盒模型*
 
 <img src="ContainerNetworkModel.jpeg">
+
+Container Network Model, CNM 是由 Docker 引入的一种网络模型，具体通过由 Docker 团队开发和维护的 Libnetwork 容器网络库来实现
+
+CNM用于定义容器之间以及容器与外部网络之间的连接和通信。CNM 的目标是提供一个通用的、可扩展的网络模型，使得容器能够灵活地连接到各种网络
+
+### CNM 的主要组件
+
+* Sandbox 沙盒：每个容器都有一个关联的网络沙盒，用于包含容器的网络栈，比如端口、套接字、IP 路由表、防火墙、DNS 配置等内容。沙盒是网络隔离的单元，容器内的网络配置和状态被维护在该沙盒中
+* Endpoint 端点：Endpoint 是容器的网络终端，它与一个沙盒相关联，定义了容器如何连接到网络。Endpoint 的主要职责是负责创建连接。Endpoint 类似于常见的网络适配器。每个 Endpoint 有一个唯一的名字，并包含一个或多个网络配置项，如 IP 地址、MAC 地址等
+* Network 网络：Network 是一组连接的 Endpoint 的集合，是 Docker 内部的虚拟子网。它定义了容器之间和容器与外部网络之间的通信规则。网络可以包含多个 Endpoint，这些 Endpoint 可以是同一沙盒内的容器，也可以是不同沙盒的容器
+* Driver 驱动程序：驱动程序是实现网络连接和通信的插件。Docker 提供了一些内置的网络驱动程序，同时也允许用户自定义网络驱动程序。内置的驱动程序（成为原生驱动或本地驱动）包括桥接 bridge、覆盖 overlay、主机 host 等
+
+CNM 的架构允许用户在不同的网络驱动程序之间进行切换，从而实现对网络连接和通信的灵活控制。用户可以根据应用程序的需求选择适当的网络驱动程序，并通过 Docker 命令或 Docker Compose 文件来配置容器的网络
+
+### Libnetwork
+
+* 多种网络驱动程序：Libnetwork 支持多种内置网络驱动程序，包括桥接（bridge）、覆盖（overlay）、主机（host）、Macvlan、ipvlan 等。这使得用户可以根据应用程序的需求选择适当的网络驱动程序
+* 模块化架构：Libnetwork 的架构是模块化的，允许用户自定义和扩展网络驱动程序。用户可以实现自己的网络驱动程序，以满足特定的网络需求
+* 网络服务发现：Libnetwork 支持服务发现机制，通过 DNS 或自定义别名，容器可以通过服务名称而不是 IP 地址进行通信。这提高了容器之间通信的灵活性
+* 内建 SDN, Software-Defined Networking 支持：Libnetwork 提供了一些软件定义网络的功能，例如跨主机的覆盖网络，使容器能够在不同主机上互相通信
+* 插件和扩展：Libnetwork 支持插件和扩展，使得用户能够集成其他网络解决方案和服务，例如第三方 SDN 解决方案
+
+
+
+## *Bridge*
+
+Bridge 模式是默认的网络模式，bridge 驱动会创建一个 Linux 网桥，容器通过该桥接网络连接到宿主机。**最适合需要多个容器之间互相通信的情况**，也适用于容器与宿主机通信
+
+**例子：** `docker run --network bridge my_container`
+
+## *Host*
+
+Host模式下容器共享主机的网络栈，与主机直接共享网络命名空间。适用于两种情况
+
+* 网络性能要求较高的场景，因为容器直接使用主机的网络栈，无需额外的网络地址转换
+* 当网络堆栈不应该与 Docker 主机隔离，但是希望容器的其他资源被隔离时，主机网络是最佳选择
+
+**例子：** `docker run --network host my_container`
+
+## *Container*
+
+Container模式下新创建的容器直接使用另一个已经运行的容器的网络栈，与该容器共享网络命名空间，而不是与Host共享。新创建的容器不会创建自己的网卡，配置自己的 ip，而是和一个指定的容器共享 ip，端口等，两个容器除了网络方面，其他的如文件系统、进程列表等还是隔离的。两个容器的进程可以通过 lo 网卡设备通信
+
+适用于需要让一个容器访问另一个容器的网络栈的情况
+
+**例子：** `docker run --network container:existing_container my_container`
+
+## *None*
+
+None模式下容器拥有自己的Network Namespace，但没有与宿主机或其他容器连接，也就是说并不为 Docker 容器进行任何网络配置，这个 Docker 容器没有网卡、IP、路由等信息
+
+适用于不需要网络访问的场景，可以提高安全性，因为容器没有网络连接
+
+* **例子：** `docker run --network none my_container`
+
+
+
+在运行容器时使用 `--network` 选项来指定网络模式。例如，`docker run --network host my_container` 将容器连接到主机网络
 
 # Kubernetes
 

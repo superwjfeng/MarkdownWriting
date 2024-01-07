@@ -6,7 +6,7 @@ Win中的服务 services 是一种在后台运行的程序或进程，不需要�
 
 ### 注册服务
 
-在cmd或powershell中使用 `sc` 命令
+在cmd或powershell中使用 `sc`（ServiceControl）命令
 
 1. 用`sc`命令注册服务：
 
@@ -125,3 +125,13 @@ https://blog.csdn.net/qq_33915732/article/details/105011892
   * HKEY_CURRENT_CONFIG：包含计算机当前配置的信息
 * 注册表编辑器：Windows提供了注册表编辑器（Registry Editor）工具，允许用户查看、编辑和修改注册表。使用者需要小心操作，因为错误的修改可能会导致系统不稳定或不可用
 * 备份和还原：由于注册表的重要性，系统管理员在进行重要的更改之前通常会备份注册表，以便在需要时能够还原到之前的状态
+
+
+
+
+
+
+
+# 虚拟化
+
+Hyper-V是由Microsoft开发的一种虚拟化技术，它是Windows操作系统中的一项特性，用于创建和管理虚拟机（VMs）。以下是一些关于Hyper-V的基本介绍

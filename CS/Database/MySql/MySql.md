@@ -202,8 +202,10 @@ SELECT CURRENT_USER();
    * 赋予用户对所有数据库的所有权限
 
      ```mysql
-     GRANT ALL PRIVILEGES ON *.* TO 'new_user'@'localhost';
+     GRANT ALL PRIVILEGES ON *.* TO 'new_user'@'localhost' WITH GRANT OPTION;
      ```
+     
+     WITH GRANT OPTION 允许用户将这些权限授予其他用户
 
 4. 刷新权限
 
