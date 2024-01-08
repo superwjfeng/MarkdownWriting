@@ -239,15 +239,15 @@ Greenplum、TiDB、Postgresql XC、HAWQ等，商用的如南大通用的GBase、
 
 ### Jail时代
 
-*  1979年贝尔实验室发明 `chroot` 系统调用
+*  1979年贝尔实验室发明 `chroot()` 系统调用
 
-   `chroot` 系统调用是在1979 年开发第7 版Unix期间引入的。贝尔实验室在Unix V7的开发过程中，发现当一个系统软件编译和安装完成后，整个测试环境的变量就会发生改变，下一次测试需要重新配置环境信息
+   `chroot()` 系统调用是在1979 年开发第7 版Unix期间引入的。贝尔实验室在Unix V7的开发过程中，发现当一个系统软件编译和安装完成后，整个测试环境的变量就会发生改变，下一次测试需要重新配置环境信息
 
   设计者们思考能否隔离出来一个独立的环境，来构建和搭建测试环境，所以发明了chroot，可以把一个进程的文件系统隔离起来
 
-  chroot系统调用可以将进程及其子进程的根目录更改为文件系统中的新位置。隔离以后，该进程无法访问到外面的文件，因此这个被隔离出来的新环境像监狱一样，被命名为Chroot Jail （监狱）。后续测试只需要把测试信息放到Jail中就可以完成测试了
+  chroot 可以将进程及其子进程的根目录更改为文件系统中的新位置。隔离以后，该进程无法访问到外面的文件，因此这个被隔离出来的新环境像监狱一样，被命名为Chroot Jail （监狱）。后续测试只需要把测试信息放到Jail中就可以完成测试了
 
-  Chroot Jail 最初是由美国计算机科学家 Bill Cheswick 在 1982 年提出的概念，作为 Unix 系统中实施安全策略的一种方法。Bill Cheswick 使用 `chroot` 系统调用来限制非特权用户的访问权限，将用户限制在一个特定的根目录中。这个概念后来被广泛采用，并成为许多安全工具和系统的基础
+  Chroot Jail 最初是由美国计算机科学家 Bill Cheswick 在 1982 年提出的概念，作为 Unix 系统中实施安全策略的一种方法。Bill Cheswick 使用 chroot 来限制非特权用户的访问权限，将用户限制在一个特定的根目录中。这个概念后来被广泛采用，并成为许多安全工具和系统的基础
 
 *  2000年FreeBSD 4.0发行FreeBSD Jail
 
@@ -262,6 +262,9 @@ Greenplum、TiDB、Postgresql XC、HAWQ等，商用的如南大通用的GBase、
   Linux-VServer 通过使用内核层的隔离机制来实现虚拟化。它通过名为 VServer 的内核补丁，扩展了 Linux 内核，增加了对虚拟化的支持。这个补丁使得每个 VServer 实例能够在逻辑上独立运行，就像它们在独立的物理服务器上一样
 
 * 2004年Solaris Containers发行
+
+
+这个时期的进程隔离技术大多以 Jail 模式为核心，基本实现了进程相关资源的隔离操作，没有更大的应用场景发展有限
 
 ### 云时代
 
@@ -289,23 +292,21 @@ Greenplum、TiDB、Postgresql XC、HAWQ等，商用的如南大通用的GBase、
 
 * 2013年LMCTFY启动
 
-  Let Me Contain That For You (LMCTFY) 于2013 年作为Google 容器堆栈的开源版本启动，提供Linux 应用程序容器。应用程序可以**容器感知，创建和管理它们自己的子容器**。在谷歌开始和docker合作，后续转向了docker公司的libcontainer，LMCTFY于2015 年停止
+  Let Me Contain That For You (LMCTFY) 于2013 年作为Google 容器堆栈的开源版本启动，提供Linux 应用程序容器。应用程序可以**容器感知，创建和管理它们自己的子容器**。再Google开始和docker合作后，Google 转向了docker公司的libcontainer，Google家的LMCTFY于2015 年停止
 
 * 2013年Docker推出到风靡全球
 
   Docker最初是一个叫做dotCloud的PaaS服务公司的内部项目，后来该公司改名为Docker。Docker在初期与Warden类似，使用的也是LXC，之后才开始**采用自己开发的libcontainer来替代LXC**，它是将应用程序及其依赖打包到几乎可以在任何服务器上运行的容器的工具。与其他只做容器的项目不同的是，**Docker引入了一整套管理容器的生态系统，这包括高效、分层的容器镜像模型、全局和本地的容器注册库、清晰的REST API、命令行等等**
 
-  **Docker为提供了一整套的解决方案**，不仅解决了容器化问题，而且解决了分发问题，很快被各大厂商选择变成了云基础设施，厂商围绕Docker也开始了生态建设。
+  **Docker为提供了一整套的解决方案**，不仅解决了容器化问题，而且解决了分发问题，很快被各大厂商选择变成了云基础设施，厂商围绕Docker也开始了生态建设
 
 ### 云原生 Cloud Native
 
-**云原生一词是指从一开始就设计为驻留在云中的应用程序**。 云原生涉及云技术，例如微服务、容器编排工具和自动扩缩
-
 **云时代解决了服务的打包上线问题，而云原生解决容器上层的管理和编排问题**。在云原生时代发生了两场争夺标准制定权的大战，分别用来争夺容器标准和运行时、编排的标准
 
-**容器编排是指管理和协调容器化应用程序的自动化过程**。它涉及将多个容器组合成一个分布式应用，并负责处理容器的调度、部署、扩展、监控和治理等任务。容器编排旨在简化分布式应用的管理，并提供高可用性、弹性和可靠性
+**容器编排 Container Orchestration 是指管理和协调容器化应用程序的自动化过程**。它涉及将多个容器组合成一个分布式应用，并负责处理容器的调度、部署、扩展、监控和治理等任务。容器编排旨在简化分布式应用的管理，并提供高可用性、弹性和可靠性
 
-首先介绍一下云原生的概念
+首先介绍一下云原生的概念：**云原生一词是指从一开始就设计为驻留在云中的应用程序**。 云原生涉及云技术，例如微服务、容器编排工具和自动扩缩
 
 <https://www.amazonaws.cn/knowledge/what-is-cloud-native/>
 
@@ -332,9 +333,9 @@ Pros & Cons
   * 安全问题：元原生因应用容器技术，容易对数据安全造成一定程度的安全隐患。攻击者如果从某个容器链接至 host 主机，有可能在下一步攻击行动中，入侵更多非授权容器，导致大规模数据风险
   * 依赖云服务提供商：云原生应用程序通常依赖于云服务提供商的基础设施和平台。这可能使得应用程序对特定云服务提供商产生依赖，限制了跨云平台的可移植性和灵活性
 
-### 云原生大战：容器标准
+### 云原生大战：OCI容器标准
 
-Docker vs. Rocket 结果为docker捐出runc
+Docker vs. Rocket 结果为docker捐出RunC
 
 * 2013年CoreOS发布并终止与Docker的合作
 
@@ -350,17 +351,17 @@ Docker vs. Rocket 结果为docker捐出runc
 
   2014年底，CoreOS正式发布了CoreOS的开源容器引擎Rocket（简称rkt），和Docker正式分开发展。Google于2015年4月领投CoreOS 1200万美元，而CoreOS也发布了Tectonic，成为首个支持企业版本kubernetes的公司。从此，容器江湖分为两大阵营，**Google派系和Docker派系**
 
-* 2015年6月Docker成立OCI
+* 2015年6月OCI标准发布
 
-  Docker公司在容器运行因为高速迭代导致变更频繁，影响较大
+  Docker公司因为对于容器运行的高速迭代会对其他公司造成较大的影响，并且因为其一家独大漠视社区的呼声，试图独自主导容器生态的发展。所以其他厂商为了抗衡Docker的影响力，亟需发展一些规范和标准
 
-  2015 年6 月22 日，由Docker公司牵头，CoreOS、Google、RedHat 等公司共同宣布，**Docker 公司将Libcontainer捐出，并改名为RunC项目**，交由一个完全中立的基金会管理，然后以RunC为依据，大家共同制定一套容器和镜像的标准和规范。**RUNC的本质就是可以不通过Docker Damon直接运行容器**
+  2015 年 6 月22 日，在Linux基金会和其他公司的施压下，由Docker公司牵头，CoreOS、Google、RedHat 等公司共同宣布，**Docker 公司将Libcontainer捐出，并改名为RunC项目**，交由一个完全中立的基金会管理，然后以RunC为依据，大家共同制定一套容器和镜像的标准和规范。**RunC的本质就是可以不通过Docker Damon直接运行容器**
 
-  制定出来的规范就是OCI Open Container Initiative 开放容器标准，旨在“制定并维护容器镜像格式和容器运行时的正式规范（OCI Specifications）”。其核心产出是OCI Runtime Spec（容器运行时规范）、OCI Image Spec（镜像格式规范）、OCI Distribution Spec（镜像分发规范）。所以**OCI组织解决的是容器的构建、分发和运行问题**
+  制定出来的规范就是**OCI Open Container Initiative 开放容器标准**，旨在“制定并维护容器镜像格式和容器运行时的正式规范（OCI Specifications）”。其核心产出是OCI Runtime Spec（容器运行时规范）、OCI Image Spec（镜像格式规范）、OCI Distribution Spec（镜像分发规范），这些部分详见下面OCI。所以**OCI组织解决的是容器的构建、分发和运行问题**
 
   社区们期望通过标准来约束Docker公司的话语权，不过Docker公司并没有积极推动OCI的发展，而且OCI也无法影响Docker的地位，因为Docker已经是事实的容器标准
 
-  因为对容器标准的争夺大局已定，Google和RedHat等公司将方向调转到容器上面的**平台层**，即如何管理容器集群
+因为对容器标准的争夺大局已定，Google和RedHat等公司将方向调转到容器上面的**平台层**，即如何管理容器集群
 
 ### 云原生大战：编排
 
@@ -370,22 +371,22 @@ Swarm vs. k8s 结果为k8s胜出，成为标准
 
   容器只是解决了容器化，分发问题，但是一个软件的网络问题、负载均衡问题、监控、部署、更新、镜像管理、发布等很多问题并没有有效的解决
 
-  Google内部调度系统Borg已经拥有10多年的使用容器经验，在2014年6月推出了开源的K8S,可以支持对容器的编排和管理，完成生态的闭环
+  Google内部调度系统Borg已经拥有10多年的使用容器经验，在2014年6月推出了开源的K8S，可以支持对容器的编排和管理，完成生态的闭环
 
   同年7月，微软、Red Hat、IBM、Docker、CoreOS、Mesosphere和Saltstack 等公司，相继加入K8S。之后的一年内，VMware、HP、Intel等公司，也陆续加入
 
 * 2015年Docker推出容器集群编排组件Swarm
 
-  在Docker 1.12 及更高版本中，Swarm 模式与Docker 引擎集成,为Docker 容器提供原生集群管理功能
+  在Docker 1.12 及更高版本中，Swarm 模式与Docker 引擎集成为 Docker 容器提供原生集群管理功能
 
-  两大派系的竞争愈演愈烈，行业标准的诉求越来越强烈
+两大派系的竞争愈演愈烈，行业标准的诉求越来越强烈
 
-### 云原生大战：运行时
+### 云原生大战：运行时实现
 
-Docker Containerd vs. Google CRI 结果为containerd实现CRI作为标准
+Docker Containerd vs. Google CRI 结果为containerd的实现作为标准的CRI选择
 
 ```
-cri-containerd -> cri-o -> containererd -> containerd实现CRI作为标准
+cri-containerd -> cri-o -> containererd -> containerd的实现作为标准CRI
 ```
 
 * 2015年7月Google带头成立CNCF
@@ -394,17 +395,19 @@ cri-containerd -> cri-o -> containererd -> containerd实现CRI作为标准
 
 * 2016年发布CRI
 
-  Google就和红帽主导了CRI标准，**用于k8s和特定的容器运行时解耦**。**CRI Container Runtime Interface 容器运行时接口 本质上就是k8s定义的一组与容器运行时进行交互的接口，所以只要实现了这套接口的容器运行时都可以对接k8s**
+  <img src="CRI标准.drawio.png" width=80%>
 
-  但是这个适合Docker还是事实标准，然而CRI并没有话语权，但是又必须支持Docker，所以就有了docker-shim，docker-shim的本质其实就是k8s为了对接docker的一个CRI的实现
+  Google和红帽主导了CRI标准，**用于k8s和特定的容器运行时解耦**。**CRI Container Runtime Interface 容器运行时接口 本质上就是k8s定义的一组与容器运行时进行交互的接口，所以只要实现了这套接口的容器运行时都可以对接k8s**
 
-* 2016年Docker捐出containerd
+  但是由于Docker还是容器的事实标准，Google的CRI在容器上并没有话语权，但是又必须支持Docker，所以就有了docker-shim，docker-shim的本质其实就是k8s为了对接docker的一个CRI的实现
 
-  containerd作为运行时标准，Docker从Docker Engine种剥离出来，捐赠给了CNCF。这时Google为了将containerd加入到cri标准中，又开发了**CRI-containerd**，用来完成k8s和容器之间的交互
+* 2016年Docker捐出 containerd
 
-* 2016年CRI-O发布
+  Docker 将containerd作为运行时标准，从Docker Engine中剥离出来，捐赠给了CNCF。这时Google为了将containerd加入到CRI标准中，又开发了**CRI-containerd**，用来完成k8s和容器之间的交互
 
-  CRI-O可以让开发者直接从Kubernetes来运行容器，这意味着Kubernetes可以不依赖于传统的容器引擎（比如Docker），也能够管理容器化工作负载。容器此时也回归到自己的位置，如何更好的封装云原生的程序
+* 2016年CRI-O运行时实现发布
+
+  CRI-O可以让开发者直接从k8s来运行容器，这意味着k8s可以不依赖于传统的容器引擎（比如Docker），也能够管理容器化工作负载。容器此时也回归到自己的位置，如何更好的封装云原生的程序
 
   在2016年，Docker公司宣布了一个震惊全部人的计划：放弃现有的Swarm项目，将容器编排和集群管理功能所有内置到Docker项目中
 
@@ -414,51 +417,25 @@ cri-containerd -> cri-o -> containererd -> containerd实现CRI作为标准
 
   Swarm的失败后, 社区版Docker项目改名为moby，将Docker引流到Docker的企业版上去，螳臂挡车
 
-* 2017年containerd确定作为标准CRI
-
-  2017年各大厂商都开始拥抱Kubernetes，亚马逊AWS，Microsoft Azure，VMware，有的甚至抛弃了自家的产品。
-
-  亚马逊网络服务（AWS）于八月份以白金会员（最高级别）加入了CNCF。
-
-  VMware都作为CNCF的白金会员注册.
-
-  Docker Inc.ocker企业版框架中添加了本地Kubernetes支持。Docker自己的Swarm技术也借鉴了k8s的技术进一步发展。
+* 虽然有了CRI-O这种运行时实现，但是因为绝大部分用户还是习惯于使用Docker，所以2017年 containerd 这种CRI实现，成为CRI的事实标准
 
   **Kubernetes至此已成了容器编排领域的绝对标准，而Docker已成容器事实的标准**
 
-## *编排与容器的技术演进之路*
+## *OCI标准*
 
-### DockerClient
+## *容器技术栈*
 
-此时K8s只是编排领域的一个选择，而Docker此时一家独大，所以K8s的客户端仅是作为Docker的客户端来调用Docker引擎来完成服务
+https://landscape.cncf.io
 
-### RUNC & Shim
+<img src="容器技术栈.jpg">
 
-OCI催生runc，剥离Docker Engine的一家独大的情况，确保各个厂商都可以搭建自己的容器平台。CRI标准确立了但是Docker并没有接入该标准。此时催生了临时技术shim
+### 定义
 
-此时Docker话语权荏苒很大，Docker公司的OCI标准不兼容google的CRI标准。shim是一个包装器，使满足google的CRI标准
-
-### CRI-Containerd
-
-containerd被捐献出来，谷歌开发cri-containerd接入CRI标准
-
-### CRI-O
-
-k8s已经成为了编排标准，因此它可以倒逼Docker公司对容器标准做出改革
-
-### Containerd
-
-containerd实现CRI，成为CRI的事实标准
-
-### 实际生产的集群采用的什么运行时组件？
-
-以腾讯的TKE（腾讯商用K8S产品)为例，支持选择containerd和docker两种模式的选择。
-
-* Containerd调用链更短，组件更少，更稳定，占用节点资源更少。建议选择Containerd
-* 以下情况还是要用docker
-  * 使用docker build/push/save/load 等命令
-  * 需要调用docker API
-  * 需要docker compose 或docker swarm
+> 相对较为正式的术语定义如下图，可以把容器管理系统分为三层：
+>
+> 1. High-level Container Management：容器管控的UI层。直接实现容器的管控和使用界面，也是用户最熟悉的子系统。
+> 2. High-level Container Runtime：容器状态及资源供给。包括镜像管理、网络接入、容器状态、调用Low Level Runtime执行容器等功能。习惯上这层称之为容器引擎（Container Engine）。
+> 3. Low-level Container Runtime：容器执行层。负责具体构建容器运行环境并执行容器进程。习惯上这层直接简称为容器运行时（Container Runtime）。 -- https://zhuanlan.zhihu.com/p/337280265
 
 # Cloud System Engineering
 
@@ -505,72 +482,26 @@ containerd实现CRI，成为CRI的事实标准
   * Salesforce, Microsoft Office 365, Google Workspace
   * Mail/Office tools, Customer relationship management CRM, Enterprise resource planning ERP
 
-## *虚拟化*
-
-### 虚拟化层次
-
-虚拟化技术 Virtualization 通过在同一个硬件主机上多路复用虚拟机的方式来共享昂贵的硬件资源，从而提高资源利用效率和应用程序灵活度。硬件资源（CPU、内存、IO）和软件资源（OS和库）可以在不同的功能层虚拟化
-
-
-
-<img src="虚拟化实现层次.drawio.png" width="40%">
-
-* 指令集体系结构级：使用物理主机的ISA（指令集架构 Instruction Set Architecture）模拟出另外一个ISA。效率极低，因为一条源指令只能需要数十条甚至上百条指令来实现
-* 硬件抽象级：共用同一份硬件资源，通过Hypervisor或VMM（虚拟机监视器 Virtual Machine Monitor）这一种新增的处于硬件与不同OS之间的软件层来管理资源，最著名的就是全虚拟化的VMware和半虚拟化Xen
-* 操作系统级：共用同一份操作系统资源，将部分系统资源隔离形成容器，最重要的应用之一就是用Docker来部署服务
-* 库支持级：大部分应用程序使用用户级库的API而非系统调用，通过API钩子可以控制应用程序和其他系统部分之间的通信连接
-* 应用程序级：也称为进程级虚拟化，虚拟化层本身就作为一个进程跑在OS上面，最典型的就是JVM
-
-### 硬件系统级和操作系统级的虚拟化对比
+## *Remainder：虚拟机 vs. 容器*
 
 也可以说是虚拟机和容器的对比
 
-<img src="容器和VM的对比.drawio.png" width="60%">
+<img src="容器和VM的对比.drawio.png" width="80%">
 
 每个VM都需要一套完整的OS，在一个物理PC上能够同时运行的VM是很有限的
 
-而容器非常轻量化。容器引擎 container engine负责启动及停止容器，作用和VMM比较相似
+而容器非常轻量化。**容器引擎 container engine 的核心功能**是准备运行容器所需要的资源以及管理容器生命周期，作用和VMM比较相似
 
 * 容器是对应用程序及其依赖关系的封装，属于操作系统级的虚拟化。具体地说容器是一种轻量级、可移植的虚拟化技术，用于打包、部署和运行应用程序及其所有依赖。容器技术的核心思想是将应用程序及其运行环境、依赖项等打包到一个独立的单元中，该单元被称为容器
 * 容器解决的问题就是环境依赖造成部署困难的问题，或者说“程序能在我的OS上运行，但是在别人的OS上却运行不了”
 
 容器的一个主要缺点在于所有容器共享主机的内核，所以容器只能运行与主机一样的内核
 
-### 不同级别虚拟化性能的大致比较
-
-下表中X越多，说明performance越好
-
-| 实现级别 | 高性能 | 应用程序灵活性 | 实现复杂度 | 应用程序隔离性 |
-| :------: | :----: | :------------: | :--------: | :------------: |
-|  ISA级   |   X    |     XXXXX      |    XXX     |      XXX       |
-|  硬件级  | XXXXX  |      XXX       |   XXXXX    |      XXXX      |
-|   OS级   |  XXXX  |       XX       |    XXX     |       XX       |
-| 用户库级 |  XXX   |       XX       |     XX     |       XX       |
-|  进程级  |   XX   |       XX       |   XXXXX    |     XXXXX      |
-
-### 实现虚拟化的工具
-
-全虚拟化是指在虚拟机中模拟硬件的完整功能，包括CPU、内存、存储和网络等。在全虚拟化中，虚拟机不知道自己正在运行在虚拟化环境中，而是认为自己正在直接运行在物理硬件上。为了实现全虚拟化，需要对虚拟机操作系统的指令进行翻译，这会导致性能开销，因为每个指令都需要进行额外的处理。常见的全虚拟化技术包括VMware ESXi和Microsoft Hyper-V等。
-
-半虚拟化是指虚拟机操作系统知道自己正在运行在虚拟化环境中，可以与虚拟化层进行交互，以实现更高的性能和更少的开销。在半虚拟化中，虚拟机操作系统会使用虚拟化层提供的API来访问硬件资源，而不是直接访问硬件。这减少了指令翻译的需要，并且能够更好地利用硬件资源。常见的半虚拟化技术包括Xen和KVM等。
-
-因此，全虚拟化和半虚拟化之间的主要区别在于虚拟化的方式和性能开销。全虚拟化模拟完整的硬件功能，导致性能开销，而半虚拟化操作系统知道自己正在运行在虚拟化环境中，可以与虚拟化层进行交互，从而减少性能开销。
-
-### 虚拟化种类
-
-在一个Data center里面，一台服务器主要就是三个组成部分：Compute(CPU)、Storage(Disk or SSD)、Network。因此虚拟化也就着重在这三个层面
-
-* Compute: VM or Container
-* Network
-* Storage https://www.redhat.com/zh/topics/data-storage/file-block-object-storage#
-  * Object storage 对象存储
-  * Block storage 块存储
-
 ## *Cloud software systems- Distributed systems in the cloud*
 
 ### 云计算和分布式系统的联系
 
-"云计算" 是指将计算资源（如服务器、存储、网络等）通过网络连接，提供给用户使用的一种服务模式。而 "分布式系统" 则是指将多个独立的计算机或节点组成一个整体，以共同协作完成某项任务或提供某种服务
+"云计算" 是指将计算资源（如服务器、存储、网络等）通过网络连接，提供给用户使用的一种服务模式。而 "分布式系统" 则是指将多个独立的计算机	节点组成一个整体，以共同协作完成某项任务或提供某种服务
 
 这两个概念的紧密关系在于，云计算通常是基于分布式系统实现的。云计算提供的计算资源往往来自于多个节点或服务器，这些节点可以在地理位置上分散，也可以在技术层面上分散，它们之间需要通过网络连接和协作完成任务。因此，云计算平台本质上就是一个分布式系统，通过对多个节点的统一管理和协调，向用户提供高效、可靠的计算资源服务
 
@@ -614,6 +545,12 @@ Deployment: Process of delivering software from a development environment to a l
 
 ### serverless
 
+Serverless 是一种计算模型，它允许开发者构建和运行应用程序而无需管理底层的服务器基础架构。这并不意味着没有服务器，而是指开发者不再需要关心服务器的管理、配置和维护
+
+在传统的应用程序部署模型中，开发者通常需要预先配置和管理服务器来运行他们的应用程序。而在 serverless 模型中，云服务提供商（如 AWS Lambda、Azure Functions、Google Cloud Functions 等）会自动处理底层服务器的管理，开发者只需关注编写应用程序的代码
+
+Serverless 并非适用于所有类型的应用程序，特别是对于长时间运行、需要持续连接的应用程序可能不是最佳选择。然而，对于许多事件驱动和短暂执行的任务，serverless 架构可以提供灵活、高效和经济的解决方案
+
 # Docker技术基石
 
 <img src="Docker技术底座.drawio.png" width="60%">
@@ -652,7 +589,7 @@ Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()`
 * UTS：每个容器能看到自己的hostname，拥有独立的主机名和域名
 * IPC：同一个IPC namespace的进程之间能互相通讯，不同的IPC namespace之间不能通信
 * PID：每个PID namespace中的进程可以有其独立的PID，每个容器可以有其PID为1的root进程
-* Network：每个容器用有其独立的网络设备，IP地址，IP路由表，/proc/net目录，端口号
+* Network：每个容器用有其独立的网络设备，IP地址，IP路由表，/proc/net目录，端口号。这部分在 *网络编程.md* 中有详细介绍
 * Mount：每个容器能看到不同的文件系统层次结构
 * User：每个container可以有不同的user和group id
 
@@ -886,6 +823,16 @@ Docker Desktop 提供了一个 GUI，它有下面这些组件
 * Docker Content Trust 是一项安全功能，用于验证Docker镜像的真实性和完整性。它通过数字签名确保镜像在构建和传输过程中没有被篡改
 * Credential Helper是一个用于简化和安全管理Docker凭据的工具。它可以用于存储和检索访问Docker仓库所需的认证信息
 
+### Docker 版本
+
+Docker 发展过程中衍生了以下版本，目前我们学习和使用提到的版本是 docker-ce
+
+* LXC：LXC 是最早的 linux 容器技术，早期版本的 docker 直接使用 LXC 来实现容器的底层功能。虽然使用者相对较少，但 LXC 项目仍在持续开发演进中
+* libcontainer：docker 从 0.9 版本开始自行开发了 libcontainer 模块来作为 LXC 的替代品实现容器底层特性，并在 1.10 版本彻底去除了 LXC。在 1.11 版本拆分出 runc 后，libcontainer 也随之成为了 runc 的核心功能模块，runc 后续变成了容器标准
+* moby：moby 是 docker 公司发起的开源项目，其中最主要的部分就是同名组件 moby，事实上这个 moby 就是 **dockerd** 目前使用的开源项目名称，docker 项目中的 engine（dockerd）仓库现在就是从 moby 仓库 fork 而来的，使用 containerd 作为运行时标准。https://mobyproject.org/
+* docker-ce：docker 的开源版本，CE 指 Community Edition。docker-ce 中的组件来自于 moby、containerd 等其他项目。https://www.docker.com/pricing/
+* docker-ee：docker 的收费版本，EE 指 Enterprise Edition。其基础组件来源和docker-ce 是一样的，但附加了一些其他的组件和功能
+
 ## *Ubuntu*
 
 ```
@@ -915,7 +862,7 @@ Docker提供了一个方便的脚本，位于 https://get.docker.com/，用于�
 * 该脚本试图检测Linux发行版和版本，并为用户配置包管理系统
 * 该脚本不允许用户自定义大多数安装参数
 * 该脚本在没有确认的情况下安装依赖项和推荐项。这可能会根据主机机器的当前配置安装大量软件包
-* 默认情况下，该脚本安装Docker、containerd和runc的最新稳定版本。当使用此脚本为机器配置时，这可能导致意外的Docker主要版本升级。始终在测试环境中测试升级，然后再部署到生产系统中
+* 默认情况下，该脚本安装Docker、containerd和RunC的最新稳定版本。当使用此脚本为机器配置时，这可能导致意外的Docker主要版本升级。始终在测试环境中测试升级，然后再部署到生产系统中
 * 该脚本并非用于升级现有的Docker安装。当使用脚本更新现有安装时，依赖关系可能不会更新到预期版本，导致使用过时的版本
 
 ```cmd
@@ -990,13 +937,13 @@ Docker是一个开放平台，用于开发、发布和运行应用程序。 Dock
 
 ## *Docker架构*
 
-<img src="Docker架构.png" width="70%">
+### Docker组成
+
+<img src="Docker逻辑架构.png" width="70%">
 
 Docker采用CS架构。Docker客户端和Docker守护进程通信，后者负责build、run和分发Docker容器。Docker客户端和守护进程可以在同一系统上运行，或者可以将Docker客户端连接到远程Docker守护进程
 
 Docker客户端和守护进程使用REST API通过UNIX套接字或网络接口进行通信。另一个Docker客户端是Docker Compose，它可以让用户使用由一组容器组成的应用程序
-
-### 组成
 
 * Docker daemon
 
@@ -1032,6 +979,44 @@ Docker中有镜像、容器、网络、volume、插件等对象
   * 可以在本地机器、虚拟机或云中运行
   * 可移植（可在任何操作系统上运行）
   * 与其他容器隔离，运行自己的软件、二进制文件和配置
+
+## *Docker容器管理*
+
+<img src="Docker架构.drawio.png" width="80%">
+
+守护进程 Docker Daemon 负责和 Docker Client 端交互，并管理 Docker 镜像和容器。现在的架构中组件 containerd 就会负责集群节点上容器的生命周期管理，并向上为 Docker Daemon 提供 gRPC 接口
+
+### 容器引擎：Containerd
+
+https://containerd.io
+
+<img src="ContainerArchitecture.png">
+
+containerd 是一个由Docker公司于2017年捐赠给 OCI 的开源项目，它是一个轻量级的容器运行时，用于**管理容器的生命周期**。containerd的设计目标是提供一个通用的容器执行引擎，使得不同的容器生态系统可以共享相同的核心组件
+
+ containerd完全遵循OCI标准，包括容器运行时规范和容器镜像规范。这使得containerd与其他兼容OCI规范的工具和技术集成更为容易
+
+### containerd-shim
+
+> 当我们要创建一个容器的时候，现在 Docker Daemon 并不能直接帮我们创建了，而是请求 `containerd` 来创建一个容器，containerd 收到请求后，也并不会直接去操作容器，而是创建一个叫做 `containerd-shim` 的进程，让这个进程去操作容器，我们指定容器进程是需要一个父进程来做状态收集、维持 stdin 等 fd 打开等工作的，假如这个父进程就是 containerd，那如果 containerd 挂掉的话，整个宿主机上所有的容器都得退出了，而引入 `containerd-shim` 这个垫片就可以来规避这个问题了。
+>
+> 然后创建容器需要做一些 namespaces 和 cgroups 的配置，以及挂载 root 文件系统等操作，这些操作其实已经有了标准的规范，那就是 OCI（开放容器标准），`runc` 就是它的一个参考实现（Docker 被逼无耐将 `libcontainer` 捐献出来改名为 `runc` 的），这个标准其实就是一个文档，主要规定了容器镜像的结构、以及容器需要接收哪些操作指令，比如 create、start、stop、delete 等这些命令。`runc` 就可以按照这个 OCI 文档来创建一个符合规范的容器，既然是标准肯定就有其他 OCI 实现，比如 Kata、gVisor 这些容器运行时都是符合 OCI 标准的。
+>
+> 真正启动容器是通过 `containerd-shim` 去调用 `runc` 来启动容器的，`runc` 启动完容器后本身会直接退出，`containerd-shim` 则会成为容器进程的父进程, 负责收集容器进程的状态, 上报给 containerd, 并在容器中 pid 为 1 的进程退出后接管容器中的子进程进行清理, 确保不会出现僵尸进程。
+>
+> 而 Docker 将容器操作都迁移到 `containerd` 中去是因为当前做 Swarm，想要进军 PaaS 市场，做了这个架构切分，让 Docker Daemon 专门去负责上层的封装编排，当然后面的结果我们知道 Swarm 在 Kubernetes 面前是惨败，然后 Docker 公司就把 `containerd` 项目捐献给了 CNCF 基金会，这个也是现在的 Docker 架构。
+>
+> -- https://www.qikqiak.com/post/containerd-usage/
+
+### 容器运行时：RunC
+
+https://www.cnblogs.com/sparkdev/p/9032209.html
+
+OCI标准催生从Docker Engine剥离出的 RunC，以瓦解Docker Engine的一家独大的情况，确保各个厂商都可以搭建自己的容器平台
+
+RunC 是一个轻量级的工具，它是专门遵守OCI标准来用来运行容器。其实 RunC 就是一个命令行工具，可以**不用通过 docker 引擎直接运行容器**
+
+<img src="RunC.png" width="50%">
 
 ## *Workflow*
 
@@ -1236,6 +1221,16 @@ docker run -i -t ubuntu /bin/bash
 * `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
 * `docker cp 容器id:容器内路径` 目的主机路径
 
+## *常用的镜像*
+
+### Redis
+
+### Busybox
+
+BusyBox 是一个集成了三百多个最常用 Linux 命令和工具的软件。BusyBox 包含了一些简单的工具，例如 ls、cat 和 echo 等等，还包含了一些更大、更复杂的工具，例grep、find、mount 以及 telnet。有些人将 BusyBox 称为 Linux 工具里的瑞士军刀
+
+简单的说 BusyBox 就好像是个大工具箱，它集成压缩了 Linux 的许多工具和命令，也包含了 Linux 系统的自带的 shell。busybox 是一个集成了一百多个最常用 linux 命令和工具的软件,他甚至还集成了一个 http 服务器和一个 telnet 服务器,而所有这一切功能却只有区区 1M 左右的大小。因海外带宽较小，我们拉取该镜像推送到自己的仓库
+
 # Build详解
 
 ## *Build Drivers*
@@ -1281,6 +1276,8 @@ CMD ["node", "app.js"]
 
 ### dangling
 
+# Docker Volume
+
 # Docker网络
 
 Docker 提供了五种不同的网络模式：bridge 桥接模式、host 主机模式、container 容器模式、none 模式、overlay 覆盖模式，用于定义容器如何与主机和其他容器进行网络通信
@@ -1289,7 +1286,7 @@ Docker 提供了五种不同的网络模式：bridge 桥接模式、host 主机�
 
 <img src="ContainerNetworkModel.jpeg">
 
-Container Network Model, CNM 是由 Docker 引入的一种网络模型，具体通过由 Docker 团队开发和维护的 Libnetwork 容器网络库来实现
+Container Network Model, CNM 是由 Docker 引入的一种网络模型，用来指导容器网络的设计。具体通过由 Docker 团队开发和维护的 Libnetwork 容器网络库来实现
 
 CNM用于定义容器之间以及容器与外部网络之间的连接和通信。CNM 的目标是提供一个通用的、可扩展的网络模型，使得容器能够灵活地连接到各种网络
 
@@ -1304,17 +1301,72 @@ CNM 的架构允许用户在不同的网络驱动程序之间进行切换，从�
 
 ### Libnetwork
 
+Libnetwork 是 CNM 的标准实现。Libnetwork 是使用 Go 编写的开源库。Libnetwork 也是 Docker 所使用的库，Docker 网络架构的核心代码都在这个库中。Libnetwork 实现了 CNM 中定义的全部三个组件，此外它还实现了本地服务发现、基于 Ingress 的容器负载均衡，以及网络控制层和管理层功能
+
 * 多种网络驱动程序：Libnetwork 支持多种内置网络驱动程序，包括桥接（bridge）、覆盖（overlay）、主机（host）、Macvlan、ipvlan 等。这使得用户可以根据应用程序的需求选择适当的网络驱动程序
 * 模块化架构：Libnetwork 的架构是模块化的，允许用户自定义和扩展网络驱动程序。用户可以实现自己的网络驱动程序，以满足特定的网络需求
 * 网络服务发现：Libnetwork 支持服务发现机制，通过 DNS 或自定义别名，容器可以通过服务名称而不是 IP 地址进行通信。这提高了容器之间通信的灵活性
 * 内建 SDN, Software-Defined Networking 支持：Libnetwork 提供了一些软件定义网络的功能，例如跨主机的覆盖网络，使容器能够在不同主机上互相通信
 * 插件和扩展：Libnetwork 支持插件和扩展，使得用户能够集成其他网络解决方案和服务，例如第三方 SDN 解决方案
 
+### docker0
 
+Docker会自动安装一块 Docker 网卡称为 docker0，用于 Docker 各容器及宿主机的网络通信。我们用 ip 和 ifconfig 分别看一下它的信息
+
+```cmd
+$ ip addr show docker0
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:15:3d:70:77 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:15ff:fe3d:7077/64 scope link
+       valid_lft forever preferred_lft forever
+```
+
+* `<NO-CARRIER,BROADCAST,MULTICAST,UP>`：描述了接口的状态和特性
+  * `NO-CARRIER` 表示没有检测到物理链路层的连接。
+  * `BROADCAST` 表示接口支持广播传输。
+  * `MULTICAST` 表示接口支持多播传输。
+  * `UP` 表示接口是启用的。
+* `mtu 1500`： 表示最大传输单元，即最大数据包的大小，这里为1500字节
+* `qdisc noqueue`：表示队列规则，这里是没有队列。
+* `state DOWN`：表示接口的当前状态是关闭的
+* `group default`：表示接口所属的网络组
+* `link/ether 02:42:15:3d:70:77`：表示接口的物理地址（MAC地址）
+* ipv4
+  * `inet 172.17.0.1/16`：表示接口的IPv4地址是 `172.17.0.1`，子网掩码为 `/16`
+  * `brd 172.17.255.255`：表示广播地址
+  * `scope global`表示这是一个全局地址
+  * `valid_lft forever preferred_lft forever`：表示IPv4地址的生命周期信息，这里是永久有效。
+* ipv6
+  * `inet6 fe80::42:15ff:fe3d:7077/64`：表示接口的IPv6地址
+  * `scope link`：表示这是一个链路本地地址
+  * `valid_lft forever preferred_lft forever`：表示IPv6地址的生命周期信息，这里是永久有效
+
+```cmd
+$ ifconfig
+docker0: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
+        inet 172.17.0.1  netmask 255.255.0.0  broadcast 172.17.255.255
+        inet6 fe80::42:15ff:fe3d:7077  prefixlen 64  scopeid 0x20<link>
+        ether 02:42:15:3d:70:77  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 2  bytes 196 (196.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+* `RX packets 0 bytes 0 (0.0 B)`：表示接收数据包的统计信息
+* `TX packets 2 bytes 196 (196.0 B)`：表示发送数据包的统计信息
+* `RX errors 0 dropped 0 overruns 0 frame 0`：描述了接收过程中的错误统计信息
+* `TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`：描述了发送过程中的错误统计信息
 
 ## *Bridge*
 
-Bridge 模式是默认的网络模式，bridge 驱动会创建一个 Linux 网桥，容器通过该桥接网络连接到宿主机。**最适合需要多个容器之间互相通信的情况**，也适用于容器与宿主机通信
+### Docker Bridge
+
+Bridge 模式是默认的网络模式，bridge 驱动会创建一个 Linux 虚拟网桥（具体看 *网络编程.md*），容器通过该网桥连接到宿主机。**最适合需要多个容器之间互相通信的情况**，也适用于容器与宿主机通信
+
+默认的 bridge 网络会被映射到内核中为 docker0 的网桥上
 
 **例子：** `docker run --network bridge my_container`
 
@@ -1335,7 +1387,9 @@ Container模式下新创建的容器直接使用另一个已经运行的容器�
 
 **例子：** `docker run --network container:existing_container my_container`
 
-## *None*
+## *其他网络*
+
+### None
 
 None模式下容器拥有自己的Network Namespace，但没有与宿主机或其他容器连接，也就是说并不为 Docker 容器进行任何网络配置，这个 Docker 容器没有网卡、IP、路由等信息
 
@@ -1343,15 +1397,25 @@ None模式下容器拥有自己的Network Namespace，但没有与宿主机或�
 
 * **例子：** `docker run --network none my_container`
 
+### Overlay
+
+## *网络管理*
+
+# Docker Compose
+
+## *Compose的作用*
+
+Docker Compose 是一个用于**管理单机容器的编排工具**，而下文会讲的k8s则是一个跨主机的集群部署工具，Docker Compose的功能并不像Docker Swarm和Kubernetes是基于Dcoker的跨主机的容器管理平台那么丰富，但已经足够单机和本地开发环境的使用
 
 
-在运行容器时使用 `--network` 选项来指定网络模式。例如，`docker run --network host my_container` 将容器连接到主机网络
+
+
 
 # Kubernetes
 
 <https://www.redhat.com/zh/topics/containers/what-is-kubernetes>
 
-## *Swarm*
+
 
 # 云安全
 
