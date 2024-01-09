@@ -81,7 +81,30 @@ cancel 构造块可以改变 OpenMP 区域中已经描述的执行流程。cance
 
 OpenMP API 提供了同步构造块和库例程，用于协调并行区域中的任务和数据访问。此外，库例程和环境变量可用于控制或查询 OpenMP 程序的运行时环境。OpenMP 规范不保证在并行执行时相同文件的输入或输出是同步的。在这种情况下，程序员需要使用 OpenMP 同步构造块或库例程的帮助来同步输入和输出处理。对于每个线程访问不同文件的情况，程序员不需要同步访问。关于线程执行方面的基础语言定义的所有并发语义都适用于 OpenMP 线程，除非另有规定。
 
+## *安装 & 编译*
 
+### 安装
+
+OpenMP包含在 build-essential 包中
+
+```cmd
+$ sudo apt install build-essential
+```
+
+查看 OpenMP 版本
+
+```cmd
+$ echo | cpp -fopenmp -dM | grep -i open
+#define _OPENMP 201511
+```
+
+201511 发布的是 OpenMP 4.5 版本
+
+### 编译
+
+引入 `<omp.h>` 库，直接在gcc/g++的编译语句中加入 `-fopenmp` 选项来开启OpenMP的编译器指令即可
+
+﻿﻿﻿gcc加入 `-Wunknown-pragmas` 选项会在编译时报告没有处理的 `#pragma` 语句
 
 ## *基础语法*
 
@@ -107,14 +130,15 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-引入 `<omp.h>` 库，编译的时候加上 `-fopenmp` 来开启OpenMP的编译器指令
-
 ### 编译器指令
 
-所有的编译器指令以 `#paragma omp` 开头，比如parallel for的编译器指令为
+所有的编译器指令（指导语句）以 `#paragma omp` 开头，﻿﻿同一类openmp制导语句称为一种构造（construct）。使用 `{}` 标记作用的代码块，如果不用 `{}`，那么只有紧接着的一行有效
 
 ```c
-#pragma omp parallel for
+#pragma omp <directive name> [clause]
+{
+    
+}
 ```
 
 ### 共享和私有变量
@@ -133,22 +157,26 @@ for (i = 0; i < N; i++) {
 
 Data sharing clauses 数据共享语句有如下
 
+* `shared(var-list)`：在var-list中的是共享的。全局变量默认是shared
+
+  * 共享变量在内存中只有一份，所有线程都可以访问
+  * 请保证共享访问不会冲突
+  * **不特别指定并行区变量默认为 shared**
+  
 * `private(var-list)`：在var-list中的变量是私有的
 
   * 每一个线程都独自拥有变量的副本
   * 如果j被定义为私有变量，那么在for循环里面所有的线程都不能访问其他的j，尽管j本来是共享变量
-  * 所有的线程都不会使用到先前的定义，比如说一开始tmp若被赋值为3，则进入并行块后会被按照内置类型初始化为0.0
+  * **所有的线程都不会使用到先前的定义，比如说一开始tmp若被赋值为3，则进入并行块后会被按照内置类型初始化为0.0（最好是自己初始化一下）**
   * 所有线程都不能给共享的赋值
   * 在循环的入口以及出口，都 不会进行定义，也就是说在并行块结束后不会对原来的变量产生影响
-
-* `shared(var-list)`：在var-list中的是共享的。全局变量默认是shared
 
 * `default(private | shared | none)`
 
   * 为一个并行区域的变量设置默认等级
   * 当设置为none的时候，若shared没有显式给出编译会报错
 
-* `firstprivate(var-list)`：告诉编译器私有变量在**第一个循环**会继承共享变量的值，其他用法基本和private一样
+* `firstprivate(var-list)`：告诉编译器私有变量在**第一个循环**初始化为主线程中对应的数据的值，其他用法基本和private一样
 
 * `lastprivate(var-list)`
 
@@ -159,7 +187,7 @@ Data sharing clauses 数据共享语句有如下
 * `omp_get_num_threads()`：返回并行域中总线程的数量
 * `omp_get_thread_num()`：返回当前工作的线程编号
 * `omp_set_num_threads()`：设定并行域内开辟线程的数量
-* `omp_get_wtime()`：openmp中自带的计时函数，用于检测并行优化效果
+* `omp_get_wtime()`：openmp中自带的计时函数（单位是秒），用于检测并行优化效果。推荐使用这个函数，C/C++ runtime API 在并行环境下可能会影响程序的性能
 
 ### 环境变量
 
@@ -172,80 +200,35 @@ OpenMP提供了一些环境变量，用来在运行时对并行代码的执行�
 * OMP_DYNAMIC：通过设定变量值，来确定是否允许动态设定并行域内的线程数
 * OMP_NESTED：指出是否可以并行嵌套
 
-### 线程亲和性
-
-亲和性通常以掩码 mask 的形式表示，即描述线程被允许在哪些位置运行的说明。mask取决于采用哪种亲和性策略
-
-* close：适用于共享内存的线程
-
-  ```
-  Thread  Socket 0  Socket 1
-  0       0
-  1       1
-  ```
-
-* spread：适用于需要大的bandwidth的线程，这样可以进可以让它得到socket的bandwidth
-
-  ```
-  Thread  Socket 0  Socket 1
-  0       0
-  1                 1
-  ```
-
 ## *并行区域*
 
-### Parallel
+### parallel constrcut
 
-并行区域会被显式给出，并通过ICV OMP_NUM_THREADS来设置线程数（即并行度）
+并行区域会被显式给出
 
 ```c
-#pragma omp parallel [parameters]
+#pragma omp parallel [clause]
 { /**/ }
 ```
 
-### section
+下面是一些要用的 clause
 
-在一个并行区域中还可以再分组
+* 设置线程数/并行度，**优先级由低到高**
 
-```c
-#pragma omp sections [parameters]
-{
-#pragma omp section
-	{ /**/ }
-#pragma omp section
-	{ /**/ }
-}
-```
+  * 什么也不做，系统选择运行线程数
 
-* sections在封闭代码的指定部分中，由线程组进行分配任务
-* 每个独立的section都需要在sections里面
-  * **每个section都是被一个线程执行的**
-  * 不同的section可能执行不同的任务
-  * 如果一个线程够快，该线程可能执行多个section
-  * 完成任务的线程会在sections尾部同步屏障 barrier 处等待
+  * 设置环境变量 `export OMP_NUM_THREADS=4`
 
-下面看一个例子
+  * 代码中使用库函数 `void omp_set_num_threads(int)`
 
-```c
-#pragma omp parallel shared(a,b,e,d) private(i)
-{
-#pragma omp sections
-    {
-#pragma omp section
-        {
-            for (i = 0; i < N; i++) {
-                c[i] = a[i] + b[i];
-            }
-        }
-#pragma omp section
-        {
-            for (i = 0; i < N; i++) {
-                d[i] = a[i] * b[i];
-            }
-        }
-    } /* end of sections */
-} /* end of parallel block */
-```
+  * 通过制导语句从句 `num_threads(integer-expression)`
+
+  * if clause判断串行还是并行执行，若表达式为真，就按照并行方式执行并行区，否则以串行方式执行
+
+    ```c
+    #pragma omp parallel if(scalar-expression)
+    ```
+
 
 ### nowait
 
@@ -303,9 +286,73 @@ for (int i = 0; i < N; i++) {
 
 这意味着线程可以更充分地利用并行性，减少等待时间，提高性能。但要注意，`nowait`必须小心使用，以确保没有潜在的竞态条件。
 
+### 线程亲和性
+
+亲和性通常以掩码 mask 的形式表示，即描述线程被允许在哪些位置运行的说明。mask取决于采用哪种亲和性策略
+
+* close：适用于共享内存的线程
+
+  ```
+  Thread  Socket 0  Socket 1
+  0       0
+  1       1
+  ```
+
+* spread：适用于需要大的bandwidth的线程，这样可以进可以让它得到socket的bandwidth
+
+  ```
+  Thread  Socket 0  Socket 1
+  0       0
+  1                 1
+  ```
+
+### section construct
+
+在一个并行区域中还可以再分组
+
+```c
+#pragma omp sections [parameters]
+{
+#pragma omp section
+	{ /**/ }
+#pragma omp section
+	{ /**/ }
+}
+```
+
+* sections在封闭代码的指定部分中，由线程组进行分配任务
+* 每个独立的section都需要在sections里面
+  * **每个section都是被一个线程执行的**
+  * 不同的section可能执行不同的任务
+  * 如果一个线程够快，该线程可能执行多个section
+  * 完成任务的线程会在sections尾部同步屏障 barrier 处等待
+
+下面看一个例子
+
+```c
+#pragma omp parallel shared(a,b,e,d) private(i)
+{
+#pragma omp sections
+    {
+#pragma omp section
+        {
+            for (i = 0; i < N; i++) {
+                c[i] = a[i] + b[i];
+            }
+        }
+#pragma omp section
+        {
+            for (i = 0; i < N; i++) {
+                d[i] = a[i] * b[i];
+            }
+        }
+    } /* end of sections */
+} /* end of parallel block *
+```
+
 ## *循环分割工作*
 
-### for相关
+### for construct
 
 for的下面两种写法是等价的，但是第二种只有在当并行区内只有一个for的时候才能这么简化
 
@@ -332,20 +379,21 @@ int main () {
 }
 ```
 
-它告诉编译器接下来的for循环，将会使用并行的方式执行，也就是说把for的任务分配给不同的线程。使用并行的时候需要满足以下四个需求：
+它告诉编译器接下来的for循环，将会使用并行的方式执行，也就是说把for的任务分配给不同的线程。成功并行需要满足以下条件：
 
 * 在循环的迭代器必须是可计算的并且在执行前就需要确定迭代的次数
-
-* For中的语句必须要以任何顺序执行
+* for中的语句必须要以任何顺序执行
   * 在循环的代码块中不能包含break、return、exit
 
   * 在循环的代码块中不能使用goto跳出到循环外部
-
-* 迭代器只能够被for语句中的增量表达式所修改
-
+* 迭代器只能够被for语句中的增量表达式所修改，并且仅限加减法
 * 所有线程组的线程会在块尾隐式定义的 barrier 处同步，除非声明了nowait
 
-OpenMP编译器不检查被parallel for指令并行化的循环所包含的迭代间的依赖关系。若一个或者更多个迭代结果依赖于其他迭代的循环，一般不能被正确的并行化
+注意⚠️：OpenMP编译器不检查被parallel for指令并行化的循环所包含的迭代间的依赖关系，这是由程序员编程的时候来保证的。若一个或者更多个迭代结果依赖于其他迭代的循环，一般不能被正确的并行化
+
+如果将 parallel 和 for construct 合并，那么支持的clauses会发生变化
+
+<img src="parallelfor支持的clauses.png" width="40%">
 
 ### 循环调度策略
 
@@ -383,17 +431,36 @@ Loop Scheduling Strategy 是一种用于在并行循环中分配迭代任务给�
 
 * `runtime` 运行时调度
 
-  运行时根据控制变量来调整
+  运行时根据控制变量 OMP_SCHEDULE 来调整
+
+一个典型的例子是对对称矩阵做计算的时候（这时候只需要计算一个上/下三角矩阵）
+
+### 循环嵌套
+
+`collapse(n)`：应用于n重循环嵌套的合并（展开）循环，n要小于等于嵌套层数，要﻿﻿注意循环之间是否有数据依赖
 
 ## *数据同步*
 
 ### barrier
 
-barrier是用于实现同步的一种手段，用于协调并行线程的执行。它会在代码的某个点，令线程停下直到所有的线程都到达该地方，从而确保在某一点上的所有线程都达到了同步点之后才能继续执行。
+barrier是用于实现同步的一种手段，用于协调并行线程的执行。它会在代码的某个点，令线程停下直到所有的线程都到达该地方，从而确保在某一点上的所有线程都达到了同步点之后才能继续执行
 
-barrier非常有用，因为它允许线程在并行执行的某个地方同步，以确保协作并发操作。
+barrier非常有用，因为它允许线程在并行执行的某个地方同步，以确保协作并发操作
 
-* 每一个并行区域在末尾都有一个隐式的barrier，不过可以用nowait声明来关闭这个隐式的barrier
+<img src="barrier.png" width="50%">
+
+* **每一个并行区域（parallel construct）在末尾都有一个隐式的barrier**，不过可以用nowait声明来关闭这个隐式的barrier
+
+  ```c
+  #pragma omp parallel
+  {
+  #pragma omp for
+      {
+  		for (int i= 1; i<n; i++) a[i] = i;
+  	}
+      // implicit barrier
+  }
+  ```
 
 * 额外的barrier也可以显式给出
 
@@ -406,6 +473,8 @@ barrier非常有用，因为它允许线程在并行执行的某个地方同步�
 ### master & masked
 
 master目前已经被废弃了，目前用的是masked
+
+<img src="masked.png" width="50%">
 
 master/masked用来声明一个区域，在master中只有主线程 primary thread 可以执行，其他线程会跳过这个区域，也不会进行同步
 
@@ -430,18 +499,23 @@ masked可以用来指定一些线程运行，其他线程会跳过这个区域�
 
 ### single
 
+<img src="single.png" width="50%">
+
 ```c
 #pragma omp single [parameter]
 	/**?
 ```
 
-* 告诉编译器接下来紧跟的下段代码将只由**任意一个**线程执行， 和masked不同，masked可以指定哪一个或哪一些线程来执行，而single用哪一个则无法控制
+* 告诉编译器接下来紧跟的下段代码将只由**任意一个**线程执行，有隐式 barrier
+* 和masked不同，masked可以指定哪一个或哪一些线程来执行，而**single用哪一个则无法控制**
 * 它可能会在处理多段线程不安全代码时非常有用，比如说初始化数据结构
 * single region尾是一个隐式的barrier：在不使用no wait选项时，在线程组中不执行single的线程们将会等待single的结束
 
 ### critical
 
-声明临界区
+<img src="critical.png" width="50%">
+
+声明临界区，让里面的for互斥执行
 
 ```c
 #pragma omp critical [(Name)]
@@ -479,6 +553,8 @@ int shared_variable = 0;
 	/*expression-stmt*/
 ```
 
+atomic 和 critical 的语义基本是一样的，但 atomic 还可以指定**单个特定格式的语句或语句组中某个变量** atomic 操作
+
 ### 运行时锁
 
 OpenMP除了directive之外，还提供了一些运行时锁的API，他们基本和pthread的使用是一样的
@@ -495,17 +571,30 @@ logicalvar = omp_test_lock(&lockvar); // check lock and possibly set lock
 
 运行时锁支持nestable lock
 
-### Odered Construct
+### ordered
 
+﻿﻿ordered construct 用来声明有潜在的顺序执行部分
 
-
-### 规约
+## *规约*
 
 ```c
 reduction(operator:list)
 ```
 
-在barrier的地方不仅需要同步数据，有时候还需要进行规约，规约就是把各个线程的数据聚合起来。规约的结果可以给主线程使用
+有时候在barrier的地方不仅需要同步数据，还需要进行规约，规约就是把各个线程的数据聚合起来。规约的结果可以给主线程使用
+
+<img src="OpenMP支持的规约操作.png">
+
+### reduction的执行过程
+
+1. fork线程并分配任务
+2. 每一个线程定义一个私有变量omp_priv（同private）
+3. 各个线程执行计算
+4. 所有omp_priv和omp_in一起顺序进行reduction，写回原变量
+
+### 自定义规约操作
+
+### 将规约过程组织成数据结构
 
 在各个线程之间的规约有可能会有比较大的消耗，一般来说不会采用线性结构来做规约，而会采用树等结构来做。因此规约应该要被实现为OpenMP和MPI层次的操作
 
@@ -727,6 +816,8 @@ SIMD ISA多媒体扩展源于这样一个事实：许多多媒体应用程序操
 MMX `->` SSE `->` SSE2 `->` AVX\*
 
 SIMD简介 - 吉良吉影的文章 - 知乎 https://zhuanlan.zhihu.com/p/55327037
+
+<img src="SIMD_registers.png">
 
 SIMD于20世纪70年代首次引用于ILLIAC IV大规模并行计算机上。而大规模应用到消费级计算机则是在20实际90年代末
 
@@ -2047,169 +2138,3 @@ Teams construct 只是生成了league of teams
     }
     #pragma omp target exit data map(from : a[0 : datasetSize]) map(delete: b[0:datasetSize], c[0:datasetSize],d[0:datasetSize])
 ```
-
-# 基准测试 & 性能调优工具
-
-## *Google性能评估框架*
-
-google/benchmark
-
-### 安装
-
-````cmd
-$ git clone git@github.com:google/benchmark.git
-````
-
-### 使用
-
-```c++
-#include <vector>
-#include <cmath>
-#include <benchmark/benchmark.h>
-
-constexpr size_t n = 1<<27;
-std::vector<float> a(n);
-
-void BM_for(benchmark::State &bm) {
-    for (auto _: bm) {
-        // fill a with sin(i)
-        for (size_t i = 0; i < a.size(); i++) {
-            a[i] = std::sin(i);
-        }
-    }
-}
-
-BENCHMARK(BM_for);
-
-void BM_reduce(benchmark::State &bm) {
-    for (auto _: bm) {
-        // calculate sum of a 
-        for (size_t i = 0; i < a.size(); i++) {
-            res += a[i];
-        }
-        benchmark::DoNotOptimize(res);
-    }
-}
-
-BENCHMARK(BM_reduce);
-
-BENCHMARK_MAIN();
-```
-
-使用起来很方便，只需将需要测试的代码放在 `for (auto _: bm)` 里面即可。它会自动决定要重复多少次， 保证结果是准确的，同时不浪费太多时间
-
-BENCHMARK_MAIN 会自动生成了一个 main 函数， 从而生成一个可执行文件供你运行。运行后会得到测试的结果打印在终端上
-
-google/benchmark 还提供了一些 helper 函数/方法，比如说DoNotOptimize，因为BM_reduce中是一个计算任务，如果不使用res的话编译器会把它优化掉，所以要用DoNotOptimize禁止优化。如果不使用google/benchmark的话就得打印一下res来强制使用它
-
-### 编译
-
-使用编译器编译你的测试代码，确保链接 Google Benchmark 库。需要添加 `-lbenchmark` 和 `-lpthread` 等链接选项
-
-```cmd
-$ g++ -o mybenchmark mybenchmark.cpp -lbenchmark -lpthread
-```
-
-### 命令行参数
-
-google/benchmark 提供了一些命令行参数，来更好的控制测试的输出行为
-
-## *perf*
-
-perf是Linux操作系统中内置的性能分析工具。它通过使用硬件性能监测器和事件计数器，提供了对程序运行时的诸多性能指标的收集
-和分析能力。Perf工具可以用于测量和分析各种系统层面的性能指标，包括CPU利用率、指令执行次数、缓存命中率、内存访问模式等
-
-<img src="perf_events_map.png" width="80%">
-
-* 综合性能分析：pert提供了广泛的性能分析功能，包括CPU性能分析、内存分析、事件采样、调用图等。
-* 功能强大：通过硬件性能检测器来收集性能数据，可以独立的为每个线程计数，提供更全面的多线程性能分析
-* 可扩展性好：perf支持多种分析和报告输出格式，可以根据需要生成文本、图形或其他格式的分析结果。它还可以与其他工具（如gprof2dot）进一步生成多种形式的分析结果
-
-## *gprof*
-
-### intro
-
-gprof是GNU项目中的一个性能分析工具，可用于C和C++程序。它通过在程序中插入计时代码和函数调用跟踪来测量程序执行时间，并生成函数调用图和剖析报告，以帮助确定程序的性能瓶颈
-
-* Pros
-  * 和GNU集成，可以跨平台使用
-  * 配合第三方工具可以实现比较好的可视化效果
-  * 没有perf那么复杂，比较容易使用
-* Cons
-  * 不能像perf一样通过硬件性能检测器收集数据，其精准度有限，对程序执行时间较短或细粒度性能问题的分析方面可能不够准确
-  * 对于多线程和并发程序的性能分析能力有限
-  * 主要针对C/C++程序
-
-### 使用
-
-* 使用-pg参数编译程序
-
-  ```cmd
-  $ g++ -pg main.cpp-o main.exe
-  ```
-
-* 运行程序并正常退出，执行完成后会生成gmon.out文件
-
-  ```cmd
-  $ ./main.exe
-  ```
-
-* 对使用gprof将生成的gmon.out文件转成可读文件
-
-  ```cmd
-  $ gprof main.exe gmon.out > result.txt
-  ```
-
-### 函数调用可视化
-
-可以通过gprof2dot工具将 result.txt 转换成调用关系图。Gprof2dot是一个开源的工具，可以将多种性能分析工具分析结果进行可视化。支持pert、valgrid、gprof、vtune等等
-
-* 安装：需要有python环境和graphviz环境
-
-  ```cmd
-  $ sudo apt-get install python3 graphviz
-  $ pip install gprof2dot
-  ```
-
-* 使用
-
-  ```cmd
-  $ gprof2dot result.txt | dot -Tpng-o output.png
-  ```
-
-## *likwid*
-
-## *火焰图*
-
-火焰图是由 Linux 性能优化大师 Brendan Gregg 发明的，从宏观角度查看时间花在了哪里
-
-* X轴
-  * 由多个方块组成，每个方块表示一个函数
-  * 函数在X轴占据的宽度越宽，表示它被采样到的次数越多，可以简单的粗暴的近似理解为执行时间
-* Y轴
-  * 表示函数调用栈，调用栈越深，火焰就越高
-  * 顶部是 CPU 正在执行的函数，下方都是它的父函数
-
-### 生成火焰图
-
-1. 采集堆栈：perf、SystemTap、sample-bt
-2. 折叠堆栈：stackcollapse.pl
-3. 生成火焰图：flamegraph.pl
-
-## *bpf*
-
-## *SystemTap*
-
-https://blog.csdn.net/han2529386161/article/details/103428728
-
-## *Intel Vtune profiler*
-
-Intel VTune profiler是一款功能强大的性能分析工具，针对Intel处理器和架构进行了优化。它可以提供广泛的性能分析功能，包括CPU
-使用率、内存访问模式、并行性分析等。VTune profiler支持Windows和Linux操作系统
-
-* 性能强大，和pert一样可以通过硬件事件采样，而且可以对多个维度分析线程、内存、cache、ofiload
-* 用户友好：提供使用简便的GUI，使用起来非常方便，也支持命令行
-* 丰富的可视化和报告功能：VTune提供直观的可视化界面和丰富的报告功能，使得性能数据和分析结果易于理解和解释。开发人员可以通过图表、图形化界面和报告来展示和分享性能分析的结果。
-* 跨平台，支持Windows和linux系统
-* 支持本地和远程调试
-
