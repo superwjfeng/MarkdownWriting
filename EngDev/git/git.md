@@ -1,4 +1,4 @@
-# Git原理
+# Git使用
 
 ## *版本控制*
 
@@ -25,98 +25,13 @@
 
 ### 工作区、暂存区和版本库
 
+Git追踪管理的是修改，而不是文件
+
 <img src="git三个区域.png" width="50%">
 
 * 工作区 Working directory：放需要管理的代码和文件的目录
-
 * 暂存区 Stage area/index：一般放在 `.git` 目录下的index文件中
-
 * 版本库 Repository (locally)：`.git` 这个隐藏目录被称为Git的版本库
-
-  <img src="git版本库内容.png" width="35%">
-
-修改的工作区内容的索引会写入对象库的一个新的git对象 object 中
-
-Git追踪管理的是修改，而不是文件
-
-## *Git的数据模型*
-
-Git 将顶级目录中的文件和文件夹作为集合，并通过一系列快照 snapshot 来管理其历史记录。每一个文件被称为Blob对象，相当于是字节Array数据对象，目录被称为Tree，它将名字String于Blob对象或另外的树映射 `map<string, object>`
-
-```
-<root> (tree)
-|
-+- foo (tree)
-|  |
-|  + bar.txt (blob, contents = "hello world")
-|
-+- baz.txt (blob, contents = "git is wonderful")
-```
-
-Git使用由snapshot组成的有向无环图 directed acyclic graph 来建模历史。有向无环图的意思是每一个snapshot都有一系列的parent
-
-每一个snapshot称为一个commit，每一个snapshot都会会指向它之前的snapshot。用伪代码可以表示成
-
-```
-// 文件就是一组数据
-type blob = array<byte>
-
-// 一个包含文件和目录的目录
-type tree = map<string, tree | blob>
-
-// 每个提交都包含一个父辈，元数据和顶层树
-type commit = struct {
-    parent: array<commit>
-    author: string
-    message: string
-    snapshot: tree
-}
-```
-
-### 对象和内存寻址
-
-Git 中对象根据内容地址寻址，在储存数据时，所有的对象都会基于它们的SHA-1 哈希值进行寻址
-
-```
-objects = map<string, object>
-
-def store(object):
-    id = sha1(object)
-    objects[id] = object
-
-def load(id):
-    return objects[id]
-```
-
-Blobs、树和提交都一样，它们都是对象。当它们引用其他对象时，它们并没有真正的在硬盘上保存这些对象，而是仅仅保存了它们的哈希值作为引用
-
-但是哈希值是记不住了，所以要给他们起别名，也就是建立一个用string表示的reference 引用。和C++不同，这里reference应该被理解为指针，它可以不断变动指向不同的哈希值（或者说commit）。这样，Git 就可以使用诸如 “master” 这样人类可读的名称来表示历史记录中某个特定的提交，而不需要在使用一长串十六进制字符了
-
-```
-references = map<string, string>
-
-def update_reference(name, id):
-    references[name] = id
-
-def read_reference(name):
-    return references[name]
-
-def load_reference(name_or_id):
-    if name_or_id in references:
-        return load(references[name_or_id])
-    else:
-        return load(name_or_id)
-```
-
-git的分支实质上仅是包含所指对象的SHA-1校验和文件，所以它的创建和销毁都很快。创建一个新分支就相当于网一个文件中写了41个字节
-
-### 一些特殊的reference
-
-* 当前的位置特殊的索引称为 HEAD
-* origin一般用作本地对remote repository的名称，它是 `git clone` 时的默认remote库名称，可以 `git clone [-o RemoteName] ` 换一个名字
-* 本地 `git init` 时的默认branch名称是master。因此对远程库的本地branch名称是，`<remote>/<branch>`，即origin/master
-
-# Git使用
 
 ## *git 配置*
 
@@ -303,3 +218,130 @@ Detached HEAD 状态通常发生在以下几种情况下
 * `git blame`：查看最后修改某行的人
 * `git bisect`：通过二分查找搜索历史记录
 * `.gitignore`： [指定](https://git-scm.com/docs/gitignore) 故意不追踪的文件
+
+
+
+# Git原理
+
+## *Git文件系统*
+
+## *Git的对象模型*
+
+```cmd
+$ mkdir GitTest
+$ cd GitTest
+$ git init
+```
+
+<img src="git版本库内容.png" width="35%">
+
+Object是git管理的最基本的单元，object代表了一个普通的文件。每一个被 git 管理的文件都会计算出一个 hash 值然后压缩放置于 `.git/objects` 目录中。修改的工作区内容的索引会写入对象库的一个新的git对象 object 中
+
+一共有四个Object类型
+
+```
+CommitObject  = 1 // 提交
+TreeObject    = 2 // 目录
+BlobObject    = 3 // 文件
+TagObject     = 4 // 标签
+```
+
+```pseudocode
+type Object interface {
+	ID() plumbing.Hash // 哈希值
+	Type() plumbing.ObjectType // 类型
+	Decode(plumbing.EncodedObject) error // 写入
+	Encode(plumbing.EncodedObject) error // 读取
+}
+```
+
+
+
+
+
+
+
+Git 将顶级目录中的文件和文件夹作为集合，并通过一系列快照 snapshot 来管理其历史记录。每一个文件被称为Blob对象，相当于是字节Array数据对象，目录被称为Tree，它将名字String于Blob对象或另外的树映射 `map<string, object>`
+
+```
+<root> (tree)
+|
++- foo (tree)
+|  |
+|  + bar.txt (blob, contents = "hello world")
+|
++- baz.txt (blob, contents = "git is wonderful")
+```
+
+Git使用由snapshot组成的有向无环图 directed acyclic graph 来建模历史。有向无环图的意思是每一个snapshot都有一系列的parent
+
+每一个snapshot称为一个commit，每一个snapshot都会会指向它之前的snapshot。用伪代码可以表示成
+
+```
+// 文件就是一组数据
+type blob = array<byte>
+
+// 一个包含文件和目录的目录
+type tree = map<string, tree | blob>
+
+// 每个提交都包含一个父辈，元数据和顶层树
+type commit = struct {
+    parent: array<commit>
+    author: string
+    message: string
+    snapshot: tree
+}
+```
+
+### 对象和内存寻址
+
+Git 中对象根据内容地址寻址，在储存数据时，所有的对象都会基于它们的SHA-1 哈希值进行寻址
+
+```
+objects = map<string, object>
+
+def store(object):
+    id = sha1(object)
+    objects[id] = object
+
+def load(id):
+    return objects[id]
+```
+
+Blobs、树和提交都一样，它们都是对象。当它们引用其他对象时，它们并没有真正的在硬盘上保存这些对象，而是仅仅保存了它们的哈希值作为引用
+
+但是哈希值是记不住了，所以要给他们起别名，也就是建立一个用string表示的reference 引用。和C++不同，这里reference应该被理解为指针，它可以不断变动指向不同的哈希值（或者说commit）。这样，Git 就可以使用诸如 “master” 这样人类可读的名称来表示历史记录中某个特定的提交，而不需要在使用一长串十六进制字符了
+
+```
+references = map<string, string>
+
+def update_reference(name, id):
+    references[name] = id
+
+def read_reference(name):
+    return references[name]
+
+def load_reference(name_or_id):
+    if name_or_id in references:
+        return load(references[name_or_id])
+    else:
+        return load(name_or_id)
+```
+
+git的分支实质上仅是包含所指对象的SHA-1校验和文件，所以它的创建和销毁都很快。创建一个新分支就相当于网一个文件中写了41个字节
+
+
+
+## *Reference*
+
+Git 支持三种引用类型，不同的引用类型对应的引用文件各自存储在 `.git/refs/` 下的不同子目录中。
+
+* **HEAD 引用**
+* **标签引用**
+* **远程引用**
+
+### 一些特殊的reference
+
+* 当前的位置特殊的索引称为 HEAD
+* origin一般用作本地对remote repository的名称，它是 `git clone` 时的默认remote库名称，可以 `git clone [-o RemoteName] ` 换一个名字
+* 本地 `git init` 时的默认branch名称是master。因此对远程库的本地branch名称是，`<remote>/<branch>`，即origin/master

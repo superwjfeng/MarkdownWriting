@@ -577,22 +577,38 @@ logicalvar = omp_test_lock(&lockvar); // check lock and possibly set lock
 
 ## *规约*
 
+有时候在barrier的地方不仅需要同步数据，还需要进行规约，规约就是把各个线程的数据聚合起来，比如说要算一个大的加法，每个加法里面还有很多操作，那么可以让每个线程处理内部的操作，然后最后把结果加起来。规约的结果可以给主线程使用
+
 ```c
-reduction(operator:list)
+reduction(operator:variable)
 ```
 
-有时候在barrier的地方不仅需要同步数据，还需要进行规约，规约就是把各个线程的数据聚合起来。规约的结果可以给主线程使用
-
-<img src="OpenMP支持的规约操作.png">
+* `operator`是规约操作的运算符，例如 `+` 表示求和，`*` 表示求积，`max` 表示求最大值，等等。
+* `variable`是进行规约操作的变量
 
 ### reduction的执行过程
+
+下面是 openmp 自带的内置规约操作
+
+<img src="OpenMP支持的规约操作.png">
 
 1. fork线程并分配任务
 2. 每一个线程定义一个私有变量omp_priv（同private）
 3. 各个线程执行计算
-4. 所有omp_priv和omp_in一起顺序进行reduction，写回原变量
+4. Combiner：所有私有的omp_in（就是omp_priv？）一起顺序进行reduction操作，并将结果写回原变量（omp_out）
 
 ### 自定义规约操作
+
+OpenMP 提供的内置规约操作只可用于内置数据类型，比如 int、float 等，如果是要操作自定义类型 struct 或者有一些非内安置操作，比如 argmin、argmax，那么就需要自定义规约操作。有点C++重载类操作符的意味
+
+```c
+#pragma omp declare reduction (reduction-identifier : typename-list : combiner) [initializer-clause]
+```
+
+* reduction-identifier：归约标识符，相当于openmp自带的+，这里命名为MyAdd
+* typename-list：归约操作的数据类型，这里为MyClass
+* combiner：合并链接具体操作，+=为具体操作，omp_out与omp_in为固定的标识符
+* initializer-clause：归约操作的每个线程的初始值，比如求和操作时赋值100则等效于100xn(线程数）基础上再求和数组,定义格式为initializer(omp_priv=MyClass(100)) ,此项可以省略不写，初值会按类型的默认构造函数赋值
 
 ### 将规约过程组织成数据结构
 
@@ -600,7 +616,271 @@ reduction(operator:list)
 
 ## *OpenMP的内存模型*
 
+# OpenMP源代码解析
 
+下面的内容都是GCC按照OpenMP规范的实现
+
+libgomp ABI: https://gcc.gnu.org/onlinedocs/libgomp/The-libgomp-ABI.html
+
+gcc source code: https://github.com/gcc-mirror/gcc/blob/master/libgomp/parallel.c#L130
+
+## *准备*
+
+### 帮助阅读汇编的gcc选项
+
+* 调整编译器的优化等级：编译器较高的优化登记会导致汇编代码产生严重变形，可读性严重下降。`-Og` 是减少GCC的优化程度，提高汇编程序的可读性，其中-g是 gdb debugging。较高的优化等级可以通过 `-O1`、`-O2` 等选项指定
+* -Wunknown-pragmas: 此选项告诉 GCC 在遇到未知的 #pragma 指令时发出警告。在编译时，如果你使用了未知的 #pragma 指令，编译器会产生相应的警告信息，帮助用户避免使用不被支持的指令
+* -fverbose-asm: 此选项用于生成更为详细的汇编代码，包括源代码行号和基本块的注释。这样生成的汇编代码更易于阅读和理解，特别是在进行汇编级别的调试时。这对于分析和理解生成的汇编代码非常有用
+* -masm=intel：这个选项将汇编代码格式设置为 Intel 风格，而不是默认的 AT&T 风格，对于一些程序员来说更易读
+* -fdump-tree-all：可以让GCC生成大量的中间代码文件，其中包括 `*.o.omp-expand` 文件，它包含了OpenMP指令的展开
+
+```cmd
+$ gcc -S main.c -o main.s -fopenmp -lm -Wunknown-pragmas -fverbose-asm -masm=intel -Og -fdump-tree-all
+```
+
+## *parallel construct*
+
+https://gcc.gnu.org/onlinedocs/libgomp/Implementing-PARALLEL-construct.html
+
+```c
+#pragma omp parallel
+{
+    body;
+}
+```
+
+会被展开为
+
+```c
+void subfunction (void *data)
+{
+	use data;
+    body;
+}
+
+setup data;
+GOMP_parallel_start (subfunction, &data, num_threads);
+subfunction (&data);
+GOMP_parallel_end ();
+```
+
+```c
+void GOMP_parallel_start (void (*fn)(void *), void *data, unsigned num_threads)
+```
+
+* `fn`：指向表示并行区域的函数的指针。该函数必须接受一个 `void*` 参数，调用 `GOMP_parallel_start` 时应提供相应签名的函数。从上面展开的部分可以看出，这个函数指针就是用于回调 subfunction 的
+* `data`：指向要传递给并行区域的数据的指针。在并行区域中，可以使用线程特定的机制访问此数据
+* `num_threads`：一个无符号整数，指定在并行区域中要使用的线程。如果不指定这个 `num_threads()` 子句的话，默认的参数是 0 ，但是如果使用了 IF 子句并且条件是 false 的话，那么这个参数的值就是 1（即并行）
+
+### GOMP_parallel_start 分析
+
+```c
+void
+GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
+{
+  num_threads = gomp_resolve_num_threads (num_threads, 0);
+  gomp_team_start (fn, data, num_threads, 0, gomp_new_team (num_threads),
+		   NULL);
+}
+```
+
+* gomp_resolve_num_threads
+
+  ```c
+  /* Determine the number of threads to be launched for a PARALLEL construct.
+     This algorithm is explicitly described in OpenMP 3.0 section 2.4.1.
+     SPECIFIED is a combination of the NUM_THREADS clause and the IF clause.
+     If the IF clause is false, SPECIFIED is forced to 1.  When NUM_THREADS
+     is not present, SPECIFIED is 0.  */
+  gomp_resolve_num_threads (unsigned specified, unsigned count) {
+    // ...
+    if (specified == 1)
+    return 1;
+    // ...
+    /* If NUM_THREADS not specified, use nthreads_var.  */
+    if (specified == 0)
+      threads_requested = icv->nthreads_var;
+    else
+      threads_requested = specified;
+    // ...
+  }
+  ```
+
+  SPECIFIED 是 NUM_THREADS 子句和 IF 子句的组合。 如果 IF 子句为假，则将 SPECIFIED 强制为 1。当 NUM_THREADS 未出现时，SPECIFIED 为 0，此时会由[这个算法](#https://www.openmp.org/spec-html/5.0/openmpsu35.html#x55-880002.6.1)决定，注意这个算法及到当前上下文中的多个因素，非常复杂。总而言之就是此时取决于运行时库的实现
+
+* gomp_team_start
+
+  ```c
+  /* Launch a team.  */
+  
+  void
+  gomp_team_start (void (*fn) (void *), void *data, unsigned nthreads,
+  		 unsigned flags, struct gomp_team *team,
+  		 struct gomp_taskgroup *taskgroup)
+  {
+    struct gomp_thread_start_data *start_data = NULL;
+    struct gomp_thread *thr, *nthr;
+    struct gomp_task *task;
+    struct gomp_task_icv *icv;
+    /*
+    大量代码
+    */
+    for (; i < nthreads; ++i, ++start_data)
+      {
+        pthread_t pt;
+        int err;
+  
+        start_data->fn = fn; // 这行代码就是将 subfunction 函数指针进行保存最终在函数  gomp_thread_start 当中进行调用
+        start_data->fn_data = data; // 这里保存函数 subfunction 的函数参数
+        start_data->ts.team = team; // 线程的所属组
+        start_data->ts.work_share = &team->work_shares[0];
+        start_data->ts.last_work_share = NULL;
+        start_data->ts.team_id = i; // 线程的 id 我们可以使用函数 omp_get_thread_num 得到这个值
+        start_data->ts.level = team->prev_ts.level + 1;
+        start_data->ts.active_level = thr->ts.active_level;
+  #ifdef HAVE_SYNC_BUILTINS
+        start_data->ts.single_count = 0;
+  #endif
+        start_data->ts.static_trip = 0;
+        start_data->task = &team->implicit_task[i];
+        gomp_init_task (start_data->task, task, icv);
+        team->implicit_task[i].icv.nthreads_var = nthreads_var;
+        start_data->thread_pool = pool;
+        start_data->nested = nested;
+              // 如果使用了线程的亲和性那么还需要进行亲和性设置
+        if (gomp_cpu_affinity != NULL)
+      gomp_init_thread_affinity (attr);
+  
+        err = pthread_create (&pt, attr, gomp_thread_start, start_data);
+        if (err != 0)
+      gomp_fatal ("Thread creation failed: %s", strerror (err));
+      }
+  }
+  ```
+
+  本质上就是通过线程池来分发线程，parallel construct 最后就是一个通过 pthread_create 来构建线程池的过程
+
+### 总结
+
+将parallel construct的调用过程可以总结为
+
+```
+GOMP_parallel_start() -> gomp_resolve_num_threads(), gomp_team_start() -> for (num_threads) { pthread_create() }
+```
+
+### GOMP_parallel_end
+
+这个函数的主要作用就是一个同步点，保证所有的线程都执行完成之后再继续往后执行。其核心原理就是使用路障 barrier 去实现的，这其中是 OpenMP 自己实现的一个 barrier 而不是直接使用 pthread 当中的 barrier  
+
+## *for construct*
+
+```c
+#pragma omp parallel for
+for (i = lb; i <= ub; i++)
+	body;
+```
+
+会被展开为
+
+```c
+void subfunction (void *data)
+{
+	long _s0, _e0;
+	while (GOMP_loop_static_next (&_s0, &_e0))
+    {
+        long _e1 = _e0, i;
+        for (i = _s0; i < _e1; i++)
+            body;
+	}
+	GOMP_loop_end_nowait ();
+}
+
+GOMP_parallel_loop_static (subfunction, NULL, 0, lb, ub+1, 1, 0);
+subfunction (NULL);
+GOMP_parallel_end ();
+```
+
+```c
+void
+GOMP_parallel_loop_dynamic_start (void (*fn) (void *), void *data,
+                  unsigned num_threads, long start, long end,
+                  long incr, long chunk_size)
+{
+  gomp_parallel_loop_start (fn, data, num_threads, start, end, incr,
+                GFS_DYNAMIC, chunk_size);
+}
+
+static void
+gomp_parallel_loop_start (void (*fn) (void *), void *data,
+              unsigned num_threads, long start, long end,
+              long incr, enum gomp_schedule_type sched,
+              long chunk_size)
+{
+  struct gomp_team *team;
+  // 解析具体创建多少个线程
+  num_threads = gomp_resolve_num_threads (num_threads, 0);
+  // 创建一个含有 num_threads 个线程的线程组
+  team = gomp_new_team (num_threads);
+  // 对线程组的数据进行初始化操作
+  gomp_loop_init (&team->work_shares[0], start, end, incr, sched, chunk_size);
+  // 启动 num_threads 个线程执行函数 fn 
+  gomp_team_start (fn, data, num_threads, team);
+}
+
+enum gomp_schedule_type
+{
+  GFS_RUNTIME, // runtime 调度方式
+  GFS_STATIC,     // static  调度方式
+  GFS_DYNAMIC, // dynamic 调度方式
+  GFS_GUIDED,     // guided  调度方式
+  GFS_AUTO     // auto    调度方式
+};
+```
+
+`gomp_parallel_loop_start()` 的参数为
+
+* `start`: 循环的起始迭代，即 for 的第一个参数
+* `end`: 循环的结束迭代，即 for 的第二个参数
+* `incr`: 循环迭代的增量，比如如果是 1，则按顺序迭代；如果是 -1，则倒序迭代。所以 `#pragma omp for` 只能是 `++` 或者 `--`
+* `sched`: 一个枚举类型，指定循环的调度策略
+* `chunk_size`: 用于指定循环分块执行的块大小。这个参数在某些调度策略中非常重要，例如在静态调度中，它表示每个线程获取的连续迭代的数量
+
+`gomp_parallel_loop_start()` 的主要作用就是将整个循环的起始位置信息保存到线程组内部，即 `gomp_loop_init()`。那么之后就能够在函数`GOMP_loop_dynamic_next()` 当中直接使用这些信息进行不同线程的分块划分
+
+## *其他的construct*
+
+### section construct
+
+```c
+#pragma omp sections
+{
+    #pragma omp section
+    stmt1;
+    #pragma omp section
+    stmt2;
+    #pragma omp section
+    stmt3;
+}
+```
+
+becomes
+
+```c
+for (i = GOMP_sections_start (3); i != 0; i = GOMP_sections_next ())
+    switch (i)
+      {
+      case 1:
+        stmt1;
+        break;
+      case 2:
+        stmt2;
+        break;
+      case 3:
+        stmt3;
+        break;
+      }
+GOMP_barrier ();
+```
 
 # Correctness
 
@@ -663,6 +943,27 @@ Enddo
   for (i = 0; i < 4; i++) {
       b[i] = 8;         // Step 1
       a[i] = b[i] + 10; // Step 2
+  }
+  ```
+
+  ```c
+  #include <omp.h>
+  
+  int main() {
+      int b[4];
+      int a[4];
+  
+      #pragma omp parallel for
+      for (int i = 0; i < 4; i++) {
+          b[i] = 8;  // 并行化 Step 1
+      }
+  
+      #pragma omp parallel for
+      for (int i = 0; i < 4; i++) {
+          a[i] = b[i] + 10;  // 并行化 Step 2
+      }
+  
+      return 0;
   }
   ```
 
@@ -862,6 +1163,12 @@ Intel开发了跨平台函数库 IPP, Intel Integrated Performance Primitives �
 
 Auto-vectorization 是一种编译器优化技术，旨在自动将代码转换为使用矢量指令集（如SSE、AVX等）的形式，以便在现代处理器上实现并行执行
 
+```cmd
+$ gcc -S main.c -o main.s -fopenmp -lm -Wunknown-pragmas -fverbose-asm -masm=intel -Og
+```
+
+如果看到编译器生成的汇编里，有大量 ss 结尾 的指令则说明矢量化失败；如果看到大多数都是 ps 结尾则说明矢量化成功
+
 ### Directive
 
 * OpenMP
@@ -902,7 +1209,9 @@ m = _mm_add_ps(m, one);
 
 GCC允许这么写，因为Linux里SSE/AVX是内置指令，而win的MSVC就要用函数来调用
 
-## *SSE/AVX Intrinsics*
+# SSE/AVX Intrinsics
+
+## *Intro*
 
 https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html
 
@@ -925,22 +1234,48 @@ SSE/AVX指令主要定义于以下一些头文件中：
 ### 命名规则
 
 * 数据类型通常以 `__mxxx(T)` 的方式进行命名，其中xxx代表数据的位数，如SSE提供的 `__m128` 为128位，AVX提供的 `__m256` 为256位。T为类型，若为单精度浮点型则省略（即**默认是单精度浮点类型**），若为整形则为i，比如 `__m128i`，若为双精度浮点型则为d，如 `__m256d`
-* 操作浮点数的内置函数命名方式为：`_mm(xxx)_name_PT`
-  * xxx为SIMD寄存器的位数，若为128m则省略，比如`_mm_addsub_ps`，若为 `_256m` 则为256，如`_mm256_add_ps`
+* 操作浮点数的内置函数命名方式为：`_mm(xxx)_name_[A]PT`
+  * xxx为SIMD寄存器的位数，若为128，xxx 则省略，比如`_mm_addsub_ps`，若为 AVX2 的256位就写 _mm256，比如`_mm256_add_ps`
   * name为函数执行的操作的名字，如加法为`_mm_add_ps`，减法为 `_mm_sub_ps`
+  * A代表的是否对齐到16字节，a(ligned) 代表对齐，u(nanligned) 代表不对齐。这个命名项是可选的
   * P代表的是对矢量 packed data vector 还是对标量 scalar 进行操作，如`_mm_add_ss` 是只对最低位的32位浮点数执行加法，而 `_mm_add_ps` 则是对4个32位浮点数执行加法操作
   * T代表浮点数的类型，若为s则为单精度浮点型，若为d则为双精度浮点，如 `_mm_add_pd` 和 `_mm_add_ps`
 * 操作整形的内置函数命名方式为：`_mm(xxx)_name_epUY`。xxx为SIMD寄存器的位数，若为128位则省略。 name为函数的名字。U为整数的类型，若为无符号类型则为u，否则为i，如 `_mm_adds_epu16` 和 `_mm_adds_epi16`。Y为操作的数据类型的位数，如 `_mm_cvtpd_pi32`。之所以加一个 `e` 是历史遗留问题，是为了和 MMX 的指令做区别
 
-## *Intrinsic类型*
+### -march=native
+
+`-march=native` 是 GCC 编译器中的一个选项，用于指示编译器生成针对本地计算机架构优化的代码。具体而言，它告诉编译器使用与主机处理器架构相匹配的指令集和优化
+
+* 使用 `-march=native` 的好处是，编译器会根据当前系统的处理器类型自动选择最佳的指令集，以提高生成的机器代码的性能。这种方式特别适用于在特定系统上编译和运行代码，因为它充分利用了该系统硬件的优势
+* 然而需要注意的是，使用 `-march=native` 可能会导致生成的代码无法在其他类型的处理器上运行。如果代码需要跨平台运行，可能需要选择一个更通用的 `-march` 选项，以确保生成的代码能够在不同的硬件上正常工作
+
+## *存取*
 
 ### 存取操作 load/store/set
 
-### 乘法
+```c
+__m128 _mm_load_ps (float const* mem_addr);
+__m128 _mm_load_ps1 (float const* mem_addr);
+
+```
+
+## *算术运算*
+
+### 加减法
+
+
+
+### 乘除法
 
 * `_mm_mul_epi32()` 注意溢出时的问题
 * `_mm_mullo_epi32()`
 * `_mm_mulhi_epi32()`
+
+### 平方
+
+### 倒数
+
+### 点乘
 
 ### 数据类型转换
 
@@ -952,7 +1287,7 @@ https://www.toolhelper.cn/Digit/FractionConvert
 
 设置round模式 `_MM_SET_ROUNDING_MODE()`，可以选择 `_MM_ROUND_DOWN`、`_MM_ROUND_UP`、`_MM_ROUND_TOWARD_ZERO`，默认的模式是 `_MM_ROUND_NEAREST`（向偶数偏移，减少平均值误差偏移）
 
-### 比较运算
+比较运算
 
 ### 逻辑运算
 

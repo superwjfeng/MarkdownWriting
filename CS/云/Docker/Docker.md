@@ -421,8 +421,6 @@ cri-containerd -> cri-o -> containererd -> containerd的实现作为标准CRI
 
   **Kubernetes至此已成了容器编排领域的绝对标准，而Docker已成容器事实的标准**
 
-## *OCI标准*
-
 ## *容器技术栈*
 
 https://landscape.cncf.io
@@ -436,6 +434,52 @@ https://landscape.cncf.io
 > 1. High-level Container Management：容器管控的UI层。直接实现容器的管控和使用界面，也是用户最熟悉的子系统。
 > 2. High-level Container Runtime：容器状态及资源供给。包括镜像管理、网络接入、容器状态、调用Low Level Runtime执行容器等功能。习惯上这层称之为容器引擎（Container Engine）。
 > 3. Low-level Container Runtime：容器执行层。负责具体构建容器运行环境并执行容器进程。习惯上这层直接简称为容器运行时（Container Runtime）。 -- https://zhuanlan.zhihu.com/p/337280265
+
+# OCI标准
+
+https://waynerv.com/posts/container-fundamentals-learn-container-with-oci-spec/
+
+OCI 规范分为 Image spec 和 Runtime spec 两部分，它们分别覆盖了容器生命周期的不同阶段
+
+* Image Spec 规范定义了容器镜像的结构和元数据格式，确保容器镜像在不同的容器运行时之间具有可移植性
+*  Runtime Spec 规范定义了容器的运行时行为，确保容器在不同的容器运行时中具有一致的执行方式
+
+## *Image spec*
+
+https://github.com/opencontainers/image-spec
+
+### 镜像内容
+
+* Image Manifest：提供了镜像的配置和文件系统层定位信息，可看作是镜像的目录，文件格式为 `json` 
+* Image Layer Filesystem Changeset：序列化之后的文件系统和文件系统变更，它们可按顺序一层层应用为一个容器的 rootfs，因此通常也被称为一个 `layer`（与下文提到的镜像层同义），文件格式可以是 `tar` ，`gzip` 等存档或压缩格式
+* Image Configuration：包含了镜像在运行时所使用的执行参数以及有序的 rootfs 变更信息，文件类型为 `json`
+
+## *Runtime spec*
+
+https://github.com/opencontainers/runtime-spec
+
+### 容器的生命周期
+
+规范中只定义了4种[容器状态](https://github.com/opencontainers/runtime-spec/blob/master/runtime.md#state)，运行时实现可以在规范的基础上添加其他状态
+
+<img src="OCI标准的容器生命周期.drawio.png" width="50%">
+
+* `creating`: the container is being created
+* `created`: the runtime has finished the create operation and the container process has neither exited nor executed the user-specified program
+* `running`: the container process has executed the user-specified program but has not exited
+* `stopped`: the container process has exited
+
+### 运行时操作
+
+同时标准还规定了运行时必须支持的[操作](https://github.com/opencontainers/runtime-spec/blob/master/runtime.md#operations)
+
+* Query State：查询容器的当前状态
+* Create：根据镜像及配置创建一个新的容器，但是不运行用户指定程序
+* Start：在一个已创建的容器中运行用户指定程序
+* Kill：发送特定信号终止容器进程
+* Delete：删除已停止容器所创建的资源
+
+每个操作之前或之后还会触发不同的 hooks，符合规范的运行时必须执行这些 hooks。
 
 # Cloud System Engineering
 
@@ -601,27 +645,88 @@ Linux 提供了多个API 用来操作namespace，它们是 `clone()`、`setns()`
 * mount命令用于加载文件系统到指定的加载点。此命令的也常用于挂载光盘，使我们可以访问光盘中的数据。Win上会自动挂载，Linux要手动挂载。挂载的实质是为磁盘添加入口（挂载点）
 * `unshare` 命令主要能力是使用与父程序不共享的名称空间运行程序
 
-
-
 要先挂载一个文件，否则隔离不彻底，还是能看到其他文件
 
 ## *资源控制*
 
+对隔离的空间需要进行资源控制，否则一个没有限制的容器就会把系统弄崩溃了。一个例子是K8S会因为容器的OOM将其杀死
+
 ### cgroups
 
+cgroups, Control Groups，是 Linux 内核提供的一种机制，用于限制、控制和监视进程组的系统资源。它允许系统管理员在系统上分配资源，如 CPU、内存、磁盘 I/O 等，以便更有效地管理和控制进程的资源使用
 
+* 资源限制：cgroup 允许管理员为每个 cgroup 分配特定的资源限制，如 CPU 使用、内存限制等。这有助于确保系统上的不同任务之间的资源分配更加公平和可控
+* 优先级：可以为不同的 cgroup 设置优先级，以确保高优先级的任务获得更多的系统资源。这对于实时任务和对性能要求较高的任务非常有用
+* 资源统计：cgroup 允许管理员监视每个 cgroup 的资源使用情况，以便进行性能分析和故障排除
+* 进程组管理：cgroup 可以将一组相关的进程放在同一个 cgroup 中，从而更容易地对它们进行管理和控制
+* 层次结构：cgroup 支持层次结构，可以创建嵌套的 cgroup。这使得在不同层次上对资源进行更细粒度的控制成为可能
 
-限制CPU的使用率
+### cgroups 信息查看
 
-内存，比如说K8S会因为容器的OOM将其杀死
+* 查看系统中支持的 cgroups 文件系统（Linux系统中，cgroups 被实现为文件系统的一部分）
 
+  ```cmd
+  $ cat /proc/filesystems | grep cgroup
+  nodev	cgroup
+  nodev	cgroup2
+  ```
 
+  * cgroup：这是早期的 cgroup 实现，在较早版本的 Linux 内核中使用，存在一些限制
+  * cgroup2：这是更新的 cgroup 实现，它在一些方面提供了改进和新功能。它允许更灵活的资源控制，支持层次结构，以及一些其他增强功能。许多新的 Linux 发行版和内核版本已经采用了 cgroup2
+
+* cgroups 各个子系统查看
+
+  ```cmd
+  $ cat /proc/cgroups
+  #subsys_name	hierarchy	num_cgroups	enabled
+  cpuset	0	98	1
+  cpu	0	98	1
+  cpuacct	0	98	1
+  blkio	0	98	1
+  memory	0	98	1
+  devices	0	98	1
+  freezer	0	98	1
+  net_cls	0	98	1
+  perf_event	0	98	1
+  net_prio	0	98	1
+  hugetlb	0	98	1
+  pids	0	98	1
+  rdma	0	98	1
+  misc	0	98	1
+  ```
+
+  * subsys_name：子系统的名称，表示cgroups中的一个资源控制模块
+  * hierarchy：层次结构的编号。`0` 表示该子系统没有嵌套层次结构
+  * num_cgroups：当前系统上该子系统的 cgroup 数量
+  * enabled：一个标志，表示该子系统是否在内核中启用。`1` 表示启用，`0` 表示未启用
+
+* cgroups 挂载信息查看
+
+  ```cmd
+  $ mount | grep cgroup
+  cgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime)
+  ```
+
+  默认存储位置为 /sys/fs/cgroup
+
+* 查看一个进程的 cgroups 控制信息（`$$` 表示当前进程的PID）
+
+  ```cmd
+  [root@VM-8-12-centos ~]# cat /proc/$$/cgroup
+  11:hugetlb:/
+  10:memory:/user.slice
+  9:freezer:/
+  8:cpuset:/
+  7:perf_event:/
+  6:net_prio,net_cls:/
+  5:devices:/user.slice/user-0.slice
+  4:pids:/user.slice
+  3:cpuacct,cpu:/user.slice
+  2:blkio:/user.slice
+  1:name=systemd:/user.slice/user-0.slice/session-354304.scope
+  ```
 
 sched_autogroup 的原理是把同一个session中的进程放入同一个cgroup中，以cgroup为单位进行进程调度，避免了声明需要很多线程的进程抢占大部分CPU资源
-
-
-
-Docker本质就是一个特殊的进程，里面用 clone 来创建、管理其他的进程，即容器
 
 ### 需要用到的命令
 
@@ -629,6 +734,17 @@ Docker本质就是一个特殊的进程，里面用 clone 来创建、管理其�
 * `stress`
 
 ## *LXC容器*
+
+LXC简单来说就是对namespace和cgroup的封装，不需要像上面一样自己去操作namespace和cgroup的API，而是直接使用LXC提供的比较方便的API就可以完成资源隔离和资源控制
+
+早期Docker是对LXC的进一步封装
+
+### 安装
+
+```cmd
+$ apt install lxc lxc-templates bridge-utils -y
+$ systemctl status lxc
+```
 
 ### 需要用到的命令
 
@@ -846,7 +962,30 @@ https://docs.docker.com/engine/install/ubuntu/#install-from-a-package
 
 ### 安装目录问题
 
-Docker 默认的安装目录为/var/lib/docker，这里面会存放很多很多镜像，所以我们在安装的时候需要考虑这个目录的空间
+Docker 默认的安装目录为 /var/lib/docker，这里面会存放很多很多镜像，所以我们在安装的时候需要考虑这个目录的空间
+
+有三种解决方案
+
+1. 将 /var/lib/docker 挂载到一个大的磁盘，比如腾讯云这种云厂商在安装 K8s 的节点的时候提供了挂载选项，可以直接挂载这个目录过去
+
+2. 安装之前挂载一个大的磁盘，然后创建一个软链接到 /var/lib/docker，这样就自动安装到我们空间比较大的磁盘了
+
+3. 修改docker的配置文件，假设我们准备好了一个 /data/var/lib/docker 大硬盘挂载点
+
+   ```json
+   {
+   	"data-root": "/data/var/lib/docker"
+   }
+   ```
+
+   ```cmd
+   # 加载配置
+   sudo systemctl daemon-reload
+   # 重启 docker
+   sudo systemctl restart docker
+   #查看 docker 状态
+   sudo systemctl status docker
+   ```
 
 ### 通过包管理工具安装
 
@@ -907,6 +1046,26 @@ $ newgrp docker # 使当前用户无需重新登录，立即切换到docker用�
 $ docker ps
 ```
 
+### 修改国内镜像源（镜像加速器）
+
+对于使用 systemd 的系统（Ubuntu 16.04+、Debian 8+、CentOS 7），
+
+1. 在配置文件 /etc/docker/daemon.json（没有则创建之）中加入
+
+   ```json
+   {
+       "regostru-mirrors" : ["https://docker.mirrors.ustc.edu.cn/"]
+   }
+   ```
+
+   如果是阿里云的镜像，需要先自己注册账号，然后会分配个人专属的镜像地址
+
+2. 重新启动 dockerd
+
+   ```cmd
+   $ sudo systemctl restart docker
+   ```
+
 ## *Mac & Win*
 
 ### Mac
@@ -931,7 +1090,7 @@ Docker Desktop将容器和镜像存储在Mac文件系统中的单个预先分配
 
 ### Win
 
-# Docker的使用
+# Docker Workerflow
 
 Docker是一个开放平台，用于开发、发布和运行应用程序。 Docker允许用户将应用程序与基础架构分离，以便快速交付软件。使用Docker，用户可以以与管理应用程序相同的方式管理基础架构。通过利用Docker的代码快速发布、测试和部署方法，可以显著缩短编写代码和在生产环境中运行代码之间的延迟
 
@@ -967,20 +1126,82 @@ Docker中有镜像、容器、网络、volume、插件等对象
 
   在运行容器时，它使用一个独立的文件系统。这个自定义的文件系统由一个容器镜像提供。由于镜像包含了容器的文件系统，所以它必须包含运行应用程序所需的一切——所有依赖项、配置、脚本、二进制文件等等。镜像还包含了容器的其他配置，如环境变量、默认运行命令和其他元数据。**镜像是不可更改的，要修改一个镜像，需要重新构建**
 
-  **Docker镜像就好像是一个模版**，可以通过这个模版来创建容器服务，即通过镜像来创建容器服务
+  **Docker镜像就好像是一个类**，可以通过这个模版来创建容器服务，即通过镜像来创建容器服务
 
   用户可以创建自己的镜像，也可以仅使用由其他人创建并在注册表中发布的镜像。要构建自己的镜像，用户可以创建一个 **Dockerfile**，其中有一个简单的yaml语法来定义创建镜像和运行它所需的步骤。 Dockerfile 中的每个指令都会在镜像中创建一个层。当更改 Dockerfile 并重新构建镜像时，只有那些已更改的层会重新构建。这就是镜像相对于其他虚拟化技术轻量、小巧、快速的部分原因
 
 * 容器 container
 
-  一个容器就是在用户的计算机上运行的与主机机器上所有其他进程隔离的沙盒进程。该隔离利用了 Linux 内核名称空间和 cgroups 的功能，这些功能已经存在于 Linux 中很长时间。Docker 已经努力让这些功能易于使用和管理。总结一下，一个容器：
+  容器就像一个类实例
 
+  一个容器就是在用户的计算机上运行的与主机机器上所有其他进程隔离的沙盒进程。该隔离利用了 Linux 内核名称空间和 cgroups 的功能，这些功能已经存在于 Linux 中很长时间。Docker 已经努力让这些功能易于使用和管理。总结一下，一个容器：
+  
   * 是一个可运行的映像的实例。可以使用 DockerAPI 或 CLI 创建、启动、停止、移动或删除容器
   * 可以在本地机器、虚拟机或云中运行
   * 可移植（可在任何操作系统上运行）
   * 与其他容器隔离，运行自己的软件、二进制文件和配置
 
-## *Docker容器管理*
+## *Overview*
+
+<img src="docker_workflow.png" width="50%">
+
+编写Dockerfile `->` build 生成 images `->` run 形成 containers `->` push 到远程库
+
+<img src="docker常用命令.png" width="70%">
+
+## *Docker镜像管理*
+
+### 镜像仓库分类
+
+* 按是否对外开放划分
+  * 公有仓库：像阿里云、docker hub 等放到公有网络上，不用登录就可以下载镜像，供大家访问使用
+  * 私有仓库：不对外开放，往往位于私有网络，只有公司内部人员可以使用。
+* 按供应商和面向群体划分
+  * sponsor registry：第三方的 registry，供客户和 docker 社区版使用
+  * mirror registry：第三方的 registry，只让客户使用，例如阿里云必须注册才能使用
+  * vendor registry：由发布 docker 镜像的供应商提供的 registry，例如像Google 和 Redhat 提供了镜像仓库服务
+  * private registry：通过没有防火墙和额外的安全层的私有实体提供的 registry，仅供内部使用
+
+### 实际工作中镜像仓库的使用
+
+<img src="实际工作中镜像仓库的使用.drawio.png" width="60%">
+
+### 命令
+
+* 查看镜像信息
+
+  * `docker images` 查看镜像信息
+
+    ```cmd
+    $ docker images
+    REPOSITORY                                   TAG    IMAGE ID     CREATED        SIZE
+    gitlab.lrz.de:5005/cdb-23/gr18/ms4/kv-server latest f151d15bf79e 5 months ago   345MB
+    ```
+
+    * REPOSITORY：表示镜像的仓库名称。这通常是镜像的来源或名称空间
+
+    * TAG：镜像的标签，表示该镜像的版本
+
+    * IMAGE ID：镜像的唯一标识符，是一个较短的哈希值
+
+    * CREATED：镜像创建的时间，如果是从远程仓库中拉取的镜像，那么这个时间表示镜像在远程仓库中创建的时间，而不是本地构建的时间
+
+  * `docker history`：显示一个镜像的历史记录，包括各个层的详细信息
+
+  * `docker inspect`：查看详细的镜像信息，包括配置、挂载点等
+* `docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]` 给一个镜像打标签
+
+* `docker pull` 下载镜像。如果不写tag，就默认下载latest
+
+* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
+
+* `docker rmi -f 镜像ide` 删除指定的镜像
+
+* `docker save [OPTIONS] IMAGE [IMAGE...]`：将一个或多个镜像保存成一个 tar 归档文件
+
+* `docker load [OPTIONS]`：从一个 tar 归档文件中加载镜像到本地
+
+## *Docker容器架构*
 
 <img src="Docker架构.drawio.png" width="80%">
 
@@ -1018,13 +1239,156 @@ RunC 是一个轻量级的工具，它是专门遵守OCI标准来用来运行容
 
 <img src="RunC.png" width="50%">
 
-## *Workflow*
+## *容器命令*
 
-<img src="docker_workflow.png" width="50%">
+### 容器的周期控制
 
-编写Dockerfile `->` build 生成 images `->` run 形成 containers `->` push 到远程库
+<img src="Docker容器的生命周期.png">
 
-<img src="docker常用命令.png" width="70%">
+注意有三类特殊情况
+
+* 容器 OOM (Out Of Memory)。Docker 在处理 OOM 事件时分为三种情况
+
+  * 若容器中的应用耗尽了主机系统分配给容器的内存限额，就会触发 OOM 事件。比如说在容器当中，部署了一个 web 服务。假设主机分配给此容器的内存上限为 1G，当脚本申请的内存大于 1G 时，此容器就会触发 OOM 事件。而在这种情况下，此容器将会被强制关闭
+
+    但要注意的是，此时关闭容器的并非是 Docker Daemon，而是宿主机操作系统。因为一个容器其实就是一组运行在宿主机操作系统当中的进程，宿主机操作系统通过cgroups 对这组进程设定资源上限，当这些进程申请的资源到达上限时，触发的是宿主机操作系统的内核 OOM 事件，因此最终是由宿主机内核来关闭这些进程
+
+  * 如果用户不想关闭这个容器，那么可以选择 `--oom-kill-disable` 来禁用 OOM-Killer。
+
+    使用此参数时，仍需要注意，如果使用 `-m` 设置了此容器内存上限，那么当容器到达内存资源上限时，主机不会关闭容器，但也不会继续向此容器继续分配资源，此时容器将处于 hung 状态。只需要将最坏的情况封闭在一定范围之内，而不至于蔓延出去
+
+  * 如果用户使用了 `--oom-kill-disable`，但也没有使用 `-m` 来设定上限，因而此时此容器将会尽可能多地使用主机内存资源。换言之，主机内存有多大，它就将用多大
+
+* 容器异常退出
+
+  * 当容器的 Init 进程退出时，也就代表着此容器被关闭。Docker 目前没有办法知道此时的进程退出属于正常退出还是异常退出
+  * 当出现容器关闭情况时，Docker Daemon 会尝试再次重新将此容器由 Stopped 状态转为 Running 状态。只有设置了--restart 参数的容器，Docker Daemon 才会去尝试启动，否则容器会保持停止状态
+
+* 容器暂停：Docker剥夺了容器的CPU时间片，失去了 CPU 资源的进程，是不会被主机内核系统所调度的。其他资源，如 Memory 资源、Network 资源等还保留未动
+
+`docker ps` 查看目前运行的容器，`docker ps -a` 查看运行过的所有容器
+
+```cmd
+$ docker ps -a
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS         PORTS                    NAMES
+abc123456789   nginx:latest   "nginx -g 'daemon of…"   2 hours ago      Up 2 hours     0.0.0.0:80->80/tcp       web_server
+def987654321   ubuntu:20.04   "/bin/bash"              3 days ago        Exited (0)     0.0.0.0:8080->8080/tcp   my_container
+```
+
+* CONTAINER ID：每个容器的唯一标识符。可以使用这个ID来执行其他与容器相关的操作，例如停止、删除等
+* IMAGE：用于创建容器的镜像名称或ID。镜像是一个包含应用程序和其依赖项的文件系统快照
+* COMMAND：启动容器时运行的命令。这通常是容器的入口点，决定容器的主要操作
+* CREATED：容器的创建时间。这是一个相对于当前时间的时间戳，表示容器何时启动
+* STATUS：容器的当前状态。可能的值包括运行中（`Up`）、已停止（`Exited`）、挂起（`Paused`）等。如果是Exited，括号里的是它的推出码
+* PORTS：映射到容器内部端口的端口号。这个字段显示了容器内部应用程序的端口和映射到主机的端口
+* NAMES：容器的名称。Docker容器可以使用名称来引用，而不仅仅是使用容器ID。这使得与容器进行交互更加方便。如果在运行容器时没有显式指定名称，Docker将为容器分配一个随机的、唯一的名称。这个名称通常是以形容词和名词的（毫无意义的）组合，如"admiring_bell"，"furious_beaver"等，以确保其唯一性
+
+### 创建、启动容器
+
+注意：`docker container *` 和 `docker *` 是相同的命令，可以互换使用。在较新版本的 Docker 中，为了提高命令行的组织结构，`docker container` 子命令被引入，但为了保持向后兼容性，`docker run` 仍然有效，并且与 `docker container run` 具有相同的功能。下面笔者还是统一使用不带 container 的命令
+
+```cmd
+docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+```
+
+`docker run` 是容器最重要的命令之一，它相当于 create + start。它的选项为
+
+* `-d, --detach`：在后台运行容器，即使终端关闭，容器也会继续运行
+
+* `-p, --publish 主机端口:容器端口`：将容器内部端口映射到主机的指定端口
+
+* `-P`：将容器内部端口映射到主机的随机端口（不常用，一般都用 `-p`）
+
+  <img src="端口映射.drawio.png" width="40%">
+
+* `-v, --volume`：挂载主机文件或目录到容器内部，实现数据持久化
+
+* `--name`：为容器指定一个名称
+
+* `-h`：指定容器的 hostname
+
+* `-e, --env`：设置环境变量
+
+* `--rm`：容器退出时自动删除容器实例
+
+* `--cpuset-cpus="0-2" or --cpuset-cpus="0,1,2"`：绑定容器到指定 CPU 运行
+
+* `-m`：设置容器使用内存最大值
+
+* `--network`：指定容器连接的网络，默认是 bridge
+
+* `--link`：连接到另一个容器，已被弃用，建议使用用户定义的网络
+
+* `-v, --volume`：绑定一个卷
+
+* `-i -t`：以交互模式运行容器，通常与分配伪终端一起使用
+
+* `--restart`：设置容器的重启策略，默认是无限重启
+
+我们以下面这个命令来说明一下 `docker run` 的时候都发生了什么
+
+```shell
+docker run -i -t ubuntu /bin/bash
+```
+
+当输入上面的命令时，发生了下面这些事
+
+1. 如果用户没有本地的ubuntu镜像，Docker会从用户配置的registry中拉取它，就像手动运行 `docker pull ubuntu` 一样
+2. Docker创建一个新的容器，就像手动运行了 `docker container create` 命令一样
+3. Docker为容器分配一个读写文件系统，作为其最终层。这允许正在运行的容器在其本地文件系统中创建或修改文件和目录
+4. Docker创建一个网络接口，将容器连接到默认网络，因为用户没有指定任何网络选项。这包括分配容器的IP地址。默认情况下，容器可以使用主机机器的网络连接连接到外部网络
+5. Docker启动容器并执行 `/bin/bash`。因为容器正在交互式地运行并附加到用户的终端（由于 `-i` 和 `-t` 标志），用户可以使用键盘提供输入，同时将输出记录到其终端
+6. 当用户输入 `exit` 以终止 `/bin/bash` 命令时，容器停止但不被删除。用户可以再次启动它或将其删除
+
+```cmd
+docker create [OPTIONS] IMAGE [COMMAND] [ARG...]
+docker start [OPTIONS] CONTAINER [CONTAINER...]
+```
+
+### 暂停、重启
+
+```
+docker pause CONTAINER [CONTAINER...]
+docker unpause CONTAINER [CONTAINER...]
+```
+
+### 退出、删除容器
+
+```cmd
+ docker kill [OPTIONS] CONTAINER [CONTAINER...]
+ docker rm [OPTIONS] CONTAINER [CONTAINER...]
+ docker container prune [OPTIONS]
+```
+
+* 退出容器
+
+  * exit 直接停止并退出容器
+  * Ctrl+P+Q 容器不停止退出
+* 删除容器 
+
+  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
+  * 下面两个指令是具有一定危险性的
+    * `docker rm -f $(docker ps -aq) ` 删除所有的容器
+    * `docker container prune` 删除所有 stop 的容器
+
+### 镜像快照、导入导出
+
+### 查看信息
+
+* 日志 `docker logs -f -t --tail NUM` 显示日志条数
+* 查看容器中进程信息 `docker top 容器id`
+* 查看镜像原数据 `docker inspect`
+* 查看资源占用信息 `docker stats`
+
+### 进入容器的命令和拷贝命令
+
+* `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
+* `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
+* `docker cp 容器id:容器内路径` 目的主机路径
+
+# Build详解
+
+## *基础*
 
 ### Dockerfile编写
 
@@ -1083,10 +1447,10 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
   * 用来定义当启动基于某个镜像的容器时的默认程序
   * 每一个Dockerfile只能有一个CMD
-  
+
 * LABEL：以键值对的形式为镜像添加元数据
 
-### Build
+### Build 命令
 
 用 `docker build --build` 来查看 `docker build <dockerfile>` 命令的常用选项
 
@@ -1098,140 +1462,6 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 * `--network`：指定构建时要使用的网络模式。例如：`docker build --network=host .`
 * `--pull`：在构建之前尝试拉取最新的基础镜像。例如：`docker build --pull .`
 * `--quiet, -q`：减少构建输出，仅显示最终镜像的ID。例如：`docker build -q .`
-
-### 镜像控制
-
-* 查看镜像信息
-
-  * `docker images` 查看镜像信息
-
-    ```cmd
-    $ docker images
-    REPOSITORY                                   TAG    IMAGE ID     CREATED        SIZE
-    gitlab.lrz.de:5005/cdb-23/gr18/ms4/kv-server latest f151d15bf79e 5 months ago   345MB
-    ```
-
-    * REPOSITORY：表示镜像的仓库名称。这通常是镜像的来源或名称空间
-
-    * TAG：镜像的标签，表示该镜像的版本
-
-    * IMAGE ID：镜像的唯一标识符，是一个较短的哈希值
-
-    * CREATED：镜像创建的时间，如果是从远程仓库中拉取的镜像，那么这个时间表示镜像在远程仓库中创建的时间，而不是本地构建的时间
-
-  * `docker history`：显示一个镜像的历史记录，包括各个层的详细信息
-
-  * `docker inspect`：查看详细的镜像信息，包括配置、挂载点等
-
-* `docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]` 给一个镜像打标签
-
-* `docker pull` 下载镜像。如果不写tag，就默认下载latest
-
-* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
-
-* `docker rmi -f 镜像ide` 删除指定的镜像
-
-* `docker save [OPTIONS] IMAGE [IMAGE...]`：将一个或多个镜像保存成一个 tar 归档文件
-
-* `docker load [OPTIONS]`：从一个 tar 归档文件中加载镜像到本地
-
-### `Docker run` 启动容器
-
-注意：`docker container *` 和 `docker *` 是相同的命令，可以互换使用。在较新版本的 Docker 中，为了提高命令行的组织结构，`docker container` 子命令被引入，但为了保持向后兼容性，`docker run` 仍然有效，并且与 `docker container run` 具有相同的功能。下面笔者还是统一使用不带 container 的命令
-
-```cmd
-$ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
-```
-
-`docker run` 是容器最重要的命令之一，它的选项为
-
-*  `-d, --detach`：在后台运行容器，即使终端关闭，容器也会继续运行
-*  `-p, --publish`：将容器内部端口映射到主机的端口
-*  `-v, --volume`：挂载主机文件或目录到容器内部，实现数据持久化
-*  `--name`：为容器指定一个名称
-*  `-e, --env`：设置环境变量
-*  `--rm`：容器退出时自动删除容器实例
-*  `--network`：指定容器连接的网络，默认是 bridge
-*  `--link`：连接到另一个容器，已被弃用，建议使用用户定义的网络
-*  `-i -t：以交互模式运行容器，通常与终端一起使用
-*  `--restart`：设置容器的重启策略，默认是无限重启。
-
-我们以下面这个命令来说明一下 `docker run` 的时候都发生了什么
-
-```shell
-docker run -i -t ubuntu /bin/bash
-```
-
-当输入上面的命令时，发生了下面这些事
-
-1. 如果用户没有本地的ubuntu镜像，Docker会从用户配置的registry中拉取它，就像手动运行 `docker pull ubuntu` 一样
-2. Docker创建一个新的容器，就像手动运行了 `docker container create` 命令一样
-3. Docker为容器分配一个读写文件系统，作为其最终层。这允许正在运行的容器在其本地文件系统中创建或修改文件和目录
-4. Docker创建一个网络接口，将容器连接到默认网络，因为用户没有指定任何网络选项。这包括分配容器的IP地址。默认情况下，容器可以使用主机机器的网络连接连接到外部网络
-5. Docker启动容器并执行 `/bin/bash`。因为容器正在交互式地运行并附加到用户的终端（由于 `-i` 和 `-t` 标志），用户可以使用键盘提供输入，同时将输出记录到其终端
-6. 当用户输入 `exit` 以终止 `/bin/bash` 命令时，容器停止但不被删除。用户可以再次启动它或将其删除
-
-### 容器的周期控制
-
-* `docker ps` 查看目前运行的容器，`docker ps -a` 查看运行过的所有容器
-  
-  ```cmd
-  $ docker ps -a
-  CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS         PORTS                    NAMES
-  abc123456789   nginx:latest   "nginx -g 'daemon of…"   2 hours ago      Up 2 hours     0.0.0.0:80->80/tcp       web_server
-  def987654321   ubuntu:20.04   "/bin/bash"              3 days ago        Exited (0)     0.0.0.0:8080->8080/tcp   my_container
-  ```
-  
-  * CONTAINER ID：每个容器的唯一标识符。可以使用这个ID来执行其他与容器相关的操作，例如停止、删除等
-  * IMAGE：用于创建容器的镜像名称或ID。镜像是一个包含应用程序和其依赖项的文件系统快照
-  * COMMAND：启动容器时运行的命令。这通常是容器的入口点，决定容器的主要操作
-  * CREATED：容器的创建时间。这是一个相对于当前时间的时间戳，表示容器何时启动
-  * STATUS：容器的当前状态。可能的值包括运行中（`Up`）、已停止（`Exited`）、挂起（`Paused`）等。如果是Exited，括号里的是它的推出码
-  * PORTS：映射到容器内部端口的端口号。这个字段显示了容器内部应用程序的端口和映射到主机的端口
-  * NAMES：容器的名称。Docker容器可以使用名称来引用，而不仅仅是使用容器ID。这使得与容器进行交互更加方便。如果在运行容器时没有显式指定名称，Docker将为容器分配一个随机的、唯一的名称。这个名称通常是以形容词和名词的（毫无意义的）组合，如"admiring_bell"，"furious_beaver"等，以确保其唯一性
-  
-* 退出容器
-
-  * exit 直接停止并退出容器
-  * Ctrl+P+Q 容器不停止退出
-
-* 删除容器 
-
-  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
-  * `docker rm -f $(docker ps -aq) ` 删除所有的容器
-
-* 启动和停止容器的操作
-
-  * 启动容器 `docker start 容器id`
-  * 重启容器 `docker restart 容器id`
-  * 停止当前正在运行的容器 `docker sotp 容器id`
-  * 强制停止当前容器 `docker kill 容器id`
-
-## *其他命令*
-
-### 查看信息
-
-* 日志 `docker logs -f -t --tail NUM` 显示日志条数
-* 查看容器中进程信息 `docker top 容器id`
-* 查看镜像原数据 `docker inspect`
-
-### 进入容器的命令和拷贝命令
-
-* `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
-* `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
-* `docker cp 容器id:容器内路径` 目的主机路径
-
-## *常用的镜像*
-
-### Redis
-
-### Busybox
-
-BusyBox 是一个集成了三百多个最常用 Linux 命令和工具的软件。BusyBox 包含了一些简单的工具，例如 ls、cat 和 echo 等等，还包含了一些更大、更复杂的工具，例grep、find、mount 以及 telnet。有些人将 BusyBox 称为 Linux 工具里的瑞士军刀
-
-简单的说 BusyBox 就好像是个大工具箱，它集成压缩了 Linux 的许多工具和命令，也包含了 Linux 系统的自带的 shell。busybox 是一个集成了一百多个最常用 linux 命令和工具的软件,他甚至还集成了一个 http 服务器和一个 telnet 服务器,而所有这一切功能却只有区区 1M 左右的大小。因海外带宽较小，我们拉取该镜像推送到自己的仓库
-
-# Build详解
 
 ## *Build Drivers*
 
@@ -1278,9 +1508,35 @@ CMD ["node", "app.js"]
 
 # Docker Volume
 
+Docker volume 存储卷 是 Docker 中用于持久化数据的一种机制，它允许在容器之间或容器与主机之间共享和存储数据。实际上**在宿主机上的这个与容器形成绑定关系的目录被称作存储卷**。卷的本质是文件或者目录，它可以绕过默认的联合文件系统，直接以文件或目录的形式存在于宿主机上
+
+使用 Docker volume 可以解决容器中数据持久性的问题，因为容器本身是临时的，一旦容器停止或删除，其文件系统中的数据也会丢失。而 Docker volume 允许将数据存储在宿主机上的持久化存储卷中，使得数据可以在容器之间进行共享，同时保留在宿主机上。**容器和宿主机的数据读写是同步的**
+
+## *存储卷类型*
+
+<img src="types-of-mounts-volume.webp" width="60%">
+
+### Volume
+
+volume：管理卷，默认映射到宿主机的/var/lib/docker/volumes 目录下，只需要在容器内指定容器的挂载点是什么，而被绑定宿主机下的那个目录，是由容器引擎 daemon 自行创建的一个空的目录，或者使用一个已经存在的目录，与存储卷建立存储关系
+
+这种方式极大解脱用户在使用卷时的耦合关系，缺陷是用户无法指定那些使用目录，灵活性较低，因此临时存储比较适合
+
+匿名卷和命名卷
+
+### Bind Mount
+
+bind mount 绑定数据卷：映射到宿主机指定路径下，在宿主机上的路径要**人工的指定一个特定的路径**，在容器中也需要指定一个特定的路径，两个已知的路径建立关联关系
+
+### tmpfs mount
+
+tmpfs mount 临时数据卷：**映射到宿主机内存中**，一旦容器停止运行，tmpfs mounts会被移除，数据就会丢失。用于**高性能的临时数据存储**
+
+## *实操：MySQL灾难恢复*
+
 # Docker网络
 
-Docker 提供了五种不同的网络模式：bridge 桥接模式、host 主机模式、container 容器模式、none 模式、overlay 覆盖模式，用于定义容器如何与主机和其他容器进行网络通信
+Docker 提供了五种不同的网络模式：bridge 桥接模式、host 主机模式、container 容器模式、none 模式、overlay 叠加模式，用于定义容器如何与主机和其他容器进行网络通信
 
 ## *沙盒模型*
 
@@ -1399,6 +1655,8 @@ None模式下容器拥有自己的Network Namespace，但没有与宿主机或�
 
 ### Overlay
 
+跨主机的时候，在大的网络中叠加小网络
+
 ## *网络管理*
 
 # Docker Compose
@@ -1454,4 +1712,4 @@ Docker Compose 是一个用于**管理单机容器的编排工具**，而下文�
 
 ### Key management service KMS
 
-### Remote attestation
+### Remote attestationa
