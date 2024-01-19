@@ -181,7 +181,7 @@ gcc/g++编译出来的二进制程序默认是release模式，**要使用gdb调�
 
 * 行号断点：通过在源代码的特定行上设置断点，可以使程序在执行到该行时停止。`break [filename:]linenumber`
 * 函数断点：通过指定要在特定函数内停止程序执行的方式来设置函数断点。`break function_name`
-* 条件断点：设置一个条件，只有当条件满足时才会触发断点。`break location if condition`
+* **条件断点**：设置一个条件，只有当条件满足时才会触发断点。`break location if condition`
 * 硬件断点：硬件断点是在处理器级别实现的断点，可以用于监视内存地址的读写操作。`break location hardware`
 * 监视断点：监视断点用于监视变量的值的更改。当变量的值发生变化时，程序会停止执行。`watch variable`
 * 静态断点：静态断点是指在程序启动之前设置的断点，用于在程序加载时立即生效。`break filename:linenumber static`
@@ -306,15 +306,14 @@ info register eax
 
    ```cmd
    source /path/to/your/script.gdb
-   
    ```
-
+   
    当然也可以不用 `.gdbinit`，直接用命令行加载该脚本
-
+   
    ```cmd
    $ gdb -x /path/to/your/script.gdb
    ```
-
+   
 * 配置 GDB 行为：修改 GDB 的一些行为，例如更改显示格式、设置断点、启用或禁用特定功能等。例如：
 
    ```

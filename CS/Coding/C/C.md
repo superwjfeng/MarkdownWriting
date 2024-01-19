@@ -1488,8 +1488,7 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
     <img src="my_strstr.png" width="45%">
 
     ```c
-    char* my_strstr(const char* str1, const char* str2)
-    {
+    char* my_strstr(const char* str1, const char* str2) {
         assert(str1 && str2);
     
         const char* s1 = str1;// 加上const和str1保持一致
@@ -1497,13 +1496,11 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
         const char* s2 = str2;
         const char* curr = s1; // curr记录从何处开始匹配
         
-        while (*curr) // 走到curr为\0为止
-        {
+        while (*curr) { // 走到curr为\0为止
             // 匹配失败重置
             s1 = curr; // 匹配失败s1和s2需要复位
             s2 = str2; 
-            while (*s1 && *s2 && *s1 == *s2)
-            {
+            while (*s1 && *s2 && *s1 == *s2) {
                 s1++;
                 s2++;
             }
@@ -1514,8 +1511,7 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
         return NULL; // 找不到
     }
     
-    int main()
-    {
+    int main() {
         char str1[] = "abcdeqcdeferwrew\0xxx";
         char str2[] = "cdef";
         printf("%s\n", my_strstr(str1, str2));
@@ -1523,8 +1519,8 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
         return 0;
     }
     ```
-
-  * 查找子串还可以用KMP算法实现
+    
+    * 标准库中查找子串用KMP算法实现
 * strtok：查找自定义分隔符（token）
 
     ```c
@@ -1568,16 +1564,14 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
 ```c
 // strerror 头文件：#include <errno.h>
 // 全局变量：errno（错误码）比如说404就是一种错误码
-int main()
-{
+int main() {
     printf("%s\n", strerror(0));
     printf("%s\n", strerror(1));
     printf("%s\n", strerror(2));
     printf("%s\n", strerror(3));
 
     int* p = (int*)malloc(INT_MAX);
-    if (p == NULL) 
-    {
+    if (p == NULL) {
         printf("%s\n", strerror(errno)); //库函数malloc出错时会把错误码放到errno里
         //errno是全局变量，会被更新的
         perror("malloc"); //与strerror（不打印）使用场景不同
@@ -1594,13 +1588,11 @@ int main()
 
     ```c
     //void * memcpy ( void * destination, const void * source, size_t num );
-    void* my_memcpy(void* dest, const void* src, size_t count)
-    //void* 可以用来接收任意类型的指针，使用时必须要进行强制转换
-    {
+    void* my_memcpy(void* dest, const void* src, size_t count) {
+    	//void* 可以用来接收任意类型的指针，使用时必须要进行强制转换
         assert(dest && src);
         void* ret = dest;
-        while (count--)
-        {
+        while (count--) {
             *(char*)dest = *(char*)src; // 解引用拷贝
             dest = (char*)dest + 1;
             src = (char*)src + 1;
@@ -1611,8 +1603,8 @@ int main()
         return ret;
     }
     ```
-
-  * 函数从src位置开始往后复制count个字节的数据到dest
+    
+    * 函数从src位置开始往后复制count个字节的数据到dest
   * 这个函数在遇到'\0'的时候不会停下来
   * 不能用于src和dest有重叠的情况，复制情况未定义，要用memmove
 * memmove
@@ -1711,11 +1703,6 @@ int main()
         return 0;
     }
     ```
-
-## *字符串示例：字符串排序*
-
-1. 排序指针而非字符串
-2. 选择排序（冒泡排序）
 
 # 自定义类型：结构体、枚举和联合
 

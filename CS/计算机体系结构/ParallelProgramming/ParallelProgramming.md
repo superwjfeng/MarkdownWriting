@@ -1239,8 +1239,12 @@ SSE/AVX指令主要定义于以下一些头文件中：
   * name为函数执行的操作的名字，如加法为`_mm_add_ps`，减法为 `_mm_sub_ps`
   * A代表的是否对齐到16字节，a(ligned) 代表对齐，u(nanligned) 代表不对齐。这个命名项是可选的
   * P代表的是对矢量 packed data vector 还是对标量 scalar 进行操作，如`_mm_add_ss` 是只对最低位的32位浮点数执行加法，而 `_mm_add_ps` 则是对4个32位浮点数执行加法操作
-  * T代表浮点数的类型，若为s则为单精度浮点型，若为d则为双精度浮点，如 `_mm_add_pd` 和 `_mm_add_ps`
+  * T代表浮点数的类型，若为s（single）则为单精度浮点型，若为d（double）则为双精度浮点，如 `_mm_add_pd` 和 `_mm_add_ps`
 * 操作整形的内置函数命名方式为：`_mm(xxx)_name_epUY`。xxx为SIMD寄存器的位数，若为128位则省略。 name为函数的名字。U为整数的类型，若为无符号类型则为u，否则为i，如 `_mm_adds_epu16` 和 `_mm_adds_epi16`。Y为操作的数据类型的位数，如 `_mm_cvtpd_pi32`。之所以加一个 `e` 是历史遗留问题，是为了和 MMX 的指令做区别
+
+为什么int命名为 epi？extended packed integer，extended 是由于历史原因，MMX 已经把 `_mm_set_pi32` 占掉了
+
+-msse4.1
 
 ### -march=native
 
@@ -1249,6 +1253,20 @@ SSE/AVX指令主要定义于以下一些头文件中：
 * 使用 `-march=native` 的好处是，编译器会根据当前系统的处理器类型自动选择最佳的指令集，以提高生成的机器代码的性能。这种方式特别适用于在特定系统上编译和运行代码，因为它充分利用了该系统硬件的优势
 * 然而需要注意的是，使用 `-march=native` 可能会导致生成的代码无法在其他类型的处理器上运行。如果代码需要跨平台运行，可能需要选择一个更通用的 `-march` 选项，以确保生成的代码能够在不同的硬件上正常工作
 
+
+
+
+
+
+
+horizontal 操作通常指的是在 SIMD 寄存器中横向（跨元素）组合或操作数据
+
+例如，考虑一个 SIMD 寄存器，其中包含四个单精度浮点数：A, B, C, 和 D。"Horizontal add" 操作将执行 A+B+C+D，将这四个数相加得到一个结果。这是横向对这些数进行相加，而不是像传统的加法操作那样逐个元素相加
+
+
+
+没有 horizontal max
+
 ## *存取*
 
 ### 存取操作 load/store/set
@@ -1256,8 +1274,17 @@ SSE/AVX指令主要定义于以下一些头文件中：
 ```c
 __m128 _mm_load_ps (float const* mem_addr);
 __m128 _mm_load_ps1 (float const* mem_addr);
-
+__m128 _mm_set1_ps (float a); // 广播
+__m128 _mm_set_ps (float e3, float e2, float e1, float e0);
+__m128i _mm_set_epi32 (int e3, int e2, int e1, int e0);
+__m128i _mm_setr_epi32 (int e3, int e2, int e1, int e0);
 ```
+
+
+
+`__m128` 只能是4个double，而 `__m128i` 可以是16个char，8个short，4个int，分别用 `_mm_set_epi8`、16、32 来设置
+
+
 
 ## *算术运算*
 
@@ -1267,7 +1294,7 @@ __m128 _mm_load_ps1 (float const* mem_addr);
 
 ### 乘除法
 
-* `_mm_mul_epi32()` 注意溢出时的问题
+* `_mm_mul_epi32()` 是将高64位的两个32位数相乘，后64位直接被忽略了。注意溢出时的问题，返回的是两个 epi64
 * `_mm_mullo_epi32()`
 * `_mm_mulhi_epi32()`
 
@@ -1279,7 +1306,22 @@ __m128 _mm_load_ps1 (float const* mem_addr);
 
 ### 数据类型转换
 
-`_mm_castps_si128()` 是直接按位转换，不会生成任何指令
+`_mm_castps_si128()` 是直接按位转换，相当于 `reinterpret_cast` 按位强转，不会生成任何指令（数据类型转换，比如说浮点数转换成整形时，编译器需要生成很多指令才能正确转换）
+
+`_mm_cvtps_si128()` 才会生成指令，类似于 `()` 或者 `static_cast`
+
+`_mm_cvtps_epi32() ` 向上取整
+
+`_mm_cvttps_epi32() ` 向下取整，多了一个 t（truncate）
+
+```c
+_MM_SET_ROUDING_MODE(_MM_ROUND_DOWN);
+_MM_SET_ROUDING_MODE(_MM_ROUND_UP);
+_MM_SET_ROUDING_MODE(_MM_ROUND_TOWARD_ZERO);
+_MM_SET_ROUDING_MODE(_MM_ROUND_NEAREST); // 默认，往偶数取整
+```
+
+
 
 https://www.toolhelper.cn/Digit/FractionConvert
 
@@ -1287,7 +1329,17 @@ https://www.toolhelper.cn/Digit/FractionConvert
 
 设置round模式 `_MM_SET_ROUNDING_MODE()`，可以选择 `_MM_ROUND_DOWN`、`_MM_ROUND_UP`、`_MM_ROUND_TOWARD_ZERO`，默认的模式是 `_MM_ROUND_NEAREST`（向偶数偏移，减少平均值误差偏移）
 
-比较运算
+### 比较运算
+
+要么全0，要么全1（`-nan(0xfffffffffffff)`）
+
+
+
+
+
+
+
+`_mm256_blendv_pd(_mpi_j, _mpi_i, cmp_j);`，如果 cmp_j 为全0，则取前面的，若 cmp_j 为全1，则取后面的
 
 ### 逻辑运算
 

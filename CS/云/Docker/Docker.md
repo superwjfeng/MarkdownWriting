@@ -883,7 +883,7 @@ $ cat upper/1.txt
 update in merge folder
 ```
 
-### Docker中使用UnionFS
+### UnionFS在Docker中的作用
 
 一个完整的Ubuntu镜像要4-5G，而CentOS更是要10G，但是官方提供的镜像却分别只有300MB和800MB。Docker是通过UnionFS借用Host Kernel来实现的
 
@@ -891,8 +891,10 @@ update in merge folder
 
 典型的Linux文件系统包含两个文件系统，bootfs 和 rootfs
 
-* bootfs包含了kernel和bootloader，bootloader会引导加载Kernel
-* rootfs包含了典型Linux的命令、目录和文件：/dev /bin /etc等
+* bootfs包含了kernel和bootloader，bootloader会引导加载Kernel。Linux在刚启动的时候会加载bootfs文件系统，当boot加载完成之后整个内核就都在内存中了，此时内存的使用权由bootfs转交给内核，系统也会卸载掉bootfs
+* rootfs包含了典型Linux的命令、目录和文件：/dev /bin /etc等。rootfs就是不同的Linux发行版，比如ubuntu、debian之类的
+
+Docker的镜像都是只读的，而**容器这个实例化对象就是加在这些只读镜像上面的一层可读写的文件层**
 
 ## *Win & Mac的OS级虚拟化*
 
