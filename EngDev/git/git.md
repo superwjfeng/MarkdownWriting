@@ -219,9 +219,14 @@ Detached HEAD 状态通常发生在以下几种情况下
 * `git bisect`：通过二分查找搜索历史记录
 * `.gitignore`： [指定](https://git-scm.com/docs/gitignore) 故意不追踪的文件
 
-
-
 # Git原理
+
+```cmd
+# 检出 Git 源码
+$ git clone https://github.com/git/git.git
+# 切换到第一次提交
+$ git checkout e83c5163316f89bfbde7d9ab23ca2e25604af290
+```
 
 ## *Git文件系统*
 
