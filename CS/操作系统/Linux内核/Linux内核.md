@@ -631,6 +631,8 @@ Linux提供了两种保证一致性的策略：写回与写透
 
 # Linux Ext\* 文件系统
 
+<http://chuquan.me/2022/05/01/understand-principle-of-filesystem/#文件操作>
+
 ## *Ext\*文件系统*
 
 ### Ext\*文件系统介绍
