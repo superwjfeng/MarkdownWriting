@@ -701,6 +701,8 @@ Optional：将 nvim 设置为 vim 别名
    alias vim="nvim"
    ```
 
+如果要在window上安装的话，只需要到github上下载win对应的release即可
+
 ### 从Vim迁移到NeoVim
 
 NeoVim的配置文件：`~/.config/nvim/init.vim`（需要手动创建）
@@ -716,25 +718,25 @@ NeoVim的配置文件：`~/.config/nvim/init.vim`（需要手动创建）
 
 ### 配置
 
-1. **Neovim 的配置文件：** 默认情况下，Neovim 使用 Lua 作为其主要配置语言，配置文件通常命名为 `init.lua`，而不是 Vim 中的传统 `~/.vimrc` 文件。在 `init.lua` 文件中，可以使用 Lua 语言编写配置和插件设置
+**Neovim 的配置文件：** 默认情况下，Neovim 使用 Lua 作为其主要配置语言，配置文件通常命名为 `init.lua`，而不是 Vim 中的传统 `~/.vimrc` 文件。在 `init.lua` 文件中，可以使用 Lua 语言编写配置和插件设置
 
-   ```lua
-   -- 示例 Neovim 的 Lua 配置文件
-   -- init.lua
-   
-   -- 设置缩进
-   vim.cmd('set expandtab')
-   vim.cmd('set shiftwidth=4')
-   vim.cmd('set tabstop=4')
-   
-   -- 启用行号
-   vim.cmd('set number')
-   
-   -- 设置配色方案
-   vim.cmd('colorscheme desert')
-   ```
+配置文件在ubuntu和macOS上放在 `.config/nvim` 中，windows则放在 `~/AppData/Local/nvim` 中（如果不存在需要自己创建），可以用 `:echo stdpath('config')` 命令查询
 
-Neovim 引入了 Lua 作为配置和插件编写的首选脚本语言，当然也还是支持原来的 Vim Script
+```lua
+-- 示例 Neovim 的 Lua 配置文件
+-- init.lua
+
+-- 设置缩进
+vim.cmd('set expandtab')
+vim.cmd('set shiftwidth=4')
+vim.cmd('set tabstop=4')
+
+-- 启用行号
+vim.cmd('set number')
+
+-- 设置配色方案
+vim.cmd('colorscheme desert')
+```
 
 ### 插件管理
 

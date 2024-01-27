@@ -1,3 +1,25 @@
+# 源代码
+
+## *代码结构*
+
+* arch：包含和硬件体系结构相关的代码，每种平台占一个相应的目录。比如说和ARM体系存放在arm目录下，其中包括kerel（内核核心部分）、mm（内存管理）、nwfpe（浮点单元仿真）、lib（硬件相关工具函数）、boot（引导程序）、configs（各开发板的默认配置文件所在）
+* block：部分块设备驱动程序
+* crypto：常用加密和散列算法（如AES、SHA等），还有一些压缩和CRC校验算法
+* Documentation：关于内核各部分的参考文档
+* drivers：设备驱动程序，一般每种不同的设备的驱动程序占用一个子目录
+* fs：各种支持的文件系统的相关代码，如ext、fat、ntfs等
+* include：这个目录包括了核心的大多数include文件。另外对于每种支持的体系结构分别有一个子目录
+* init：内核初始化代码（注意不是系统引导代码）
+* ipc：此目录包含了核心的进程间通讯代码
+* kernel：内核的最核心部分，包括进程调度、定时器等，和平台相关的一部分代码放在 `arch/*/kernel` 目录下
+* lib：此目录包含了核心的库代码。与处理器结构相关库代码被放在 `arch/*/ib/` 目录下
+* mm：内存管理代码，和平台相关的一部分代码放在 `arch/*/mm` 目录下
+* net：网络相关代码，实现了各种常见的网络协议
+* scripts：用于配置内核的脚本文件
+* security：主要是一个SELinux的模块
+* sound：常用音频设备的驱动程序等
+* usr：目前实现了一个cpio
+
 # Paging of x86-64
 
 https://zhuanlan.zhihu.com/p/652983618 & Intel® 64 and IA-32 Architectures Software Developer Manuals Volume 3 Chapter 4 Paging
@@ -383,6 +405,69 @@ void *startRoutine(void *args) {
 <img src="用户级tid和内核级lwp.png">
 
 ## *内核线程*
+
+# 中断 & 异常
+
+* 上半部 top half / 硬中断 hardirq：用来**快速处理**中断，它在中断禁止模式下运行，主要处理跟硬件紧密相关的或时间敏感的工作
+* 下半部 bottom half / 软中断 softirq：**延迟处理**上半部未完成的工作，通常以内核线程的方式之后运行
+
+
+
+
+
+每个 CPU 都对应一个软中断内核线程，名字为 `ksoftirqd/CPU ID`，比如说， 0 号 CPU 对应的软中断内核线程的名字就是 `ksoftirqd/0`
+
+```cmd
+$ ps aux | grep softirq
+root          13  0.0  0.0      0     0 ?        S    Jan18   0:12 [ksoftirqd/0]
+root          22  0.0  0.0      0     0 ?        S    Jan18   0:12 [ksoftirqd/1]
+```
+
+这两个线程的名字外面都有中括号，这说明 ps 无法获取它们的命令行参数（cmline）。一般来说，如果 ps 的输出中，名字括在中括号里的，一般都是内核线程
+
+
+
+
+
+
+
+软中断不只包括了刚刚所讲的硬件设备中断处理程序的下半部，一些内核自定义的事件也属于软中断，比如内核调度和 RCU 锁, Read-Copy Update 等
+
+## *proc*
+
+### /proc/softirqs
+
+/proc/softirqs 提供了软中断的运行情况，即各种类型软中断在不同 CPU 上的累积运行次数
+
+```cmd
+$ cat /proc/softirqs
+                    CPU0       CPU1
+          HI:          1          0
+       TIMER:   13092424   30698060
+      NET_TX:          2          0
+      NET_RX:    5081382    5097039
+       BLOCK:     428631    5267739
+    IRQ_POLL:          0          0
+     TASKLET:      11144       9129
+       SCHED:   33957966   48773573
+     HRTIMER:         43         64
+         RCU:   29092449   29456840
+```
+
+* HI 高优先级软中断：这是处理紧急事件的软中断，例如处理网络数据包的高优先级任务
+* TIMER 定时器软中断：用于处理定时器事件，例如调度进程
+* NET_TX 网络传输软中断：处理网络数据包的传输，从内核到网络接口
+* NET_RX 网络接收软中断：处理接收到的网络数据包，从网络接口到内核
+* BLOCK 块设备软中断：用于块设备的I/O操作，例如磁盘读写
+* IRQ_POLL 中断轮询软中断：用于轮询中断状态，以检测中断事件
+* TASKLET 任务软中断：用于延迟执行一些任务，通常在中断上下文中
+* SCHED 调度软中断：用于系统调度，例如任务的切换和调度
+* HRTIMER 高精度定时器软中断：用于处理高分辨率定时器事件
+* RCU 读-复制更新软中断：用于在不阻塞读取的情况下执行更新操作
+
+### /proc/interrupts
+
+/proc/interrupts 提供了硬中断的运行情况
 
 # 进程调度
 

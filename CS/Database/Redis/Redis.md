@@ -44,7 +44,26 @@ Redis是一个在内存中存储数据的中间件 Middleware，通常用于作�
 
 ## *Redis的重要版本*
 
-Redis5系列用
+https://zhuanlan.zhihu.com/p/609450508
+
+### 早期版本
+
+* 1.0 初始版本发布于 2009.9，提供基本的键值存储和简单的数据结构：string、list、set、dict（哈希表）。commit ID 为 557a74e56308325874c573e6dd2c6b228136de86
+* 2.0 发布于 2010.9
+  * 引入了虚拟内存、列表、集合、有序集合等新数据结构
+  * 对持久性进行了改进，支持快照和日志追加。引入了复制功能
+
+### 2.6
+
+重构了大量的核心代码，所有2.6引入的集群相关的代码都去掉了
+
+### 3.0
+
+添加Redis的分布式实现Redis Cluster
+
+### 6.0
+
+### 7.0
 
 ## *Redis的安装与服务器管理*
 
@@ -78,13 +97,15 @@ systemctl list-units --type=service # 查看所有已启动的服务
 
 * 使用redis自带的客户端 `redis-cli` 来连接服务器。这是最稳定的，也是最常用的客户端
 
-  ```shell
-  ❯ redis-cli
+  ```cmd
+  $ redis-cli
   127.0.0.1:6379> ping
   PONG
   ```
 
 * 图形化界面客户端（桌面程序、web程序）：和MySql一样，依赖于Win系统，而工作中win系统连接到服务器会有诸多限制。中间可能会经历很多的跳板机 jump host、堡垒机 bastion host 和权限校验
+
+  https://github.com/qishibo/AnotherRedisDesktopManager
 
 * 基于redis的api自行开发客户端，这是工作中最主要的形态
 

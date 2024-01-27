@@ -1661,6 +1661,18 @@ None模式下容器拥有自己的Network Namespace，但没有与宿主机或�
 
 ## *网络管理*
 
+## *补充：VMware的网络管理*
+
+### Bridged
+
+### NAT模式
+
+Network Address Translation, NAT 网络地址转换模式 使用 VMware Network Adapter VMnet8 虚拟网卡，主机上的VMware Network Adepter VMnet8虚拟网卡直接连接到VMnet8虚拟交换机上与虚拟网卡进行通信
+
+### Host-only 模式
+
+
+
 # Docker Compose
 
 ## *Compose的作用*

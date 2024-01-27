@@ -171,23 +171,44 @@ Non-functional requirements 是指依一些条件判断系统运作情形或其�
 
 # 网络通信框架
 
-## *通用数据交换*
+## *通用数据交换 -- 序列化 & 反序列化*
 
-XML（eXtensible Markup Language）、JSON（JavaScript Object Notation）和 Protocol Buffers（通常称为Protobuf）都是用于描述和表示数据的通用格式，但在语法、应用场景和特点上有一些区别。以下是对 XML 和 JSON 的介绍和对比
+### 为什么要序列化 & 反序列化？
 
-### IDL
+* 跨平台和跨语言
+  * 网络通信可能涉及不同高级语言之间的通信，若这时候C++去发一个结构体，然后Java该怎么理解？
+  * 即使是同一种语言，比如说Server和Client都采用C++来写，若直接发结构体来传递信息，不同的处理器对结构体的对齐、存储方式可能完全不同，毕竟对结构体是没有C规范的
+  * 这种情况下只能是通过一个大家都可以理解的中间商来交流
+* TCP是面向字节流的，天然的存在[粘包问题](#粘包)，只能靠自定义数据结构、添加分隔符等方式来解决，所以自然而然的就需要序列化
+* 数据交换：序列化和反序列化使得不同系统能够共享和交换数据。通过将数据序列化为一种通用格式（如 JSON、XML、Protobuf 等），可以确保数据的结构和内容在不同系统之间得到保留和解释。从OSI七层模型来看，**序列化就是位于传输层和应用层之间的Presentation层**。关于Json、XML和Protobuf的对比这部分可以看 *EIST软件工程.md 的Web与通信部分*
+* 对于网络协议栈传输层及以下的协议则可以传输结构体：因为网络层以下实际上变化是很少的，且要求高效，因此在传输的时候使用的就是规定了固定格式的结构体，然后直接转成二进制。但是应用层的灵活度和弹性要很高，因为要考虑不同版本、不同时间段的用户需求，所以应用层必须要加一层序列化和反序列化的软件层来方便定制
+* 数据持久化：序列化也可以用于将数据持久化到磁盘或数据库中。通过将数据序列化为字节流或字符串，可以将其写入文件或存储到数据库中，以便将来读取和解析
 
-接口描述语言 Interface Description Language，IDL是一种用于描述系统、组件或服务之间的接口的语言。它提供了一种结构化的方式来定义接口的方法、参数、数据类型和协议等信息，以便不同的系统或组件之间能够进行有效的通信和交互
+### 序列化 & 反序列化的组件
 
-接口描述语言的主要作用是定义接口的规范，使得不同的系统能够理解和解析接口定义，并在运行时进行相应的操作和通信。它提供了一种中立的、独立于编程语言和平台的方式来描述接口，使得不同的编程语言和平台之间可以通过解析接口描述语言的定义来实现互操作性
+<img src="序列化和反序列化的组件.jpeg" width="80%">
 
-以下是一些常见的接口描述语言
+* IDL（Interface description language）文件：
 
-1. IDL（Interface Definition Language）：IDL是一种用于定义分布式对象的接口的语言，最初由OMG（Object Management Group）定义。它被广泛应用于CORBA（Common Object Request Broker Architecture）分布式系统中，用于描述对象之间的接口和通信协议
-2. WSDL（Web Services Description Language）：WSDL是一种用于描述Web服务接口的语言，定义了Web服务的操作、消息格式和网络协议等信息。它使用XML（eXtensible Markup Language）来描述接口，被广泛用于SOAP（Simple Object Access Protocol）和RESTful（Representational State Transfer）等Web服务标准中
-3. protobuf（Protocol Buffers）：protobuf是一种由Google开发的接口描述语言，用于定义数据结构和接口的格式。它使用简洁的二进制编码格式，并支持多种编程语言。protobuf广泛应用于Google内部和开源社区，用于高效的数据序列化和通信
-4. JSON Schema：JSON Schema是一种基于JSON格式的接口描述语言，用于定义JSON数据的结构和约束。它提供了一种声明式的方式来描述JSON数据的类型、格式、校验规则等，以确保数据的有效性和一致性
-5. RAML（RESTful API Modeling Language）：RAML是一种用于建模和描述RESTful API的语言。它提供了一种简洁的方式来定义API的资源、方法、参数、请求和响应等信息，以便于开发者理解和使用API
+  接口描述语言 Interface Description Language，IDL是一种用于描述系统、组件或服务之间的接口的语言。它提供了一种结构化的方式来定义接口的方法、参数、数据类型和协议等信息，以便不同的系统或组件之间能够进行有效的通信和交互
+
+  接口描述语言的主要作用是定义接口的规范，使得不同的系统能够理解和解析接口定义，并在运行时进行相应的操作和通信。它提供了一种中立的、独立于编程语言和平台的方式来描述接口，使得不同的编程语言和平台之间可以通过解析接口描述语言的定义来实现互操作性
+
+* IDL Compiler：IDL文件中约定的内容为了在各语言和平台可见，需要有一个编译器，将IDL文件转换成各语言对应的动态库
+
+* Stub/Skeleton Lib：负责序列化和反序列化的工作代码
+
+  * Stub是一段部署在分布式系统客户端的代码，一方面接收应用层的参数，并对其序列化后通过底层协议栈发送到服务端，另一方面接收服务端序列化后的结果数据，反序列化后交给客户端应用层
+  * Skeleton部署在服务端，其功能与Stub相反，从传输层接收序列化参数，反序列化后交给服务端应用层，并将应用层的执行结果序列化后最终传送给客户端Stub
+
+* Client/Server：指的是应用层程序代码，他们面对的是IDL所生成的特定语言的class或struct
+
+* 底层协议栈和互联网：序列化之后的数据通过底层的传输层、网络层、链路层以及物理层协议转换成数字信号在互联网中传递
+
+### 早期的IDL
+
+* COM, [The Component Object Model](https://learn.microsoft.com/en-us/windows/win32/com/the-component-object-model) 主要用于Windows平台，并没有真正实现跨平台，另外COM的序列化的原理利用了编译器中虚表，使得其学习成本巨大（想一下这个场景， 工程师需要是简单的序列化协议，但却要先掌握语言编译器）。由于序列化的数据与编译器紧耦合，扩展属性非常麻烦
+* CORBA, Common Object Request Broker Architecture 是早期比较好的实现了跨平台，跨语言的序列化协议。COBRA的主要问题是参与方过多带来的版本过多，版本之间兼容性较差，以及使用复杂晦涩。这些政治经济，技术实现以及早期设计不成熟的问题，最终导致COBRA的渐渐消亡。J2SE 1.3之后的版本提供了基于CORBA协议的RMI-IIOP技术，这使得Java开发者可以采用纯粹的Java语言进行CORBA的开发
 
 ### XML
 

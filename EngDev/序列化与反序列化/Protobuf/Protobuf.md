@@ -8,6 +8,8 @@ C++用命名空间，Java用外部类进行统一的管理
 
 # intro
 
+## *Protobuf简介*
+
 https://sunyunqiang.com/blog/protobuf_encode/
 
 Protocol Buffers (protobuf) 是一种由Google开发的二进制数据序列化格式。它旨在用于高效地序列化结构化数据，并支持跨不同平台、不同语言的数据交换
@@ -35,7 +37,7 @@ Tag：字段标识号，用于标识字段；Length：Value的字节长度；Val
 
 需要注意的是，由于 Protobuf 是一种二进制格式，因此对于人类可读性较差，相比于文本格式（如JSON）更适合机器间的数据交换
 
-## *编码*
+## *Protobuf的编码*
 
 下面介绍protobuf使用的两种编码方式
 

@@ -6,6 +6,8 @@ Robotic OperatingSystem, ROS是一个用于编写机器人软件的灵活框架�
 
 <img src="ROS1架构.drawio.png" width="50%">
 
+<img src="ROSPackage.drawio.png" width="70%">
+
 * OS层：ROS依然是运行在OS上的，对ROS官方支持度最好的是Ubuntu
 * 中间层
   * 对TCP/UDP进行两次封装，形成了TCPROS/UDPROS。通信系统使用发布-订阅模型、client-srever模型
@@ -194,9 +196,20 @@ $ catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
 
 # roscpp
 
-## *ROS package 总览*
+## *intro*
 
-<img src="ROSPackage.drawio.png" width="70%">
+http://wiki.ros.org/roscpp
+
+ROS支持多种语言的客户端：roscpp、rospy、roslisp、rosjava、roslibjs
+
+roscpp 是一个方便的接口，允许开发者使用C++来编写ROS Node，这些节点可以发布和订阅ROS消息，调用ROS服务（Service），以及使用ROS参数服务器（Parameter Server）等功能
+
+### roscpp的内部库
+
+* [cpp_common](http://wiki.ros.org/cpp_common)：ROS通信相关软件包，包含 ROS 中间件/通信包，核心客户端库（roscpp、rospy、roslisp）和图形自省工具（rostopic、rosnode、rosservice、rosparam），它们为主题、节点、提供实现和工具服务和参数
+* [roscpp_serialization](http://wiki.ros.org/roscpp_serialization)：提供序列化和反序列化上层接口
+* [roscpp_traits](http://wiki.ros.org/roscpp_traits)：消息的元数据，元信息包括消息类型的名称、数据结构、MD5校验和（一种用于检测消息内容是否发生变化的哈希值）以及完整的消息定义
+* [rostime](http://wiki.ros.org/rostime)：ros独有的自己封装了一个时间库，类似C++的时间库
 
 ## *节点初始、关闭以及NodeHandle*
 

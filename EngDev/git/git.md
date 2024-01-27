@@ -224,6 +224,7 @@ Detached HEAD 状态通常发生在以下几种情况下
 ```cmd
 # 检出 Git 源码
 $ git clone https://github.com/git/git.git
+$ cd git
 # 切换到第一次提交
 $ git checkout e83c5163316f89bfbde7d9ab23ca2e25604af290
 ```
