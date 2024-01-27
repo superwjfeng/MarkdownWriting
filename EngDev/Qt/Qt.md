@@ -172,9 +172,13 @@ Qt 是一个**跨平台的C++应用程序开发框架**，它用于创建各种�
 
 一个新的Qt项目会默认加载 Qt Core、Qt GUI 和 Qt Widgets 三个类
 
-# GUI设计
+# Qt基础
 
-## *UI文件设计 & 运行机制*
+## *Qt项目的组成*
+
+创建一个demo项目：新建项目 - Application - Qt Widgets Application（基于窗口的项目）
+
+<img src="Qt项目组成.png">
 
 ### 项目文件 .pro
 
@@ -189,10 +193,13 @@ QT       += core gui
 # Qt 5中对gui模块进行了拆分, 将 widgets 独立出来了
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
    
+TARGET = HelloQt
+TEMPLATE = app   
+
 # 使用c++11新特性
 CONFIG += c++11	
 
-#如果在项目中调用了废弃的函数, 项目编译的时候会有警告的提示    
+# 如果在项目中调用了废弃的函数, 项目编译的时候会有警告的提示    
 DEFINES += QT_DEPRECATED_WARNINGS
 
 # 项目中的源文件
@@ -215,29 +222,113 @@ FORMS += \
 
 `.ui` 文件是一个xml格式的文件，一般情况下并不需要在xml格式下对这个文件进行编辑，关于这个文件结构了解即可
 
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralWidget"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>400</width>
+     <height>23</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>
+```
+
 ### 主函数
 
+```c++
+#include "mainwindow.h"		// 生成的窗口类头文件
+#include <QApplication>		// 应用程序类头文件
 
+int main(int argc, char *argv[])
+{
+    // 创建应用程序对象, 在一个Qt项目中实例对象有且仅有一个
+    // 类的作用: 检测触发的事件, 进行事件循环并处理
+    QApplication a(argc, argv);
+    // 创建窗口类对象
+    MainWindow w;
+    // 显示窗口
+    w.show();
+    // 阻塞函数，应用程序对象进入事件循环, 保证应用程序不退出
+    return a.exec();
+}
+```
 
-## *可视化UI设计*
+## *三种基本窗口类型*
 
-### 信号与槽
+ ### QWidget
+
+### QDialog
+
+两种显示方式
+
+* 模态
+* 非模态
+
+### QMainWindow
+
+## *窗口坐标*
+
+## *内存回收*
+
+## *Qt的数据类型*
+
+没有必要使用这些封装类型，大部分情况下直接使用 C++ 的基础类型就可以了
+
+位于 `<QtGlobal>` 中
+
+### QByteArray
+
+### QString
+
+## *Qt的日志管理*
+
+# 信号与槽
 
 信号与槽 Signal & Slot 用于不同对象的通信，窗口与窗口之间，窗口之内不同控件之间的通信就是执行某种槽方法
 
 声明了 `Q_OBJECT` 的话就是表示支持信号与槽。不是所有的类都能支持信号与槽，必须是继承自 QObject 基类的派生类才支持信号与槽机制
 
-## *代码化UI设计*
 
-## *混合方式UI设计*
 
-# Qt类库
+# Qt控件
 
-# 常用界面设计组件
+## *按钮类型*
+
+## *容器类型*
 
 ### 正则表达式
-
-
 
 QRegExp
 
@@ -245,10 +336,8 @@ QRegExp
 
 `+` 表示匹配次数 $\geq 1$ 次，`*` 表示匹配任意次数（可为0次），` {n,m}` 表示匹配次数至少n次，至多m次
 
-# 对话框 & 多窗体设计
 
-# 文件系统和文件读写
 
-# 绘画
+# Qt事件
 
-# Qt Charts
+# 套接字通信
