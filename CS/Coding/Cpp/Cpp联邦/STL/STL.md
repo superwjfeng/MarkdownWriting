@@ -32,7 +32,7 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
   * 关联式容器 Associative container：存储的是 `<key, value>` 结构的键值对。map、set、multimap、multiset，具体见下
   * C++11新增了array静态数组容器，和普通数组的主要区别在于对越界的检查更加严格，因为 `array[]` 的本质是函数调用 -- 运算符重载
   
-* Iterator 迭代器：迭代器再不暴露底层实现细节的情况下，提供了统一的方式（即从上层角度看，行为和指针一样）去访问容器。屏蔽底层实现细节，体现了封装的价值和力量。迭代器被认为是algorithm和container的粘合剂，因为algorithm要通过迭代器来影响container
+* Iterator 迭代器：迭代器在不暴露底层实现细节的情况下，提供了统一的方式（即从上层角度看，行为和指针一样）去访问容器。屏蔽底层实现细节，体现了封装的价值和力量。迭代器被认为是algorithm和container的粘合剂，因为algorithm要通过迭代器来影响container
 
     <img src="迭代器初探.png" width="60%">
 
