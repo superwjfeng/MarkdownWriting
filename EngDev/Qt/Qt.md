@@ -287,18 +287,30 @@ int main(int argc, char *argv[])
 
 ## *三种基本窗口类型*
 
- ### QWidget
+<img src="Qt控件类关系.png">
+
+### QWidget
+
+* 当创建窗口对象时，若没有给对象指定父对象，则该窗口是一个有边框的独立窗口。要显示这个窗口就得 `show()`
+* 如果指定了父对象，则该窗口会内嵌于父对象之中，没有边框。这样在父窗口显示的时候，子窗口会被一并显示
 
 ### QDialog
 
+QDialog只能作为一个独立窗口使用，不能内嵌到其他窗口中
+
 两种显示方式
 
-* 模态
-* 非模态
+* 非模态 `show()`
+* 模态 `exec()`，会阻塞程序的运行
 
 ### QMainWindow
 
-## *窗口坐标*
+包含菜单栏 menubar、工具栏 toolbar、状态栏 statusbar
+
+### 窗口坐标
+
+* 所有坐标的确定都需要先找到坐标原点，Qt的坐标原点在窗口的左上角。x轴向右递增，y轴向下递增
+* 嵌套窗口中，子窗口使用的是父窗口的相对坐标
 
 ## *内存回收*
 
@@ -310,15 +322,96 @@ int main(int argc, char *argv[])
 
 ### QByteArray
 
+QByteArray 是对 `char*` 的简单封装
+
 ### QString
+
+QString 是对 `char*` 的深度封装
 
 ## *Qt的日志管理*
 
+### QDebug
+
+在Qt中进行log输出，一般不使用c的 `printf`，也不使用C++中的 `cout`，Qt框架提供了专门用于日志输出的类，放在 `<QDebug>` 中
+
+```c++
+#include <QDebug>
+
+// 在代码中使用QDebug输出日志
+qDebug() << "This is a debug message";
+```
+
+不过默认情况下只会输出到Qt Creator的调试窗口中，如果要输出到console的话，就在 `.pro` 文件中添加 
+
+```
+CONFIG += console
+```
+
+### QLoggingCategory
+
+QLoggingCategory允许在不同的模块中定义不同的日志类别，从而更灵活地控制日志输出
+
+```c++
+#include <QLoggingCategory>
+
+// 在模块中定义一个日志类别
+Q_LOGGING_CATEGORY(myCategory, "my.category")
+
+// 在代码中使用定义的日志类别输出日志
+qCDebug(myCategory) << "This is a debug message";
+```
+
+### 使用Qt的自定义日志记录机制
+
+如果需要更高级的日志记录功能，Qt还提供了自定义的日志记录机制。可以通过继承Qt的QAbstractLogging类来创建自定义的日志记录目标
+
+```c++
+#include <QLoggingCategory>
+#include <QFile>
+#include <QTextStream>
+
+// 自定义日志记录目标
+class MyLogger : public QObject, public QLoggingCategory
+{
+    Q_OBJECT
+
+public:
+    MyLogger(QObject* parent = nullptr) : QObject(parent) {}
+
+public slots:
+    void logMessage(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+    {
+        // 你可以在这里实现你的日志记录逻辑，比如将日志写入文件
+        QFile logFile("logfile.txt");
+        if (logFile.open(QIODevice::WriteOnly | QIODevice::Append)) {
+            QTextStream stream(&logFile);
+            stream << msg << endl;
+        }
+    }
+};
+
+// 在你的代码中设置自定义的日志记录目标
+int main(int argc, char *argv[])
+{
+    QCoreApplication a(argc, argv);
+    MyLogger logger;
+    qInstallMessageHandler(logger.logMessage);
+
+    qInfo() << "This is an informational message";
+
+    return a.exec();
+}
+```
+
 # 信号与槽
+
+订阅者模型
 
 信号与槽 Signal & Slot 用于不同对象的通信，窗口与窗口之间，窗口之内不同控件之间的通信就是执行某种槽方法
 
 声明了 `Q_OBJECT` 的话就是表示支持信号与槽。不是所有的类都能支持信号与槽，必须是继承自 QObject 基类的派生类才支持信号与槽机制
+
+## *标准信号槽*
 
 
 
