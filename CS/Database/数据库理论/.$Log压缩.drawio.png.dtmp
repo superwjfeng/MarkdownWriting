@@ -1,0 +1,91 @@
+<mxfile host="Electron" modified="2024-02-03T17:53:49.223Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.5.0 Chrome/112.0.5615.204 Electron/24.5.1 Safari/537.36" etag="b6ZbhJCHX9f8hmoWFx5k" version="21.5.0" type="device">
+  <diagram name="第 1 页" id="WF_hkFtnvmQV8kol1gMz">
+    <mxGraphModel dx="891" dy="260" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Ju7O4QCH8n-7jZnFWV4U-2" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="920" y="693.92" width="430" height="306.08" as="geometry" />
+        </mxCell>
+        <mxCell id="Ju7O4QCH8n-7jZnFWV4U-1" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="315" y="693.92" width="455" height="306.08" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-2" value="" style="sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.devices.hard_disk;" parent="1" vertex="1">
+          <mxGeometry x="400" y="595" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-3" value="&lt;font style=&quot;font-size: 30px;&quot;&gt;Universal Compaction&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="460" y="610" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-4" value="" style="sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.devices.hard_disk;" parent="1" vertex="1">
+          <mxGeometry x="930" y="595" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-5" value="&lt;span style=&quot;font-size: 30px;&quot;&gt;Level Compaction&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="990" y="610" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-6" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="330" y="710" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-9" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="440" y="710" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-10" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="550" y="710" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-11" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="660" y="710" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-12" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;rotation=-90;strokeWidth=3;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="527.66" y="693.92" width="26.25" height="198.43" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-13" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="330.78" y="816.08" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-14" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="461.96" y="816.08" width="159.22" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-16" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="660.78" y="816.08" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-17" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;rotation=-90;strokeWidth=3;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="462.65" y="754.21" width="26.25" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-20" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="329.68" y="921.87" width="250.32" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-21" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="660" y="921.87" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-23" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="930" y="710" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-24" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="710" width="90" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-27" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;rotation=-90;strokeWidth=3;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="1019.9999999999999" y="693.92" width="26.25" height="198.43" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-28" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="953.51" y="816.08" width="159.22" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-29" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="1170" y="816.08" width="159.22" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-30" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;rotation=-90;strokeWidth=3;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+          <mxGeometry x="1130.79" y="709.21" width="26.25" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-31" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Sorted Log File&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="995.67" y="921.87" width="296.49" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-32" value="&lt;font color=&quot;#ff0000&quot; style=&quot;font-size: 26px;&quot;&gt;Level 0&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="810" y="720" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-33" value="&lt;font color=&quot;#ff0000&quot; style=&quot;font-size: 26px;&quot;&gt;Level 1&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="810" y="826.08" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="xV_PLe2OMLxd8HoVSzFH-34" value="&lt;font color=&quot;#ff0000&quot; style=&quot;font-size: 26px;&quot;&gt;Level 2&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="810" y="931.87" width="110" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

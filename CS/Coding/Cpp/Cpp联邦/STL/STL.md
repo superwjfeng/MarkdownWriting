@@ -1760,7 +1760,7 @@ explicit unordered_map ( size_type n = /* see below */,                         
 
     * 给一个key，若能找到符合的key，返回val&：相当于查找+修改val的功能
 
-    * 若没有符合的，就**插入默认构造生成的新pair**，即 `pair(key, V())`，并返回val&：相当于插入+修改的功能
+    * 若没有符合的，就**插入默认构造生成的新pair**，即 `pair(key, V())`，并返回val&，其中 value 会被初始化，比如 int 类型被初始化0，string 被初始化空串。相当于插入+修改的功能
 
     * 底层是利用insert实现的
 
