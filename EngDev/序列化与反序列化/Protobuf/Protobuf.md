@@ -119,6 +119,13 @@ $ ls /usr/local/lib | grep libprotoc
 
 下面的流程是针对22.0之后的版本的bazel的。**切换到 root 安装**
 
+安装 protobuf 需要先安装好下面这些库
+
+* bazel，看 *bazel.md* 有关安装的介绍
+* git
+* g++
+* Abseil 看 *Abseil&Boost.md* 有关安装的介绍
+
 ```cmd
 $ git clone https://github.com/protocolbuffers/protobuf.git
 $ cd protobuf
@@ -613,3 +620,94 @@ https://protobuf.dev/reference/cpp/api-docs/
 ## *Java*
 
 https://protobuf.dev/reference/java/api-docs/overview-summary.html
+
+# CMake 组织 protobuf
+
+`FindProtobuf.cmake` 提供了 protobuf 库的配置
+
+https://cmake.org/cmake/help/latest/module/FindProtobuf.html
+
+## *步骤*
+
+```cmake
+cmake_minimum_required(VERSION 3.5)
+project(MyProtobufProject)
+
+# 查找Protobuf
+find_package(Protobuf REQUIRED)
+
+# 将.proto文件编译为对应的源文件
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS my_message.proto)
+
+# 添加可执行文件
+add_executable(my_program main.cpp ${PROTO_SRCS} ${PROTO_HDRS})
+
+# 链接Protobuf库
+target_link_libraries(my_program ${Protobuf_LIBRARIES})
+```
+
+## *宏*
+
+`FindProtobuf.cmake` 提供了一些宏
+
+### protobuf_generate
+
+`protobuf_generate`是一个CMake宏，用于在构建时自动编译 `.proto` 源文件。这些源文件将被用于实际的编译，并与项目一起链接
+
+注意⚠️：`PROTOBUF_GENERATE`使用时，`*.proto` 文件要位于当前目录下，即 `*.proto` 文件和 `add_library` 或 `add_executable` 需要在同一个目录，否则会出错
+
+```cmake
+protobuf_generate (
+    TARGET <target>
+    [LANGUAGE <lang>]
+    [OUT_VAR <out_var>]
+    [EXPORT_MACRO <macro>]
+    [PROTOC_OUT_DIR <dir>]
+    [PLUGIN <plugin>]
+    [PLUGIN_OPTIONS <plugin_options>]
+    [DEPENDENCIES <depends]
+    [PROTOS <protobuf_files>]
+    [IMPORT_DIRS <dirs>]
+    [GENERATE_EXTENSIONS <extensions>]
+    [PROTOC_OPTIONS <protoc_options>]
+    [APPEND_PATH])
+```
+
+* `TARGET`：指定目标CMake构建目标，生成的源文件将被添加到这个目标中
+* `LANGUAGE`：指定生成的源文件类型，可以是cpp或python，默认为cpp
+* `OUT_VAR`：指定一个CMake变量的名称，该变量将包含生成的源文件的路径
+* `EXPORT_MACRO`：指定一个宏，应用于所有生成的Protobuf消息类和外部变量。这可以用于声明DLL导出等
+* `PROTOC_OUT_DIR`：指定生成的源文件的输出目录，默认为`CMAKE_CURRENT_BINARY_DIR`
+* `PLUGIN`：可选的插件可执行文件，例如grpc_cpp_plugin的路径
+* `PLUGIN_OPTIONS`：向插件提供的附加选项，例如`generate_mock_code=true`用于gRPC cpp插件
+* `DEPENDENCIES`：传递给底层`add_custom_command`调用的依赖参数
+* `PROTOS`：指定要生成源文件的.proto模式文件列表。如果省略，则将使用目标中以.proto结尾的每个源文件
+* `IMPORT_DIRS`：模式文件的公共父目录，用于解析模式文件之间的相对路径
+* `GENERATE_EXTENSIONS`：如果省略`LANGUAGE`，则必须设置为protoc生成的扩展名
+* `PROTOC_OPTIONS`：传递给protoc的附加参数
+
+### protobuf_generate_cpp
+
+```cmake
+protobuf_generate_cpp (<SRCS> <HDRS>
+    [DESCRIPTORS <DESC>] [EXPORT_MACRO <MACRO>] [<ARGN>...])
+```
+
+这个宏专门用来将 proto 编程为 cpp 和头文件，但是不能指定输出，没有上面的宏通用
+
+## *例子*
+
+```cmake
+find_package(gRPC CONFIG REQUIRED)
+find_package(Protobuf REQUIRED)
+add_library(ProtoTest Test.proto)
+target_link_libraries(ProtoTest PUBLIC gRPC::grpc++)
+protobuf_generate(TARGET ProtoTest)
+protobuf_generate(
+    TARGET ProtoTest
+    LANGUAGE grpc
+    PLUGIN protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
+    PLUGIN_OPTIONS generate_mock_code=true
+    GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc)
+```
+

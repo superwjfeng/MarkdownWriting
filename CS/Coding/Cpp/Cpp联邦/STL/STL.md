@@ -191,7 +191,7 @@ array容器进行越界判定的方式是和vector类似的`[]`运算符重载�
 
 * 函数指针
 *  函数表达式**对象**
-*  调用运算符重载 -- [仿函数/函数对象](#仿函数)
+*  调用运算符重载 -- 仿函数/函数对象
 
 当类或函数模板需要用到仿函数时，此时可以用lambda表达式替换，因为这样可以将其隐藏到类或函数中封装
 
@@ -307,6 +307,7 @@ int main() {
 
 3. lambda语句
 
+C++11只允许单语句的 lambda 表达式自动推导其尾置返回，而C++14则放宽到了包含多语句的一切 lambda 表达式和函数式（此时不需要尾置返回了）
 
 ### lambda底层原理
 
@@ -382,6 +383,12 @@ auto foo = [](auto a) { return a; };
 int three = foo(3);
 char const* hello = foo("hello");
 ```
+
+## *lambda 在17、20中的升级*
+
+### 常量lambda和捕获 `*this`
+
+### 捕获 `[=, this]`
 
 ## *包装器 Wrapper*
 
@@ -593,6 +600,18 @@ C++11引入的专用移动迭代器 move iterator 不是用来拷贝元素，而
 
 标准库提供的 `make_move_iterator` 函数将一个普通迭代器转换为一个移动迭代器，该函数接受一个迭代器参数，返回一个移动迭代器
 
+# lambda的使用
+
+本章来自 *Effective Modern C++*
+
+## *条款31：避免默认捕获模式*
+
+## *条款32：使用初始化捕获将对象移入闭包*
+
+## *条款33：对auto&&类型的参数使用delctype并将其转发*
+
+## *条款34：优先使用lambda，而非 `std::bind`*
+
 # `<algorithm>` 库函数
 
 ### `<algorithm>` 库
@@ -693,7 +712,20 @@ STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 
 
 * `merge`：将两个容器元素合并，并存储到另一容器中。前提是两个容器必须是有序的
 
+## *STL中 `std::sort` 的实现*
+
+### 实现逻辑
+
+### 代码阅读
+
 ## *拷贝*
+
+```c++
+template <class InputIterator, class OutputIterator> 
+OutputIterator copy (InputIterator first, InputIterator last, OutputIterator result);
+```
+
+复杂度为 ***O(N)***，N 是元素个数
 
 ## *替换*
 
@@ -925,8 +957,9 @@ const_iterator end() const {
     ```
     
 * `push_back`：尾插一个字符
+  
   * 直接实现
-
+  
     ```cpp
     void push_back(char ch) {
         // 满了就扩容
@@ -1312,6 +1345,54 @@ template < class T, class Alloc = allocator<T> > class vector; // generic templa
         swap(tmp);
     }
     ```
+
+## *emplace_back 的优势*
+
+```c++
+template < class T, class Alloc = allocator<T> > class vector {
+public:
+    void push_back (const T& val); // 并不是类型推导，T 在 vector 定义的时候就已经定下来了
+    void push_back (T&& val);
+    template <typename... Args> void emplace_back(Args&&... args);
+};
+```
+
+在 *模版.md* - 条款24：区分右值引用 & 万能引用 - 可变参数模板的万能引用 部分用 emplace_back 举过例子。其中 push_back 不属于万能引用，因为它的参数类型 T 是由 vector 的定义来决定的
+
+实际上 emplace_back（C++11） 和 pop_back 的功能是一样的，都是往容器中插入元素。区别在于二者的性能
+
+### 实验
+
+```c++
+class Test {
+	Test(int data1, int data2) {}
+};
+
+std::vector<Test> tests;
+tests.reserve(6);
+// 传左值
+tests.push_back(tt) // 一次拷贝构造
+tests.emplace_back(tt); // 一次拷贝构造
+// 传右值
+tests.push_back(Test(10, 20)); // 一次移动拷贝
+tests.emplace_back(Test(10, 20)); // 一次移动拷贝
+// 直接传两个 int
+tests.push_back({10, 20}); // 一次移动拷贝
+tests.emplace_back(10, 20); // 不需要移动
+```
+
+最大的区别是第三次实验，首先 push_back 和 emplace_back 的传参方式就不一样
+
+* push_back 必须要传一个初始化列表进去，初始化列表会自动调用合适的构造器，这是因为 push_back 的参数在 vector 定义时就已经确认了
+* 但 emplace_back 则不必传初始化列表，当然传也是可以的。因为 emplace_back 用了可变参数模版，所以它想传几个参数就传几个
+
+另外，emplace_back 相比于 push_back 省去了移动拷贝
+
+如何实现的呢？push_back 还是需要通过初始化列表构造一个Test的临时变量，然后进行移动。而 emplace_back 则是通过可变参数模版接受了 Test 的构造函数所需要的多个参数，然后直接在 emplace_back 函数内部原地创建出一个 Test 对象来，所以省去了一次移动拷贝
+
+### 编译时的性能对比
+
+因为 emplace_back 使用了可变参数模版，所以在编译时就需要实例化模版，当参数不同的调用多的话，无疑会增加编译时的开销
 
 ## *list 链表*
 
@@ -1792,6 +1873,14 @@ explicit unordered_map ( size_type n = /* see below */,                         
     }
     ```
 
+* 关于 unordered_map 的排序问题
+
+  如果只是想对 key 排序，那么可以把 unordered_map 转换为 map 或者 multimap
+
+  如果是想对 value 排序的话，首先不能使用 `std::sort`，因为 sort 需要的是 RandomAccessIterator，而 map 是 Bidirectional Iterator，unordered_map 则是 forward iterator
+
+  解决方法是把 unordered_map 的所有 pair 倒入一个 vector（RandomAccessIterator），然后再用 sort，当然 sort 要自己给出 Compare 函数来指定是对 `pair->second`，即 value 进行比较
+
 # 标准库特殊设施
 
 ## *tuple类型*
@@ -1922,3 +2011,12 @@ e.discard(u)         // 将引擎推进u步：u的类型为 unsigned long long
 ```
 
 ### 其他随机数分布
+
+# 疑惑
+
+```c++
+void push_back (const value_type& val);
+void push_back (value_type&& val);
+```
+
+为什么明明是引用，但插入的还是一个拷贝？

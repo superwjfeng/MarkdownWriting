@@ -290,7 +290,23 @@ A& ra1 = bb; //向上转换切片，所以没有产生中间变量，也就不�
 ## *循环 Loop*
 
 * while循环是最早出现的
+
 * for循环是后期产生的，将控制变量的初始化、条件判断、循环条件的调整集成到一起
+
+  ```c
+  for (初始化表达式; 循环条件; 循环后操作) {
+      // 循环体
+  }
+  ```
+
+  所以有时候可以扩展到用两个变量同时控制
+
+  ```c
+  for (int i = 0, j = 0; i < n && j < n; i++, j++) {
+      if (board[i][j] == "Q" && (i != row && j != col)) return false;
+  }
+  ```
+
 * do while循环至少进行一次，使用场景有限
 
 ## *分支和跳转*
@@ -536,6 +552,22 @@ setjmp 把当前进程环境的各种信息保存到 env 参数中
 * 指针访问数组元素的两种方式
   * `*(ptr + 3)`
   * `ptr[3]`
+
+### 应用：sizeof 的实现
+
+sizeof 是用宏定义实现的运算符，它不是一个函数，在使用的时候加不加括号都行。**实现原理就是利用了不同类型的指针的步长是不同的**
+
+* 非数组的 sizeof
+
+  ```c
+  #defne _sizeof(T) ( (size_t)((T*)0 + 1))
+  ```
+
+* 数组的 sizeof
+
+  ```c
+  #define array_sizeof(T)   ( (size_t)(&T+1)  - (size_t)(&T)  )
+  ```
 
 ### 保护数组中的数据：const限定符的作用
 
@@ -1133,7 +1165,7 @@ Unix使用 `\n`，macOS使用 `\r`，Win使用 `\r\n`。如果不做切换换行
     }
     ```
     
-    运行后不会打印"hello world"，只会打印乱码。虽然"hello world"字符串定义在了GetMemory()中，但字符串常量是静态变量保存于内存的静态区中，在GetMemory()退出后并不会被销毁，其定义在GetMemory()中只意味着其位于GetMemory()的定义域中。但问题在于虽然"hello world"字符串常量不会被销毁，但char p[]意味着开辟了新的内存空间给p数组，而其是"hello world"的一份临时拷贝，在GetMemory()退出时被销毁。因此返回的p指向了一个被系统回收的区域，即野指针问题。将数组写成指针形式可以规避这个问题。
+    运行后不会打印"hello world"，只会打印乱码。虽然"hello world"字符串定义在了 `GetMemory()` 中，但字符串常量是静态变量保存于内存的静态区中，在`GetMemory()` 退出后并不会被销毁，其定义在 `GetMemory()` 中只意味着其位于 `GetMemory()` 的定义域中。但问题在于虽然"hello world"字符串常量不会被销毁，但 `char p[]` 意味着开辟了新的内存空间给p数组，而其是"hello world"的一份临时拷贝，在 `GetMemory()` 退出时被销毁。因此返回的p指向了一个被系统回收的区域，即野指针问题。将数组写成指针形式可以规避这个问题
 
     ```c
     char* GetMemory(void) {
@@ -1408,6 +1440,7 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
   * dest必须足够大，以确保能存放字符串，放不下会报错 `- Stack around the variable 'dest' was corrupted. 栈空间损坏`
   * dest不能是常量字符串，必须是新开的栈空间
   * 返回是 `char*` 是为了实现链式访问，如 `printf("%s\n", my_strcpy(dest, src));`，如果返回是void则不能链式访问
+  
 * `strcat()` 函数 将src追加到dest后面 -- 先找尾再拷贝，效率较低
 
     ```c
@@ -1439,15 +1472,15 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
     
     * dest从`'\0'` 开始被src首字符开始覆盖，src的 `'\0'` 也被一同拷贝
     * 设计思路：先用strlen找到dest'\0'的位置（即开始拷贝的位置），然后用strcpy将src拷贝到dest之前找到的位置
+    
 * 用my_strcat函数，字符串自己给自己追加的时候会造成死循环，某些C语言库中的strcat函数解决了这个问题
+
 * `strcmp()` 函数
 
     ```c
-    int my_strcmp(const char* s1, const char* s2)
-    {
+    int my_strcmp(const char* s1, const char* s2) {
         assert(s1 && s2);
-        while (*s1 == *s2)
-        {
+        while (*s1 == *s2) {
             if (*s1 == '\0') // 判断*s1, *s2都可以
                 return 0; //相等
             s1++;
@@ -1460,10 +1493,10 @@ size_t my_strlen(const char* str) { //因为这个函数不会修改str，const�
         return *s1 - *s2;
     }
     ```
-
-  * `"abc" < "abcdef"` 或者 `arr1 < arr2`这么写是在比较首元素地址的大小
+    
+    * `"abc" < "abcdef"` 或者 `arr1 < arr2`这么写是在比较首元素地址的大小
   * C语言标准规定，若str1>str2，则返回大于0的数字，<则返回小于0的数字，=返回0
-  * strcmp函数比较的不是字符串的长度，而是比较字符串中对应位置上的字符的ASCII码大小，如果相同，就比较下一对，直到不同或者都遇到'\0'
+  * **strcmp函数比较的不是字符串的长度，而是比较字符串中对应位置上的字符的ASCII码大小**，如果相同，就比较下一对，直到不同或者都遇到'\0'
 
 ### 长度受限制的字符串函数
 
@@ -1772,64 +1805,130 @@ struct Point p3 = {x, y};
 
 ### 结构体内存对齐 Memory Alignment
 
+* 对齐指的是结构体的每个成员的起始地址要对齐到某个整数地址、整个结构体的总大小要对齐到某个整数
+
 * 为什么存在结构对齐？
+
   * 平台移植原因：不是所有的硬件平台都能访问任意地址上的任意数据的。某些硬件平台只能在某些地址处取某些特定类型的数据，否则抛出硬件异常
   * 性能原因：数据结构（尤其是栈）应该尽可能地在自然边界上对齐。为了访问未对齐的内存，处理器需要做两次内存访问，而对齐的内存访问仅需要一次访问。总体来说，结构体的内存对齐是拿空间来换时间
-  
+
   CPU访问非对齐的内存时为何需要多次读取再拼接？<http://t.csdn.cn/GWQ1g> 
-  
+
 * 结构体的对齐规则
   * 第一个成员在与结构体变量偏移量为0的地址处
-  * 其他成员变量要对齐到默认对齐数的整数倍的地址处
-     * 某成员的对齐数=编译器默认的一个对齐数与该成员大小的较小值
-     * VS中默认的对齐数为8
-     * Linux中没有对齐数，自身的大小就是对齐数
-  * 结构体总大小为最大对齐数（每个成员变量都有一个对齐数）的整数倍
-  * 若嵌套了结构体，嵌套的结构体对齐到自己的最大对齐数的整数倍处，结构体的整体大小就是所有对齐数（含嵌套结构体的对齐数）的整数倍
-  * 设计结构体：核心思想是让占用空间小的成员尽量集中在一起
+
+  * 其他成员变量要对齐到对齐数的整数倍的地址处
+     * Windows: **`bool`** and **`char`** on 1-byte boundaries, **`short`** on 2-byte boundaries, **`int`**, **`long`**, and **`float`** on 4-byte boundaries, and **`long long`**, **`double`**, and **`long double`** on 8-byte boundarie
+     
+       https://learn.microsoft.com/en-us/cpp/cpp/alignment-cpp-declarations?view=msvc-170
+     
+     * Linux 的区别貌似就是最大对齐到4字节，而不是8字节
+     
+  * 结构体总大小为最大对齐数（每个成员变量都有一个对齐数，编译器的默认对齐数不算）的整数倍
+
+     <img src="结构体内存对齐.drawio.png" width="60%">
+
+     ```c
+     // Linux 没有默认对齐数，成员本身的长度就是默认对齐数
+     struct S1 {
+         char c1; // 0
+         int i;   // int 要对齐到 4，4-7
+         char c2; // 8
+                  // 填充 9-11
+     };
+     
+     std::cout << "Size of S1: " << sizeof(S1) << std::endl; // 共12字节
+     std::cout << "Alignmen of S1.c1: " << offsetof(struct S1, c1) << std::endl; // 0
+     std::cout << "Alignmen of S1.i: " << offsetof(struct S1, i) << std::endl;   // 4
+     std::cout << "Alignmen of S1.c2: " << offsetof(struct S1, c2) << std::endl; // 8
+     
+     struct S2 {
+         char c1; // 0
+         char c2; // 1
+         int i;   // 4-7
+         char c3; // 8
+         char c4; // 9
+                  // 填充 10-11
+     }; 
+     std::cout << "Size of S2: " << sizeof(S2) << std::endl; // 共8字节
+     std::cout << "Alignmen of S2.c1: " << offsetof(struct S2, c1) << std::endl; // 0
+     std::cout << "Alignmen of S2.c2: " << offsetof(struct S2, c2) << std::endl; // 1
+     std::cout << "Alignmen of S2.i: " << offsetof(struct S2, i) << std::endl;   // 4
+     std::cout << "Alignmen of S2.c3: " << offsetof(struct S2, c3) << std::endl; // 8
+     std::cout << "Alignmen of S2.c4: " << offsetof(struct S2, c4) << std::endl; // 9
+     
+     struct S3 {
+         double d; // 0-7
+         char c;   // 8
+         int i;    // 12-15
+     };
+     std::cout << "Size of S3: " << sizeof(S3) << std::endl; // 共16字节
+     std::cout << "Alignmen of S3.d: " << offsetof(struct S3, d) << std::endl; // 0
+     std::cout << "Alignmen of S3.c: " << offsetof(struct S3, c) << std::endl; // 8
+     std::cout << "Alignmen of S3.i: " << offsetof(struct S3, i) << std::endl; // 12
+     ```
+
+  * **嵌套的结构体的大小不会影响结构体的最大对齐数**：嵌套的结构体对齐到自己的最大对齐数的整数倍处，结构体的整体大小就是所有对齐数（含嵌套结构体的对齐数）的整数倍
+
+     下面这个例子是结构体里嵌套结构体时的对齐情况的。s3 在 s4 中是对齐到 8 的，因为 s3 本身的对齐数是 8 (double)
+
+     ```c++
+     struct S4 {
+         char c1;      //0
+         struct S3 s3; //8-23
+         double d;     //24-31 最大对齐数为16
+     };
+     
+     std::cout << "Size of S4: " << sizeof(S4) << std::endl; // 共32字节
+     std::cout << "Alignmen of S4.c1: " << offsetof(struct S4, c1) << std::endl;
+     std::cout << "Alignmen of S4.s3: " << offsetof(struct S4, s3) << std::endl;
+     std::cout << "Alignmen of S4.d: " << offsetof(struct S4, d) << std::endl;
+     
+     std::cout << "Size of S3: " << sizeof(S3) << std::endl; // 16
+     std::cout << "Size of S4: " << sizeof(S4) << std::endl; // 32
+     std::cout << "S4 is aligned to: " << alignof(struct S4) << std::endl; // 8
+     ```
+
+* 设计结构体：核心思想是让占用空间小的成员尽量集中在一起
+
+### 获取 & 修改对齐数
+
+* offsetof 可以用来确定某个结构体成员相对于结构体起始地址的偏移量
 
     ```c
-    // VS默认对齐数为8
-    struct S1 {
-        char c1; //0
-        int i; //4-7
-        char c2; //8-11
+    struct Person {
+        char name[20];
+        int age;
+        float height;
     };
-    // 共12字节
-    struct S2 {
-        char c1 //0
-        char c2;//1
-        int i;//4-7
-    };
-    // 共8字节
-    struct S3 {
-        double d; //8
-        char c; //9
-        int i; //16
-    };
-    // 共16字节
-    struct S4 {
-        char c1; //0
-        struct S3 s3; //8-23
-        double d; //24-31 最大对其数为16
-    };
-    // 共32字节
+    
+    int main() {
+        // 计算结构体成员的偏移量
+        size_t name_offset = offsetof(struct Person, name);
+        size_t age_offset = offsetof(struct Person, age);
+        size_t height_offset = offsetof(struct Person, height);
+        return 0;
+    }
     ```
-  
-* 修改默认对齐数 ```#pragma pack(n)```
+
+    它的实现大概是这样的，和 sizeof 一样，都是利用不同指针的步长
+
+    ```c
+    // <stddef.h>
+    #define offsetof(type, member) ((size_t)(&((type *)0)->member))
+    ```
+
+* 修改默认对齐数 `#pragma pack(n)`
 
     ```c
     #pragma pack(8) // 设置默认对齐数为8
-    struct s
-    {
+    struct s {
         char c1;
         int i;
         char c2;
     };
     #pragma pack() // 取消设置的默认对齐数，还原为默认
     ```
-
-### 结构体传参
 
 ## *位段 bit field*
 
@@ -3210,7 +3309,7 @@ typedef struct
 
 # 运行库
 
-## *GNU C源码阅读技巧*
+## *源代码阅读技巧*
 
 以 glibc-2.31 为例 https://ftp.gnu.org/gnu/glibc/
 
@@ -3231,7 +3330,7 @@ $ tar -xzvf glibc-2.31.tar.gz
 
 需要注意的是，使用 `_GNU_SOURCE` 可能会使代码在不同编译器和平台上不具有可移植性，因为这些扩展功能不一定在所有编译器和标准库中都可用。因此，除非明确需要使用这些特定于 GNU 的特性，否则最好避免在通用的跨平台代码中使用 `_GNU_SOURCE`。如果要编写可移植的代码，建议仅依赖于标准C或C++功能，而不使用非标准或特定于编译器/库的扩展
 
-### \_\_attribute\_\_机制
+### GCC 的 \_\_attribute\_\_ 属性说明符
 
 `__attribute__` 机制是 GNU C 编译器（如 GCC）提供的一种用于控制编译器行为和注释的机制。它允许程序员使用一些特殊的属性来告诉编译器如何处理变量、函数、结构等元素，或者对代码进行一些特殊的优化或警告
 
@@ -3320,6 +3419,8 @@ https://www.cnblogs.com/justinyo/archive/2013/03/12/2956438.html
   * 弱别名不会完全替代原始符号，而是在原始符号不存在时才会起作用
   * 如果原始符号存在，弱别名将被忽略，原始符号将被使用
   * 弱别名常用于提供一个默认实现，但允许用户覆盖它
+
+### MVSC
 
 ## *入口函数和程序初始化*
 

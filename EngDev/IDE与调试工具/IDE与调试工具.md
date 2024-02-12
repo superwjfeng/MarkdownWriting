@@ -864,7 +864,9 @@ CMake工具不会用到VS的build和debug系统（即tasks.json和launch.json）
 
 当然如果想要用tasks.json来使用CMake也是可以的
 
-# 远程调试
+# VS Code在容器环境中开发
+
+
 
 
 

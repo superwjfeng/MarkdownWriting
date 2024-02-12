@@ -208,7 +208,7 @@ cmake --build build --parallel 4
 cmake --build build --target install
 ```
 
-* 配置阶段：`cmake -B build`：
+* 配置阶段：`cmake -B build`：B 代表 build
 
   ```
   -B <path-to-build>           = Explicitly specify a build directory.
@@ -218,7 +218,7 @@ cmake --build build --target install
 
   例如，运行命令 cmake -B build 会根据CMakellists.txt文件中的配置生成构建系统文件（如Makefile或Visual Studio项目文件 .sln）并将其放置在名为build的目录中。这个命令通常用于在构建系统文件和源代码文件分离的情况下，以保持源代码目录的干净和可维护性
 
-  * 在配置阶段还可以使用 -D 选项来设置缓存变量。第二次配置时，之前的 -D 添加仍然会被保留
+  * 在配置阶段还可以使用 -D（Define） 选项来设置缓存变量。第二次配置时，之前的 -D 添加仍然会被保留
 
     ```
     -D <var>[:<type>]=<value>    = Create or update a cmake cache entry.
@@ -749,7 +749,7 @@ GNU项目一般都会遵守 Filesystem Hierarchy Standard, FHS <https://zh.wikip
 
 ## *子模块*
 
-有三种引入子模块的方式
+有三种引入子模块的方式。所谓引入子模块，就是指根据我们的需要找到指定版本的库**头文件包含路径、链接库路径**等，从而能够满足我们开发项目的编译链接需要
 
 1. 纯头文件：target_include_directories
 2. 子模块：add_subdirectory
@@ -880,39 +880,6 @@ target_include_directories(my_library
 )
 ```
 
-### 寻找系统中的包/库
-
-```cmake
-find_package(<PackageName> [version] [EXACT] [QUIET] [MODULE]
-             [REQUIRED] [[COMPONENTS] [components...]]
-             [OPTIONAL_COMPONENTS components...]
-             [REGISTRY_VIEW  (64|32|64_32|32_64|HOST|TARGET|BOTH)]
-             [GLOBAL]
-             [NO_POLICY_SCOPE]
-             [BYPASS_PROVIDER])
-```
-
-* `<PackageName>`：指定要查找的软件包的名称。这通常是软件包提供者定义的包名称，如 Boost、OpenCV、Qt 等
-* `[version]`：可选项，用于指定所需的软件包版本。可以是具体版本号，也可以是版本号的范围。例如，`[version "2.0"]` 或 `[version "2.0.1"]`
-* `[EXACT]`：可选项，要求找到的软件包版本必须与指定的版本号完全匹配
-* `[QUIET]`：可选项，如果找不到软件包，将不会产生错误，而是在静默模式下继续
-* `[MODULE]`：可选项，表示要查找的软件包是一个 CMake 模块。通常用于查找 CMake 模块文件而不是常规的软件包
-* `[REQUIRED]`：可选项，表示找不到指定的软件包时会引发致命错误。如果不使用此选项，CMake 将继续处理而不会停止
-* `[[COMPONENTS] [components...]]`：用于指定软件包的组件（例如库、工具等）。这使得你可以选择性地只找到软件包的部分组件
-* `[OPTIONAL_COMPONENTS components...]`：可选项，用于指定软件包的可选组件，这些组件可以不存在
-* `[REGISTRY_VIEW (64|32|64_32|32_64|HOST|TARGET|BOTH)]`：可选项，指定用于查找软件包的注册表视图。这通常用于 Windows 上的 64 位和 32 位软件包
-* `[GLOBAL]`：可选项，表示全局查找软件包，即在 CMakeLists.txt 文件之外的范围中查找
-* `[NO_POLICY_SCOPE]`：可选项，表示在查找时不应用策略范围（policy scope）
-* `[BYPASS_PROVIDER]`：可选项，绕过软件包提供者，直接使用系统上找到的软件包。通常用于测试目的
-
-现代 CMake 认为一个包 package 可以提供多个库，又称组件 components，比如 TBB 这个包，就包含了 tbb, tbbmalloc, tbbmalloc_proxy 这三个组件。因此为避免冲突，每个包都享有一个独立的名字空间，以 :: 的分割
-
-### .cmake文件
-
-`.cmake` 文件通常是 CMake 脚本文件的扩展名。CMake 脚本文件是用来配置、构建和安装项目的脚本文件。这些文件包含了一系列 CMake 命令和指令
-
-和C的头文件的组织非常相似，`.cmake` 文件也可以被其他CMakeLists.txt通过include导入
-
 ## *生成目标*
 
 ### add_executable
@@ -1018,6 +985,159 @@ target_add_definitions(myapp PUBLIC -DMY_MACRO=1)
 * 2：严重错误。通常表示 CMake 在执行配置或生成期间遇到了致命错误，无法继续
 * 3：没有匹配的 CMakeLists.txt 文件。这表示 CMake 在当前目录或指定的目录中找不到 CMakeLists.txt 文件
 * 4：配置文件错误。表示 CMake 在配置项目时发生了错误，可能是由于 CMakeLists.txt 文件中的问题导致的
+
+# find_package
+
+## *Overview*
+
+### .cmake文件
+
+`.cmake` 文件通常是 CMake 脚本文件的扩展名。CMake 脚本文件是用来配置、构建和安装项目的脚本文件。这些文件包含了一系列 CMake 命令和指令
+
+和C的头文件的组织非常相似，`.cmake` 文件也可以被其他CMakeLists.txt通过include导入
+
+现代 CMake 认为一个包 package 可以提供多个库，又称组件 components，比如 TBB 这个包，就包含了 tbb, tbbmalloc, tbbmalloc_proxy 这三个组件。因此为避免冲突，每个包都享有一个独立的名字空间，以 :: 的分割
+
+### find_package 的两种工作模式
+
+CMake本身不提供任何搜索库的便捷方法，所有路径都应该由软件包的`<PackageName>Config.cmake`或`Find<PackageName>.cmake` 配置文件提供
+
+一般不用担心找不到的问题，因为一个合格的使用 CMake 构建的软件包都应该提供`<PackageName>Config.cmake`或`Find<PackageName>.cmake` 配置文件。找到了就会自动设置相关变量
+
+find_package 有两种工作模式，这两种工作模式的不同决定了其搜索包路径的不同
+
+* Module模式：find_package命令基础工作模式（Basic Signature），也是默认工作模式
+* Config模式：find_package命令的高级工作模式（Full Signature）。 只有在find_package中指定CONFIG、NO_MODULE等关键字，或者Module模式查找失败后才会进入到Config模式
+
+<img src="find_package过程.drawio.png" width="70%">
+
+### find_package 的效果
+
+如上所示，在 find_package 后可以直接使用相关的头文件和库等
+
+```cmake
+target_include_directories(monitor_proto PUBLIC
+${PROTOBUF_INCLUDE_DIRS})
+```
+
+## *Module模式*
+
+### 命令
+
+```c++
+find_package(<PackageName> [version] [EXACT] [QUIET] [MODULE]
+             [REQUIRED] [[COMPONENTS] [components...]]
+             [OPTIONAL_COMPONENTS components...]
+             [REGISTRY_VIEW  (64|32|64_32|32_64|HOST|TARGET|BOTH)]
+             [GLOBAL]
+             [NO_POLICY_SCOPE]
+             [BYPASS_PROVIDER])
+```
+
+* `<PackageName>`：指定要查找的软件包的名称。这通常是软件包提供者定义的包名称，如 Boost、OpenCV、Qt 等
+* `[version]`：可选项，用于指定所需的软件包版本。可以是具体版本号，也可以是版本号的范围。例如，`[version "2.0"]` 或 `[version "2.0.1"]`
+* `[EXACT]`：可选项，要求找到的软件包版本必须与指定的版本号完全匹配
+* `[QUIET]`：可选项，如果找不到软件包，将不会产生错误，而是在静默模式下继续
+* `[MODULE]`：可选项，假如加入了**MODULE**选项，那么就只在**Module**模式查找，如果**Module**模式下查找失败并不切换到**Config**模式查找
+* `[REQUIRED]`：可选项，表示找不到指定的软件包时会引发致命错误。如果不使用此选项，CMake 将继续处理而不会停止
+* `[[COMPONENTS] [components...]]`：用于指定软件包的组件（例如库、工具等）。这使得可以选择性地只找到软件包的部分组件
+* `[OPTIONAL_COMPONENTS components...]`：可选项，用于指定软件包的可选组件，这些组件可以不存在
+* `[REGISTRY_VIEW (64|32|64_32|32_64|HOST|TARGET|BOTH)]`：可选项，指定用于查找软件包的注册表视图。这通常用于 Windows 上的 64 位和 32 位软件包
+* `[GLOBAL]`：可选项，表示全局查找软件包，即在 CMakeLists.txt 文件之外的范围中查找
+* `[NO_POLICY_SCOPE]`：可选项，表示在查找时不应用策略范围（policy scope）
+* `[BYPASS_PROVIDER]`：可选项，绕过软件包提供者，直接使用系统上找到的软件包。通常用于测试目的
+
+### Module模式的搜索路径
+
+Module模式下是要查找到名为`Find<PackageName>.cmake`的配置文件
+
+Module模式只有两个查找路径：依次在 CMAKE_MODULE_PATH 和 CMAKE_ROOT（CMake的安装目录） 中寻找
+
+先在CMAKE_MODULE_PATH变量对应的路径中查找。如果路径为空，或者路径中查找失败，则在CMake安装目录（即CMAKE_ROOT变量）下的Modules目录下（通常为/usr/share/cmake-XXX/Modules，XXX是CMake版本）查找
+
+```cmake
+# 查看变量
+message(STATUS "CMAKE_MODULE_PATH = ${CMAKE_MODULE_PATH}")
+message(STATUS "CMAKE_ROOT = ${CMAKE_ROOT}")
+```
+
+## *Config模式*
+
+### 命令
+
+```c++
+find_package(<PackageName> [version] [EXACT] [QUIET]
+             [REQUIRED] [[COMPONENTS] [components...]]
+             [OPTIONAL_COMPONENTS components...]
+             [CONFIG|NO_MODULE]
+             [GLOBAL]
+             [NO_POLICY_SCOPE]
+             [BYPASS_PROVIDER]
+             [NAMES name1 [name2 ...]]
+             [CONFIGS config1 [config2 ...]]
+             [HINTS path1 [path2 ... ]]
+             [PATHS path1 [path2 ... ]]
+             [REGISTRY_VIEW  (64|32|64_32|32_64|HOST|TARGET|BOTH)]
+             [PATH_SUFFIXES suffix1 [suffix2 ...]]
+             [NO_DEFAULT_PATH]
+             [NO_PACKAGE_ROOT_PATH]
+             [NO_CMAKE_PATH]
+             [NO_CMAKE_ENVIRONMENT_PATH]
+             [NO_SYSTEM_ENVIRONMENT_PATH]
+             [NO_CMAKE_PACKAGE_REGISTRY]
+             [NO_CMAKE_BUILDS_PATH] # Deprecated; does nothing.
+             [NO_CMAKE_SYSTEM_PATH]
+             [NO_CMAKE_INSTALL_PREFIX]
+             [NO_CMAKE_SYSTEM_PACKAGE_REGISTRY]
+             [CMAKE_FIND_ROOT_PATH_BOTH |
+              ONLY_CMAKE_FIND_ROOT_PATH |
+              NO_CMAKE_FIND_ROOT_PATH])
+```
+
+与 Module 模式相同的就不赘述了
+
+* `[CONFIG|NO_MODULE]`：直接进入 Config 模式
+* `[NO_POLICY_SCOPE]`：指示 CMake 在调用 `find_package` 时避免引入策略作用域
+* `[NAMES name1 [name2 ...]]`：指定软件包的替代名称
+* `[CONFIGS config1 [config2 ...]]`：指定要搜索的配置文件名称列表
+* `[HINTS path1 [path2 ... ]]`：为 CMake 提供有关软件包位置的提示
+* `[PATHS path1 [path2 ... ]]`：指定要搜索软件包的其他路径
+* `[PATH_SUFFIXES suffix1 [suffix2 ...]]`：指定要搜索的附加路径后缀
+* `[NO_DEFAULT_PATH]`：指示 CMake 不要搜索软件包的默认位置
+* `[NO_PACKAGE_ROOT_PATH]`：指示 CMake 不要使用软件包根路径
+* `[NO_CMAKE_PATH]`、`[NO_CMAKE_ENVIRONMENT_PATH]`、`[NO_SYSTEM_ENVIRONMENT_PATH]`、`[NO_CMAKE_PACKAGE_REGISTRY]`、`[NO_CMAKE_SYSTEM_PATH]`、`[NO_CMAKE_INSTALL_PREFIX]`、`[NO_CMAKE_SYSTEM_PACKAGE_REGISTRY]`：控制各种路径搜索和环境考虑。
+* `[CMAKE_FIND_ROOT_PATH_BOTH | ONLY_CMAKE_FIND_ROOT_PATH | NO_CMAKE_FIND_ROOT_PATH]`：指定与查找根路径相关的行为
+
+### Config模式的搜索路径
+
+https://blog.csdn.net/zhanghm1995/article/details/105466372
+
+Config模式下是要查找名为`<PackageName>Config.cmake`或`<lower-case-package-name>-config.cmake`的模块文件
+
+查找顺序为
+
+1. 名为 `<PackageName>_DIR` 的CMake变量或环境变量路径，其默认为空
+   这个路径是非根目录路径，需要指定到 `<PackageName>Config.cmake` 或 `<lower-case-package-name>-config.cmake` 文件所在目录才能找到
+
+2. 名为CMAKE_PREFIX_PATH、CMAKE_FRAMEWORK_PATH、CMAKE_APPBUNDLE_PATH的CMake变量或环境变量路径。根目录，默认都为空
+
+3. PATH环境变量路径：根目录，默认为系统环境PATH环境变量值
+
+   **其实这个路径才是Config模式大部分情况下能够查找到安装到系统中各种库的原因**。这个路径的查找规则为：遍历PATH环境变量中的各路径，如果该路径如果以bin或sbin结尾，则自动回退到上一级目录得到根目录
+
+在上述指明的是根目录路径时，CMake会首先检查这些根目录路径下是否有名为 `<PackageName>Config.cmake` 或`<lower-case-package-name>-config.cmake` 的模块文件，若没有，CMake会继续检查或匹配这些根目录下的以下路径（`<PackageName>_DIR` 路径不是根目录路径）：
+
+```
+<prefix>/(lib/<arch>|lib|share)/cmake/<name>*/
+<prefix>/(lib/<arch>|lib|share)/<name>*/ 
+<prefix>/(lib/<arch>|lib|share)/<name>*/(cmake|CMake)/
+```
+
+其中 `<arch>` 为系统架构名，如Ubuntu下一般为：/usr/lib/x86_64-linux-gnu，整个 `(lib/<arch>|lib|share)` 为可选路径，例如OpenCV库而言会检查或匹配 `<prefix>/OpenCV/`、`<prefix>/lib/x86_64-linux-gnu/OpenCV/`、`<prefix>/lib/share/OpenCV/`、`<prefix>/share/OpenCV/` 等路径；name为包名，不区分大小写 `<name>*` 意思是包名后接一些版本后等字符也是合法的，如pcl-1.9也会被找到
+
+## *封装软件包*
+
+为了让我们自己开发的软件包能够让使用者通过 find_package 来找到，同理我们也需要提供 `<PackageName>Config.cmake`或`Find<PackageName>.cmake` 配置文件
 
 # 构建库
 
@@ -1209,14 +1329,6 @@ https://www.jianshu.com/p/ab5ef02bfa2c
 Bazel是一个支持多语言、跨平台的构建工具。Bazel支持任意大小的构建目标，并支持跨多个仓库的构建，是Google主推的一种构建工具
 
 用Bazel管理、安装的包几乎无法使用make或cmake来进行管理
-
-### Abseil
-
-Abseil 是 Google 内部使用的 C++ 基础库，它历经十多年的开发，它的目的是为 Google 编程人员在各种项目上的工作需求提供支持，这些项目包括 Protocol Buffers、gRPC、TensorFlow 和 Bazel 等
-
-> Abseil是从 Google 内部代码块中抽取出来的一系列最基础的软件库。作为基本的组成部分，这些软件库支撑了几乎全部 Google 在运行的项目。以前这些 API 是零零散散地嵌入在 Google 的大部分开源项目中，现在我们将它们规整在一起，形成这样一个全面的项目。
->
-> Abseil 是 Google 代码库的最基本构建模块，其代码经过了生产环节测试，此后还会继续得到完全的维护。 -- Google
 
 ## *安装*
 

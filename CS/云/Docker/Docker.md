@@ -1443,7 +1443,7 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
 * `RUN <command>`：在容器内执行指定的指令，并把结果保存下来
 
-* `EXPOSE`：暴露容器的端口，使得可以从主机访问容器内的服务
+* EXPOSE：暴露容器的端口，使得可以从主机访问容器内的服务
 
 * `CMD <command>`
 
@@ -1451,6 +1451,8 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
   * 每一个Dockerfile只能有一个CMD
 
 * LABEL：以键值对的形式为镜像添加元数据
+
+* ARG：用于定义构建时的参数。这些参数也可以在构建 Docker 镜像时通过 `--build-arg` 标志进行传递
 
 ### Build 命令
 

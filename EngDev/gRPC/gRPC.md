@@ -4,11 +4,25 @@ Author: Weijian Feng 封伟健
 Source: Official documentation for gRPC <https://grpc.io/docs/>, 官方文档中文翻译 <https://doc.oschina.net/grpc?t=56831>
 ---
 
-# gRPC
+# gRPC原理
 
-gRPC的源码库 <https://github.com/grpc/grpc>
+## *gRPC 实现架构*
 
-## *intro*
+https://grpc.io/blog/grpc-stacks/
+
+<img src="gRPC协议栈.png">
+
+gRPC是基于HTTP/2的再包装，因此其底层调用的仍然是 TCP/IP 协议栈。既然是 HTTP/2，那么用的就是 stream
+
+## *请求消息*
+
+## *响应消息*
+
+
+
+
+
+
 
 gRPC（Google Remote Procedure Call）是一种高性能、通用的开源远程过程调用（RPC）框架，由Google开发并开源。它基于HTTP/2协议和Protocol Buffers（protobuf）序列化协议，用于构建跨平台和跨语言的分布式应用程序
 
@@ -29,6 +43,26 @@ gRPC 提供了一种简单的方法来定义服务接口和消息类型（**基�
 7. 支持服务发现和负载均衡：gRPC 提供了服务发现和负载均衡的功能，可以轻松部署和管理大规模的分布式系统
 
 gRPC 在微服务架构和分布式系统中具有广泛的应用。它提供了高效的网络通信和跨语言支持，使得不同服务能够方便地进行通信和协作。无论是构建大规模的云原生应用程序、实现高性能的数据传输，还是构建实时流处理系统，gRPC 都是一个强大的工具
+
+
+
+
+
+# gRPC使用
+
+gRPC的源码库 <https://github.com/grpc/grpc>
+
+## *安装*
+
+https://github.com/grpc/grpc/blob/v1.61.0/src/cpp/README.md
+
+### 使用 Bazel
+
+### 使用 CMake
+
+
+
+
 
 ## *项目结构*
 

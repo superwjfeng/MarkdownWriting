@@ -351,3 +351,18 @@ Git 支持三种引用类型，不同的引用类型对应的引用文件各自�
 * 当前的位置特殊的索引称为 HEAD
 * origin一般用作本地对remote repository的名称，它是 `git clone` 时的默认remote库名称，可以 `git clone [-o RemoteName] ` 换一个名字
 * 本地 `git init` 时的默认branch名称是master。因此对远程库的本地branch名称是，`<remote>/<branch>`，即origin/master
+
+
+
+
+
+
+
+
+
+
+
+
+
+## *rebase vs. merge*
+

@@ -3,6 +3,8 @@ Title: Cpp
 Author: Weijian Feng 封伟健
 ---
 
+
+
 # 数据类型
 
 ## *引用*
@@ -17,7 +19,8 @@ Author: Weijian Feng 封伟健
 
 ### 引用特性
 
-* 引用在定义时必须初始化
+* 引用本身不能修改。但可以通过引用来修改它所引用的东西的值
+* 引用在定义时必须初始化，且必须用左值初始化
 * 一个变量可以有多个引用
 * 某个引用一旦已经引用了一个实体后，不能再引用其他实体
 * 除了const和类以外，其他的引用必须严格类型匹配
@@ -34,6 +37,18 @@ b = x; // 将会同时赋值给b和a，因为b和a是同一个地址
 c = x; // 这个例子并不是说c重新引用了x这个实体，而是说x通过c这个引用间接赋值给了c所引用的a
 // 因为&c代表的是给c取地址，所以其实C++中并没有语法来表示重新引用其他实体
 ```
+
+### 引用的本质
+
+上面的引用特性，特别是前两条，其实和顶层const /  const pointer 的特性是一样的
+
+```c++
+int a = 10;
+int* const pa = &a; // 顶层 const
+int& ra = a; // 引用，引用就是用指针来实现的
+```
+
+其实引用的底层就是指针：**引用是一个指向不可变的、被编译器自动解引用的指针，即，引用是一个被编译器自动解引用的“本身是常量的指针”**
 
 ### <span id="lvalue">使用场景</span>
 
@@ -132,7 +147,7 @@ A& func4() {
 }
 ```
 
-* 中间临时量 temporary object 问题，具体看《程序员的自我修养--链接、装载与库》10.2.3函数返回值传递机制
+* 中间临时量 temporary object 问题，具体看《程序员的自我修养--链接、装载与库》10.2.3 函数返回值传递机制
   
   * 函数的返回对于1-8字节的小对象，直接通过eax寄存器存放的临时量返回。注意：**这个临时对象编译器默认将其设置为const，即临时变量具有常性**
   * 对于大于8字节的大对象，会在上层栈帧开辟temp空间返回
@@ -143,7 +158,7 @@ A& func4() {
 
   * 传值输入：需要调用拷贝函数，压栈时创建临时的形参，将实参拷贝给形参后调用形参，调用拷贝构造函数有栈帧开销和拷贝临时量的空间浪费，从上图试验中可以看出，传值需要多调用拷贝和析构，开销很大
   * 传引用输入：不需要调用拷贝构造函数，直接传递引用
-  * 结论：传引用和传值对于内置类型效果不明显，都需要4个或8个字节。但对自定义类型效果明显，传引用不需要调用拷贝构造进行拷贝 
+  * 结论：传引用和传值对于内置类型效果不明显，都需要4个或8个字节。但对自定义类型效果明显，传引用不需要调用拷贝构造进行拷贝。内置类型还是传值好一些
 
 * 输出
 
@@ -164,6 +179,7 @@ A& func4() {
 * 语法特性及底层原理
   * 语法角度来看引用没有开空间，指针开了4或8字节空间
   * 底层原理来看，引用底层是用指针实现的
+* Google 风格规定：不可变的非内置类型参数用 const 引用，可变的非内置类型参数用指针
 
 ## *联合体*
 
@@ -347,39 +363,21 @@ C++98的枚举类型存在上面这些弊端，C++11推出了强枚举类型 str
 
 C++11除了让强枚举类型可以指定枚举常量的数据类型，也可以让老枚举类型指定
 
-## *新的字符串类型支持*
+### 初始化列表有底层类型的枚举类型（17）
 
-### C++98 wchar_t 的问题
-
-C++98提供了一个wchar_t字符类型用它表示一个Unicode宽字符，并且为此提供了前缀L
-
-§问题在于标准在定义 wchar_t 时并没有规定其占用内存的大小，这就导致了不同平台的实现差异。Win上wchar_t是一个16位长度的类型，而在Linux和macOS上wchar_t却是32位的。这就导致了不可跨平台
-
-C++11 char16_t & char32_t
-
-由于上面说的wchar_t由于定义不明确带来的移植困难，所以C++98时代实际上只能过通过char和char数组来存放Unicode宽字符，这非常不方便
-
-C++11的char16_t和char32_t的出现解决了这个问题，它们明确规定了其所占内存空间的大小。char16_t和char32_t分别专门用来存放UTF-16和UTF-32编码的字符类型
-
-### 前缀问题
-
-同时C++11还为3种编码提供了新前缀，用于声明3种编码字符和字符串的字面量：UTF-8的前缀u8、UTF-16的前缀u和UTF-32的前缀U
-
-不过在使用u8的时候存在一些问题。在C++11中u8只能作为字符串字面量（比如说 `"hello world"`）的前缀，而无法作为字符（比如说 `'c'`）的前缀。这个问题直到C++17才得以解决
+C++17支持让强枚举类型通过初始化列表来初始化，因为强枚举类型有默认的底层类型int，而枚举类型则一定要是指定了底层类型之后才允许使用初始化列表来初始化
 
 ```c++
-char utf8c = u8'a'; // C++17 标准 
+enum class HighSchool {
+    student,
+    teacher,
+    principal
+}
+
+HighSchool h{1};
 ```
 
-### C++20 char_8
-
-因为UTF-8采用的是可变长编码，因此C++标准始终没有提供专用于支持它的数据类型。所以只能遗址用char数组来保存UTF-8编码字符
-
-```c++
-char utf8[] = u8"你好世界";
-```
-
-C++20新引入的类型char8_t可以代替char作为UTF-8的字符类型。char8_t具有和unsigned char相同的符号属性、存储大小、对齐方式以及整数转换等级
+### 使用using打开强枚举类型
 
 ## *C++的强制类型转换*
 
@@ -395,7 +393,7 @@ C++继承了C语言的隐式类型转换和显式类型转换体系，可以看C
 
 强制类型转换的形式为 **`cast_name<type>(expression);`**
 
-RTTI思想和 `dynamic_cast` 会在[多态](#RTTI)部分介绍
+RTTI思想和 `dynamic_cast` 会在 *面向对象.md* - 多态部分介绍
 
 ### `static_cast` 用于非多态类型转换
 
@@ -475,6 +473,225 @@ std::string &shorterString(std::string &s1, std::string &s2) {
     return const_cast<std::string &>(r);
 }
 ```
+
+## *nullptr*
+
+本章内容部分选自 *Effective Modern C++* 的条款8：优先考虑使用nullptr而非0和NULL
+
+我们可以通过auto 自动推导来看看nullptr、0和NULL分别是什么类型
+
+```c++
+auto a = 0;
+auto b = NULL;
+auto c = nullptr;
+cout << typeid(a).name() << endl; // int
+cout << typeid(b).name() << endl; // Win是int，Linux是long
+cout << typeid(c).name() << endl; // std::nullptr_t
+```
+
+### 正确调用指针版本的函数重载
+
+nullptr 不会造成0和NULL稍不留意就会遭遇的重载决议问题
+
+```c++
+void f(int); // f的三个重载版本
+void f(bool);
+void f(void*);
+
+f(0); // 调用的是f(int)，而不是 f(void*）
+f(NULL); // 可能通不过编译，但一般会调用f(int)。从来不会调用f(void*)
+```
+
+Linux中NULL的类型为long，long到int、bool和 `void *` 的转换可能是同样好的，此时编译器会报错
+
+对于没有nullptr可用的C++98程序员而言，指导原则是不要同时重载指针类型和整型
+
+下面是 `std::nullptr_t` 的定义， `std::nullptr_t` 可以隐式转换到所有的裸指针 raw pointer（即非智能指针），包括 `void *`。这就是为什么nullptr可以用来赋值给任意类型指针的原因了
+
+```c++
+#include <cstddef>
+typedef decltype(nullptr) nullptr_t;
+```
+
+### 模板推导时不能混用
+
+```c++
+template<typename FuncType,
+			typename MuxType,
+			typename Ptr Typey>
+auto lockAndCall (FuncType func,
+				MuxType& mutex,
+				PtrType ptr) -> decltype (func(ptr)) {
+    MuxGuard g(mutex);
+	return func(ptr);
+}
+```
+
+## *优先使用 using 别名声明*
+
+本章选自 *Effective Modern Cpp.md* - 条款9：优先考虑别名声明而非typedef
+
+C语言和C++98都提供了用 typedef 给类型起别名，从而简化一些特别长的自定义类型
+
+C++11规定了一种新的方法，称为**别名声明 alias declaration** ，用关键字using来定义类型别名，比如
+
+```c++
+using iterator = _list_iterator<T, Ref, Ptr>;
+```
+
+但是给指针这种复合类型和常量起类型别名要小心一点，因为可能会产生一些意想不到的后果
+
+using 相较于 typedef 的优势主要是在跟模板相关的时候
+
+* typedef 只能给一个实例化的类起别名，比如
+
+  ```c++
+  typedef Blob<string> StrBlob;
+  ```
+
+  若给要给模板起别名，则必须要在定义的类里面
+
+  ```c++
+  template<typename T> class myVector1 {
+      typedef std::vector<T> type;
+  }
+  ```
+
+* C++11标准允许我们为类模板直接定义一个类型别名，比如说下面的代码中，将twin定义为两个成员类型相同的一个模板pair的别名
+
+  ```c++
+  template<typename T> using myVector2 = std::vector<T>;
+  ```
+
+但真正的好处在于 using 可以避免使用 typenmame 来避免二义性
+
+```c++
+template<template T> Widge {
+	typename myVector1<T>::type myVec1; // 使用了依赖名，要用typename
+	myVector2<T> myVec2; // 不需要typename
+}
+```
+
+## *新的字符串类型支持*
+
+### C++98 wchar_t 的问题
+
+C++98提供了一个wchar_t字符类型用它表示一个Unicode宽字符，并且为此提供了前缀L
+
+§问题在于标准在定义 wchar_t 时并没有规定其占用内存的大小，这就导致了不同平台的实现差异。Win上wchar_t是一个16位长度的类型，而在Linux和macOS上wchar_t却是32位的。这就导致了不可跨平台
+
+C++11 char16_t & char32_t
+
+由于上面说的wchar_t由于定义不明确带来的移植困难，所以C++98时代实际上只能过通过char和char数组来存放Unicode宽字符，这非常不方便
+
+C++11的char16_t和char32_t的出现解决了这个问题，它们明确规定了其所占内存空间的大小。char16_t和char32_t分别专门用来存放UTF-16和UTF-32编码的字符类型
+
+### 前缀问题
+
+同时C++11还为3种编码提供了新前缀，用于声明3种编码字符和字符串的字面量：UTF-8的前缀u8、UTF-16的前缀u和UTF-32的前缀U
+
+不过在使用u8的时候存在一些问题。在C++11中u8只能作为字符串字面量（比如说 `"hello world"`）的前缀，而无法作为字符（比如说 `'c'`）的前缀。这个问题直到C++17才得以解决
+
+```c++
+char utf8c = u8'a'; // C++17 标准 
+```
+
+### C++20 char_8
+
+因为UTF-8采用的是可变长编码，因此C++标准始终没有提供专用于支持它的数据类型。所以只能遗址用char数组来保存UTF-8编码字符
+
+```c++
+char utf8[] = u8"你好世界";
+```
+
+C++20新引入的类型char8_t可以代替char作为UTF-8的字符类型。char8_t具有和unsigned char相同的符号属性、存储大小、对齐方式以及整数转换等级
+
+## *格式化字符串库（20）*
+
+### `std::format`
+
+std::format - Lancern的文章 - 知乎 https://zhuanlan.zhihu.com/p/355166681
+
+`std::format` 是 C++20 中引入的一个格式化字符串的库，它允许你以一种更简洁和类型安全的方式进行字符串格式化。在使用 `std::format` 之前，通常我们使用 `sprintf` 或者其他类似的函数，但这些函数存在一些安全性和易用性的问题。`std::format` 的设计旨在解决这些问题
+
+`std::format` 的使用基本和Python的格式化字符串是一模一样的。`std::format` 是一个函数模板，其原型为
+
+```c++
+template <typename ...Args>
+std::string format(std::string_view fmt, const Args&... args);
+```
+
+`std::format` 接受一个格式化字符串（所谓格式化字符串是一种包含占位符的字符串，这些占位符在运行时被具体的值替代。这样的字符串通常用于输出信息时，以便以一种结构化和可读的方式呈现数据）作为第一个参数，然后使用**花括号 `{}` 表示占位符**，占位符中的内容将被后续参数替换
+
+```c++
+#include <format>
+#include <iostream>
+
+int main() {
+    // 格式化字符串
+    std::string formattedString = std::format("Hello, {}!", "world");
+    // 输出结果
+    std::cout << formattedString << std::endl;
+
+    return 0;
+}
+```
+
+### 为自定义类型指定格式化方法
+
+`std::format` 可以支持对自定义的数据类型进行格式化
+
+### 补充：第三方fmt库
+
+`fmtlib/fmt ` 格式化库提供了类似于 C++20 中的 `std::format` 的字符串格式化功能，它的目标是提供高性能的、类型安全的字符串格式化，语法上类似于 Python 中的字符串格式化
+
+`fmt::format` 和 C++20 中的 `std::format` 在使用上非常相似，因为 `fmt::format` 的设计灵感就来自于 C++20 中的 `std::format`。两者都提供了类似的语法和功能，以一种更现代和类型安全的方式进行字符串格式化
+
+主要的相似之处包括：
+
+1. 使用花括号 `{}` 作为占位符
+2. 支持多种类型的格式化，包括整数、浮点数、字符串等
+3. 允许在占位符中使用格式说明符，例如 `:.2f` 表示浮点数保留两位小数
+
+虽然在使用上很相似，但需要注意的是，`std::format` 是标准 C++ 的一部分，而 `fmt::format` 是一个单独的第三方库（fmt库），它在C++20之前就已经存在了，并为那些尚未升级到C++20的项目提供了类似的功能
+
+在C++20及之后的标准中，优先选择使用 `std::format`，因为它是标准库的一部分，有望成为C++中的通用标准。而对于早期标准的项目，或者对于不支持C++20的编译器，可以考虑使用 `fmt::format` 这个第三方库
+
+## *属性*
+
+### 属性标准的出来
+
+程序员又需要和编译器沟通的需求，从而可以为某些实体添加一些编译时额外的信息（有点类似于 `#pragma`），这种指令被称为属性 attribute
+
+为了避免又创造出一个新的关键词乃至于引起一些需要维护老代码的麻烦，同时又必须让这些扩展内容不至于污染标准的命名空间，所以C++98标准保留了一个特殊的用户命名空间：双下划线关键词，以方便各大编译器厂商能够根据需要添加相应的语言扩展
+
+在C++11之前，GCC和MSVC就已经支持了这一功能，比如 GCC 的 `__attribute__` 和 MSVC 的 `__declspec`
+
+由于早先的属性实现基本上完全是由编译器自行实现的，彼此之间并不兼容，甚至部分关键属性导致了语言的分裂。为了规范和便于使用，C++11～C++20 出台了几个标准属性
+
+### 标准属性说明符的语法
+
+```c++
+[[attr]] [[attr1, attr2, attr3(args)]] [[namespace::attr(args)]]
+```
+
+以双中括号开头、以反双中括号结尾,括号中是具体的属性
+
+### noreturn (11)
+
+### carries_dependency (11)
+
+### deprecated (14)
+
+### fallthrough (17)
+
+### nodiscard (17)
+
+### maybe_unused (17)
+
+### likely & unlikely (20)
+
+### no_unique_address (20)
 
 # C++函数
 
@@ -570,6 +787,41 @@ namespace std {
     template<> struct hash<Foo>;
 }
 template<> struct std::hash<Foo> {} // 命名空间外定义
+```
+
+### 简化命名空间写法
+
+有时候打开一个嵌套命名空间可能只是为了向前声明某个类或者函数，但是却需要编写冗长的嵌套代码，这无疑是一种麻烦
+
+```c++
+namespace A {
+    namespace B {
+        namespace C{
+            void foo() {}
+        }
+    }
+}
+```
+
+C++17允许更简洁的嵌套命名空间写法
+
+```c++
+// 两种写法等价
+namespace A::B::C {
+    void foo() {}
+}
+
+```
+
+C++20进一步简化了内联命名空间的定义方法。inline 可以出现在除第一个 namespace 之外的任意 namespace 之前
+
+```c++
+namespace A::B::inline C {
+    int foo1() {} 
+}
+namespace A::inline B::C {
+    int foo2() {} 
+}
 ```
 
 ## *缺省参数/默认参数*
@@ -737,6 +989,79 @@ ADD(a | b, a&b);
 * inline对于编译器而言只是一个建议，不同编译器关于inline实现机制可能不同
 * inline不建议声明和定义分离，分离会导致链接错误。inline不会被放进编译生成的符号表里，因为inline定义的函数符号是不会被调用的，只会被展开使用。推荐声明+定义全部写在头文件中（这也符合模块化设计声明和定义分离的设计初衷，便于使用）
 
+## *17扩展的inline说明符*
+
+## *`std::optional` （17）*
+
+https://blog.csdn.net/qq_21438461/article/details/131892081
+
+### 设计理念
+
+`<optional>` 是 C++17 中引入的标准库类型之一，用于**表示一个可能包含值的对象** `std::optinal` represents a variable that may or may not contain a value。它的主要目的是解决函数返回可能失败或无效的情况，而无需依赖自定义特殊的错误代码或异常。在某种程度上，它类似于指针，但它提供了更多的语义信息和安全性保障
+
+一般会用特殊值或者指针，比如说 -1 或 nullptr 来作为出错或者特殊的状态，然而使用指针可能会引入空指针的问题，增加了代码的复杂性。而如果使用特殊值则可能会限制函数的返回值范围，或者引入额外的错误检查代码
+
+另外 `std::optional`没有异常处理的开销，因为它不需要抛出和捕获异常
+
+使用 `std::optional` 可以更清晰地表达代码的意图，减少错误处理的复杂性。它可以用于代替指针，避免空指针异常，也可以用于避免抛出异常的开销
+
+### 成员函数
+
+Workflow：`std::optional` 可以存储一个值，也可以为空。首先可以使用 `.has_value()` 成员函数来检查是否有值。如果存储了一个值，可以使用 `.value()` 成员函数来获取这个值
+
+* `has_value()`：检查`std::optional`是否包含值
+* `T& value()`：访问`std::optional`包含的值
+* `T value_or(T&& default_value)`：访问`std::optional`包含的值，如果没有值，则返回默认值
+* `void reset()`：清空 `std::optional`包含的值
+* `T& emplace( Args&&... args )`：替换`std::optional`包含的值
+
+### 实现
+
+```c++
+// 简化实现
+template <typename T>
+class optional {
+    union {
+        T value; // 实际的值
+        char dummy; // 用于表示没有值的情况
+    };
+    bool has_value; // 标记是否包含值
+};
+```
+
+为了实现既可以表示有效值也可以表示无效值的效果，内部采用 union
+
+### 应用
+
+* 处理可能不存在的返回值，如果是值不存在的情况就返回一个同样定义在 `<optional>` 中的常量 `std::nullopt` 就可以了
+
+  ```c++
+  #include <iostream>
+  #include <optional>
+  
+  std::optional<int> divide(int a, int b) {
+      if (b != 0) {
+          return a / b;
+      } else {
+          return std::nullopt; // 表示没有值
+      }
+  }
+  
+  int main() {
+      auto result = divide(10, 2);
+      if (result.has_value()) {
+          std::cout << "Result: " << result.value() << std::endl;
+      } else {
+          std::cout << "Division by zero!" << std::endl;
+      }
+      return 0;
+  }
+  ```
+
+* 优化代码可读性
+
+* 在元模版编程中的作用
+
 # 复杂的const问题
 
 C++11引入的constexpr关键字是相当令人困惑的，只有随着后续的C++14和C++17对它的调整，才让它变得更好用一些。因为constexpr是这样一个跨越了多个C++标准的关键字，我们不在这边给出，可以查看 *EffectiveModernCpp.md* 的条款15
@@ -814,6 +1139,105 @@ buffSize = 1024; // 对const赋值，会直接报错
 
 而局部const变量，则不会放入符号表中，在栈帧中放到某个页中，通过将页属性设置为只读就可以保证局部变量为只读
 
+## *const与指针*
+
+### 常量指针 & 指针常量
+
+https://www.cnblogs.com/zpcdbky/p/4902688.html 这篇文章很好地阐述了为什么常量指针 & 指针常量的定义是一团乱麻，几乎是学一次忘一次。指针常量 & 常量指针是中文翻译的产物，是非常糟糕的翻译，不要去记这个翻译
+
+个人觉得记忆的最好方式还是通过编译器如何 parse 指针的角度来区分。因为 `int*` 才是一个完整的类型，所以 `*` 的左边是修饰类型的（即地址指向的对象的类型），`*` 的右边是修饰对象本身的
+
+<img src="顶层与底层const.drawio.png" width="70%">
+
+const修饰指针的三种情况
+
+* 常量指针 pointer to const/底层const low-level const：`int const *p` 或者 `const int *p`：cosnt修饰的是 `*p`，不能修改 `*p`所指向的值，但可以修改p地址本身
+* 指针常量 const pointer/顶层const top-level const：`int* const p`：p一个指针常量，不能修改指针p，即p指向的地址不可修改，但 `*p` 指向的地址所存储的值可以修改
+* `const int* const p`：同时是指针常量和常量指针
+
+底层const和顶层const是C++ Primer引入的概念。可以这么理解：顶层const是指const修饰的是对象的本身，而底层const则是从底层来看是某个对象的地址，const修饰的是这个地址指向的对象。注意：**对顶层const取指针会得到一个底层const**，因为底层const指向常量
+
+注意⚠️：处于简洁的目的，在笔者的笔记中采用 pointer to const 和 const pointer 的记法
+
+### 一些记忆方法（deprecated）
+
+下面是一些记忆方法，其实并没有什么用，因为写了也就不删了
+
+快速的记忆方法：从右到左，遇到p就翻译成p is a，遇到 `*` 就翻译成 point to，比如`int const *p` 是 p is a point(er) to int const；`int* const p` 是 p is const point to int 。如何理解常量指针与指针常量？ - 李鹏的回答 - 知乎 https://www.zhihu.com/question/19829354/answer/44950608
+
+一个永远不会忘记的方法，**const默认是修饰它左边的符号的，如果左边没有，那么就修饰它右边的符号**
+
+1.  `const int *p` 左边没有，看右边的一个，是int，自然就是p指针指向的值不能改变
+
+2.  `int const *p` 此时左边有int，其实和上面一样，还是修饰的int
+3.  `int* const p` 修饰的是\*，指针不能改变
+4.  `const int *const p` 第一个左边没有，所以修饰的是右边的int，第二个左边有，所以修饰的是 * ，因此指针和指针指向的值都不能改变
+5.  `const int const *p` 这里两个修饰的都是int了，所以重复修饰了，有的编译器可以通过，但是会有警告，你重复修饰了，有的可能直接编译不过去
+
+### 权限问题
+
+只允许权限缩小或平移，不允许权限放大。简单的说就是 `int*`和 `const int*` 都可以赋值给 `const int*`，但是 `const int*` 不能赋值给 `int*`
+
+* 当对常变量取地址时，必须要**将指针指向的量设为const**（常量指针 `int const *p`），否则会有权限放大问题；将指向const的 pointer to const 用const数据或非const数据的地址（权限缩小）初始化为或赋值是合法的
+
+  ```c
+  const int arr[] = {0};
+  const int *ptr = arr; // 原来是const的数据，其指针指向的量也必须设置为const
+  ```
+
+  注意这里不要混淆了，不能用const数据初始化 const pointer，属于权限放大
+
+* 但是只能把非const的指针赋给普通数据，否则会权限放大
+
+  ```c
+  const int arr[3] = { 0,1,2 };
+  int *ptr = arr; // 编译器不会报错，但ptr权限被放大了，可以通过*ptr修改arr中的数据，这种写法仍然是错误的
+  ptr[2] = 3
+  ```
+
+注意：当执行对象拷贝操作时，顶层const会被忽略。也就是说const对象是可以赋值给普通对象的。顶层const被忽略的原因在于，当执行对象拷贝的时候，对新的拷贝对象的操作不会影响到原来的对象，此时不会像底层const存在权限放大或缩小的问题
+
+下面的例子中指针报错报的是 `const int*` 类型的值不能用于初始化 `int*` 类型的实体，而不是 `const int* const` 类型的值不能用于初始化 `int*` 类型的实体的原因就是因为顶层const被忽略了
+
+```c++
+  const int a = 10;
+  int b = a; // 顶层const被忽略
+
+  const int *const p = new int(10); 
+  int *p1 = p; // 错误，权限扩大。 "const int*”类型的值不能用于初始化"int*”类型的实体
+  int *const p2 = p; // 错误，权限扩大
+  const int * p3 = p; // 错误，权限扩大
+
+  int *p4 = &a; // 错误，权限扩大
+  
+  const int &r1 = 20;
+  int &r2 = a; // 错误
+  int &r3 = r1; // 错误
+```
+
+### constexpr变量
+
+constexpr 是 C++11 引入的一个关键字，用于声明一个“常量表达式函数”，也可以用于声明一个“常量表达式变量”
+
+constexpr指针的初始值必须是nullptr或者是0，或者是存储在某个固定地址中的对象
+
+constexpr 的出现是为了方便程序员声明常量表达式，从而提高程序的效率。使用 constexpr 声明的常量表达式可以在编译时就被求值，从而避免了在运行时进行计算。**字面值类型 literal type** 是指在编译时就要被计算确定的值，因此 constexpr 不能被定义在函数体内，除了地址不变的static局部静态对象，所以 constexpr 引用能绑定到静态局部对象上
+
+除了用于声明常量表达式函数和变量之外，`constexpr` 还可以用于要求函数或变量在编译时就必须被求值，避免栈开销，否则编译器会报错。这种约束可以帮助程序员写出更加高效和可靠的代码
+
+```cpp
+constexpr int factorial(int n) {
+    return (n <= 1) ? 1 : (n * factorial(n - 1));
+}
+
+int main() {
+    constexpr int result = factorial(5); // 在编译时就被求值
+    static_assert(result == 120, "factorial(5) should be 120");
+}
+```
+
+### 指针、常量和类型别名
+
 ## *const与引用*
 
 ### 常量引用 Reference to const 与权限放大问题
@@ -858,100 +1282,6 @@ const int& x = 10; // 甚至可以引用常量
 
 初始化常量引用时允许用任意表达式作为初始值，只要该表达式的结果能隐式转换成功
 
-## *const与指针*
-
-### 常量指针与指针常量
-
-const修饰指针的三种情况
-
-* 常量指针 pointer to const/底层const low-level const：`int const *p` 或者 `const int *p`：cosnt修饰的是 `*p`，不能修改 `*p`所指向的值，但可以修改p地址本身
-* 指针常量 const pointer/顶层const top-level const：`int* const p`：p一个指针常量，不能修改指针p，即p指向的地址不可修改，但 `*p` 指向的地址所存储的值可以修改
-* `const int* const p`：同时是指针常量和常量指针
-
-
-底层const和顶层const是C++ Primer引入的概念。可以这么理解：顶层const是对象本身，而底层const则是从底层来看是某个对象的地址。注意：**对顶层const取指针会得到一个底层const**，因为底层const指向常量
-
-```c++
-const int* const p; // 分别是底层const和顶层const
-const int a = 10; // 顶层const
-const int& ra = 10; // 底层const，引用就是用指针来实现的
-```
-
-快速的记忆方法：从右到左，遇到p就翻译成p is a，遇到 `*` 就翻译成 point to，比如`int const *p` 是 p is a point(er) to int const；`int* const p` 是 p is const point to int 。如何理解常量指针与指针常量？ - 李鹏的回答 - 知乎 https://www.zhihu.com/question/19829354/answer/44950608
-
-一个永远不会忘记的方法，**const默认是修饰它左边的符号的，如果左边没有，那么就修饰它右边的符号**
-
-1.  `const int *p` 左边没有，看右边的一个，是int，自然就是p指针指向的值不能改变
-
-2.  `int const *p` 此时左边有int，其实和上面一样，还是修饰的int
-3.  `int* const p` 修饰的是*，指针不能改变
-4.  `const int *const p` 第一个左边没有，所以修饰的是右边的int，第二个左边有，所以修饰的是 * ，因此指针和指针指向的值都不能改变
-5.  `const int const *p` 这里两个修饰的都是int了，所以重复修饰了，有的编译器可以通过，但是会有警告，你重复修饰了，有的可能直接编译不过去
-
-### 权限问题
-
-只允许权限缩小或平移，不允许权限放大。简单的说就是 `int*`和 `const int*` 都可以赋值给 `const int*`，但是 `const int*` 不能赋值给 `int*`
-
-* 当对常变量取地址时，必须要**将指针指向的量设为const**（常量指针 `int const *p`），否则会有权限放大问题；将指向const的指针常量用const数据或非const数据的地址（权限缩小）初始化为或赋值是合法的。
-
-  ```c
-  const int arr[] = {0};
-  const int *ptr = arr; // 原来是const的数据，其指针指向的量也必须设置为const
-  ```
-
-  注意这里不要混淆了，不能用const数据初始化指针常量，属于权限放大
-
-* 但是只能把非const的指针赋给普通数据，否则会权限放大
-
-  ```c
-  const int arr[3] = { 0,1,2 };
-  int *ptr = arr; // 编译器不会报错，但ptr权限被放大了，可以通过*ptr修改arr中的数据，这种写法仍然是错误的
-  ptr[2] = 3
-  ```
-
-注意：当执行对象拷贝操作时，顶层const会被忽略。也就是说const对象是可以赋值给普通对象的。顶层const被忽略的原因在于，当执行对象拷贝的时候，对新的拷贝对象的操作不会影响到原来的对象，此时不会像底层const存在权限放大或缩小的问题
-
-下面的例子中指针报错报的是 `const int*` 类型的值不能用于初始化 `int*` 类型的实体，而不是 `const int* const` 类型的值不能用于初始化 `int*` 类型的实体的原因就是因为顶层const被忽略了
-
-```c++
-  const int a = 10;
-  int b = a; // 顶层const被忽略
-
-  const int *const p = new int(10); 
-  int *p1 = p; // 错误，权限扩大。 "const int*”类型的值不能用于初始化"int*”类型的实体
-  int *const p2 = p; // 错误，权限扩大
-  const int * p3 = p; // 错误，权限扩大
-
-  int *p4 = &a; // 错误，权限扩大
-  
-  const int &r1 = 20;
-  int &r2 = a; // 错误
-  int &r3 = r1; // 错误
-```
-
-### constexpr变量
-
-constexpr 是 C++11 引入的一个关键字，用于声明一个“常量表达式函数”，也可以用于声明一个“常量表达式变量”
-
-constexpr指针的初始值必须是nullptr或者是0，或者是存储在某个固定地址中的对象
-
-nstexpr 的出现是为了方便程序员声明常量表达式，从而提高程序的效率。使用 constexpr 声明的常量表达式可以在编译时就被求值，从而避免了在运行时进行计算。**字面值类型 literal type** 是指在编译时就要被计算确定的值，因此 constexpr 不能被定义在函数体内，除了地址不变的static局部静态对象，所以 constexpr 引用能绑定到静态局部对象上
-
-除了用于声明常量表达式函数和变量之外，`constexpr` 还可以用于要求函数或变量在编译时就必须被求值，避免栈开销，否则编译器会报错。这种约束可以帮助程序员写出更加高效和可靠的代码
-
-```cpp
-constexpr int factorial(int n) {
-    return (n <= 1) ? 1 : (n * factorial(n - 1));
-}
-
-int main() {
-    constexpr int result = factorial(5); // 在编译时就被求值
-    static_assert(result == 120, "factorial(5) should be 120");
-}
-```
-
-### 指针、常量和类型别名
-
 ## *const与函数*
 
 函数传参时等同于变量赋值，所以它的规则和前面const与变量、引用、指针的关系一模一样
@@ -975,7 +1305,7 @@ int main() {
 
 ### const与函数重载
 
-若参数只有const区别，不会构成函数重载
+若参数是非指针或引用的普通变量，此时是拷贝传参，忽略 constness，所以此时不会构成函数重载
 
 ```cpp
 void test(int x) {};
@@ -989,7 +1319,7 @@ void test(const int *x) {}; //正确
 
 但**若形参是某种类型的指针或引用，则通过区分其指向的是常量对象还是非常量对象可以实现函数重载**
 
-当传递一个非常量对象或者指向非常量对象的指针时，编译器会优先选用非常量版本的函数
+当传递一个非常量对象或者指向非常量对象的指针时，编译器会优先选用非常量版本的函数（匹配优先）
 
 ### constexpr函数
 
@@ -1742,7 +2072,77 @@ SGI-STL默认选择使用一级还是二级空间配置器，通过 `USE_MALLOC`
 * `uninitialized_fill(b, e, t)`：在迭代器b和e指定的原始内存范围中创建对象，对象的值均为t的拷贝
 * `uninitialized_fill_n(b, n, t)`；从迭代器b指向的内存地址开始创建n个对象。b必须指向足够大的未构造的原始内存，能够容纳给定数量的对象
 
+# 内存对齐
 
+## *C++11之前控制内存对齐*
+
+在 *C.md* - 运行库 - 源代码阅读技巧中介绍过 GCC 的 `__attribute__` 和 MSVC 的 `__declspec` 属性说明符
+
+在 C++ 11之前为了知道结构体某个数据段的对齐数是多少，一般是通过 offsetof 来实现的
+
+```c++
+#define ALIGNOF(type, result) \   
+	struct type##_alignof_trick{ char c; type member; }; \
+    result = offsetof(type##_alignof_trick, member)
+```
+
+至于修改默认对齐数可以用 `#pragma pack(n)`
+
+## *alignof & alignas（11）*
+
+alignof 和 alignas 是 C++11 引入的用于控制内存对齐的关键字，其中 alignof 可以计算出结构体某个数据段的对齐数，alignas 可以修改结构体数据段的对齐数
+
+### alignof
+
+```c++
+// alignas 生效的情况
+
+struct Info {
+  uint8_t a;  // 1
+  uint16_t b; // 2
+  uint8_t c;  // 3
+              // 填充 4
+};
+
+std::cout << sizeof(Info) << std::endl;   // 6  2 + 2 + 2
+std::cout << alignof(Info) << std::endl;  // 2
+
+struct alignas(4) Info2 {
+  uint8_t a;  // 1
+  uint16_t b; // 4-5
+  uint8_t c;  // 6
+              // 填充 7-8
+};
+
+std::cout << sizeof(Info2) << std::endl;   // 8  4 + 4
+std::cout << alignof(Info2) << std::endl;  // 4
+```
+
+C++标准规定了 alignof 只能接受一个类型，但是 GCC 对此做出了扩展，它也可以接受一个变量
+
+### alignas
+
+alignas 除了上面的一般用法，还有两个特殊之处
+
+* 若 alignas 小于自然对齐的最小单位，则被忽略
+* 控制
+
+## *其他关于对齐字节长度的支持*
+
+### 其他方法
+
+C++11除了 alignof 和 alignas 之外，还提供了一些其他的类模版和函数模版来支持进一步的对齐控制
+
+### 使用 new 分配指定对齐字节长度的对象（17）
+
+C++17 可以让 new 运算符接受一个 `std::align_val_t` 类型的参数来获得分配对象需要的对齐字节长度来实现根据对齐字节长度分配对象
+
+```c++
+void* operator new(std::size_t, std::align_val_t);
+void* operator new[](std::size_t, std::align_val_t);
+```
+
+实际上，编译器会自动从类型对齐字节长度的属性中获取这个参数并且传参，不需要传入额外的参数
 
 # 异常
 
@@ -1942,13 +2342,13 @@ noexcpet的特殊用法
 
 异常总体而言，利大于弊，所以在大型工程中还是要鼓励使用异常，而且基本所有的面向对象语言都用异常来处理错误
 
-# 智能指针 Smart Pointer
+# 智能指针的原理
 
-## *智能指针的使用及原理*
+## *智能指针的设计理念*
 
 ### 为什么要使用指针指针？
 
-后来发展的面向对象语言因为借鉴了C++缺乏有效资源管理的机制，都发展出了垃圾回收机制。智能指针是C++为了补不设置垃圾回收机制的坑，且垃圾回收对于主程序而言是一个独立的进程，会有一定的性能消耗，C++考虑到性能也就没有采取垃圾回收的方法
+后来发展的面向对象语言因为借鉴了C++缺乏有效资源管理的机制，都发展出了垃圾回收机制。智能指针 Smart Pointer 是C++为了补不设置垃圾回收机制的坑，且垃圾回收对于主程序而言是一个独立的进程，会有一定的性能消耗，C++考虑到性能也就没有采取垃圾回收的方法
 
 但智能指针主要是为了**保证异常安全**，因为异常实际上和goto一样打乱了正常的程序执行流，以前依靠正常的程序执行流来手动delete回收资源的方法现在就很难行得通了 
 
@@ -2220,3 +2620,366 @@ std::shared_ptr<int> n4((int*)malloc(sizeof(12)), [](int* ptr) {free(ptr); });
 `std::shared_ptr` 的引用计数是原子操作，这意味着它可以在多线程环境中安全地使用。引用计数是 `std::shared_ptr` 用于跟踪对象被共享的次数的机制
 
 然而，尽管引用计数本身是线程安全的，但共享指针的其他操作（例如创建、复制、销毁等）可能会导致竞态条件。例如，多个线程同时尝试增加引用计数可能会导致计数不正确的结果。为了解决这个问题，C++11 引入了 `std::make_shared` 和 `std::allocate_shared`，它们使用单一的内存分配来创建智能指针，从而避免了某些潜在的竞态条件
+
+
+
+# 智能指针的使用
+
+本章来自 *Effective Modern C++*
+
+## *条款18：使用 `std::unique_ptr` 管理具备专属所有权的资源*
+
+可以认为在默认情况下 `std::unique_ptr` 和裸指针有着有着相同的尺寸。`std::unique_ptr` 独享一份资源，不允许拷贝，只允许移动
+
+### unique_ptr作为工厂函数的返回值类型
+
+<img src="工厂函数.drawio.png" width="60%">
+
+工厂函数接受一个类实例，然后内部需要把开辟出来的资源返回出来，所以要用智能指针
+
+```c++
+// 抽象产品
+class Investment {
+public:
+    virtual ~Investment() {}
+};
+// 具体产品
+class Stock : public Investment {
+public:
+    Stock(int a) { std::cout << "Stock(int a)" << std::endl; }
+    ~Stock() override { std::cout << "~Stock()" << std::endl; }
+};
+class Bond : public Investment {
+public:
+    Bond(int a, int b) { std::cout << "Bond(int a, int b)" << std::endl; }
+    ~Bond() override { std::cout << "~Bond()" << std::endl; }
+};
+class RealEstate : public Investment {
+public:
+    RealEstate(int a, int b, int c) { std::cout << "RealEstate(int a, int b, int c)" << std::endl; }
+    ~RealEstate() override { std::cout << "~RealEstate()" << std::endl; }
+};
+```
+
+下面是工厂函数，我们的工厂函数用传入的参数作为区分来构建相应的对象
+
+```c++
+// 工厂函数
+template <typename... Ts>   // 返回指向对象的std::unique_ptr，对象使用给定实参创建
+std::unique_ptr<Investment> makeInvestment(Ts &&...params) { // 条宽25 对万能引用用forward
+    std::unique_ptr<Investment> uptr{nullptr};
+    constexpr int numArgs = sizeof...(params);
+    if constexpr (numArgs == 1) {
+        uptr.reset(new Stock(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 2) {
+        uptr.reset(new Bond(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 3) {
+        uptr.reset(new RealEstate(std::forward<Ts>(params)...));
+    }
+    return uptr;
+}
+```
+
+unique_ptr 可以高效地转换为shared_ptr，所以它适合做返回值。因为无法确定用户是否需要专属所有权语义还是共享所有权语义
+
+```c++
+std::shared_ptr<Investment> sp = makeInvestment(arguments);
+```
+
+### 自定义删除器
+
+具有很多状态的自定义删除器 custom deleter 会产生大size的 `std::unique_ptr` 对象
+
+用lambda作自定义删除器比较好。lambda是一个匿名对象，因为匿名对象没有数据对象（若没有捕捉）
+
+```c++
+auto delInvmt = [](Investment *pInvestment) { // lambda作为自定义删除器
+    std::cout << "delete" << std::endl;
+    delete pInvestment;
+};
+
+template <typename... Ts>
+std::unique_ptr<Investment, decltype(delInvmt)> // 更改后的返回类型
+makeInvestment2(Ts &&...params) {
+    std::unique_ptr<Investment, decltype(delInvmt)> // 应返回的指针
+        uptr(nullptr, delInvmt);
+    constexpr int numArgs = sizeof...(params);
+    if constexpr (numArgs == 1) {
+        uptr.reset(new Stock(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 2) {
+        uptr.reset(new Bond(std::forward<Ts>(params)...));
+    }
+    if constexpr (numArgs == 3) {
+        uptr.reset(new RealEstate(std::forward<Ts>(params)...));
+    }
+    return uptr;
+}
+// C++14
+template <typename... Ts> auto makeInvestment3(Ts &&...params) {}
+```
+
+当要使用自定义析构器时，其必须被指定为 `std::unique_ptr` 的第二个模版实参
+
+## *条款19：使用 `std::shared_ptr` 管理具备共享所有权的资源*
+
+### `std::shared_ptr` 对象模型
+
+<img src="shared_ptr对象模型.drawio.png" width="60%">
+
+`std::shared_ptr` 比正常指针大一倍，因为里面有两个指针，一个是指向管理的堆上的T类型的对象的指针，另一个指针是指向堆上的控制块的指针
+
+从上面的结构图也可以看出自定义删除器是不会增加 `std::shared_ptr` 的大小的，删除器的size只会影响在堆上的控制块的大小。这点与 `std::unique_ptr` 不同，自定义删除器是 unique_ptr 的一部分
+
+### 引用计数机制的性能影响
+
+* 如上面的对象模型所示，引用计数需要的控制块会让`std::shared_ptr` 比正常指针大一倍
+* 引用计数的控制块内存必须动态分配
+* 引用计数的递增和递减必须是原子操作
+
+### 控制块的生成时机
+
+* 使用 `std::make_shared<T>` 的时候
+* 从具备专属所有权的智能指针 unique_ptr 或 auto_ptr（当然请绝对不要使用auto_ptr）出发构造 shared_ptr
+* 向 shared_ptr 的构造函数中传入一个裸指针
+
+### `std::shared_ptr` 多控制块引起类浅拷贝问题
+
+从上面的结构图可以看出，堆上的T类型对象和控制块是一一对应的关系（并没有说他们的存放地址是相连的）。但如果2个控制块与同一个T类型对象关联到一块，那么大概率会有多次释放的风险
+
+结论是无论一个T类型对象有多少个shared_ptr指向它，都应该只有一个控制块
+
+```c++
+class A { /**/ };
+{
+    auto pa = new A();
+    std::shared_ptr<A> sp1(pa);
+    std::shared_ptr<A> sp2(pa);
+}
+// ... 程序崩溃
+```
+
+因为控制块会在向 shared_ptr 的构造函数中传入一个裸指针创建，上面的控制块创建了两回，指向同一个A对象，所以出了作用域后两次析构程序崩溃了
+
+修改的方法就是用 shared_ptr 的拷贝构造
+
+```c++
+class A { /**/ };
+{
+    std::shared_ptr<A> sp1(new A());
+    std::shared_ptr<A> sp2(sp1); // 拷贝
+}
+// OK
+```
+
+### 使用this指针作为 `std::shared_ptr` 的构造函数实参
+
+```c++
+class Widget; // 前向声明
+std::vector<std::shared_ptr<Widget>> processedWidgets;
+
+class Widget {
+public:
+    void process() { processedWidgets.emplace_back(this); }
+};
+
+// 两次析构错误
+{
+    auto w = std::shared_ptr<Widget>();
+    w->process();
+}
+```
+
+在 `std::shared_ptr<Widget>()` 处会创建一次控制块，因为this指针和裸指针的效果是一样的，所以在emplace_back的时候会调用 `{}` 初始化又创建了一次
+
+当希望一个托管到shared_ptr的类能够安全地由this指针创建一个shared_ptr的时候，要使用 `std::enable_sahred_from_this<T>`，它是一种CRTP
+
+```c++
+class Widget : public std::enable_shared_from_this<Widget> {
+public:
+    void process() { processedWidgets.emplace_back(shared_from_this()); }
+};
+```
+
+另外说一下，下面的写法虽然可以通过编译，但非常不合理，因为托管给shared_ptr的是一个栈上的地址，shared_ptr应该要管理堆上开辟的地址
+
+```c++
+{
+    Widget w;
+    w.process();
+}
+```
+
+所以完整的版本应该像下面这么写
+
+```c++
+class Widget : public std::enable_shared_from_this<Widget> {
+public:
+    template <typename... Ts>
+    static std::shared_ptr<Widget> create(Ts &&...params) {
+        return std::shared_ptr<Widget>(new Widget(std::forward<Ts>(params)...));
+    }
+    void process() {
+        processedWidgets.emplace_back(shared_from_this());
+    }
+private:
+    Widget(int data) : _data(data){}; //禁用构造
+    int _data;
+};
+```
+
+## *条款20：当 `std::shared_ptr` 可能悬空时使用 `std:weak_ptr`*
+
+waek_ptr 不能单独使用，它必须要通过传入一个共享指针来创建。weak_ptr不会增加引用计数
+
+shared_ptr对管理的资源有完全的管理权限、使用权和所有权；而weak_ptr不干涉对象的共享所有权，它所做的只是检查对象是否还在
+
+```c++
+auto spw = std::make_shared<Widget>(); // spw 引用计数 Reference Counter, RC为1
+std::waek_ptr<Widget> wpw(spw);        // wpw 指向与spw所持有相同的Widget，RC仍然为1
+spw = nullptr;                         // RC变为0，Widget 被销毁，wpw悬空，不过此时空间还没有被OS回收
+```
+
+### 监视资源是否释放
+
+悬空 dangle 就是指指向了一个空指针，也可以叫做失效 expired。weak_ptr常用来检查它对应的资源是否是空指针
+
+虽然weak_ptr不能掌握资源是否释放，但有3种方式可以检查资源是否已经释放了
+
+* `wpw.expired() == true` 来看资源是否已经被释放了
+
+* 若wpw过期了，则lock的结果，即spw1为空
+
+  ```c++
+  std::shared_ptr<Widget> spw1 = wpw.lock(); // 若wpw过期，则spw1为nullptr
+  ```
+
+* 若wpw过期了，则抛异常
+
+  ```c++
+  std::shared_ptr<Widget> spw2(wpw); // 抛异常
+  ```
+
+会延迟空间的回收
+
+### 一种使用场景
+
+```c++
+std::unique_ptr<const Widget> loadWidget(int id) {
+    // 耗时操作
+    std::unique_ptr<const Widget> uptr{new Widget(id)};
+    return uptr;
+}
+
+std::shared_ptr<const Widget> fastLoadWidget(int id) {
+    static std::unordered_map<int, std::weak_ptr<const Widget>> cache;
+    auto objPtr = cache[id].lock();
+    if (!objPtr) {
+        objPtr = loadWidget(id);
+        cache[id] = objPtr;
+    }
+    return objPtr;
+}
+```
+
+上面loadWidget是很费时的工厂函数，因为可能牵涉到了IO等操作。若找到了就返回对应的Widget托管指针，否则就调用费时的loadWidget
+
+其实上面的实现还是有问题的，因为cache中可能会堆积大量的失效weak_ptr。可以考虑用观察者模式来改写
+
+### `std::weak_ptr` 应对循环引用问题
+
+
+
+## *条款21：使用 `std::make_unique` & `std::make_shared`，而不是直接new*
+
+### make_xxx 的优势
+
+* 减少代码重复
+
+  ```c++
+  auto wpw1(std::make_unique<Widget>()); // 写一次类型
+  std::unique_ptr<Widget> wpw2(new Widget); // 写两次类型
+  ```
+
+* 使用make_xxx更安全
+
+  ```c++
+  void processWidget(std::shared_ptr<Widget> spw, int priority); // 声明
+  processWidget(std::shared_ptr<Widget>(new Widget), computePriority()); // 调用
+  ```
+
+  如果Widget先被new出来，但是computePriority抛异常导致processWidget无法执行，那么此时就没有人释放new出来的Widget了。本质就是无法保证new和computePriority的异常安全
+
+  下面的写法是异常安全的，可以解决问题
+
+  ```c++
+  processWidget(std::make_shared<Widget>(), computePrioriy());
+  ```
+
+* 使用 `std::make_shared` 比直接 new shared_ptr 要高效
+
+  用new的时候实际上malloc了两次，一次malloc管理对象，一次malloc申请控制块。而 make_shared 就直接把管理对象和管理块一块申请了出来。当然这条规则不适用于 unique_ptr，它没有管理快
+
+  ```c++
+  std::shared_ptr<Widget> spw(new Widget);
+  auto spw = std::make_shared<Widget>();
+  ```
+
+### make_xxx的局限性
+
+* make_shared和make_unique的通病
+
+  * 使用自定义删除器时只能使用new，没法给make_xxx传自定义删除器。因为自定了删除器之后相当于是一种新的类型，但make_xxx只接受了原生的智能指针
+
+  * 无法通过 `{}` 来初始化指向的对象，原因是 `{}` 无法完美转发（条款30）
+
+    ```c++
+    auto spv = std::make_shared<std::vector<int>>(10, 20); // OK！ 
+    auto spv = std::make_shared<std::vector<int>>({10, 20}); // 错误！
+    ```
+
+* make_shared独有的问题
+
+  * 若类中重载了 operator new/delete，使用make_shared不会执行重载函数。此时只能使用shared_ptr或使用 `std::allocated_shared`
+
+  * 使用make_shared，管理对象和控制块会一块申请，同样也会一块释放。所以当weak_ptr存在时，对象的销毁与内存释放之间的间隔时间可能很长
+
+    ```c++
+    auto sptr = std::make_shared<Widget>();
+    std::weak_ptr<Widget> wptr(sptr);
+    sptr = nullptr; // 执行到这里的时候sptr指向的Widget已经马上调用析构把Widget销毁了
+    // 但只有当wptr被销毁时OS才会释放内存
+    ```
+
+## *条款22：使用Pimpl惯用法时，将特殊成员函数的定义放到实现文件中*
+
+https://fengjungle.blog.csdn.net/article/details/123150564
+
+### Pimpl惯用法
+
+Pimpl, Pointer to implementation 指向实现的指针是一种C++中的惯用法 idiom，因为它局限于对指针的使用，所以称不上是一种设计模式 design pattern
+
+将类的实现细节从其公共接口中分离出来，将这些细节封装在内部实现类中
+
+
+
+类的私有对象不能在类外使用，而且这些声明中的私有对象还有可能暴露接口的实现方式 
+
+
+
+现在这样的话如果Gadget发生了重构，main.cc也不需要再次编译，因为它并没有用到Gadget头文件，只需要重新编译Widget.cc就可以了
+
+必须要使用指针，因为此时找不到Impl的定义，无法确定大小，指针的大小是确定的
+
+### Pimpl惯用法的优点
+
+* 减少编译依赖性：Pimpl模式可以减少类的头文件中的编译依赖性。因为类的私有实现细节被封装在内部实现类中，外部代码只需要包含类的公共头文件，而不需要知道类的具体实现细节。这可以显著减少重新编译的需求，提高了项目的构建效率
+* 提高封装性：Pimpl模式提高了类的封装性，因为内部实现细节被隐藏起来，外部代码无法访问它们。这有助于防止外部代码直接修改类的内部状态，从而提高了代码的稳定性和可维护性
+* 降低二进制兼容性风险：当你需要更改类的实现细节时，只需在内部实现类中进行更改，而不需要更改类的公共接口。这降低了向后兼容性破坏的风险，因为类的公共接口保持不变
+* 允许延迟实际的对象创建：Pimpl模式允许你延迟对象的创建，只在需要的时候才创建内部实现类的实例。这对于提高性能和减少资源消耗非常有用，尤其是对于大型对象或对象集合
+* 隐藏库依赖性：内部实现类可以包含库的特定细节，从而将库依赖性隔离在内部。这有助于减少对外部库的直接依赖，从而提高了代码的可维护性和可移植性提高安全性：通过将内部实现细节隐藏在内部实现类中，可以提高代码的安全性，减少不当访问和滥用的风险
+
+不过因为Pimpl多封装了一层，所以当阅读源代码的时候也会更加痛苦
+
