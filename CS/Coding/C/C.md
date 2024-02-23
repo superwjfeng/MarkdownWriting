@@ -500,7 +500,7 @@ setjmp 把当前进程环境的各种信息保存到 env 参数中
 ### 概念
 
 * 指针变量是用来存放地址的变量
-* 32位计算机的指针变量为4字节，64位的则为8字节
+* 一个指针的大小取决于是64位编译模式还是32位编译模式，32位的指针变量为4字节，64位的则为8字节。和机器的位数并没有直接关系
 
 ### 指针类型
 
@@ -1114,11 +1114,18 @@ int main() {
     * UTF-16的优势是可以用固定长度的编码表达常用的字符，所以计算字符长度和查找字符也比较方便。空间浪费也显著小于UTF-16
 
   * UTF-8
-    * 采用前缀编码的方式实现的一种可变changdu的编码方式。虽然空间利用率比较高，但会对绑定的变量尺寸设计造成困难。这部分在 *Cpp基础&1114.md* - C++对C语言缺陷的修正部分 - 新的字符串类型支持中有描述
+    * 采用前缀编码的方式实现的一种可变长度的编码方式。虽然空间利用率比较高，但会对绑定的变量尺寸设计造成困难。这部分在 *Cpp基础.md* - C++对C语言缺陷的修正部分 - 新的字符串类型支持中有描述
     * 具体来说最常用的Ascii码字符仍不变，占用和标准Ascii编码一样的一个字节，一个汉字占用三个字节
 
 * GBK码 汉字内码扩展规范：一个汉字占用两个字节
 * Windows中自适应的ANSI编码系统
+
+### 内码和外码
+
+<img src="内码与外码.drawio.png" width="25%">
+
+* 内码是指计算机内部操作的字符集编码：定长 UTF-32/16 方便计算机的操作（方便寻址、对齐等）
+* 外码是指与外界交换使用的字符集编码：变长 UFT-8 节省存储空间和宽带
 
 ### 换行符问题
 
@@ -2427,6 +2434,12 @@ printf("file:%s line:%d\n", __FILE__, __LINE__);
 
 ## *目标文件的格式及内容*
 
+### 复习：Linux的进程地址空间
+
+<img src="进程地址空间.drawio.png" width="80%">
+
+上图是 *操作系统理论.md* 中重要的 Linux/x86-32 中典型的进程内存结构，它对我们理解目标文件有着重要意义。当然具体内容还是看 *操作系统理论.md* 
+
 ### 目标文件的格式
 
 PC平台流行的可执行文件 Executable file 的格式，它们都是COFF COmmon File Format 格式（Unix System V Release 3 提出，引入了段 Segment 机制）的变种
@@ -2456,13 +2469,13 @@ main: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (u
 
 ### 目标文件里有什么
 
-目标文件里是高级语言编译+机器语言汇编后形成的包含代码和数据的二进制文本，以及用于链接的符号表、调试信息、字符串等。目标文件会将这些信息按照不同的属性分段存储。下面列出最重要的几个段
+目标文件里是高级语言编译+机器语言汇编后形成的包含代码和数据的二进制文本，以及用于链接的符号表、调试信息、字符串等。目标文件会将这些信息按照不同的属性分段存储，这些段基本就对应于进程地址空间的段。下面列出最重要的几个段
 
 * 文件头 File header：描述了整个文件的文件属性并且包括了一个段表 Section Table
 * 程序指令：`.text` 代码段
 * 程序数据
   * `.data` 数据段和只读数据段：已初始化的全局变量和局部静态变量
-  * `.bss` BSS段（Block Started by Symbol）：未初始化的全局变量和局部静态变量默认为0，BSS段为它们预留位置，并不占据空间
+  * `.bss` BSS段（Block Started by Symbol）：在程序启动之前，系统将本段内所有内存初始化为 0。出于历史原因，此段常被称为 BSS 段，这源于老版本的汇编语言助记符 block started by symbol 。将经过初始化的全局变量和静态变量与未经初始化的全局变量和静态变量分开存放，其主要原因在于程序在磁盘上存储时，没有必要为未经初始化的变量分配存储空间。可执行文件只需要记录未初始化数据段的位置及所需大小，直到运行时再由程序加载器来分配这一空间
 
 为什么要将程序指令和数据分离？
 
@@ -2482,13 +2495,11 @@ int global_uninit_var;
 
 const char* ch = "abcdef";
 
-void func1(int i)
-{
+void func1(int i) {
     printf("%d\n", i);
 }
 
-int main(void)
-{
+int main(void) {
     static int static_var = 85;
     static int static_var2;
 
@@ -2661,8 +2672,7 @@ int main(int argc, char **argv) {
 下面给出 `Elf32_Ehdr` 结构体（当然还有64位的兼容版本）
 
 ```c
-typedef struct
-{
+typedef struct {
     unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
     Elf32_Half    e_type;         /* Object file type */
     Elf32_Half    e_machine;      /* Architecture */

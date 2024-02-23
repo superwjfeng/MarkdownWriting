@@ -72,7 +72,7 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
 * 序列容器
   * vector
     * vector是动态开辟的数组，它在堆中分配连续的内容。记录了尾部的地址，所以尾插、尾删很快，在中间和开始处添加、删除元素操作需要挪动数据，若数据是结构或类，那么移动的同时还会进行构造和析构操作，所以在中间或头上的操作性能不高
-    * vecotr应对对任何元素的访问都是***O(1)***，所以**vector常用来保存需要经常进行随机访问的内容，井且不需要经常对中间元素进行添加、删除操作**
+    * vecotr在给出索引（即下标）时对任何元素的访问都是***O(1)***，所以**vector常用来保存需要经常进行随机访问的内容，井且不需要经常对中间元素进行添加、删除操作**
   * string：string和vector一样也是一个动态开辟数组，但它里面只放了char，是C++对字符串的封装，实现了很多字符串的操作接口，用起来很方便
   * list
     * list是一个允许常数时间插入和删除的顺序容器，支持双向迭代器
@@ -655,9 +655,31 @@ STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 
 
 ## *排序*
 
+### 严格弱序
+
+https://blog.csdn.net/River_Lethe/article/details/78618788
+
+Strict Weak Ordering 严格弱序关系是在STL容器比较器用于定义元素之间顺序关系的一种特定形式的弱序关系。严格弱序关系具有以下特征：
+
+1. **传递性 Transitivity**：如果 A 在 B 之前，B 在 C 之前，那么 A 必须在 C 之前
+2. **对称性 Symmetry**：如果元素 A 可以与元素 B 进行比较，那么元素 B 也可以与元素 A 进行比较，并且它们之间的结果应该相反。也就说**两个元素不能同时严格弱序于对方**
+3. **不可比性 Irreflexivity**：如果存在两个关键字，**任何一个都不严格弱序于另一个**，则这两个关键字是相等的
+
+在 STL 中，`<` 就是一种严格弱序，`<=` 则不是
+
+为什么要使用严格弱序，而不是弱序？主要是因为弱序 `<=` 无法判断两个元素是否相等
+
+```
+a < b # a 小于 b
+a > b # a 大于 b
+!(a < b) && !(b < a) # a == b
+```
+
+如果我们用 `<=` 的话，此时 `!(a <= b) && !(b <= a) == false` 左右都会返回 true，最后返回的就永远都是 false，也就是说没办法判断两个元素相等了 
+
 ### sort
 
-* sort：在原容器上排序，默认升序，可以通过仿函数自定义
+* sort：在原容器上排序，**默认升序**，可以通过仿函数自定义
 
   ```cpp
   template <class RandomAccessIterator> void sort (RandomAccessIterator first, RandomAccessIterator last);
@@ -665,8 +687,26 @@ STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 
   ```
 
   * sort要使用随机迭代器，也就是vector、array、deque那种支持***O(1)***随机访问的迭代器
+
   * sort的底层是不稳定快排（事件复杂度 ***O(NlogN)***），也就是说若有相同的元素，sort不保证不改变它们原来的顺序，若要保证稳定性需要用 `stable_sort`
+
   * sort在排序时需要交换容器中元素的存储位置。此时若容器中存储的是自定义的类对象，则该类的内部必须提供移动构造函数和移动赋值运算符
+
+  * 关于 Compare 这个可调用对象，下面是 `std::less` 和 `std::greater` 两个最常用的仿函数
+
+    如果 Compare 返回的是 true，那么第一个参数应该放在第二个参数之前，所以 `std::greater` 时排降序
+
+    ```c++
+    template <class T> struct less : binary_function <T,T,bool> {
+      bool operator() (const T& x, const T& y) const {return x<y;}
+    };
+    
+    template <class T> struct greater : binary_function <T,T,bool> {
+      bool operator() (const T& x, const T& y) const {return x>y;}
+    };
+    ```
+
+    注意⚠️：Compare 可调用类型必须满足严格弱序 strict weak ordering，比如只能是 `<` ，不能是 `<=`
 
 * `partial_sort(first, middle, last)`
 
@@ -1400,10 +1440,15 @@ List是一个允许常数时间插入和删除的顺序容器，支持双向迭�
 
 ### list的特殊operation
 
-* `splice`：直接转移、拼接一个list到另外一个list上
+* `splice`：删除 + 插入拼接，直接转移、拼接一个list到另外一个list上，当然也可以自己对自己操作，注意此时实现的并不是 swap 的功能，想要 swap list 元素可以用 `std::iter_swap()`
+
+  <img src="splice.drawio.png" width="80%">
+
 * `remove`
-* `srot` 排升序：属于list的sort和algorithm库中的sort的区别在于list的空间不连续，而algorithm的适用对象是连续空间，不能用于list。这是因为algorithm的底层qsort需要实现三数取中法。**list的sort底层是MergeSort**，而且list的归并不需要额外的空间了
-* list排序 VS vector排序：大量数据的排序vector效率远高于list，虽然MergeSort和qsort的效率都是***O(NlogN)***，但是vector的随机访问提供了巨大优势。**不要使用列表排序！**
+
+* `sort` 排升序：属于list的sort和algorithm库中的sort的区别在于list的空间不连续，而algorithm的适用对象是连续空间，不能用于list。这是因为algorithm的底层qsort需要实现三数取中法。**list的sort底层是MergeSort**，而且list的归并不需要额外的空间了
+
+* list排序 VS vector排序：大量数据的排序vector效率远高于list，虽然 MergeSort 和 qsort 的效率都是***O(NlogN)***，但是vector的随机访问提供了巨大优势。**不要使用列表排序！**
 
 ### list的insert迭代器不失效，erase迭代器仍然失效
 
@@ -1499,7 +1544,7 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
     lt.push_back(Pos(10, 21));
     ```
 
-  * `T* operator->()` 返回的是lt中存储的一个结构体指针*Pos，若要取到其实中的数据应该要 `it->->_a1`，因为it里首先存的是node，node里才存的是数据。但编译器为了提高可读性，进行了特殊处理，即省略了一个 `->`，自动取到的就是Pos中的一个数据。因此当lt中存储的是自定义类型或者内置类型时，`->` 都可以看作是迭代器指针取数据
+  * `T* operator->()` 返回的是lt中存储的一个结构体指针 `*Pos`，若要取到其实中的数据应该要 `it->->_a1`，因为it里首先存的是node，node里才存的是数据。但编译器为了提高可读性，进行了特殊处理，即省略了一个 `->`，自动取到的就是Pos中的一个数据。因此当lt中存储的是自定义类型或者内置类型时，`->` 都可以看作是迭代器指针取数据
 
     ```cpp
     T& operator*()
@@ -1608,7 +1653,7 @@ template <class T, class Container = vector<T>,
 ```
 
 * `priority_queue` 可以实现最大值/最小值在队头，通过建堆来实现
-* 仿函数Compare默认为`std::less`，大数优先，即默认降序。T要支持 `operator<()`；Compare为`std::greater`时为小数优先，T要支持 `operator>()`
+* 仿函数Compare默认为`std::less`，注意⚠️：**此时是大数优先（大根堆），即默认降序**，这和 `std::sort` 用 `std::less` 排升序反过来了。T要支持 `operator<()std::greateroperator>()`
 * 虽然 `priority_queue` 的底层是堆，但用它复用的容器来控制下标
 * `priority_queue` 的默认容器为vector，这是因为要进行大量的下标随机访问，用deque或list都不好
 

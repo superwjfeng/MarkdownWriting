@@ -275,7 +275,7 @@ REST、RPC（Remote Procedure Call）和HTTP（Hypertext Transfer Protocol）是
 
 * RPC与HTTP的关系
 
-  **RPC 本身并不是一个特定的协议，它是一种远程过程调用的机制**，用于实现分布式系统中的不同节点之间的通信。RPC 的目标是使远程调用像本地函数调用一样简单
+  **RPC 是一种远程过程调用的机制/协议**，用于实现分布式系统中的不同节点之间的通信。RPC 的目标是使远程调用像本地函数调用一样简单
 
   RPC **可以使用不同的协议来实现**，包括在应用层、传输层或网络层进行通信。因此，RPC 既可以是应用层协议，也可以使用其他层的协议进行实现
 
@@ -295,7 +295,7 @@ REST、RPC（Remote Procedure Call）和HTTP（Hypertext Transfer Protocol）是
 
 ### intro
 
-REST Representational State Transfer 是一种**基于网络的软件架构风格**，用于设计和构建分布式系统和网络应用程序。它在 Web 开发中广泛应用，特别是在构建 Web API（Application Programming Interface）时非常常见
+REST, Representational State Transfer 是一种**基于网络的软件架构风格**，用于设计和构建分布式系统和网络应用程序。它在 Web 开发中广泛应用，特别是在构建 Web API（Application Programming Interface）时非常常见
 
 REST 的设计原则强调以下几个关键概念：
 

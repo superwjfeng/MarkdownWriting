@@ -20,87 +20,6 @@
 * sound：常用音频设备的驱动程序等
 * usr：目前实现了一个cpio
 
-# Paging of x86-64
-
-https://zhuanlan.zhihu.com/p/652983618 & Intel® 64 and IA-32 Architectures Software Developer Manuals Volume 3 Chapter 4 Paging
-
-## *分页模式*
-
-### 开启分页
-
-分页 Paging 只能在保护模式（CR0.PE = 1）下使用。在保护模式下是否开启分页是由 CR0. PG 位（31位）决定的
-
-* 当 CR0.PG = 0 时，未开启分页，此时线性地址等同于物理地址
-* 当 CR0.PG = 1 时，开启分页
-
-### 四种分页模式
-
-intel-64 处理器支持 4 种分页模式
-
-* 32 位分页
-* PAE, Physical Address Extension 分页
-* 4 级分页
-* 5 级分页
-
-处理器当前处于哪种分页模式是由 CR4.PAE、CR4.LA57 以及 IA32_EFER.LME 共同决定的
-
-* 若 CR4.PAE = 0， 使用的是 **32位分页** 模式
-* 若 CR4.PAE = 1 且 IA32_EFER.LME = 0，使用的是 **PAE 分页**模式
-* 若 CR4.PAE = 1， IA32_EFER.LME = 1 且 CR4.LA57 = 0，使用的是 **4 级分页**模式
-* 若 CR4.PAE = 1， IA32_EFER.LME = 1 且 CR4.LA57 = 1，使用的是 **5 级分页**模式
-
-## *4级分页详解*
-
-page-map level-4, PML4
-
-Control Register 3, CR3
-
-# 内存寻址
-
-## *内存地址总览*
-
-具体可以看 *操作系统理论.md*
-
-### 三种地址
-
-* 逻辑地址 logical address：包含在机器语言指令中用来指令一个操作数或一条指令的地址。每一个逻辑地址都由一个段 segment 和偏移量 offset 组成
-* 虚拟地址 virtual address 或线性地址 linear address：32位或64位的连续无符号整数表示的虚拟地址
-* 物理地址 physical address：用于memory chip的内存单元寻址，物理地址与从CPU的地址引脚发送到memory总线上的电信号相对应，物理地址也由32位或64位的连续无符号整数表示
-
-### 地址翻译
-
-<img src="地址翻译.drawio.png">
-
-MMU中的TWU负责两部分寻址
-
-* 分段单元 segmentation unit 硬件电路：把一个逻辑地址转换成虚拟地址
-* 分页单元 paging unit 硬件电路：把一个虚拟地址转换为物理地址
-
-## *硬件分段*
-
-## *Linux分段机制*
-
-### Linux GDT
-
-### Linux LDT
-
-## *Linux分页机制*
-
-x86-64的物理分页见上
-
-从 Linux 的早期版本开始，Linux就支持两级分页；Linux 2.6版本开始支持PAE和三级分页，从 Linux 2.6.11开始支持四级分页，Linux 4.11 版本引入了对五级分页的支持。64位系统到底是用三级、四级还是五级分页取决于具体硬件对线性地址/虚拟地址的划分
-
-
-
-* 全局页目录 PGD Page Global Director
-* 上层页目录 PUD Page Upper Directory
-* 中间页目录 PMD Page Middle Directory
-* 页表项 PTE Page Table Entry
-
-# 内存管理
-
-
-
 # 进程 & 线程
 
 ## *task_struct*
@@ -311,7 +230,7 @@ Linux中的 `task_struct` 类型的结构体是进程描述符 process descripto
       return 0;
   }   
   ```
-  
+
   <img src="ZombieProcess.png" width="80%">
 
   `<defunct>` 指的是父子进程间失去通信的进程
@@ -405,6 +324,108 @@ void *startRoutine(void *args) {
 <img src="用户级tid和内核级lwp.png">
 
 ## *内核线程*
+
+# Paging of x86-64
+
+https://zhuanlan.zhihu.com/p/652983618 & Intel® 64 and IA-32 Architectures Software Developer Manuals Volume 3 Chapter 4 Paging
+
+## *分页模式*
+
+### 开启分页
+
+分页 Paging 只能在保护模式（CR0.PE = 1）下使用。在保护模式下是否开启分页是由 CR0. PG 位（31位）决定的
+
+* 当 CR0.PG = 0 时，未开启分页，此时线性地址等同于物理地址
+* 当 CR0.PG = 1 时，开启分页
+
+### 四种分页模式
+
+intel-64 处理器支持 4 种分页模式
+
+* 32 位分页
+* PAE, Physical Address Extension 分页
+* 4 级分页
+* 5 级分页
+
+处理器当前处于哪种分页模式是由 CR4.PAE、CR4.LA57 以及 IA32_EFER.LME 共同决定的
+
+* 若 CR4.PAE = 0， 使用的是 **32位分页** 模式
+* 若 CR4.PAE = 1 且 IA32_EFER.LME = 0，使用的是 **PAE 分页**模式
+* 若 CR4.PAE = 1， IA32_EFER.LME = 1 且 CR4.LA57 = 0，使用的是 **4 级分页**模式
+* 若 CR4.PAE = 1， IA32_EFER.LME = 1 且 CR4.LA57 = 1，使用的是 **5 级分页**模式
+
+## *4级分页详解*
+
+page-map level-4, PML4
+
+Control Register 3, CR3
+
+# 内存寻址
+
+## *内存地址总览*
+
+具体可以看 *操作系统理论.md*
+
+### 三种地址
+
+* 逻辑地址 logical address：包含在机器语言指令中用来指令一个操作数或一条指令的地址。每一个逻辑地址都由一个段 segment 和偏移量 offset 组成
+* 虚拟地址 virtual address 或线性地址 linear address：32位或64位的连续无符号整数表示的虚拟地址
+* 物理地址 physical address：用于memory chip的内存单元寻址，物理地址与从CPU的地址引脚发送到memory总线上的电信号相对应，物理地址也由32位或64位的连续无符号整数表示
+
+### 地址翻译
+
+<img src="地址翻译.drawio.png">
+
+MMU中的TWU负责两部分寻址
+
+* 分段单元 segmentation unit 硬件电路：把一个逻辑地址转换成虚拟地址
+* 分页单元 paging unit 硬件电路：把一个虚拟地址转换为物理地址
+
+## *硬件分段*
+
+## *Linux分段机制*
+
+### Linux GDT
+
+### Linux LDT
+
+## *Linux分页机制*
+
+x86-64的物理分页见上
+
+从 Linux 的早期版本开始，Linux就支持两级分页；Linux 2.6版本开始支持PAE和三级分页，从 Linux 2.6.11开始支持四级分页，Linux 4.11 版本引入了对五级分页的支持。64位系统到底是用三级、四级还是五级分页取决于具体硬件对线性地址/虚拟地址的划分
+
+
+
+* 全局页目录 PGD Page Global Director
+* 上层页目录 PUD Page Upper Directory
+* 中间页目录 PMD Page Middle Directory
+* 页表项 PTE Page Table Entry
+
+# 内存管理
+
+## *伙伴系统管理物理内存*
+
+伙伴系统 Buddy System
+
+## *slab分配器*
+
+# 虚拟内存
+
+# 锁 & 进程间通信
+
+## *内核锁*
+
+### RCU
+
+RCU, Read-Copy-Update 是一种用于实现并发数据访问的机制，在 2.5 版本引入，通常用于多线程环境下对共享数据的访问和更新。它的设计目标是允许读操作可以在不加锁的情况下并发进行，而不会阻塞写操作
+
+它进行并发读写的过程如下：
+
+1. 操作/读 read：读操作可以在不加锁的情况下进行，因为读操作不会修改数据，因此它们可以同时发生。读操作在读取数据之前会对其进行引用计数
+2. 拷贝 copy：当需要进行写操作时，RCU并不直接在原始数据上进行修改，而是创建一个数据的副本。这样，读操作可以继续在原始数据上进行，不受影响
+3. 更新 update：更新操作在新的副本上完成，而不是直接在原始数据上进行修改。一旦更新完成以及在所有进行读访问的使用者结束对旧副本的读取之后，**指针将指向新的数据**，这个过程是原子的。对于已经在进行的读操作，它们会继续引用原始数据，直到它们完成为止。这确保了读操作不会在修改过程中受到干扰
+4. 回收 reclaim：一旦没有任何读操作引用原始数据，该数据可以被安全地回收
 
 # 中断 & 异常
 
@@ -608,113 +629,390 @@ $ chrt [options] [priority] command [arguments...]
 
 一个常用的组合
 
-# 进程地址空间
+# 设备驱动
 
-# VFS
+<img src="Linux驱动结构.drawio.png" width=50%>
 
-# 文件系统
+## *IDR机制*
 
-文件对象由 file 结构体表示，定义在文件 `<linux/fs.h>` 中
+IDR (ID Radix) 机制将对象的身份鉴别号整数值ID与对象指针建立字典，从而完成从ID与指针之间的相互转换。IDR机制使用 Radix Tree 作为由id进行索引获取指针的稀疏数组，通过使用位图可以快速分配新的ID，IDR机制避免了使用固定尺寸的数组存放指针。IDR机制的API函数在 `lib/idr.c` 中实现
+
+# 块设备驱动
+
+<img src="Linux块设备文件系统结构.drawio.png" width="50%">
 
 ```c
-struct file {
-	union {
-		struct list_head      fu_list;            /* 文件对象链表 */
-        struct rcu_head       fu_rchead;          /* 释放之后的RCU链表 */
-    } f_u;
-	struct path               f_path;             /* 包含目录项 */
-	struct file_operations    *f_op;              /* 文件操作表 */
-    spinlock_t                f_lock;             /* 单个文件结构锁 */
-    atomic_t                  f_count;            /* 文件对象的使用计数 */
-	unsigned int              f_flags;            /* 当打开文件时所指定的标志 */
-	mode_t                    f_mode;             /* 文件的访问模式 */
-    loff_t                    f_pos;              /* 文件当前的位移量（文件指针）*/
-	struct fown_struct        f_owner;            /* 拥有者通过信号进行异步IO数据的传送 */
-	const struct cred         *f_cred;            /* 文件的信任状 */
-	struct file_ra_state      f_ra;               /* 预读状态 */
-	u64                       f_version;          /* 版本号 */
-	void                      *f_security;        /* 安全模块 */
-	void                      *private_data;      /* tty 设备驱动的钩子 */
-	struct list_head          f_ep_links;         /* 事件池链表 */
-	spinlock_t                f_ep_lock;          /* 事件池锁 */
-	struct address_space      *f_mapping;         /* 页缓存映射 */
-	unsigned long             f_mnt_write_state;  /* 调试状态 */
+/* 定义在 <fs/block_dev.c> 中 */
+struct bdev_inode {
+    struct block_device bdev;
+    struct inode vfs_inode;
 };
 ```
 
-## *Page Cache*
 
-Page 页是内存管理的基本单位，而Page Cache 页高速缓存是操作系统中的一种**内存缓存机制**，用于提高文件系统的性能。它是在文件系统和物理磁盘之间的一层[缓冲区](#VFS支持多文件系统)，将磁盘上的数据以页面的整数倍形式缓存在内存中，以加快对文件的访问速度
 
-当应用程序需要读取文件时，操作系统会首先检查 Page Cache 中是否已经存在所需的页面。如果页面已经缓存在内存中，操作系统可以直接从缓存中读取数据，避免了频繁的磁盘访问。如果页面不在缓存中，操作系统会将该页面从磁盘读取到缓存中，并提供给应用程序使用。类似地，当应用程序写入文件时，操作系统会首先将数据写入 Page Cache，然后在适当的时机再将数据刷写回磁盘
+### bio
 
-Page Cache 的存在极大地提高了文件系统的读取性能，因为内存的访问速度比磁盘快得多。大多数文件读取操作可以直接在内存中完成，避免了昂贵的磁盘 I/O 操作。此外，Page Cache 还可以提供一定程度的文件写入性能提升，因为数据可以先暂存在内存中，减少对磁盘的频繁写入操作
+```c
+struct bio {
+	sector_t             bi_sector;           /* 块IO操作的第一个磁盘扇区 */
+    struct bio*          bi_next;             /* 链接到请求队列中的下一个bio */
+    struct block_device* bi_bdev;             /* 指向块设备描述符的指针 */
+    unsigned long        bi_flags;            /* bio的状态标志 */
+    unsigned long        bi_rw;               /* IO操作标志 */
+    unsigned short       bi_vcnt;             /* bio的 bio_vec 数组中段的数目 */
+    unsigned short       bi_idx;              /* bio 的bio_vec 数组中段的当前索引值 */
+    unsigned short       bi_phys_segments;    /* 合并之后 bio 中物理段的数目 */
+    unsigned short       bi_hw_segments;      /* 合并之后硬件段的数目 */
+    unsigned int         bi_size;             /* 需要传送的字节数 */
+    unsigned int         bi_hw_front_size;    /* 硬件段合并算法使用 */
+    unsigned int         bi_hw_back_size;     /* 硬件段合并算法使用 */
+    unsigned int         bi_max_vecs;         /* bio 的bio_vec数组中允许的最大段数 */
+    struct bio_vec*      bi_io_vec;           /* 指向 bio 的bio_vec数组中的段的指针 */
+    bio_end_io_t*        bi_end_io;           /* bio 的IO操作结束时调用的方法 */
+    atomic_t             bi_cnt;              /* bio 的引用计数器 */
+    void*                bi_private;          /* 通用块层和块设备驱动程序的IO完成方法使用的指针 */
+    bio_destructor_t*    bi_destructor;       /* 释放bio时调用的析构方法（通常是bio-destructor()方法） */
+};
+```
 
-Page Cache 是透明的，对应用程序而言是不可见的，它是操作系统的一部分。操作系统会根据需要自动管理 Page Cache 的内容，并在内存紧张时自动释放一部分缓存空间
+```c
+struct bio_vec {
+    struct page* bv_page;      /* 说明指向段的页框中页描述符的指针 */
+    unsigned int bv_len;       /* 段的字节长度 */
+    unsigned int bv_offset;    /* 页框中段数据的偏移量 */
+};
+```
 
-需要注意的是，Page Cache 的存在会导致文件系统的修改对应用程序的可见性延迟。因为数据首先写入到缓存中，而不是直接写入磁盘，所以在数据被刷新回磁盘之前，对文件的修改对其他应用程序是不可见的。这就意味着，如果系统崩溃或断电，尚未刷新到磁盘的数据可能会丢失。为了确保数据的持久性，应用程序可能需要使用类似于 `fsync()` 的操作来强制将数据刷新到磁盘上
+# VFS
 
-Linux系统可以通过读取 `/proc/meminfo` 文件来查看系统内存
 
-Page Cache中的数据是采用基数树组织的，效率很高
 
-### Page & Page Cache
+笔者的理解是 VFS inode 是一切的核心，因为它的 i_ino 在 VFS 和各种不同的文件系统中都是独一无二的。底层的文件系统是通过自己的 inode 来找到具体的物理存储地址的
 
-**并不是所有 page 都被组织为 Page Cache**，Linux 系统上供用户可访问的内存分为两个类型
 
-* File-backed pages：文件备份页也就是 Page Cache 中的 page，对应于磁盘上的若干数据块；对于这些页最大的问题是脏页回盘。这种page的swap效率较高
-* Anonymous pages：匿名页不对应磁盘上的任何磁盘数据块，它们是进程的运行时内存空间（例如方法栈、局部变量表等属性）。swap效率较低
 
-还要注意：不是所有的磁盘数据都会被加载为内存的Page Cache中，比如Directed IO直接访问了 Buffer cache
+## *Overview*
 
-[Buffer Cache](#VFS)（缓冲区缓存）是操作系统中另一种用于提高文件系统性能的内存缓存机制。它类似于 Page Cache，但其重点是缓存文件系统层面的数据块，而不是整个文件页面
+```c
+/* 定义在 <sched.h> 中 */
+struct task_struct {
+    // ...
+    int link_count, total_link_count; /* 用于在查找环形链表时防止无限循环 */
+    struct fs_struct    *fs;          /* 文件系统信息 */
+    struct files_struct *files;       /* 打开文件信息 */
+    struct nsproxy      *nsproxy;     /* 命名空间 */
+    // ...
+};
+```
 
-Buffer Cache 的主要作用是减少磁盘 I/O 操作，通过将文件系统的数据块缓存在内存中，以便更快地访问和操作这些数据。当应用程序读取或写入文件系统的数据块时，操作系统会首先检查 Buffer Cache 中是否已经存在所需的数据块。如果数据块已经缓存在缓冲区中，操作系统可以直接从缓存中读取或写入数据，避免了对磁盘的实际读写操作
+不要混淆 `struct fs_struct *fs` 和 `struct files_struct *files`
 
-Linux Kernel 2.4之前，Page Cache 与 buffer cache 是完全分离的。2.4 版本内核之后，两块缓存近似融合在了一起：如果一个文件的页加载到了 Page Cache，那么同时 buffer cache 只需要维护块指向页的指针就可以了。只有Directed IO菜会真正放到buffer cache。因此现在说的Page Cache一般就是指这两者的结合
+* 前者保存了进程相关的文件系统的数据，比如说当前工作目录和 chroot 资源限制有关的信息
 
-### Page Cache 与文件持久化的一致性&可靠性
+* 后者则保存的则是当前进程的所使用的各个文件描述符的数据信息
 
-任何系统引入缓存，就会引发一致性问题：即内存中的数据与磁盘中的数据不一致。例如常见后端架构中的 Redis 缓存与 MySQL 数据库就存在一致性问题
+  注意⚠️：这里的文件描述符可不是进行系统编程时的那个 fd 整数，而是一个确切的数据结构。既然我们用到了那个整数，那么 `struct files_struct` 必然是有数据类型可以完成二者之间的映射
 
-Linux提供了两种保证一致性的策略：写回与写透
+VFS这章笔者会分成 VFS 对文件系统的管理和对文件本身的管理两大部分
 
-* 写回策略 write-back 是指在更新缓存中的数据时，**只更新缓存而不立即写回到底层存储介质**。当数据被修改后，只会更新到缓存中的对应位置，而不是立即写入到主存或磁盘中。当数据被置换出缓存或缓存行被替换时，才会将被修改的数据写回到底层存储介质。**OS中存在周期性的线程执行写会任务，这是OS默认的方案**
-* 写透策略 write-through 是指**在更新缓存中的数据时，同时将数据写回到底层存储介质**。当数据被修改后，会立即更新到缓存中的对应位置，并且同时将修改后的数据写入到主存或磁盘中。向用户层提供特定接口，用户可以自行调用强制写透
+下图是关于 VFS 中对于文件管理的总体结构
 
-写回和写透之间的主要区别在于数据的更新时机和写入的位置：
+<img src="VFS.drawio.png">
 
-* 写回 WB：数据被修改后，只更新到缓存中，然后在合适的时机将被修改的数据写回到底层存储介质
-* 写透 WT：数据被修改后，立即更新到缓存中，并且同时写入到底层存储介质，保证数据的一致性和持久性
+有两条路线可以走
 
-写回策略通常会在缓存的一致性机制中使用，例如在处理器高速缓存（CPU Cache）或磁盘缓存（Disk Cache）中。它可以提高写操作的性能，并减少对底层存储介质的频繁写入。然而，写回策略可能会导致数据的延迟一致性，即在写回之前，其他组件可能无法看到最新的修改。这就需要额外的机制（如写入无效ating或写入回调）来确保数据的一致性
+* `super_blcok`
+* `task_struct`
 
-写透策略则更注重数据的持久性和一致性，确保每次写操作都能够立即写入到底层存储介质。尽管写透策略提供了较高的数据一致性，但在写入操作频繁时可能会降低系统的整体性能，因为每次写操作都需要写入到底层存储介质
+## *文件的标识符 inode*
 
-选择使用写回还是写透策略取决于具体应用场景和需求。写回策略通常用于读写比较频繁且对一致性要求不那么严格的情况，而写透策略则适用于对数据一致性和持久性要求较高的场景
+### inode
 
-### 写回 & 写透用到的系统调用
+```c
+/* 定义在 <fs.h> 中 */
+struct inode {
+    struct hlist_node  i_hash; 
+    struct list_head   i_list; 
+    struct list_head   i_sb_list;
+    struct list_head   i_dentry; 
+    unsigned long      i_ino;    /* inode 的编号（ID）*/
+    atomic_t           i_count;  /* 计数器，记录了访问该inode结构的进程数目 */
+    unsigned int       i_nlink;  /* 计数器，记录了使用该inode的硬链接总数 */
+    uid_t  i_uid;
+    gid_t  i_gid;
+    dev_t  i_rdev;
+    unsigned long      i_version;
+    loff_t             i_size;  /* 文件长度 in Bytes */
+    struct timespec    i_atime; /* 最后访问的时间 */
+    struct timespec    i_mtime; /* 最后修改的时间 */
+    struct timespec    i_ctime; /* 最后修改inode的时间 */
+    unsigned int  i_blkbits;
+    blkcnt_t      i_blocks;     /* 指定了文件按块计算的长度 */
+    umode_t       i_mode;       /* 访问权限 */
+    struct inode_operations      *i_op;  /* inode 操作的函数指针集合 */
+    const struct file_operations *i_fop; /* 文件操作集合：此前为->i_op->default_file_ops */
+    struct super_block           *i_sb;
+    struct address_space         *i_mapping;
+    struct address_space          i_data;
+    struct dquot                 *i_dquot[MAXQUOTAS];
+    struct list_head              i_devices;
+    union {
+        struct pipe_inode_info *i_pipe; /* 用于实现管道的inode的相关信息 */
+        struct block_device    *i_bdev; /* 用于块设备 */
+        struct cdev            *i_cdev; /* 用于字符设备 */
+    };
+    int            i_cindex;
+    __u32          i_generation;
+    unsigned long  i_state;
+    unsigned long  dirtied_when; /* 第一个脏操作发生的时间, 以jiffies计算 */
+    unsigned int   i_flags;
+    atomic_t       i_writecount;
+    void          *i_security;
+};
+```
 
-文件 = 数据 + 元数据，所以文件的一致性实际上包括两个方面，即数据的一致性和元数据的一致性
+每个文件（目录也是文件）在文件系统中都有一个唯一的inode，通过该inode可以定位和管理文件的所有相关信息。当文件被创建时，系统会为其分配一个inode，并将文件的元数据信息存储在这个inode中。当文件被访问或修改时，操作系统会根据inode来定位文件的数据块，从而实现文件的读写操作
 
-根据对数据和元数据持久化的不同表现可以区分3种用到的系统调用
+注意⚠️：底层的文件系统的 inode 数据结构和 VFS 的 inode 数据结构都是不一样的，即使是原生兼容的 Ext\* 文件系统
 
-* `fsync(int fd)`：将 fd 代表的文件的脏数据和脏元数据全部刷新至磁盘中
-* `fdatasync(int fd)`：将 fd 代表的文件的脏数据刷新至磁盘，同时对必要的元数据刷新至磁盘中，这里所说的必要的概念是指：对接下来访问文件有关键作用的信息，如文件大小，而文件修改时间等不属于必要信息
-* `sync()`：对系统中所有的脏的文件数据和元数据刷新至磁盘中
+* 对于同样支持 inode 的底层文件系统，欠缺的部分由内核自身在从底层文件系统读入信息时生成或动态建立
+* 对于那些没有 inode 的底层文件系统，必须从其包含的数据中提取出相关信息并拼接出这里给出的形式
 
-### Pros and Cons of Page Cache
+### inode 操作 & 文件操作
 
-* Pros
-  * 提高访问性能：Page Cache将磁盘上的数据缓存在内存中，使得对文件的读取操作可以直接在内存中完成，避免了频繁的磁盘访问。由于内存的访问速度远远快于磁盘，因此可以显著提高文件的访问性能
-  * 减少磁盘 I/O：通过缓存热门或频繁访问的数据页，Page Cache可以减少对磁盘的实际读写操作。它充分利用了内存的高速缓存能力，减少了对慢速磁盘的依赖，从而降低了磁盘 I/O 的开销
-* Cons
-  * 内存占用：Page Cache需要占用一部分系统内存来存储缓存的数据页。如果缓存的数据量很大，可能会占用较多的内存资源，导致可用内存减少，可能影响其他应用程序的运行
-  * 数据一致性延迟：由于Page Cache采用写回策略，数据的更新可能存在一定的延迟。当数据被修改后，只会更新到缓存中，而不是立即写入到主存或磁盘中。这可能导致其他组件无法立即看到最新的修改，需要额外的机制来保证数据的一致性
-  * 数据丢失风险：由于Page Cache是在内存中存储数据的，当系统崩溃或断电时，尚未写回到磁盘的数据可能会丢失。虽然操作系统会尽力确保数据的持久性，但在某些情况下，仍然存在数据丢失的风险
-* 透明性：Page Cache对应用程序是透明的，对应用层并没有提供很好的管理 API，因此应用程序无需显式地管理缓存。操作系统会自动处理缓存的管理和更新，使得应用程序开发变得更简单。但这种透明性不一定是好事，应用层即使想优化 Page Cache 的使用策略也很难进行。因此像InnoDB就实现了自己的16KB单位的内存管理
+inode_operations 和 file_operations 是两个包含了很多函数指针的结构体。file_operations 用于操作文件中包含的数据，inode_operations 则负责管理结构性的操作（比方说删除一个文件）和文件相关的元数据
 
-# Linux Ext\* 文件系统
+这里先介绍 inode 操作，对于文件本身的操作 file_operations 会在下面介绍
+
+```c
+/* 定义在 <fs.h> 中 */
+struct inode_operations {
+    int (*create) (struct inode *,struct dentry *,int, struct nameidata *); 
+    struct dentry * (*lookup) (struct inode *,struct dentry *, struct nameidata *); 
+    int (*link) (struct dentry *,struct inode *,struct dentry *); 
+    int (*unlink) (struct inode *,struct dentry *); 
+    int (*symlink) (struct inode *,struct dentry *,const char *); 
+    int (*mkdir) (struct inode *,struct dentry *,int); 
+    int (*rmdir) (struct inode *,struct dentry *); 
+    int (*mknod) (struct inode *,struct dentry *,int,dev_t); 
+    int (*rename) (struct inode *, struct dentry *, struct inode *, struct dentry *); 
+    int (*readlink) (struct dentry *, char __user *,int); 
+    void * (*follow_link) (struct dentry *, struct nameidata *); 
+    void (*put_link) (struct dentry *, struct nameidata *, void *); 
+    void (*truncate) (struct inode *); 
+    int (*permission) (struct inode *, int, struct nameidata *); 
+    int (*setattr) (struct dentry *, struct iattr *); 
+    int (*getattr) (struct vfsmount *mnt, struct dentry *, struct kstat *); 
+    int (*setxattr) (struct dentry *, const char *,const void *,size_t,int); 
+    ssize_t (*getxattr) (struct dentry *, const char *, void *, size_t); 
+    ssize_t (*listxattr) (struct dentry *, char *, size_t); 
+    int (*removexattr) (struct dentry *, const char *); 
+    void (*truncate_range)(struct inode *, loff_t, loff_t);
+    long (*fallocate)(struct inode *inode, int mode, loff_t offset, loff_t len);
+}
+```
+
+## *VFS对文件本身的组织*
+
+```c
+/* 定义在 <sched.h> 中 */
+struct files_struct {
+    atomic_t count;
+    struct fdtable *fdt; /* RCU 指针 */
+    struct fdtable fdtab;
+    int next_fd; /* 下一次打开新文件时使用的文件描述符 */
+    struct embedded_fd_set close_on_exec_init;
+    struct embedded_fd_set open_fds_init;
+    struct file* fd_array[NR_OPEN_DEFAULT];
+};
+
+/* 定义在 `<file.h>` 中 */
+struct embedded_fd_set {  unsigned long fds_bits[1];  }; /* 一个简单的 bitmap */
+```
+
+在 *系统编程.md* 中在上层应用编程时频繁出现的整数文件描述符 fd 其实就是这里 `fd_array` 的下标
+
+`NR_OPEN_DEFAULT` 是每个进程可以打开的最大值，它定义在 `include/linux/sched.h` 中，默认值为 BITS_PER_LONG，32位和64位系统的值分别为32和64
+
+```c
+/* 定义在 <file.h> 中 */
+struct fdtable {
+    unsigned int max_fds;
+    struct file ** fd; /* 当前fd_array */
+    fd_set *close_on_exec;
+    fd_set *open_fds;
+    struct rcu_head rcu;
+    struct files_struct *free_files;
+    struct fdtable *next;
+};
+```
+
+### 文件描述符 `struct file`
+
+文件描述符保存了文件本身的特征信息
+
+```c
+/* 定义在 <fs.h> 中 */
+struct file {
+    struct list_head   fu_list; /* 文件对象实例链表 */
+    struct path        f_path;  /* 包含目录项 */
+#define f_dentry f_path.dentry
+#define f_vfsmnt f_path.mnt
+    const struct file_operations *f_op; /* 文件操作表 */
+    atomic_t      f_count;              /* 文件对象的使用计数 */
+    unsigned int  f_flags;              /* 当打开文件时所传递的额外的标志位 */
+    mode_t        f_mode;               /* 文件的访问模式 */
+    loff_t        f_pos;                /* 文件当前的位移量（文件指针）*/
+    struct fown_struct    f_owner;      /* 拥有文件的进程的信息（信号 & 异步IO） */
+    unsigned int          f_uid,   f_gid;
+    struct file_ra_state  f_ra;         /* 预读状态 */
+    unsigned long         f_version;    /* 版本号 */
+    // ... 
+    struct address_space  *f_mapping;   /* 页缓存映射 */
+    // ... 
+};
+
+/* 定义在 <namei.h> 中 */
+struct path {
+    struct vfsmount *mnt;
+    struct dentry *dentry;
+};
+```
+
+path 的 `struct dentry` 缓存提供了文件名和 inode 之间的关联，用于快速寻找文件
+
+### 文件操作
+
+```c
+/* 定义在 <fs.h> 中 */
+struct file_operations {
+    struct module *owner;
+    loff_t (*llseek) (struct file *, loff_t, int);
+    ssize_t (*read) (struct file *, char __user *, size_t, loff_t *);
+    ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *);
+    ssize_t (*aio_read) (struct kiocb *, const struct iovec *, unsigned long, loff_t);
+    ssize_t (*aio_write) (struct kiocb *, const struct iovec *, unsigned long, loff_t);
+    int (*readdir) (struct file *, void *, filldir_t);
+    unsigned int (*poll) (struct file *, struct poll_table_struct *);
+    int (*ioctl) (struct inode *, struct file *, unsigned int, unsigned long);
+    long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);
+    long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
+    int (*mmap) (struct file *, struct vm_area_struct *);
+    int (*open) (struct inode *, struct file *);
+    int (*flush) (struct file *, fl_owner_t id);
+    int (*release) (struct inode *, struct file *);
+    int (*fsync) (struct file *, struct dentry *, int datasync);
+    int (*aio_fsync) (struct kiocb *, int datasync);
+    int (*fasync) (int, struct file *, int);
+    int (*lock) (struct file *, int, struct file_lock *);
+    ssize_t (*sendpage) (struct file *, struct page *, int, size_t, loff_t *, int);
+    unsigned long (*get_unmapped_area)(struct file *, unsigned long,
+                                       unsigned long, unsigned long, unsigned long);
+    int (*check_flags)(int);
+    int (*dir_notify)(struct file *filp, unsigned long arg);
+    int (*flock) (struct file *, int, struct file_lock *);
+    ssize_t (*splice_write)(struct pipe_inode_info *, struct file *,
+                            loff_t *, size_t, unsigned int);
+    ssize_t (*splice_read)(struct file *, loff_t *, 
+                           struct pipe_inode_info *, size_t, unsigned int);
+};
+```
+
+## *文件系统的特征信息*
+
+```c
+/* 定义在 <fs_struct.h> 中 */
+struct fs_struct {
+    atomic_t count;
+    int umask;
+    struct dentry * root, * pwd, * altroot;
+    struct vfsmount * rootmnt, * pwdmnt, * altrootmnt;
+};
+```
+
+### VFS命名空间
+
+```c
+/* 定义在 <nsproxy.h> 中 */
+struct nsproxy {
+    // ...  
+	struct mnt_namespace *mnt_ns;
+    // ...  
+};
+
+/* 定义在 <mnt_namespace.h> 中 */
+struct mnt_namespace {
+    atomic_t count;
+    struct vfsmount * root;
+    struct list_head list;
+    // ...
+};
+```
+
+
+
+## *目录项缓存*
+
+Linux使用目录项缓存（简称dentry缓存）来快速访问此前的查找操作的结果
+
+```c
+/* 定义在 <dcache.h> 中 */
+struct dentry {
+    atomic_t d_count;
+    unsigned int d_flags;   /* 由d_lock保护 */
+    spinlock_t d_lock;    /* 每个dentry的锁 */
+    struct inode *d_inode; /* 文件名所属的inode,如果为NULL,则表示不存在的文件名 */
+    /* * 接下来的3个字段由__d_lookup处理
+    * 将它们放置在这里,使之能够装填到一个缓存行中*/ 
+    struct hlist_node d_hash; /* 用于查找的散列表 */
+    struct dentry *d_parent;  /* 父目录的dentry实例 */
+    struct qstr d_name;
+    struct list_head d_lru;   /* LRU链表 */
+    union {
+        /* 链表元素,用于将当前dentry连接到父目录dentry的d_subdirs链表中 */
+        struct list_head d_child;
+        struct rcu_head d_rcu;
+    } d_u;
+    struct list_head d_subdirs;  /* 子目录/文件的目录项链表 */
+    struct list_head d_alias; /* 链表元素,用于将dentry连接到inode的i_dentry链表中 */
+    unsigned long d_time;  /* 由d_revalidate使用 */
+    struct dentry_operations *d_op;
+    struct super_block *d_sb;  /* dentry树的根,超级块 */
+    void *d_fsdata;   /* 特定于文件系统的数据 */
+    int d_mounted;
+    unsigned char d_iname[DNAME_INLINE_LEN_MIN]; /* 短文件名存储在这里 */
+};
+```
+
+### dentry 操作
+
+```c
+/* 定义在 <dcache.h> 中 */
+struct dentry_operations { 
+    int (*d_revalidate)(struct dentry *, struct nameidata *);
+    int (*d_hash) (struct dentry *, struct qstr *);
+    int (*d_compare) (struct dentry *, struct qstr *, struct qstr *);
+    int (*d_delete)(struct dentry *);
+    void (*d_release)(struct dentry *);
+    void (*d_iput)(struct dentry *, struct inode *);
+    char *(*d_dname)(struct dentry *,char *, int);
+};
+```
+
+## *VFS对文件系统的操作*
+
+### 注册文件系统
+
+### 装载和卸载
+
+### 管理超级块
+
+## *VFS对文件本身的操作*
+
+VFS以各种系统调用的形式提供了用于文件处理的通用 API
+
+# Ext\* 文件系统
 
 <http://chuquan.me/2022/05/01/understand-principle-of-filesystem/#文件操作>
 
@@ -742,10 +1040,10 @@ Ext4由于其优越的性能和特性，成为当前Linux系统中的首选文�
 
 ### Ext\*文件系统组成
 
-Linux的Ext\*文件系统会为每个文件分配两个数据结构：**索引节点index node** 和**目录项 directory entry**，它们主要用来记录文件的元信息和目录层次结构
+作为Linux原生的文件系统，Ext\*文件系统和VFS完全一样，会为每个文件分配两个数据结构：**索引节点 index node** 和**目录项 directory entry**，它们主要用来记录文件的元信息和目录层次结构
 
-* 索引节点 inode，用来记录文件的元信息，比如 inode 编号、文件大小、访问权限、创建时间、修改时间、数据在磁盘的位置等等。索引节点是文件的**唯一**标识，它们之间一一对应，也同样都会被存储在硬盘中，所以**索引节点同样占用磁盘空间**。每一个inode是一个大小一般为128字节或256字节的空间
-* 目录项 dentry，用来记录文件的名字、**索引节点指针**以及与其他目录项的层级关联关系。多个目录项关联起来，就会形成目录结构，但它与索引节点不同的是，**目录项是由内核维护的一个数据结构，不存放于磁盘，而是缓存在内存**
+* 索引节点 ext\*_inode，用来记录文件的元信息，比如 inode 编号、文件大小、访问权限、创建时间、修改时间、数据在磁盘的位置等等。索引节点是文件的**唯一**标识，它们之间一一对应，也同样都会被存储在硬盘中，所以**索引节点同样占用磁盘空间**。每一个inode是一个大小一般为128字节或256字节的空间
+* 目录项 ext*_dentry，用来记录文件的名字、**索引节点指针**以及与其他目录项的层级关联关系。多个目录项关联起来，就会形成目录结构，但它与索引节点不同的是，**目录项是由内核维护的一个数据结构，不存放于磁盘，而是缓存在内存**
 
 ### Ex2文件系统的物理结构
 
@@ -794,22 +1092,51 @@ inode是文件系统用来管理在磁盘上的文件所用的数据结构，每
 注意区分Ex2文件系统的inode和VFS的inode
 
 ```c
-struct ex2_innode {
-	__le16                i_mode;           /* 文件类型和访问权限 */
-    __le16                i_uid;            /* 拥有者标识符 */
-    __le32                i_size;           /* 以字节为单位的文件长度 */
-    __le32                i_atime;          /* 最后一次访问文件的时间 */
-    __le32                i_ctime;          /* 索引节点最后改变的时间 */
-    __le32                i_mtime;          /* 文件内容最后改变的时间 */ 
-    __le32                i_dtime;          /* 文件删除的时间 */
-    __le16                i_gid;            /* 用户组标识符 */
-    __le16                i_links_count;    /* 硬链接计数器 */
-    __le32                i_blocks;         /* 文件的数据块数 */ 
-    __le32                i_flags;          /* 文件标志 */
-    union                 osd1;             /* 特定的操作系统信息 */
-    __le32[EXT2_N_BLOCKS] i_block;          /* 指向数据块的指针 */
-    __le32                i_generation;     /* 文件版本（当网络文件系统访问文件时使用） */
-    __le32                i_file_acl;       /* 文件访问控制列表 */
+/* 定义在 <ext2_fs.h> 中 */
+struct ext2_inode {
+    __le16 i_mode;  /* 文件模式 */
+    __le16 i_uid;  /* 所有者UID的低16位 */
+    __le32 i_size;  /* 长度,按字节计算 */
+    __le32 i_atime;  /* 访问时间 */
+    __le32 i_ctime;  /* 创建时间 */
+    __le32 i_mtime;  /* 修改时间 */ 
+    __le32 i_dtime;  /* 删除时间 */ 
+    __le16 i_gid;  /* 组ID的低16位 */ 
+    __le16 i_links_count;  /* 链接计数 */ 
+    __le32 i_blocks;  /* 块数目 */ 
+    __le32 i_flags;  /* 文件标志 */ 
+    union {
+        struct {
+            __le32 l_i_reserved1;
+        } linux1;
+        struct {
+            // ... 
+        } hurd1;
+        struct {
+            // ... 
+        } masix1;
+    } osd1;  /* 特定于操作系统的第一个联合 */
+    __le32 i_block[EXT2_N_BLOCKS]; /* 块指针(块号) */ 
+    __le32 i_generation; /* 文件版本,用于NFS */ 
+    __le32 i_file_acl; /* 文件ACL */
+    __le32 i_dir_acl; /* 目录ACL */
+    __le32 i_faddr;  /* 碎片地址*/
+    union {
+        struct {
+            __u8  l_i_frag;  /* 碎片编号 */
+            __u8  l_i_fsize;  /* 碎片长度 */
+            __u16  i_pad1;
+            __le16  l_i_uid_high;  /* 这两个字段 */
+            __le16  l_i_gid_high;  /* 此前定义为reserved2[0] */
+            __u32  l_i_reserved2;
+        } linux2;
+        struct { 
+            // ... 
+        } hurd2;
+        struct {
+            // ... 
+        } masix2;
+    } osd2;   /* 特定于操作系统的第二个联合 */
 };
 ```
 
@@ -819,46 +1146,111 @@ struct ex2_innode {
 * Linux中的inode属性里面，没有保存文件名
 * Linux下一切皆文件，因此目录也有自己的inode和data block，目录下的文件的文件名和inode编号映射关系都存储在目录的data block里。文件名和inode编号互为key值
 
-# 块设备驱动
+# Page Cache & Buffer Cache
 
-<img src="Linux块设备文件系统结构.drawio.png" width="50%">
 
-### bio
+
+## *Page Cache*
+
+Page 页是内存管理的基本单位，而Page Cache 页高速缓存是操作系统中的一种**内存缓存机制**，用于提高文件系统的性能。它是在文件系统和物理磁盘之间的一层[缓冲区](#VFS支持多文件系统)，将磁盘上的数据以页面的整数倍形式缓存在内存中，以加快对文件的访问速度
+
+当应用程序需要读取文件时，操作系统会首先检查 Page Cache 中是否已经存在所需的页面。如果页面已经缓存在内存中，操作系统可以直接从缓存中读取数据，避免了频繁的磁盘访问。如果页面不在缓存中，操作系统会将该页面从磁盘读取到缓存中，并提供给应用程序使用。类似地，当应用程序写入文件时，操作系统会首先将数据写入 Page Cache，然后在适当的时机再将数据刷写回磁盘
+
+Page Cache 的存在极大地提高了文件系统的读取性能，因为内存的访问速度比磁盘快得多。大多数文件读取操作可以直接在内存中完成，避免了昂贵的磁盘 I/O 操作。此外，Page Cache 还可以提供一定程度的文件写入性能提升，因为数据可以先暂存在内存中，减少对磁盘的频繁写入操作
+
+Page Cache 是透明的，对应用程序而言是不可见的，它是操作系统的一部分。操作系统会根据需要自动管理 Page Cache 的内容，并在内存紧张时自动释放一部分缓存空间
+
+需要注意的是，Page Cache 的存在会导致文件系统的修改对应用程序的可见性延迟。因为数据首先写入到缓存中，而不是直接写入磁盘，所以在数据被刷新回磁盘之前，对文件的修改对其他应用程序是不可见的。这就意味着，如果系统崩溃或断电，尚未刷新到磁盘的数据可能会丢失。为了确保数据的持久性，应用程序可能需要使用类似于 `fsync()` 的操作来强制将数据刷新到磁盘上
+
+Linux系统可以通过读取 `/proc/meminfo` 文件来查看系统内存
+
+Page Cache中的数据是采用基数树组织的，效率很高
+
+### Page & Page Cache
+
+**并不是所有 page 都被组织为 Page Cache**，Linux 系统上供用户可访问的内存分为两个类型
+
+* File-backed pages：文件备份页也就是 Page Cache 中的 page，对应于磁盘上的若干数据块；对于这些页最大的问题是脏页回盘。这种page的swap效率较高
+* Anonymous pages：匿名页不对应磁盘上的任何磁盘数据块，它们是进程的运行时内存空间（例如方法栈、局部变量表等属性）。swap效率较低
+
+还要注意：不是所有的磁盘数据都会被加载为内存的Page Cache中，比如Directed IO直接访问了 Buffer cache
+
+[Buffer Cache](#VFS)（缓冲区缓存）是操作系统中另一种用于提高文件系统性能的内存缓存机制。它类似于 Page Cache，但其重点是缓存文件系统层面的数据块，而不是整个文件页面
+
+Buffer Cache 的主要作用是减少磁盘 IO 操作，通过将文件系统的数据块缓存在内存中，以便更快地访问和操作这些数据。当应用程序读取或写入文件系统的数据块时，操作系统会首先检查 Buffer Cache 中是否已经存在所需的数据块。如果数据块已经缓存在缓冲区中，操作系统可以直接从缓存中读取或写入数据，避免了对磁盘的实际读写操作
+
+Linux Kernel 2.4之前，Page Cache 与 buffer cache 是完全分离的。2.4 版本内核之后，两块缓存近似融合在了一起：如果一个文件的页加载到了 Page Cache，那么同时 buffer cache 只需要维护块指向页的指针就可以了。只有Directed IO才会真正放到buffer cache。因此现在说的Page Cache一般就是指这两者的结合
+
+### Page Cache 与文件持久化的一致性&可靠性
+
+任何系统引入缓存，就会引发一致性问题：即内存中的数据与磁盘中的数据不一致。例如常见后端架构中的 Redis 缓存与 MySQL 数据库就存在一致性问题
+
+Linux提供了两种保证一致性的策略：写回与写透
+
+* 写回策略 write-back 是指在更新缓存中的数据时，**只更新缓存而不立即写回到底层存储介质**。当数据被修改后，只会更新到缓存中的对应位置，而不是立即写入到主存或磁盘中。当数据被置换出缓存或缓存行被替换时，才会将被修改的数据写回到底层存储介质。**OS中存在周期性的线程执行写会任务，这是OS默认的方案**
+* 写透策略 write-through 是指**在更新缓存中的数据时，同时将数据写回到底层存储介质**。当数据被修改后，会立即更新到缓存中的对应位置，并且同时将修改后的数据写入到主存或磁盘中。向用户层提供特定接口，用户可以自行调用强制写透
+
+写回和写透之间的主要区别在于数据的更新时机和写入的位置：
+
+* 写回 WB：数据被修改后，只更新到缓存中，然后在合适的时机将被修改的数据写回到底层存储介质
+* 写透 WT：数据被修改后，立即更新到缓存中，并且同时写入到底层存储介质，保证数据的一致性和持久性
+
+写回策略通常会在缓存的一致性机制中使用，例如在处理器高速缓存（CPU Cache）或磁盘缓存（Disk Cache）中。它可以提高写操作的性能，并减少对底层存储介质的频繁写入。然而，写回策略可能会导致数据的延迟一致性，即在写回之前，其他组件可能无法看到最新的修改。这就需要额外的机制（如写入无效ating或写入回调）来确保数据的一致性
+
+写透策略则更注重数据的持久性和一致性，确保每次写操作都能够立即写入到底层存储介质。尽管写透策略提供了较高的数据一致性，但在写入操作频繁时可能会降低系统的整体性能，因为每次写操作都需要写入到底层存储介质
+
+选择使用写回还是写透策略取决于具体应用场景和需求。写回策略通常用于读写比较频繁且对一致性要求不那么严格的情况，而写透策略则适用于对数据一致性和持久性要求较高的场景
+
+### 写回 & 写透用到的系统调用
+
+文件 = 数据 + 元数据，所以文件的一致性实际上包括两个方面，即数据的一致性和元数据的一致性
+
+根据对数据和元数据持久化的不同表现可以区分3种用到的系统调用
+
+* `fsync(int fd)`：将 fd 代表的文件的脏数据和脏元数据全部刷新至磁盘中
+* `fdatasync(int fd)`：将 fd 代表的文件的脏数据刷新至磁盘，同时对必要的元数据刷新至磁盘中，这里所说的必要的概念是指：对接下来访问文件有关键作用的信息，如文件大小，而文件修改时间等不属于必要信息
+* `sync()`：对系统中所有的脏的文件数据和元数据刷新至磁盘中
+
+### Pros and Cons of Page Cache
+
+* Pros
+  * 提高访问性能：Page Cache将磁盘上的数据缓存在内存中，使得对文件的读取操作可以直接在内存中完成，避免了频繁的磁盘访问。由于内存的访问速度远远快于磁盘，因此可以显著提高文件的访问性能
+  * 减少磁盘 I/O：通过缓存热门或频繁访问的数据页，Page Cache可以减少对磁盘的实际读写操作。它充分利用了内存的高速缓存能力，减少了对慢速磁盘的依赖，从而降低了磁盘 I/O 的开销
+* Cons
+  * 内存占用：Page Cache需要占用一部分系统内存来存储缓存的数据页。如果缓存的数据量很大，可能会占用较多的内存资源，导致可用内存减少，可能影响其他应用程序的运行
+  * 数据一致性延迟：由于Page Cache采用写回策略，数据的更新可能存在一定的延迟。当数据被修改后，只会更新到缓存中，而不是立即写入到主存或磁盘中。这可能导致其他组件无法立即看到最新的修改，需要额外的机制来保证数据的一致性
+  * 数据丢失风险：由于Page Cache是在内存中存储数据的，当系统崩溃或断电时，尚未写回到磁盘的数据可能会丢失。虽然操作系统会尽力确保数据的持久性，但在某些情况下，仍然存在数据丢失的风险
+* 透明性：Page Cache对应用程序是透明的，对应用层并没有提供很好的管理 API，因此应用程序无需显式地管理缓存。操作系统会自动处理缓存的管理和更新，使得应用程序开发变得更简单。但这种透明性不一定是好事，应用层即使想优化 Page Cache 的使用策略也很难进行。因此像InnoDB就实现了自己的16KB单位的内存管理
+
+## *管理 Page Cache*
+
+### address_space 结构体
+
+在 Page Cache 中缓存了很多的页，用于管理它们的数据结构是 `struct address_space` 结构体，它被定义在 `include/linux/fs.h` 中
 
 ```c
-struct bio {
-	sector_t             bi_sector;           /* 块IO操作的第一个磁盘扇区 */
-    struct bio*          bi_next;             /* 链接到请求队列中的下一个bio */
-    struct block_device* bi_bdev;             /* 指向块设备描述符的指针 */
-    unsigned long        bi_flags;            /* bio的状态标志 */
-    unsigned long        bi_rw;               /* IO操作标志 */
-    unsigned short       bi_vcnt;             /* bio的 bio_vec 数组中段的数目 */
-    unsigned short       bi_idx;              /* bio 的bio_vec 数组中段的当前索引值 */
-    unsigned short       bi_phys_segments;    /* 合并之后 bio 中物理段的数目 */
-    unsigned short       bi_hw_segments;      /* 合并之后硬件段的数目 */
-    unsigned int         bi_size;             /* 需要传送的字节数 */
-    unsigned int         bi_hw_front_size;    /* 硬件段合并算法使用 */
-    unsigned int         bi_hw_back_size;     /* 硬件段合并算法使用 */
-    unsigned int         bi_max_vecs;         /* bio 的bio_vec数组中允许的最大段数 */
-    struct bio_vec*      bi_io_vec;           /* 指向 bio 的bio_vec数组中的段的指针 */
-    bio_end_io_t*        bi_end_io;           /* bio 的IO操作结束时调用的方法 */
-    atomic_t             bi_cnt;              /* bio 的引用计数器 */
-    void*                bi_private;          /* 通用块层和块设备驱动程序的IO完成方法使用的指针 */
-    bio_destructor_t*    bi_destructor;       /* 释放bio时调用的析构方法（通常是bio-destructor()方法） */
-};
+/* 定义在 <fs.h> 中 */
+struct address_space {
+    struct inode  *host;                         /* 所有者:inode,或块设备 */
+    struct radix_tree_root  page_tree;           /* 所有页的基数树 */
+    unsigned int  i_mmap_writable;               /* VM_SHARED映射的计数 */
+    struct prio_tree_root  i_mmap;               /* 私有和共享映射的树 */
+    struct list_head  i_mmap_nonlinear;          /* VM_NONLINEAR映射的链表元素 */
+    unsigned long  nrpages;                      /* 页的总数 */
+    pgoff_t  writeback_index;                    /* 回写由此开始 */
+    struct address_space_operations *a_ops;      /* 方法,即地址空间操作 */
+    unsigned long flags;                         /* 错误标志位/gfp掩码 */
+    struct backing_dev_info  *backing_dev_info;  /* 设备预读 */
+    struct list_head   private_list;
+    struct address_space  *assoc_mapping;
+} __attribute__((aligned(sizeof(long))));
 ```
 
-```c
-struct bio_vec {
-    struct page* bv_page;      /* 说明指向段的页框中页描述符的指针 */
-    unsigned int bv_len;       /* 段的字节长度 */
-    unsigned int bv_offset;    /* 页框中段数据的偏移量 */
-};
-```
-
-# 设备驱动
-
-<img src="Linux驱动结构.drawio.png" width=50%>
+* host指向address_space对应文件的inode
+* address_space中的page cache之前一直是用radix tree的数据结构组织的，tree_lock是访问这个radix tree的spinlcok（现在已换成xarray）。
+* i_mmap是管理address_space所属文件的多个VMAs映射的，用priority search tree的数据结构组织，i_mmap_lock是访问这个priority search tree的spinlcok。
+* nrpages是address_space中含有的page frames的总数。
+* a_ops是关于page cache如何与磁盘（backing store）交互的一系列operations
 
 # 文件访问
 
@@ -903,6 +1295,6 @@ mmap内存映射的实现过程，大致可以分为三个阶段
 
 注意：修改过的脏页并不会立即更新回文件中，而是有一段时间的延迟，可以调用 `msync()` 来强制同步, 这样所写的内容就能立即保存到文件里了
 
-# 页帧回收
+# 页回收
 
 页帧回收算法 Page Frame Reclaiming Algorithm, PFRA

@@ -1,4 +1,102 @@
-# 手搓一个（cpp）
+# Linux 的日志系统
+
+Linux 的日志系统用于记录系统运行时发生的事件、错误和警告等信息。它有助于系统管理员监控系统的状态、排查问题、进行故障诊断以及分析系统性能。Linux 的日志系统主要由以下几个组件组成
+
+<img src="Linux的日志系统结构.drawio.png" width="60%">
+
+## *日志文件的产生*
+
+### syslog 协议
+
+https://zhuanlan.zhihu.com/p/62793386
+
+RFC5424 https://datatracker.ietf.org/doc/html/rfc5424
+
+syslog 是一种标准的网络协议，它定义了日志信息的格式。它使用 UDP 或 TCP 协议，允许将日志消息发送到远程日志服务器进行集中存储和分析
+
+### syslogd / rsyslogd / kelogd
+
+syslog 协议定义了日志的格式，但 Linux 中真正运行的是 syslogd
+
+* syslogd 是 Linux 系统中最常见的也是最早的日志守护进程之一，负责接收、记录和转发系统产生的日志消息
+
+  监听 UNIX socket `/dev/log` 并来自这个 socket 的信息写入日志文件如 `/var/log/messages` 或 `/var/log/syslog`
+
+* rsyslogd (r means rocket-fast) 是 syslogd 的一个现代化替代品，提供了更多的功能和高性能优化
+
+* kelogd 是针对内核事件的日志守护进程。它监视内核事件并将相关消息记录到系统日志中，以便管理员可以查看系统的运行情况。kelogd 通常与其他日志守护进程一起工作，以提供完整的系统日志记录
+
+### 配置文件
+
+syslogd 配置在 `/etc/syslog.conf`，rsyslogd 配置在 `/etc/rsyslog.conf` 文件中。它通常是系统日志消息的第一个接收者，然后可以将这些消息发送到指定的位置，如控制台、日志文件或远程日志服务器
+
+### 日志文件的存放地点
+
+* Linux 系统中的日志文件通常存储在 `/var/log` 目录下，其中包括：
+  * `syslog` 或 `messages`：记录系统各种重要事件、警告和错误的日志消息
+  * `auth.log`：记录用户身份验证和授权相关的信息
+  * `kern.log`：记录内核相关的消息
+  * `daemon.log`：记录守护进程的消息
+  * 其他应用程序特定的日志文件，如 `apache2/access.log` 用于记录 Apache Web 服务器的访问日志
+
+## *查看 & 分析日志文件*
+
+### Systemd Journal
+
+Systemd 使用 Journal 统一管理系统日志
+
+* Journal 使用二进制格式存储日志消息到 disk 上，提供了更快的检索速度和更多的元数据
+* Journal 的日志文件位于 `/var/log/journal` 目录下，通常采用压缩格式存储
+
+### `journalctl` 命令
+
+`journalctl` 是用于检索和分析 Systemd Journal 日志消息的命令行工具，它提供了强大的过滤、查询和显示功能，可以根据时间范围、服务名称、日志级别等条件来检索日志消息
+
+若不加任何参数，会输出所有日志，所以一般需要对日志进行过滤。`journalctl` 提供了许多过滤日志的选项，但最常用的是输出特定 systemd 单元的日志信息
+
+### 配置文件
+
+https://pan-xiao.gitbook.io/debian/systemd/journal
+
+journalctl 的配置文件是 `/etc/systemd/journald.conf`，可查看 `journald.conf(5)` 获取完整信息
+
+每次修改配置文件须重启服务
+
+```cmd
+$ sudo systemctl restart systemd-journald
+```
+
+* 限制日志保存大小
+* 将日志转发至 Syslog
+
+## *日志的自动化工作*
+
+https://blog.51cto.com/9528du/1425575
+
+### 任务
+
+* 日志文件的滚动 rolling：当日志文件达到一定大小或时间限制时，系统会自动创建一个新的日志文件，同时将旧的日志文件重命名或移动到归档目录中。通常，滚动是根据大小、日期或事件数量来触发的
+* 日志文件的压缩 compression
+  * 随着时间的推移，日志文件可能会占用大量的磁盘空间。为了节省存储空间，可以对旧的日志文件进行压缩。
+  * 压缩通常使用 gzip、bzip2 或 xz 等压缩工具来进行，将日志文件转换为压缩格式，从而减少文件大小
+* 日志文件的备份 backup
+  * 日志文件备份是将日志文件复制到另一个位置或存储介质，以防止日志丢失或损坏
+  * 备份可以定期进行，可以是手动或自动的过程，以确保日志信息的安全性和可用性
+
+### Logrotate
+
+`logrotate` 的作用是自动轮转日志文件，以防止日志文件无限增长，节省磁盘空间，并确保系统的日志记录功能持续正常运行
+
+### crond & anacron
+
+crond 和 anacron 是两个用于自动执行日志轮转周期性任务的守护进程。它们的任务不一样，不过二者需要分工合作
+
+* crond假定服务器是 7x24小时运行的，当有一段关机时间就会遗漏这一时间段应该执行的 crond 任务
+* anacron 是为了执行因为时间不连续，crond 而遗漏的任务
+
+二者联合起来就不会因为服务器关机或系统时间改变而遗漏计划任务了
+
+# 手搓一个 cpp 日志系统
 
 ```c++
 #ifndef LOG_H_

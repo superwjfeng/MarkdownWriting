@@ -30,8 +30,8 @@ Protobuf相比于JSON和XML高效的原因主要在于
 
 Tag：字段标识号，用于标识字段；Length：Value的字节长度；Value：消息字段经过Varbits或Zigzag编码后的二进制值
 
-1. **编码方式：** JSON和XML是文本格式，它们的数据是以可读的文本形式表示的。在网络传输中，这些文本数据在经过编码（一般是UTF-8或ASCII）后生成二进制码，这会增加数据的体积。相比之下虽然最终都是二进制码，但是Protocol Buffers 使Varints和Zigzag这类紧凑的二进制编码格式，不需要像JSON和XML那样进行文本编码，因此在传输中能够更加紧凑
-2. **数据表示：** JSON和XML包含了大量用于描述数据结构的元信息，例如字段名称、数据类型等，这些元信息在文本格式中占据了相当的空间。相比之下，Protocol Buffers使用预定义的消息结构，消息结构信息存储在单独的文件中（.proto文件），在实际数据中只包含了实际的字段值，不包含字段名和数据类型等冗余信息，因此能够减小数据体积
+1. **编码方式：** JSON和XML是文本格式，它们的数据是以可读的文本形式表示的（文本形式是指将字符使用UTF-8 或 Ascii 码来表示）。在网络传输中，这些文本数据在经过编码（一般是UTF-8或ASCII）后生成二进制码，这会增加数据的体积。相比之下虽然最终都是二进制码，但是Protocol Buffers 使Varints和Zigzag这类紧凑的二进制编码格式，不需要像JSON和XML那样进行文本编码，因此在传输中能够更加紧凑
+2. **数据表示：** JSON和XML包含了大量用于描述数据结构的元信息，例如字段名称、数据类型等，这些元信息在文本格式中占据了相当的空间。相比之下，Protocol Buffers使用预定义的消息结构，消息结构信息存储在单独的文件中（.proto文件），在实际数据中只包含了实际的字段值，不包含字段名和数据类型等冗余信息，因此能减小数据体积
 
 在使用 Protobuf 进行数据交换时，需要先定义消息类型，并通过**编译器**生成对应的类或结构体。然后，通过序列化将消息对象转换为二进制数据，或通过反序列化将二进制数据转换为消息对象。这使得在不同的系统之间传输和存储结构化数据变得更加简单和高效
 
@@ -45,7 +45,7 @@ Tag：字段标识号，用于标识字段；Length：Value的字节长度；Val
 
 Variants 变长整形编码的思想：普通的 int 数据类型无论其值的大小，所占用的存储空间都是相等的，因此核心想法是根据数值的大小来动态地占用存储空间，从而使得值比较小的数字占用较少的字节数，而值相对比较大的数字占用较多的字节数
 
- Protobuf 中使用的是 Base128 Varints 编码，之所以叫这个名字原因即是在这种方式中使用 7 bit 来存储数字。Protobuf 中Base128 Varints 采用的是小端序
+Protobuf 中使用的是 Base128 Varints 编码，之所以叫这个名字原因即是在这种方式中使用 7 bit 来存储数字。Protobuf 中Base128 Varints 采用的是小端序
 
 看一个例子
 
@@ -88,11 +88,19 @@ MAJOR.MINOR.PATCH 到 3.20.1 为止，之后的版本去掉了MAJOR 主版本号
 >   * [Cpp] Make RepeatedField::GetArena non-const in order to support split RepeatedFields.
 > * You can refer to our [migration guide](https://protobuf.dev/programming-guides/migration/) for details on what C++ code changes will be necessary to be compatible with 22.0. -- protobuf github
 
-### Ubuntu C++ 21.12 版本
-
 https://zhuanlan.zhihu.com/p/631291781
 
-22.0之后的版本（包括22.0）貌似不支持使用Autoconf那套流程了，即使使用cmake，也必须要用到bazel。关于bazel的安装直接看 *build工具.md* - bazel
+22.0之后的版本（包括22.0）貌似不支持使用Autoconf那套流程了，如果是手动编译的话要依赖 bazel。关于bazel的安装直接看 *build工具.md* - bazel
+
+另外如果是用 cmake 来安装的话也会发生麻烦，因为官方不再为用户打包好 googletest、abseil 依赖了，googletest貌似不是强制要求的，可以在 cmake 的时候添加 `-Dprotobuf_USE_EXTERNAL_GTEST=ON` 这个 flag 关闭，但是 abseil 是需要用户自己提供的
+
+> Somewhat. Before our distribution files were created with autotools and now are using `git archive` since we turned down autotools. That also created a difference in what distribution files we release: you can see we no longer have language-specific distribution files.
+>
+> The addition of the extra subrepo/dependency (abseil) has caused us to reevaluate some of how we are dealing with dependencies. Specifically, we want users to install dependencies on their own instead of relying on us to package them. This will also allow more customization in which version of our dependencies to use. https://github.com/protocolbuffers/protobuf/issues/12016
+
+3.22.0以前的版本甚至都不需要 abseil 库，不过如果要搭配 gRPC 使用的话，abseil 库是需要的依赖
+
+### Ubuntu C++ 21.12 版本
 
 先介绍22.0之前的版本，我们安装21.12版本，仍然是利用make那套流程来安装。**切换到 root 安装**
 

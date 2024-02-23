@@ -1409,6 +1409,9 @@ FROM base_image:tag
 # 设置工作目录
 WORKDIR /app
 
+# 指定使用的 shell
+SHELL ["/bin/bash", "-c"]
+
 # 复制文件到容器中
 COPY source destination
 
@@ -1438,6 +1441,8 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
   > An image’s **parent image** is the image designated in the `FROM` directive in the image’s Dockerfile. All subsequent commands are based on this parent image. A Dockerfile with the `FROM scratch` directive uses no parent image, and creates a **base image**.
 
 * `WORKDIR <directory>`：对任何后续的RUN、CMD、ENTRYPOINT、ADD或COP指令设置工作目录，该命令可以多次使用
+
+* SHELL：Docker 使用 `/bin/sh -c` 作为默认的 shell。但是可以通过 `SHELL` 指令来指定使用其他的 shell。`-c` 表示把后面的字符串当作命令来执行，而是当作一个脚本文件来执行
 
 * `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
 
@@ -1508,7 +1513,30 @@ CMD ["node", "app.js"]
 
 ## *构建缓存*
 
+在执行每条 Dockerfile 中的构建指令之前，Docker 都会在缓存中查找是否已经存在可重用的镜像，如果有就使用现存的镜像，不会再重复创建
+
+Dockerfile 中的每一条指令都会产生一层 image layer。**当某一层 layer 修改后，后面的所有 layer 缓存都会失效，需要重新构建**
+
+### 缓存检查规则
+
+从一个基础镜像开始（`FROM` 指令指定），下一条指令将和该基础镜像的所有子镜像进行匹配，检查这些子镜像被创建时使用的指令是否和被检查的指令完全一样。如果不是，则缓存失效
+
+在大多数情况下，只需要简单地对比 `Dockerfile` 中的指令和子镜像。然而，有些指令需要更多的检查和解释
+
+**对于 `ADD` 和 `COPY` 指令，镜像中对应文件的内容也会被检查**，每个文件都会计算出一个校验和。文件的最后修改时间和最后访问时间不会纳入校验。在缓存的查找过程中，会将这些校验和和已存在镜像中的文件校验和进行对比。如果文件有任何改变，比如内容和元数据，则缓存失效
+
+除了 `ADD` 和 `COPY` 指令，缓存匹配过程不会查看临时容器中的文件来决定缓存是否匹配。例如，当执行完 `RUN apt-get -y update` 指令后，容器中一些文件被更新，但 Docker 不会检查这些文件。这种情况下，只有指令字符串本身被用来匹配缓存
+
+### 缓存失效
+
+https://juejin.cn/post/7130934881554530334
+
 ### dangling
+
+### 命令
+
+* 如果不想在构建过程中使用缓存，可以在 docker build 命令中使用 `--no-cache=true` 选项
+* 清理 Build Cache 缓存命令 `docker builder prune`
 
 # Docker Volume
 
