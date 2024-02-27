@@ -6,9 +6,9 @@
 
 ### Logistic Regression 回顾
 
-关于感知机的部分可以回顾统计机器学习.md线形分类的硬分类部分
+关于感知机的部分可以回顾 *统计机器学习.md* - 线形分类的硬分类部分
 
-参考统计机器学习.md线性分类的判别式模型部分，线形的逻辑回归可以写成
+参考 *统计机器学习.md* - 线性分类的判别式模型部分，线形的逻辑回归可以写成
 $$
 y|\boldsymbol{x}\sim Ber\left(\sigma(\boldsymbol{w}^T\boldsymbol{x})\right)\\\boldsymbol{w}^T\boldsymbol{x}\coloneqq w_0+w_1x_1+\dots+w_Dx_D
 $$
@@ -75,7 +75,7 @@ $$
 
 激活函数 Activation Function 决定了如何来激活输入信号的总和
 
-激活函数必须要是是用非线形函数，否则线形函数的叠加仍然是线形的，那么加深神经网络的层数就失去了意义
+**激活函数必须要是是用非线形函数**，否则线形函数的叠加仍然是线形的，那么加深神经网络的层数就失去了意义
 
 * Sigmoid $\frac{1}{1+\exp{(-x)}}$
 * Tanh $\tanh{x}$
@@ -127,20 +127,20 @@ def init_network():  #
 
   <img src="恒等输出.png">
 
-* sigmoid适用于二分类任务：将Logits压缩到0-1，相当于成了一个概率
+* sigmoid适用于二分类任务：将Logits压缩到0~1，相当于成了一个概率
 
   ```python
   def sigmoid(x):
       return 1 / (1 + np.exp(-x))    
   ```
 
-* softmax适用于多分类任务：将Logits压缩到0-1，相当于成了一个概率
+* softmax适用于多分类任务：将Logits压缩到0~1，相当于成了一个概率
 
-  softmax中有指数运算，因此很容易就会出现溢出 overflow 的异常，比如 `np.exp(1000) == Inf`，若在 `Inf` 之间进行运算，程序会发生错误，因此要对程序进行改进
+  工程实现，防止指数上溢：softmax中有指数运算，因此很容易就会出现溢出 overflow 的异常，比如 `np.exp(1000) == Inf`，若在 `Inf` 之间进行运算，程序会发生错误，因此要对程序进行改进
   $$
   \sigma(\boldsymbol{x}_i)=\frac{\exp{(x_i)}}{\sum\limits_{k=1}^{K}{\exp{(x_k)}}}=\frac{C\exp{(x_i)}}{C\sum\limits_{k=1}^{K}{\exp{(x_k)}}}=\frac{\exp{(x_i+\log{C})}}{\sum\limits_{k=1}^{K}{\exp{(x_k+\log{C})}}}=\frac{\exp{(x_i+C')}}{\sum\limits_{k=1}^{K}{\exp{(x_k+C')}}}
   $$
-  该式说明exp加减某个常数不会影响整体结果，$C'$ 一般取输入的最大值，用来将exp中的计算降低防止溢出
+  该式说明exp加减某个常数不会影响整体结果，$C'$ 一般取输入 $x_i$ 的最大值，用来将exp中的计算降低防止溢出
 
   ```python
   def softmax(a):
@@ -152,7 +152,7 @@ def init_network():  #
       return y
   ```
 
-  Softmax的输出层中每一个节点需要和Logits层做全链接，因为softmax的分母是所有Logits节点的和
+  Softmax的输出层中每一个节点需要和Logits层做全连接，因为softmax的分母是所有Logits节点的和
 
   <img src="Softmax输出层.png">
 
@@ -162,17 +162,17 @@ def init_network():  #
 
 ### 总结
 
-神经网络可以用来处理不同的任务，不同的任务只需要改变输出层 final layer的激活函数（称为Logtis）和损失函数
+神经网络可以用来处理不同的任务，不同的任务只需要改变输出层 final layer 的激活函数（称为Logits）和损失函数
 
->**Logits interpreted to be the unnormalised** (or not-yet normalised) **predictions** (or outputs) **of a model. These can give results, but we don't normally stop with logits, because interpreting their raw values is not easy.**
+>**Logits interpreted to be the unnormalized** (or not-yet normalized) **predictions** (or outputs) **of a model. These can give results, but we don't normally stop with logits, because interpreting their raw values is not easy.**
 
 * Supervised Learning
 
-  | Task   | $p(\boldsymbol{y}|\boldsymbol{x})$ | Logits   | Loss Function        |
-  | ------ | ---------------------------------- | -------- | -------------------- |
-  | 二分类 | Bernoulli                          | Sigmoid  | Binary-cross Entropy |
-  | 多分类 | Categorical                        | Softmax  | Cross Entropy        |
-  | 回归   | Gaussian                           | Identity | Squared Error        |
+  | Task   | $\color{white}p(\boldsymbol{y}|\boldsymbol{x})$ | Logits   | Loss Function        |
+  | ------ | ----------------------------------------------- | -------- | -------------------- |
+  | 二分类 | Bernoulli                                       | Sigmoid  | Binary-cross Entropy |
+  | 多分类 | Categorical                                     | Softmax  | Cross Entropy        |
+  | 回归   | Gaussian                                        | Identity | Squared Error        |
 
 * Unsupervised Deep Learning
 
@@ -496,8 +496,8 @@ $$
 * Performs the forward pass of the cross entropy loss function
 
   * param 
-    * y_out: [N, C] array with the predicted logits of the model (i.e. the value before applying any activation)
-    * y_truth: (N,) array with ground truth labels，标签从0开始标，即 `np.arange(N)`
+    * y_out: `[N, C]` array with the predicted logits of the model (i.e. the value before applying any activation)
+    * y_truth: `(N,)` array with ground truth labels，标签从0开始标，即 `np.arange(N)`
 
   * return: float, the cross-entropy loss value
 
@@ -609,13 +609,13 @@ Default approach: Find a local minimum by using gradient descent $W^{(new)}=W^{(
   * 每一次Evaluation必须对每一个参数独立进行，这意味着所有权重都需要进行一次上面的过程，因此更新一次梯度 $\nabla_WE$ 的计算开销大约在 $\mathcal{O}\left(\lvert W\rvert^2\right)$ 次，这对于实际中上亿参数的深度网络的训练来说计算开销极其昂贵
   * 数值微分受到截断误差和舍入误差的干扰，影响精度，且如何选择差分步长是没有定论的
 
-* 符号微分法 Symbolic differentiation
+* 符号微分法 Symbolic differentiation/解析解
 
-  * 利用求导规则对表达式进行自动计算，其计算结果是导函数的表达式而非具体的数值。即先求解析解，然后转换为程序，再通过程序计算出函数的梯度
+  * 利用代数的求导规则对表达式进行自动计算，其计算结果是导函数的表达式而非具体的数值。即先求解析解，然后转换为程序，再通过程序计算出函数的梯度
   * 表达式求导更在乎的是明晰的导数表达式，而我们在机器学习领域更在意的是导数的值，且不论不少情况下导数是没有准确的解析形式（closed-form），求导常常会让表达式的规模几何级增加，造成表达式膨胀（效率低）
   * 比如说多个ReLU的求导排列组合非常麻烦 Potentailly exponentially many different cases
 
-* 自动微分法 Automatic differentiation: e.g. Backproagation for NN（反向传播将在下一章详细给出）
+* 自动微分法 Automatic differentiation, AD: e.g. Backproagation for NN（反向传播将在下一章详细给出）
 
   * 介于数值微分和符号微分之间的方法，采用类似有向图的计算来求解微分值
   * Evaluate $\nabla_WE(W)$ at the current point $W$

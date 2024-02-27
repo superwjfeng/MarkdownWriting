@@ -787,6 +787,61 @@ OutputIterator copy (InputIterator first, InputIterator last, OutputIterator res
 * `replace_if`
 * `copy`
 
+## *运算*
+
+### 求和
+
+https://stackoverflow.com/questions/3221812/how-to-sum-up-elements-of-a-c-vector
+
+* 不使用库函数的话可以用范围for，或者迭代器遍历等方法来求
+
+  ```c++
+  for (auto& n : vector) sum_of_elems += n;
+  ```
+
+* `std::accumulate`
+
+  ```c++
+  template <class InputIterator, class T> T accumulate (InputIterator first, InputIterator last, T init);
+  template <class InputIterator, class T, class BinaryOperation> 
+  T accumulate (InputIterator first, InputIterator last, T init, BinaryOperation binary_op);
+  ```
+
+  注意⚠️：init 不仅仅指定了返回的 sum 的初始，还有它的数据类型。比方说计算一个 `vector<double>`，但是我们给的 init 是一个 int，那么返回的也是 int
+
+  accumulate不仅仅可以用来求和，也可以通过 `binary_op` 这个函数对象来定义对两个值进行操作的其他规则，这使得`accumulate`函数可以进行不同类型的累积操作，例如求和、乘积、取最大值、取最小值等
+
+  ```c++
+  #include <iostream>
+  #include <vector>
+  #include <numeric> // accumulate 函数所在的头文件
+  
+  // 定义一个函数对象，用于计算两个值的乘积
+  template<class T>
+  struct Product {
+      T operator()(const T& x, const T& y) const {
+          return x * y;
+      }
+  };
+  
+  int main() {
+      std::vector<int> numbers = {1, 2, 3, 4, 5};
+  
+      // 使用 accumulate 函数计算元素的乘积，初始值为 1，操作为 Product<int>()
+      int product = std::accumulate(numbers.begin(), numbers.end(), 1, Product<int>());
+  
+      std::cout << "Product of elements: " << product << std::endl; // 输出120
+  
+      return 0;
+  }
+  ```
+
+* `std::reduce`（C++17）
+
+  为什么C++17 添加了std::reduce - 未平的文章 - 知乎 https://zhuanlan.zhihu.com/p/605943911。据这篇文章说是因为 MapReduce 引入的，在多核高并发场景下比 accumulate 更高效
+
+  使用方式基本和 accumulate 是一样的
+
 # 空间配置器
 
 ## *SGI-STL空间配置器*
@@ -2084,11 +2139,64 @@ unordered系列是单向迭代器（哈希桶是单列表）
 
   解决方法是把 unordered_map 的所有 pair 倒入一个 vector（RandomAccessIterator），然后再用 sort，当然 sort 要自己给出 Compare 函数来指定是对 `pair->second`，即 value 进行比较
 
-# 标准库特殊设施
+# 其他数据结构
+
+## *array类型*
 
 ## *tuple类型*
 
 ## *BITSET类型*
+
+```c++
+template <size_t N> class bitset;
+```
+
+ `std::bitset` 是一个模板类，用于表示固定大小的位集合（bitset），其中每个位都可以是 0 或 1。它提供了一种高效的方式来处理位级别的操作，并且可以用于解决一些位操作相关的问题
+
+### 构造
+
+```c++
+constexpr bitset() noexcept;
+constexpr bitset (unsigned long long val) noexcept;
+// string
+template <class charT, class traits, class Alloc>
+explicit bitset (const basic_string<charT,traits,Alloc>& str, typename basic_string<charT,traits,Alloc>::size_type pos = 0,  
+                 typename basic_string<charT,traits,Alloc>::size_type n = basic_string<charT,traits,Alloc>::npos,
+                 charT zero = charT('0'), charT one = charT('1'));
+// C-string
+template <class charT>
+explicit bitset (const charT* str, typename basic_string<charT>::size_type n = basic_string<charT>::npos, 
+                 charT zero = charT('0'), charT one = charT('1'));
+```
+
+支持从一个整形或者 string/C字符串中构造
+
+### 方法
+
+* 位访问
+  * `operator[]`
+  * count：返回置位的个数
+  * `bool test (size_t pos) const;`：是否在pos位置位
+  * any：是否有任何位置位
+  * none：是否所有位都没有置位
+  * all：是否所有位都置位了
+  * size
+* 位操作
+  * set
+  * reset
+  * flip
+
+
+### 应用
+
+计算汉明距离
+
+```c++
+```
+
+
+
+# 标准库特殊设施
 
 ## *正则表达式*
 

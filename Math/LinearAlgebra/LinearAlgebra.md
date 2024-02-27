@@ -151,7 +151,7 @@ $$
 
 * $\boldsymbol{X}^T$ 的 Gram matrix $\boldsymbol{H}=\boldsymbol{X}\boldsymbol{X}^T$
 
-* ==原矩阵的元素平方和等于其Gram矩阵的迹==：可用于计算矩阵的 $F$-范数等
+* **原矩阵的元素平方和等于其Gram矩阵的迹**：可用于计算矩阵的 $F$-范数等
   $$
   trace(X^TX)=trace(XX^T)\\trace\left[\begin{matrix}\boldsymbol{x_1}\cdot\boldsymbol{x_1}&\boldsymbol{x_1}\cdot\boldsymbol{x_2}&\cdots&\boldsymbol{x_1}\cdot\boldsymbol{x_D}\\\boldsymbol{x_2}\cdot\boldsymbol{x_1}&\boldsymbol{x_2}\cdot\boldsymbol{x_2}&\cdots&\boldsymbol{x_2}\cdot\boldsymbol{x_D}\\\vdots&\vdots&\ddots&\vdots\\\boldsymbol{x_D}\cdot\boldsymbol{x_1}&\boldsymbol{x_D}\cdot\boldsymbol{x_2}&\cdots&\boldsymbol{x_D}\cdot\boldsymbol{x_D}\end{matrix}\right]=\boldsymbol{x_1}\cdot\boldsymbol{x_1}+\boldsymbol{x_2}\cdot\boldsymbol{x_2}+\cdots+\boldsymbol{x_D}\cdots\boldsymbol{x_D}\\\sum\limits_{i=1}^{n}{x_{i,1}^2}+\sum\limits_{i=1}^{n}{x_{i,2}^2}+\cdots+\sum\limits_{i=1}^{n}{x_{i,D}^2}=\sum\limits_{j=1}^{D}{\sum\limits_{i=1}^{n}{x_{i,j}^2}}
   $$
@@ -634,7 +634,7 @@ $$
 
 正圆可以表示为 $x_1^2+x_2^2=1$ 或 $x^Tx=1$，其中 $x=\left[\begin{matrix}x_1\\x_2\end{matrix}\right]$
 
-单位元还可以用如下的 $L^2$ 范数、向量内积等来表示
+单位圆还可以用如下的 $L^2$ 范数、向量内积等来表示
 $$
 \Vert x\Vert_2-1=0\\
 \Vert x\Vert_2^2-1=0\\
@@ -646,7 +646,12 @@ $$
 ### 缩放
 
 * 对于圆心位于原点半径为 $r$ 的正圆解析式为 $x^Tx-r^2=0$
-* 对照圆锥曲线的一般表达式改写为 $x^T\left[\begin{matrix}1/r^2&0\\0&1/r^2\end{matrix}\right]x-1=0\Rightarrow x^T\underbrace{\left[\begin{matrix}1/r&0\\0&1/r\end{matrix}\right]}_{S^{-1}}\underbrace{\left[\begin{matrix}1/r&0\\0&1/r\end{matrix}\right]}_{S^{-1}}x-1=0$
+
+* 对照圆锥曲线的一般表达式改写为
+  $$
+  x^T\left[\begin{matrix}1/r^2&0\\0&1/r^2\end{matrix}\right]x-1=0\Rightarrow x^T\underbrace{\left[\begin{matrix}1/r&0\\0&1/r\end{matrix}\right]}_{S^{-1}}\underbrace{\left[\begin{matrix}1/r&0\\0&1/r\end{matrix}\right]}_{S^{-1}}x-1=0
+  $$
+
 * $x^TS^{-1}S^{-1}x-1=(S^{-1}x)^TS^{-1}x-1=0$ 其中 $S$ 对角矩阵的作用是进行缩放
 
 ### 缩放+平移
@@ -674,7 +679,7 @@ $$
 
 * 将 $\Sigma^{-1}=V\Lambda^{-1}V^T$ 代入椭圆的二次型解析式，发现它可以拆成 $\Lambda^{-\frac{1}{2}}V^T(x-\mu)$ 的平方关系
   $$
-  (x-\mu)^TV\Lambda^{-1}V^T(x-\mu)=(x-\mu)^TV\Lambda^{-\frac{1}{2}}\Lambda^{-\frac{1}{2}}V^T(x-\mu)=\left[\Lambda^{-\frac{1}{2}}V^T(x-\mu)\right]^T\Lambda^{-\frac{1}{2}}V^T(x-\mu)=\Vert\Lambda^{-\frac{1}{2}}V^T(x-\mu)\Vert_2^2=\Vert z\Vert_2^2
+  (x-\mu)^TV\Lambda^{-1}V^T(x-\mu)=(x-\mu)^TV\Lambda^{-\frac{1}{2}}\Lambda^{-\frac{1}{2}}V^T(x-\mu)=\\\left[\Lambda^{-\frac{1}{2}}V^T(x-\mu)\right]^T\Lambda^{-\frac{1}{2}}V^T(x-\mu)=\Vert\Lambda^{-\frac{1}{2}}V^T(x-\mu)\Vert_2^2=\Vert z\Vert_2^2
   $$
 
 ### $\Lambda^{-\frac{1}{2}}V^T(x-\mu)$ 的几何视角
@@ -693,7 +698,7 @@ $\Lambda^{-\frac{1}{2}}V^T(x-\mu)$ 表示中心在 $\mu$ 的旋转椭圆，通�
 
 马氏距离是一个无量纲量，它将各个特征数据标准化
 
-马氏距离是一个考虑了数据标准差和相关性影响的欧式距离，即考虑了样本数据的“亲疏关系”。如下图中分别采用了欧式距离和马氏距离，途中的绿色弧线为距离等高线，可以明显看到当采用马氏距离时黄色圈点到数据质心的距离明显大于其欧式距离，这就是因为马氏距离考虑了数据的亲疏
+**马氏距离是一个考虑了数据标准差和相关性影响的欧式距离**，即考虑了样本数据的“亲疏关系”。如下图中分别采用了欧式距离和马氏距离，图中的绿色弧线为距离等高线，可以明显看到当采用马氏距离时黄色圈点到数据质心的距离明显大于其欧式距离，这就是因为马氏距离考虑了数据的亲疏
 
 <img src="欧式距离与马氏距离对比.png">
 
@@ -781,7 +786,7 @@ $$
 * $p\geq1$，当 $p<1$ 时，虽然上式有定义，但不能被称为范数，因为它不满足距离的次可加性 subadditivity/三角不等式性质 triangle inequality $\Vert x+y\Vert_p\leq\Vert x\Vert_p+\Vert y\Vert_p$，该式又被称为闵可夫斯基不等式 Minkowski inequality
 * $L^p$ 范数 和超椭圆  $\lvert\frac{x_1}{a}\rvert^p+\lvert\frac{x_2}{b}\rvert^p=1$ 密切相关，这也是圆锥曲线的一种应用
 
-将 $L^p$ 范数改写成x与非原点q之间的距离公式，q被称为查询点 query point。该距离公式称为闵可夫斯基距离，闵氏距离是对后面的曼哈顿距离、欧式距离等的概括
+将 $L^p$ 范数改写成x与非原点q之间的距离公式，q称为查询点 query point。该距离公式称为闵可夫斯基距离，闵氏距离是对后面的曼哈顿距离、欧式距离等的概括
 $$
 d(x,q)=\Vert x-q\Vert_p=\left(\lvert x_1-q_1\rvert^p+\lvert x_2-q_2\rvert^p+\cdots+\lvert x_D-q_D\rvert^p\right)=\sum\limits_{j=1}^{D}{\left(\lvert x_j-q_j\rvert^p\right)^{1/p}}
 $$
