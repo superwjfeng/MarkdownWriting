@@ -987,9 +987,13 @@ ADD(a | b, a&b);
 
 * inline是一种以空间换时间的做法，若编译器将函数当成内联函数处理，在编译阶段，会用函数体替代函数调用。缺陷是可能会使文件目标变大；优势是少了调用开销，提高程序运行效率
 * inline对于编译器而言只是一个建议，不同编译器关于inline实现机制可能不同
-* inline不建议声明和定义分离，分离会导致链接错误。inline不会被放进编译生成的符号表里，因为inline定义的函数符号是不会被调用的，只会被展开使用。推荐声明+定义全部写在头文件中（这也符合模块化设计声明和定义分离的设计初衷，便于使用）
+* **inline不建议声明和定义分离，分离会导致链接错误。inline不会被放进编译生成的符号表里**，因为inline定义的函数符号是不会被调用的，只会被展开使用。推荐声明+定义全部写在头文件中（这也符合模块化设计声明和定义分离的设计初衷，便于使用）
 
-## *17扩展的inline说明符*
+### inline 定义类的非常量静态成员（17）
+
+当定义类的非常量静态成员在头文件中，如果是没有做头文件的包含控制的话当 include 到多个文件中，头文件中的类的非常量静态成员会因为类型重定义报链接错误。关于这个错误可以看 *C.md* - 头文件部分的 Singleton 例子
+
+C++17 将 inline 扩展到定义类的非常量静态成员变量的能力
 
 ## *`std::optional` （17）*
 
@@ -1366,6 +1370,23 @@ C语言是面向对象的，只能指针内置类型
 * `<sstream>` 类处理字符串缓冲区
 * C++暂时还不支持网络流的IO库
 
+### ios 基类的成员函数
+
+继承自 ios 的其他 IO 类都会有这些成员函数
+
+* state flag
+
+  ```c++
+  bool good() const;
+  bool eof() const; // 是否到末尾
+  bool fail() const;
+  bool bad() const;
+  ```
+
+* formatting 格式化
+
+* 其他的
+
 ### C++标准IO流
 
 C++标准库提供给了4个**全局流对象** `cin`，`cout`，`cerr`，`clog`。从下图可以看到 **`std::cin` 是一个 `istream` 类的全局流对象**
@@ -1528,8 +1549,7 @@ C++用文件IO流的使用步骤
 #include <iostream>
 #include <fstream>
 
-int main()
-{
+int main() {
     std::fstream file("data.txt", std::ios::in | std::ios::out | std::ios::app); // 打开文件
 
     if (file.is_open()) { // 确保文件成功打开
@@ -1549,9 +1569,53 @@ int main()
 }
 ```
 
-## *缓冲区管理*
+
+
+
+
+```c++
+stream& getline (istream& is, string& str, char delim);
+istream& getline (istream&& is, string& str, char delim);
+
+istream& getline (istream& is, string& str);
+istream& getline (istream&& is, string& str);
+```
+
+### 应用：读取文件中的一行到vector中
+
+```c++
+class FileRead {
+ public:
+  explicit FileRead(const std::string& file_path) : ifile_(file_path) {}
+  ~FileRead() { ifile_.close(); }
+  bool ReadLine(std::vector<std::string>* results);
+
+ private:
+  std::ifstream ifile_;
+};
+
+bool FileRead::ReadLine(std::vector<std::string>* results) {
+  std::string line;
+  // line = "0.09 0.07 0.08 1/462 2829426"
+  std::getline(ifile_, line);
+  if (ifile_.eof() || line.empty()) {
+    return false;
+  }
+
+  std::istringstream line_ss(line);
+  while (!line_ss.eof()) {
+    std::string word;
+    line_ss >> word;
+    results->push_back(word);
+  }
+}
+```
+
+
 
 ## *stringstream*
+
+`std::stringstream` 是一个内存字符串流，它允许用户在内存中进行字符串的输入和输出，就像平时在文件或者标准输入输出流中所做的那样
 
 ### 情景
 
@@ -1567,6 +1631,29 @@ int main()
 ### 使用
 
 istringstream、ostringstream 和 stringstream，分别用来进行流的输入、输出和输入输出操作。使用之前要包含头文件 `<sstream>`
+
+其中 istringstream 的 `operator>>` 被称为 extraction operator，ostringstream 的 `operator<<` 被称为 insert operator
+
+* extraction operator 拆分一句话，它会省略空格（和制表符？）
+
+  ```c++
+  std::string sentence = "I love you";
+  std::istringstream sentSS(sentence);
+  std::string word;
+  while (sentSS >> word) {
+  	std::cout << word << std::endl;
+  }
+  ```
+
+* insert operator 组成一句话
+
+  ```c++
+  std::ostringstream output;
+  output << "I " << "love " << "you";
+  std::cout << output.str() << std::endl;
+  ```
+
+  insert operator 不像 extraction operator，它并不会在插入不同数据之间自动添加分隔符，需要用户手动添加
 
 stringstream主要用来
 
@@ -1774,6 +1861,10 @@ delete [] pal; // 正确
 
 对于这种错误没有什么好的解决方案，要么是在typedef的名字上显示著名是否是数组，要么尽可能避免用数组，比如用vector来替代数组
 
+### new 加不加括号的问题
+
+
+
 ## *new与delete操作符的底层原理*
 
 ### 实现原理
@@ -1904,6 +1995,8 @@ new(p1)A(10); //初始化为10
 
 另外一种使用方法就是强行改变已经new出来的对象，因为大部分类对象的成员都是私有的，不可能在类外不经由接口而直接通过 `.` 或 `->` 去改变数据，用定位new这种二次构造就可以
 
+placement new构造起来的对象数组，要显式的调用他们的析构函数来销毁（析构函数并不释放对象的内存），千万不要使用delete，这是因为placement new构造起来的对象或数组大小并不一定等于原来分配的内存大小，使用delete会造成内存泄漏或者之后释放内存时出现运行时错误
+
 一种定位new的特殊用法：nothrow对象告诉new不要抛出异常
 
 ```c++
@@ -1930,147 +2023,6 @@ int *p1 = new (nothrow) int;
 `valgrind`
 
 ### 如何避免内存泄漏
-## *SGI-STL空间配置器*
-
-### STL中的内存管理架构
-
-<img src="空间配置器和malloc的关系.png">
-
-STL容器需要频繁申请释放内存，若每次都要调用malloc进行申请会有以下缺点
-
-* 空间申请与释放需要用户自己管理，容易造成内存泄漏
-* 频繁向系统申请内存块，容易造成内存碎片也影响程序运行效率
-  * 外碎片问题：频繁向系统申请小块内存，有足够内存但是不连续，无法申请大块内存
-  * 内碎片问题：内存块挂起来管理，由于按照一定规则对齐，就会导致内存池中的内碎片
-* 直接使用malloc与new进行申请，每块空间有额外空间浪费，因为要记录开的内存空间的相关信息，如大小等
-* 代码结构不清晰
-* 未考虑线程安全
-
-因此需要设计高效的内存管理机制，空间配置并不是什么特殊的数据结构，只是对malloc的深度封装以提高它的效率
-
-### 一级空间配置器
-
-```mermaid
-flowchart TB
-id1(二级空间配置器 __dafault_alloc_template)-->choose1{大于128 Byte吗}
-choose1--Yes-->id2(交由一级空间配置器 __malloc_alloc_template 申请)
-choose1--No-->id3(确认到哪个桶中去找)
-id3-->choose2{该桶下是否挂内存块}
-choose2--Yes-->id4(直接将第一个小块内存返回给用户)
-choose2--No-->id5(向该桶中填充小块内存并返回给用户)
-```
-
-`std::allocator` 被设计为两层：一级空间配置器 `__malloc_alloc_template` 和二级空间配置器 `default_alloc_template`
-
-**一级空间配置器是二级空间配置器当申请空间大于128 Byte时的特例**，一级空间配置器就是直接用 `__malloc_alloc_template` 封装了malloc和free，二层空间配置器的底层则是对malloc和free的多次封装
-
-```c++
-static void *allocate(size_t n) {
-    void *result = malloc(n);
-    if (0 == result) result = oom_malloc(n);
-    return result;
-}
-
-static void deallocate(void *p, size_t /* n */) {
-    free(p);
-}
-```
-
-SGI-STL默认选择使用一级还是二级空间配置器，通过 `USE_MALLOC` 宏进行控制
-
-### 二级空间配置器设计
-
-二级空间配置器采用哈希桶上对应的自由链表来管理内存池的方式来管理内存
-
-因为已经是小于128字节的内存才会使用二级空间配置器，因此如果继续用1字节进行切割的话那么小内存就太碎了，而且用户申请的时候的内存基本以4字节的倍数为主，其他大小的空间几乎很少用到，因此STL中的设计是将内存对齐到8字节，也就是说128个字节内存有16个桶。选对齐到8字节也是因为每个内存块里都要存一个union，至少要有一个存下指针的8字节空间
-
-**比较有特色的是自由链表中小块内存的连接方式是用联合体 union**来实现的（tcmalloc中采用的都是直接存下一个内存块的地址）。这个联合体的设计还是很巧妙的，因为当把这个内存分出去的时候，前面原来写地址的部分可以被覆盖了，因为我们已经不会用这个地址去找自由链表上的下一个小内存块了（连接关系已经重新建立了）。而这块小内存用完之后，还给自由链表的时候，里面的用户数据也不需要了，又可以重新写地址了
-
-这种哈希桶上自由链表的头插头删都是***O(1)***的，效率相比于每次都要去跟系统要高太多了
-
-<img src="空间配置器的内存池设计.drawio.png" width="70%">
-
-内存池 Memory Pool 就是先申请一块比较大的内存块作为备用。当需要内存时，直接取内存池中去取。首位两个指针相当于是限制这个蓄水池的闸门。若池中空间不够了，就继续向内存中malloc取。若用户不使用了就可以直接交还给内存中，内存池可以位之后需要的用户重新派发这些回收的内存
-
-那么这块内存池该采取怎么样的数据结构进行管理呢？考虑到主要问题在于归还内存的时候可能并不是按照给的时候的顺序给的，即使归还了之后也要重新将内存分派出去，那么如何知道内存块的大小呢？若将内存池设计成链表的话，需要挨个遍历效率低。因此二级空间配置器设计成了**哈希桶**的形式
-
-注意：内存池和哈希表实现的二级空间配置器是两个结构，空间配置器是一个管理结构，它会去找内存池要，内存池可以通过malloc向内存要资源从而不断扩展，相当于 `end_free` 这个闸门一直在外后走。**在同一个进程中所有的容器共享一个空间配置器**，因此STL空间配置器是用单例模式 Singleton Pattern设计的（虽然源码里并不是完全的单例，但是全部属性都用了static所以页差不多），不同的容器之间只要都是用了空间配置器，那么他们之间就可以互相调用内存块
-
-### SGI-STL二级空间配置的空间申请与回收
-
-* 前期准备
-
-  用联合体来维护哈希桶结构：这块内存空间是两用的，申请了之后所有的都可以用，但如果只是挂在哈希桶上，那么需要用头4个或头8个字节来存下一个结点的地址
-
-  ```cpp
-  union obj {
-      union obj * free_list_link;
-      char client_data[1]; /* The client sees this. */
-  };
-  ```
-
-* 申请空间
-
-  * 先去对应size的哈希桶要切好的内存块，如果没有就继续往后面的大哈希桶 x 要，如果有的话就切size大小的给用户，然后把切剩余的空间 `x-size` 挂到相应的哈希桶的自由链表上
-  * 若还是找不到空的内存块就要向内存池中索要空间了：每次直接向堆去申请都会给20个切好的小内存，返回头上那个给用户，然后将多余的19个小内存块全部挂到对应的哈希桶的自由链表上
-
-* 空间回收
-
-  ```cpp
-  // 函数功能：用户将空间归还给空间配置器
-  // 参数：p空间首地址 n空间总大小
-  static void deallocate(void *p, size_t n) {
-      obj *q = (obj *)p;
-      obj ** my_free_list;
-  	// 如果空间不是小块内存，交给一级空间配置器回收
-      if (n > (size_t) __MAX_BYTES) {
-          malloc_alloc::deallocate(p, n);
-          return;
-      }
-      // 找到对应的哈希桶，将内存挂在哈希桶中（头插）
-      my_free_list = free_list + FREELIST_INDEX(n); //找到对应桶的序号
-      q->free_list_link = *my_free_list; //头插
-      *my_free_list = q;
-  }
-  ```
-
-### 空间配置器的二次封装
-
-每个容器的模版参数都有一个空间配置器，默认的是 `std::allocator`，但也可以用用户自己的，只要满足空间配置器的API要求，即allocate、deallocate、construct和destroy
-
-下面是源码：以stl_list容器为例，STL中的容器都遵循类似的封装步骤。封装了一个专门针对 `list_node` 的申请类，这样就不需要显式传 `size` 了
-
-之后 `create_node()` 的 construct 封装的是定位new，用来给申请到的内存赋值
-
-<img src="STL容器对空间配置器的封装.png">
-
-## *标准库空间配置器的使用*
-
-`std::allocator` 的相关内容定义在 `<memeory>` 中
-
-### allocator方法
-
-<img src="标准库空间配置器的使用流程.drawio.png" width="70%">
-
-* `allocator<T> a`：定义一个名为a的allocator对象，它可以为类型为T的对象分配内存
-* `a.allocate(n)`：分配一段原始的、未构造 unconstructed 的内存，保存n个类型为T的对象，所谓未构造是指内存可能包含任意值，这些值可能是未定义的或者是垃圾值
-* `a.construct(p, args)`
-  * **为了使用allocate返回的未构造原始内存，必须用 construct构造对象**。若使用未构造的内存，其行为是未定义的
-  * p必须是一个类型为 `T*` 的指针，指向一块未构造的原始内存；arg被传递给类型为T的构造函数，用来在p指向的内存中构造一个对象
-* `a.deallocate(p, n)`：释放从 `T* p` 地址开始的内存，这块内存连续保存了n个类型为T的对象；p必须是一个先前由allocate返回的指针，且n必须是p创建时所要求的大小。**在调用deallocate之前，用户必须对每个在这块内存中创建的对象调用destroy进行析构清理**
-* `a .destroy(p)`：p为 `T*` 类型的指针，此算法对p指向的对象执行析构函数
-
-### 拷贝和填充未初始化内存的算法
-
-下面这些函数在给定目的位置创建元素，而不是由系统分配内存给它们
-
-* `uninitialized_copy (b, e, b2)`
-  * 从迭代器begin和end指出的输入范围中拷贝元索到迭代器b2指定的未构造的原始内存中。b2指向的内存必须足够大，能容纳输入序列中元素的拷贝
-  * 返回最后一个构造的元素之后的位置
-
-* `uninitialized_copy_n (b, n, b2)`：从迭代器b指向的元素开始，拷贝n个元素到b2开始的内存中
-* `uninitialized_fill(b, e, t)`：在迭代器b和e指定的原始内存范围中创建对象，对象的值均为t的拷贝
-* `uninitialized_fill_n(b, n, t)`；从迭代器b指向的内存地址开始创建n个对象。b必须指向足够大的未构造的原始内存，能够容纳给定数量的对象
 
 # 内存对齐
 
@@ -2350,11 +2302,11 @@ noexcpet的特殊用法
 
 后来发展的面向对象语言因为借鉴了C++缺乏有效资源管理的机制，都发展出了垃圾回收机制。智能指针 Smart Pointer 是C++为了补不设置垃圾回收机制的坑，且垃圾回收对于主程序而言是一个独立的进程，会有一定的性能消耗，C++考虑到性能也就没有采取垃圾回收的方法
 
-但智能指针主要是为了**保证异常安全**，因为异常实际上和goto一样打乱了正常的程序执行流，以前依靠正常的程序执行流来手动delete回收资源的方法现在就很难行得通了 
+智能指针其实主要是为了**保证异常安全**，因为异常实际上和goto一样打乱了正常的程序执行流，以前依靠正常的程序执行流来手动delete回收资源的方法现在就很难行得通了 
 
 ### RAII思想
 
-RAII Resource Acquisition Is Initialization 资源获取即初始化 是一种**利用对象生命周期来控制程序资源**（如内存、文件句柄、网络接连、互斥量等等）的技术。Java中也会利用这种思想，虽然Java有垃圾回收机制，但同样会面对加锁和解锁时内存资源没有正常释放的问题
+RAII, Resource Acquisition Is Initialization 资源获取即初始化 是一种**利用对象生命周期来控制程序资源**（如内存、文件句柄、网络接连、互斥量等等）的技术。Java中也会利用这种思想，虽然Java有垃圾回收机制，但同样会面对加锁和解锁时内存资源没有正常释放的问题
 
 在对象构造时获取资源，最后在对象析构的时候析构资源，**不论在任何情况下当对象退出所在的内存空间**，也就是说其生命周期结束后，**一定会调用析构进行清理**，这是由语法定义决定的。**相当于把管理一份资源的责任托管给了一个对象**。这样做有两大好处
 
@@ -2448,6 +2400,138 @@ unique_ptr<T>& operator=(unique_ptr<T>& ap) = delete; //禁止生成默认赋值
 
 ## *`std::shared_ptr` 模拟*
 
+### `std::share_ptr` 的部分接口
+
+* `make_shared<T>(args)` 返回一个shared_ptr，指向一个动态分配的类型为T的对象，使用args来初始化此对象
+* `shared_ptr<T> p(q)` 拷贝 `shared_ptr q`，会递增管理资源的计数器
+* `p = q` 赋值，递减p计数器，递增q计数器，若p计数器为0，则释放其原来指向的资源
+* `unique()` 若计数器数目为1返回true，否则返回false
+* `use_count()` 返回计数器数目，可能会很慢，一般用于调试
+* `reset()`
+  * 有参，重新指定智能指针所管理的对象
+  * 无参，用于解除所有权并释放原有的资源
+
+* `get()`
+
+### 模拟实现
+
+实现要点
+
+1. 基础的计数机制
+2. 线程安全（`++`、`--` 是原子的）
+3. 自定义删除器
+
+```c++
+#include <iostream>
+#include <mutex>
+
+// for test
+class A {
+ public:
+  ~A() { std::cout << "~A()" << std::endl; }
+  int _a1 = 0;
+  int _a2 = 0;
+};
+
+template <typename T>
+struct Delete {
+  void operator()(T *ptr) {
+    std::cout << "delete" << std::endl;
+    delete ptr;
+  }
+};
+
+template <typename T>
+struct DeleteArray {
+  void operator()(T *ptr) {
+    std::cout << "delete array" << std::endl;
+    delete[] ptr;
+  }
+};
+
+template <typename T>
+class Free {
+ public:
+  void operator()(T *ptr) {
+    std::cout << "free" << std::endl;
+    free(ptr);
+  }
+};
+
+template <typename T, typename D = Delete<T>>
+class SharedPtr {
+ public:
+  SharedPtr(T *ptr = nullptr)
+      : _ptr(ptr), _pCount(new int(1)), _mutex(new std::mutex) {
+    std::cout << "New Shared Pointer" << std::endl;
+  }
+
+  SharedPtr(SharedPtr<T> &sp)
+      : _ptr(sp._ptr), _pCount(sp._pCount), _mutex(sp._mutex) {
+    AddCount();
+  }
+
+  ~SharedPtr() { Release(); }
+
+  void Release() {
+    if (--(*_pCount) == 0) {
+      delete _pCount;
+      D()(_ptr);
+    }
+  }
+
+  void AddCount() {
+    std::cout << "pCount++" << std::endl;
+    _mutex->lock();
+    (*_pCount)++;
+    _mutex->unlock();
+  }
+
+  SharedPtr<T> &operator=(const SharedPtr<T> &sp) {
+    if (sp._ptr == _ptr) {
+      return *this;
+    } else {
+      Release();
+      _ptr = sp._ptr;
+      _pCount = sp._pCount;
+      AddCount();
+      return *this;
+    }
+  }
+
+  T &operator*() { return *_ptr; }
+
+  T *operator->() { return _ptr; }
+    
+  SharedPtr(SharedPtr<T> &&sp) noexcept
+      : _ptr(sp._ptr), _pCount(sp._pCount), _mutex(sp._mutex) {
+    sp._ptr = nullptr;
+    sp._pCount = nullptr;
+    sp._mutex = nullptr;
+  }
+
+  SharedPtr<T> &operator=(SharedPtr<T> &&sp) noexcept {
+    if (this != sp) {
+      Release();
+      _ptr = sp._ptr;
+      _pCount = sp._pCount;
+      _mutex = sp._mutex;
+      sp._ptr = nullptr;
+      sp._pCount = nullptr;
+      sp._mutex = nullptr;
+    }
+    return *this;
+  }
+
+ private:
+  T *_ptr;
+  int *_pCount;
+  std::mutex *_mutex;
+};
+```
+
+碰到的问题就是为什么计数器要设计为 `int*`，而不是 int，因为要让同一个管理目标共享一个计数器，如果是 int 的话那就一人一个了。那接下来的问题就是为什么不设计为 `static int _pCount`？这个设计仔细一想就很离谱，静态成员变量是属于类的，这样的话相当于是不论 shared_ptr 管理什么对象，都会影响计数器。实际上笔者模拟实现的 shared_ptr 的所有成员变量都是指针
+
 ### 引用计数机制
 
 **`std::shared_ptr` 是智能指针和面试中的重点**，另外 `std::shared_ptr` 的使用中由于其结构还需要注意效率的问题，具体可以看 *EffectiveModernCpp.md* 的智能指针部分
@@ -2463,119 +2547,9 @@ unique_ptr<T>& operator=(unique_ptr<T>& ap) = delete; //禁止生成默认赋值
 
 <img src="sharedPtr的引用计数机制.drawio.png">
 
-```cpp
-template<class T, class D = Delete<T>> class shared_ptr 
-public:
-    shared_ptr(T* ptr = nullptr)
-        : _ptr(ptr) , _pCount(new int(1)) // 给一个计数器
-        {}
-    ~shared_ptr() { Release(); }
-
-    void Release() {
-        if (--(*_pCount) == 0) { //给对象赋值是建立在*this目标已经定义的情况下的
-            // 此时计数器至少为1，若没有这步，直接更改指向对象会造成内存泄漏
-            cout << "Delete: " << _ptr << endl;
-            //delete _ptr;
-            D()(_ptr);
-            delete _pCount;
-        }
-    }
-
-    shared_ptr(shared_ptr<T>& sp)
-        :_ptr(sp._ptr) , _pCount(sp._pCount)
-        { (*_pCount)++; }
-
-    shared_ptr<T>& operator=(const shared_ptr<T>& sp) {
-        if (_ptr == sp._ptr) { return *this; } //防止自己给自己赋值
-        Release(); // 原来管理的对象可能要释放
-        
-        _ptr = sp._ptr;
-        _pCount = sp._pCount;
-        (*_pCount)++;
-        return *this;
-    }
-
-    T& operator*() { return *_ptr; }
-    T* operator->() { return _ptr; }
-    T* get() { return _ptr; } // 给weak_ptr使用
-private:
-    T* _ptr;
-    int* _pCount; //计数器
-    D _del;
-};
-```
-
-### `std::weak_ptr` 应对循环引用问题
-
-<img src="智能指针循环引用.png">
-
-如上图所示，当退出 `test_shared_ptr2()` 时，n1和n2指针虽然销毁了，但new出来的空间还在，分别被右边的 `_prev` 和左边的 `_next` 管理，此时两个计数器都回到1。然后就产生了一个逻辑矛盾的销毁路径。这个问题被称为循环引用 circular reference
-
-该问题用 `std::weak_ptr` 来解决， `std::weak_ptr` 不是常规智能指针，没有RAII，也不支持直接管理资源或者访问资源
-
- `std::weak_ptr` 主要用 `std::shared_ptr` 来构造，因此不会增加计数，**本质就是不参与资源管理**，但是可以访问和修改资源
-
-```cpp
-template<class T>
-class weak_ptr { //自己实现，库里的比这个复杂得多
-public:
-    weak_ptr()
-        :_ptr(nullptr)
-        {}
-
-    weak_ptr(const shared_ptr<T>& sp) //支持对shared_ptr的拷贝构造
-        :_ptr(sp.get())
-        {}
-
-    weak_ptr(const weak_ptr<T>& wp)
-        :_ptr(wp._ptr)
-        {}
-}
-```
-
-以下是利用 `std::weak_ptr` 解决循环引用问题
-
-```cpp
-struct Node {
-    int _val;
-    std::weak_ptr<Node> _next;//解决循环引用，不会增加计数
-    std::weak_ptr<Node> _prev;
-
-    ~Node() {
-        cout << "~Node()" << endl;
-    }
-};
-
-//循环引用，没有报错是因为main退出后会自动清理资源
-//但很多程序是需要长时间运行的，在这种情况下的内存泄漏是很可怕的
-void test_shared_ptr2() {
-    std::shared_ptr<Node> n1(new Node);
-    std::shared_ptr<Node> n2(new Node);
-    n1->_next = n2;
-    n2->_prev = n1;
-}
-```
-
-## *`std::share_ptr` 的使用*
-
-### 部分接口
-
-* `make_shared<T>(args)` 返回一个shared_ptr，指向一个动态分配的类型为T的对象，使用args来初始化此对象
-* `shared_ptr<T> p(q)` 拷贝 `shared_ptr q`，会递增管理资源的计数器
-* `p = q` 赋值，递减p计数器，递增q计数器，若p计数器为0，则释放其原来指向的资源
-* `unique()` 若计数器数目为1返回true，否则返回false
-* `use_count()` 返回计数器数目，可能会很慢，一般用于调试
-* `reset()`
-  * 有参，重新指定智能指针所管理的对象
-  * 无参，用于解除所有权并释放原有的资源
-
-* `get()`
-
-### 结合使用new和智能指针
-
 ### 定制删除器
 
-如上面自己实现的 `shared_ptr` 所示，析构的时候其实不知道到底该用 `delete` 或 `delete[]`，甚至有可能数据是用malloc出来的，为了规范，此时应该要用free。特别是 `[]` 问题，不匹配的结果是很可怕的
+如上面自己实现的 `shared_ptr` 所示，在析构 shared_ptr 所管理的资源的时候，因为我们不知道管理对象 `_ptr` 到底是怎么被 new 出来的，所以其实不知道到底该用 `delete` 还是 `delete[]`，甚至有可能数据是 malloc 出来的，为了规范，此时应该要用free。特别是 `[]` 问题，不匹配的结果是很可怕的
 
 因此就要给一个模板，显式传入要用哪种delete方式
 
@@ -2620,6 +2594,59 @@ std::shared_ptr<int> n4((int*)malloc(sizeof(12)), [](int* ptr) {free(ptr); });
 `std::shared_ptr` 的引用计数是原子操作，这意味着它可以在多线程环境中安全地使用。引用计数是 `std::shared_ptr` 用于跟踪对象被共享的次数的机制
 
 然而，尽管引用计数本身是线程安全的，但共享指针的其他操作（例如创建、复制、销毁等）可能会导致竞态条件。例如，多个线程同时尝试增加引用计数可能会导致计数不正确的结果。为了解决这个问题，C++11 引入了 `std::make_shared` 和 `std::allocate_shared`，它们使用单一的内存分配来创建智能指针，从而避免了某些潜在的竞态条件
+
+### `std::weak_ptr` 应对循环引用问题
+
+<img src="智能指针循环引用.png">
+
+如上图所示，当退出 `test_shared_ptr2()` 时，n1和n2指针虽然销毁了，但new出来的空间还在，分别被右边的 `_prev` 和左边的 `_next` 管理，此时两个计数器都回到1。然后就产生了一个逻辑矛盾的销毁路径。这个问题被称为循环引用 circular reference
+
+该问题用 `std::weak_ptr` 来解决，`std::weak_ptr` 不是常规智能指针，它不是RAII，也不支持直接管理资源或者访问资源
+
+ `std::weak_ptr` 主要用 `std::shared_ptr` 来构造，因此不会增加计数，**本质就是不参与资源管理**，但是可以访问和修改资源
+
+```cpp
+template<class T>
+class weak_ptr { //自己实现，库里的比这个复杂得多
+public:
+    weak_ptr()
+        :_ptr(nullptr)
+        {}
+
+    weak_ptr(const shared_ptr<T>& sp) //支持对shared_ptr的拷贝构造
+        :_ptr(sp.get())
+        {}
+
+    weak_ptr(const weak_ptr<T>& wp)
+        :_ptr(wp._ptr)
+        {}
+}
+```
+
+以下是利用 `std::weak_ptr` 解决循环引用问题
+
+```cpp
+struct Node {
+    int _val;
+    std::weak_ptr<Node> _next;//解决循环引用，不会增加计数
+    std::weak_ptr<Node> _prev;
+
+    ~Node() {
+        cout << "~Node()" << endl;
+    }
+};
+
+//循环引用，没有报错是因为main退出后会自动清理资源
+//但很多程序是需要长时间运行的，在这种情况下的内存泄漏是很可怕的
+void test_shared_ptr2() {
+    std::shared_ptr<Node> n1(new Node);
+    std::shared_ptr<Node> n2(new Node);
+    n1->_next = n2;
+    n2->_prev = n1;
+}
+```
+
+### 结合使用new和智能指针
 
 
 
@@ -2839,7 +2866,7 @@ shared_ptr对管理的资源有完全的管理权限、使用权和所有权；�
 ```c++
 auto spw = std::make_shared<Widget>(); // spw 引用计数 Reference Counter, RC为1
 std::waek_ptr<Widget> wpw(spw);        // wpw 指向与spw所持有相同的Widget，RC仍然为1
-spw = nullptr;                         // RC变为0，Widget 被销毁，wpw悬空，不过此时空间还没有被OS回收
+spw = nullptr;                        // RC变为0，Widget 被销毁，wpw悬空，不过此时空间还没有被OS回收
 ```
 
 ### 监视资源是否释放
@@ -2942,9 +2969,9 @@ std::shared_ptr<const Widget> fastLoadWidget(int id) {
 
 * make_shared独有的问题
 
-  * 若类中重载了 operator new/delete，使用make_shared不会执行重载函数。此时只能使用shared_ptr或使用 `std::allocated_shared`
+  * 若类中重载了 operator new/delete，使用 make_shared 不会执行重载函数。此时只能使用 shared_ptr 或使用 `std::allocated_shared`
 
-  * 使用make_shared，管理对象和控制块会一块申请，同样也会一块释放。所以当weak_ptr存在时，对象的销毁与内存释放之间的间隔时间可能很长
+  * 使用 make_shared，管理对象和控制块会一块申请，同样也会一块释放。所以当weak_ptr存在时，对象的销毁与内存释放之间的间隔时间可能很长
 
     ```c++
     auto sptr = std::make_shared<Widget>();

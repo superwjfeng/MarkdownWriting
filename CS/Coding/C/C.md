@@ -2408,6 +2408,18 @@ printf("file:%s line:%d\n", __FILE__, __LINE__);
 
 ### 条件编译
 
+`if`、`#elif`、`#else` 和 `#endif`：`#if` 指令允许在编译时对表达式进行求值，根据结果来决定是否包含特定的代码。`#elif` 用于在多个条件之间进行选择，`#else` 用于表示上述条件都不满足时的情况。`#endif` 用于结束条件编译区域
+
+```c
+#if defined(_WIN32)
+// Windows 平台特定的代码
+#elif defined(__linux__)
+// Linux 平台特定的代码
+#else
+// 其他平台的代码
+#endif
+```
+
 ### 文件包括 `#include`
 
 * C标准库头文件包括使用尖括号 `<>`
@@ -2429,6 +2441,148 @@ printf("file:%s line:%d\n", __FILE__, __LINE__);
 5. 对齐方式：`#pragma` 可以用于控制数据的对齐方式。例如，`#pragma pack` 可以指定结构体的对齐方式
 
 请注意，`#pragma` 指令的具体效果取决于编译器和平台的支持。不同的编译器可能支持不同的 `#pragma` 指令，或者可能存在编译器特定的指令
+
+# 头文件
+
+## *头文件组织*
+
+C文件以 `.C` 结尾，C++文件以 `.CC` 结尾，头文件则以 `.h` 结尾
+
+### 条件编译保护避免头文件相互引用
+
+https://mmma.top/2023/05/06/C++防止头文件被重复引入/
+
+头文件的相互引用 Circular Dependency 是指在一个项目中，多个头文件之间互相包含（`#include`）对方的头文件，形成了一个循环依赖关系
+
+所有头文件都应该有 `#define` 保护来**防止头文件被重复包含**，不要使用 `#paragram once` 编译指示这种预处理指令。根据 在 C++ 中防止头文件被重复包含时为什么同时使用 #ifndef 和 #pragma once？ - 望山的回答 - 知乎 <https://www.zhihu.com/question/40990594/answer/1675549910> 的回答，`#paragram once` 编译指示在早期的GCC编译器（GCC3.4版本之前）中不支持，但是它仍然被广泛使用，所以在Win上编程时可以同时使用条件编译和编译指示
+
+头文件宏的命名格式应该基于所在项目的源代码树的全路径，即 `<PROJECT>_<PATH>_<FILE>_H_`
+
+举个例子：项目foo中的头文件 `foo/src/bar/baz.h` 可以按如下方式保护
+
+```cpp
+#ifndef FOO_BAR_BAZ_H_
+#define FOO_BAR_BAZ_H_
+// 各种声明
+#endif
+```
+
+### 前置声明改善循环依赖
+
+前置声明 forward declaration 是类、函数和模板的纯声明，不伴随其定义
+
+虽然前置声明可以在一定程度上改善类、函数等之间的互相依赖，但同时会引入很多新的问题。所以尽量避免前置声明那些定义在其他项目中的实体，函数和类模板总是使用 `#include`
+
+### `#include` 的路径及顺序避免隐藏依赖
+
+隐藏依赖 hidden dependency 指的是一个头文件中的声明是依赖于其他头文件的。比如说下面的例子
+
+```cpp
+// A.h 头文件中有
+struct BS bs;
+// B.h 头文件中有
+struct BS { /*...*/ };
+```
+
+那么在 `A.cc` 中调用就可能会出现隐藏依赖问题
+
+```cpp
+// 隐藏依赖问题
+#include "A.h"
+#include "B.h"
+
+// 调整顺序就不会有隐藏依赖问题了
+#include "B.h"
+#include "A.h"
+```
+
+**编译器通常在逐行处理源代码的同时进行语法分析和语义分析，而不是等待所有头文件都引入后再统一检查**。这是因为编译器需要在处理源文件的过程中及时发现和报告错误，而不是等到整个编译单元都被处理完后才进行检查。因此错误的原因是
+
+1. **A.h 中的前置声明**：在 `A.h` 中 `struct BS bs;` 这行代码只是一个前置声明，告诉编译器将会有一个名为 `bs` 的 `BS` 结构体的实例。但是，编译器并不知道 `BS` 结构体的具体定义，因为它还没有看到 `B.h` 中的内容
+2. **B.h 中的结构体定义**：在 `B.h` 中定义了 `BS` 结构体的具体内容。但是，这个定义在 `A.h` 中的前置声明之后，编译器不知道它，因此 `A.c` 中的代码在编译时无法正确解析 `bs` 的类型
+
+理解的核心关键在于：在链接之前，所有的cpp文件全部都是独立编译的，它只是通过头文件展开后的声明以及之后所形成的符号表知道了有其他符号的存在，比如说上面的例子中，`A.cc` 中先导入了。因此隐藏依赖问题是出现在编译阶段，即无法找到对应的符号；而重复定义和多重包含等问题则出现在链接阶段，即不知道到底该引用哪一个符号
+
+导入头文件的顺序应为：相关头文件 `->` C库 `->` C++库 `->` 其他库的头文件 `->` 本项目内的头文件，这样设计能最先检查出相关头文件中的问题
+
+进行 `#include` 的原则当前代码的符号是用到了对应头文件中的声明时才**按需导入**，大规模的程序不能设计成把所有要用的头文件在某一个头文件中全inlcude了，然后其他文件只用include这个头文件的形式。如果头文件对应的所有源文件都是库文件那还好，如果是自己写的，还要不定时的修改，那所有的文件都要不断重新编译。这种情况就是头文件形成了一个全连接图
+
+<img src="头文件全连通.drawio-8797158.png" width="40%">
+
+## *例子*
+
+```c++
+// singleton.h
+#ifndef SINGLETON_H_
+#define SINGLETON_H_
+
+class Singleton {
+  public:
+    static Singleton *getInstance() { return _instance; }
+
+  private:
+    Singleton() {}
+    Singleton(const Singleton &) = delete;
+
+  private:
+    static Singleton *_instance;
+};
+
+Singleton *Singleton::_instance = new Singleton();
+
+#endif // SINGLETON_H_
+```
+
+```c++
+// singleton.cc
+#include "singleton.h"
+int main() { return 0; }
+```
+
+```c++
+// test.cc
+#include "singleton.h"
+void test() {}
+```
+
+明明使用了 `#ifnedef` 还是报了重定义错误，为什么？
+
+一定要理解 `#ifndef` 头文件保护是为了防止隐藏依赖的，像上面的情况，两个独立的编译单元，i.e. singleton.cc 和 test.cc，`SINGLETON_H_` 都没有被定义过，所以 `Singleton::_instance` 就还是被定义了两遍，这样在链接的时候就报错了
+
+保持 `singleton.h` 不变，如果是下面的文件组织，就是可以避免隐藏依赖的情况了
+
+```c++
+// test.H
+#include "singleton.h"
+void test() {}
+```
+
+```c++
+// singleton.cc
+#include "singleton.h"
+#include "test.h"
+int main() { return 0; }
+```
+
+这时候包含关系就会变成
+
+<img src="隐藏依赖.drawio.png" width="70%">
+
+### 处理类成员变量的定义
+
+那么为什么一个头文件中包含了一个 class 的声明，为什么它被多个 cc 文件include 就不会报重定义错误呢？其实上面的错误主要是因为**定义了 `Singleton::_instance` 类成员变量** 引起的，如果一个完全相同的类（笔者的意思是不是两种同名类，但内容不同的情况）只是声明，那么不会引起重定义错误
+
+因此解决类成员变量的重定义有两种方法
+
+1. 声明和定义分离，定义到 `.cc` 文件
+
+2. C++17支持用 inline 定义类的非常量静态成员变量的能力
+
+   ```c++
+   inline Singleton *Singleton::_instance = new Singleton();
+   ```
+
+## *通过拓扑排序确定代码源文件的编译依赖关系*
 
 # 目标文件
 

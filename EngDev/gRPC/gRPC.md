@@ -55,17 +55,17 @@ Response Message: Response Headers -> Length-Prefixed-Message (optional) -> Trai
 
 与请求消息不同的是，END_STREAM 标志不随数据帧一起发送，它作为一个被称作 Trailers 单独的响应头发送，通知 client 端我们完成了响应消息的发送。Trailers 还会携带请求的状态码和状态消息
 
-# gRPC 的 Client & Server 建立
+# 安装
 
 gRPC的源码库 <https://github.com/grpc/grpc>
-
-## *安装*
 
 https://github.com/grpc/grpc/blob/v1.61.0/src/cpp/README.md
 
 ### 使用 Bazel
 
 ### 使用 CMake
+
+# 同步IO
 
 ## *项目结构*
 
@@ -712,6 +712,12 @@ https://grpc.io/docs/languages/cpp/basics/
 * 服务端流式RPC Server Streaming RPC：一个请求对应多个响应
 * 客户端流式RPC Client Streaming RPC：多个请求对应一个响应
 * 双向流RPC Bi-directional Stream RPC：多个请求返回多个响应
+
+# 异步IO
+
+对于同步的 client 来说，由于调用远程方法时会阻塞当前线程，但是异步允许同时发送多个请求，并且不会阻塞
+
+<img src="异步IO.drawio.png" width="50%">
 
 # HTTP/2 信息处理
 

@@ -395,13 +395,19 @@ void info(const char* stringFormat, ...) throw();
 
 # spdlog
 
-gabime/spdlog：能适配控制台，安卓等多后端的异步高性能日志库
+spdlog 是一个能适配控制台，安卓等多后端的轻量的异步高性能日志库。spdlog 的特色
+
+* 异步模式，支持异步写文件
+* 自定义日志输出格式
+* 支持多线程日志输出
+* header-only，使用简单
+* 丰富的格式化处理，采用开源库fmt
 
 ## *日志的性能问题*
 
 ### 性能和可靠性的权衡
 
-日志的性能与可靠性，也称为实时性（也就是及时的持久化）是想背的，必须做出取舍
+日志的性能与可靠性，也称为实时性（也就是及时的持久化）是相背的，必须做出取舍
 
 因此高性能日志的设计要点为要实现批量写入（flush），如果单笔写入，每次都要磁盘寻址以及进行用户和内核态切换
 
@@ -412,6 +418,87 @@ gabime/spdlog：能适配控制台，安卓等多后端的异步高性能日志�
 * 对比异步写入：50000条写入50毫秒，平均1,000,000ops/s。很快，因为实现了批量写入
 
 ### 同步日志和异步日志
+
+## *安装*
+
+spdlog一共有3种使用方法
+
+* spdlog是一个 header-only 的库，可以直接选择将其头文件放到项目文件的 `third_party/include`，然后直接在项目中使用就可以了
+
+* CMake集成
+
+  * 手动编译后将build文件夹下生成的 `libspdlog.a` 和include下的头文件整合到项目中，然后仍然是CMake的手动链接
+
+    ```cmd
+    $ git clone https://github.com/gabime/spdlog.git
+    $ cd spdlog && mkdir build && cd build
+    $ cmake .. && make -j
+    ```
+
+  * 项目安装后使用 find_package 自动找
+
+    ```cmd
+    $ git clone https://github.com/gabime/spdlog.git
+    $ cd spdlog && mkdir build && cd build
+    $ cmake .. -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local/spdlog
+    $ sudo make install
+    ```
+
+    ```cmake
+    find_package(spdlog REQUIRED)
+    add_executable(test.exe test.cc)
+    target_link_libraries(test.exe PRIVATE spdlog::spdlog)
+    ```
+
+## *使用*
+
+### 日志等级
+
+```
+trace = SPDLOG_LEVEL_TRACE // 最低级（用来记录代码执行轨迹）
+debug = SPDLOG_LEVEL_DEBUG //      （用来记录debug信息）
+info = SPDLOG_LEVEL_INFO   // 在上面的测试例子中用过
+warn = SPDLOG_LEVEL_WARN
+err = SPDLOG_LEVEL_ERROR
+critical = SPDLOG_LEVEL_CRITICAL
+off = SPDLOG_LEVEL_OFF     // 最高级
+```
+
+```c++
+spdlog::set_level(spdlog::level::info); // 只显示info及比info高级的信息，trace 和 debug 不显示
+```
+
+
+
+### 文件输出位置
+
+```c++
+// include 相关头文件
+// include "spdlog/sinks/basic_file_sink.h"
+
+// 开启并创建本地日志
+auto = my_logger = spdlog::basic_logger_mt("file_logger", "logs/basic-log.txt");
+
+// 设置该日志的显示级别
+my_logger->set_level(spdlog::level::warn);
+
+// 向该日志中写入信息
+my_logger->info("Hello, {}!", "World");
+```
+
+
+
+### 异步日志
+
+### 异步日志
+
+### flush 策略
+
+## *源代码分析*
+
+spdlog主要由logger（也包括async_logger）、sink、formatter、registry这四个部分组成
+
+
 
 # Java
 

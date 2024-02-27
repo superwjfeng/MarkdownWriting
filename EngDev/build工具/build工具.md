@@ -751,7 +751,7 @@ GNU项目一般都会遵守 Filesystem Hierarchy Standard, FHS <https://zh.wikip
 
 有三种引入子模块的方式。所谓引入子模块，就是指根据我们的需要找到指定版本的库**头文件包含路径、链接库路径**等，从而能够满足我们开发项目的编译链接需要
 
-1. 纯头文件：target_include_directories
+1. 纯头文件 header-only：target_include_directories
 2. 子模块：add_subdirectory
 3. 引用系统中预安装的第三方库：find_package & target_link_libraries
 
