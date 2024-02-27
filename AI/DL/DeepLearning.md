@@ -600,14 +600,14 @@ Default approach: Find a local minimum by using gradient descent $W^{(new)}=W^{(
 
 * 手动求解 By hand：根据链式法则完全手动求解，然后编写代码。手动求导工作量大且易出错（不准且效率低）
 
-* 数值微分法 Numeric：借助微分的原始数学定义进行计算
+* 数值微分法 Numerical differentiation：借助微分的原始数学定义进行计算
   $$
   \frac{\partial E_n}{\partial w_{ij}}=\frac{E_n(w_{ij}+\epsilon)-E_n(w_{ij})}{\epsilon}+\mathcal{O}(\epsilon)
   $$
 
   * 上式对每一个权重参数 $w_{ij}$ 的每一次Evaluation都需要大约 $\mathcal{O}\left(\lvert W\rvert\right)$ 次计算，相当于是控制 $w_{ij}$ 为变量，然后计算 $\mathcal{O}\left(\lvert W\rvert\right)$ 次
   * 每一次Evaluation必须对每一个参数独立进行，这意味着所有权重都需要进行一次上面的过程，因此更新一次梯度 $\nabla_WE$ 的计算开销大约在 $\mathcal{O}\left(\lvert W\rvert^2\right)$ 次，这对于实际中上亿参数的深度网络的训练来说计算开销极其昂贵
-  * 数值微分受到截断误差和舍入误差的干扰，影响精度，且如何选择差分步长是没有定论的
+  * 数值微分受到截断误差 truncation error 和舍入误差 round-off error 的干扰，影响精度，且如何选择差分步长是没有定论的
 
 * 符号微分法 Symbolic differentiation/解析解
 
@@ -617,7 +617,7 @@ Default approach: Find a local minimum by using gradient descent $W^{(new)}=W^{(
 
 * 自动微分法 Automatic differentiation, AD: e.g. Backproagation for NN（反向传播将在下一章详细给出）
 
-  * 介于数值微分和符号微分之间的方法，采用类似有向图的计算来求解微分值
+  * 介于数值微分和符号微分之间的方法，它是把计算机中的运算操作分解为一个有限的基本操作集合，然后采用类似有向图的计算来求解微分值。避免了符号微分那样的表达式膨胀
   * Evaluate $\nabla_WE(W)$ at the current point $W$
   * Every Evaluation in $\mathcal{O}\left(\lvert W\rvert\right)$，即一次梯度更新需要一次前向传播+一次反向传播
 
@@ -625,7 +625,7 @@ Default approach: Find a local minimum by using gradient descent $W^{(new)}=W^{(
 
 # 反向传播算法
 
-## *Backpropagation 反向传播总览*
+## *反向传播的简单例子*
 
 考虑如下的一个例子
 $$
@@ -754,11 +754,13 @@ def MulLayer:
 
 ### Jacobian and Gradient
 
-参考之前的多分支计算图，若考虑一个Multi-Features 的Input $\boldsymbol{x_{n\times1}}$，和一个二分类或多分类的输出 $\boldsymbol{a}_{m\times1}$，等价为考虑一个映射变换 $f:\R^n\rightarrow\R^m$，用 $\boldsymbol{a}_{m\times1}=f(\boldsymbol{x_{n\times1}})$ 来表述，这个**前向传播过程**可以用一个 Jacobian 矩阵来表示
+参考之前的多分支计算图，若考虑一个 Multi-Features 的Input $\boldsymbol{x_{n\times1}}$，和一个二分类或多分类的输出 $\boldsymbol{a}_{m\times1}$，等价为考虑一个映射变换 $f:\R^n\rightarrow\R^m$，用 $\boldsymbol{a}_{m\times1}=f(\boldsymbol{x_{n\times1}})$ 来表述，这个**反向传播过程**可以用一个 Jacobian 矩阵来表示
 $$
 \frac{\partial\boldsymbol{a}}{\partial\boldsymbol{x}}=\left[\begin{matrix}\frac{\partial a_1}{\partial x_1}&\cdots&\frac{\partial a_1}{\partial x_n}\\\vdots&\ddots&\vdots\\\frac{\partial a_m}{\partial x_1}&\cdots&\frac{\partial a_m}{\partial x_n}\end{matrix}\right]\in\R^{m\times n}
 $$
-而**反向传播过程**则可以用梯度矩阵来表达，即令 $c=g(\boldsymbol{a}),\ g:\R^m\rightarrow\R$，其中标量 $c$ 为前向传播的结果。梯度矩阵是Jacobian矩阵的输出为标量时的转置
+TODO：下面写的感觉不太对，之后再check一下
+
+而**反向传播过程**则可以用梯度矩阵来表达，即令 $c=g(\boldsymbol{a}),\ g:\R^m\rightarrow\R$，其中标量 $c$​ 为前向传播的结果。梯度矩阵是Jacobian矩阵的输出为标量时的转置
 $$
 \nabla_{\boldsymbol{a}}c\in\R^m=\left(\frac{\partial c}{\partial\boldsymbol{a}}\right)^T=\left[\begin{matrix}\frac{\partial c}{\partial a_1}&\cdots&\frac{\partial c}{\partial a_m}\end{matrix}\right]^T
 $$
@@ -1001,6 +1003,42 @@ Computes the backward pass for an affine layer
   * dx: Gradient with respect to x, of shape (N, d1, ..., d_k)
   * dw: Gradient with respect to w, of shape (D, M)
   * db: Gradient with respect to b, of shape (M,)
+
+## *反向传播的两种模式*
+
+自动微分根据链式法则的不同组合顺序，可以分为前向模式 forward mode 和反向模式 reverse mode
+
+对于一个复合函数 $y=a(b(c(x)))$，采用链式法则可将其梯度标识为下式
+$$
+\frac{dy}{dx}=\frac{dy}{da}\frac{da}{db}\frac{db}{dc}\frac{dc}{dx}\\Forward\ Mode:\ \frac{dy}{dx}=\frac{dy}{da}\left(\frac{da}{db}\left(\frac{db}{dc}\frac{dc}{dx}\right)\right)\\Backward\ Mode:\ \frac{dy}{dx}=\left(\left(\left(\frac{dy}{da}\right)\frac{da}{db}\right)\frac{db}{dc}\right)\frac{dc}{dx}
+$$
+其中前向模式就是从输入方向开始计算梯度值的，即从 c 到 a；而反向模式则是从输出方向开始计算梯度值，即从 a 到 c
+
+下面以 $y=f(x_1,x_2)=\ln{x_1}+x_1x_2-\sin{x_2}$​ 为例，具体讨论一下这两种模式
+
+<img src="反向传播例子计算图.drawio.png" width="70%">
+
+* 前向模式
+
+  <img src="前向模式自动微分示例.png" width="80%">
+
+* 反向模式
+
+  <img src="反向模式自动微分示例.png" width="70%">
+
+首先可以看到最后计算得到的梯度是和正向模式一样的
+
+在上面提到过，对一个具有 n 个输入 $x_i$ 和 m 个输出 $y_i$ 的函数 $\R^n\rightarrow\R^m$，该函数的求导结果可以构成如下的 Jacobi
+$$
+\boldsymbol{J}_f=\left[\begin{matrix}\frac{\partial y_1}{\partial x_1}&\cdots&\frac{\partial y_1}{\partial x_n}\\\vdots&\ddots&\vdots\\\frac{\partial y_m}{\partial x_1}&\cdots&\frac{\partial y_m}{\partial x_n}\end{matrix}\right]\in\R^{m\times n}
+$$
+在前向模式中是每次计算所有输出 $y_i$ 对某一个输入 $x_i$​ 的梯度，因为从输入到输出方向必然是先拥有所有的输入，这样就需要 n 次计算来构建完整的 Jacobi
+
+而在反向模式中是每次计算一个输出 $y_i$ 对所有输出 $x_i$​ 的梯度，因为从输出到输入方向必然是先拥有所有的输出，这样就需要 m 次计算来构建完整的 jacobi
+
+所以反向传播的两种计算模式的计算效率取决于输入和输出谁的纬度大，在大部分 ML/DL 的场景中，都是输入数据的维度大于输出数据的维度，所以在实际中基本都是使用反向模式。比如极端情况下有 $\R^{n\times 1}$，只需要一次反向传播就可以计算出 Jacobi，完成反向传播
+
+但是反向模式也有劣势，相比于前向模式可以一遍前向传播一遍计算梯度，也就是说前向传播和反向传播的方向是相同的，可以同时进行。反向模式则是相反的，所以完整的计算必须要分两步走，且必须要保存中间的计算结果，所以也会有额外的内存消耗。因此业界也一直在研究反向模式的内存占用优化方法，例如检查点策略 checkpointing strategies 和数据流分析 data-flow analysis
 
 # 训练相关技巧
 

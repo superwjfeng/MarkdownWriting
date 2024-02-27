@@ -299,6 +299,22 @@ AI编译器的特点 & 功能
 * 面向神经网络、深度学习的特定优化
 * DSA 芯片架构的支持
 
+## *实现自动微分*
+
+关于自动微分, i.e. 反向传播的内容可以看 *DeepLearning.md*
+
+自动微分的实现方式大致可以分为
+
+* 基本表达式法 Elemental Libraries
+* 操作符重载法 Operator Overloading, OO 
+* 代码变换法 Source Code Transformation, ST
+
+### 基本表达式法
+
+### 操作符重载法
+
+### 代码变换法
+
 ## *IR*
 
 ## *类型系统与静态分析*
