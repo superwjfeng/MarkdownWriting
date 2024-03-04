@@ -102,7 +102,7 @@ Last commit before new branch<-|     |->new commit due to new branch
 * `git checkout -b <name>`：创建分支并切换到该分支。相当于 `git branch <name>; git checkout <name>`
 * `git merge <revision>`：合并到当前分支
 * `git mergetool`: 使用工具来处理合并冲突
-* `git rebase <basename> <topicname>`: 将一系列补丁 topicname 变基 rebase 新的基线 basename
+* `git rebase <basename> <topic_name>`: 将一系列补丁 topic_name 变基 rebase 到新的基线 basename
 
 ### 关于合并冲突的问题
 
@@ -153,6 +153,30 @@ merge冲突需要手动解决，并且**merge后一定要再进行一次commit**
 * 可以通过 `git stash list` 来查看临时存储区的内容
 
 将代码merge到master中的好习惯是：**在master上merge完修复好的bug后，先切换到dev上merge master，再切换到master上merge dev**。而不是在master上merge dev。在merge的过程中也有可能因为一些误操作（少merge多merge了一行）等原因而出错，因此若直接在master上merge dev出bug了，master分支会受到直接的影响，而在dev上merge master，就算出错影响的也只是dev
+
+## *rebase vs. merge*
+
+[https://vue3js.cn/interview/git/git%20rebase_%20git%20merge.html#二、分析](https://vue3js.cn/interview/git/git%20rebase_%20git%20merge.html#二、分析)
+
+### merge
+
+<img src="merge.drawio.png" width="40%">
+
+merge 过程还是很直观的，且 merge 是一种非破坏性的操作，对现有分支不会以任何方式被更改，保留了完整不过可能会比较复杂的历史记录
+
+### rebase
+
+<img src="rebase.drawio.png" width="40%">
+
+1. rebase 会找到不同的分支的最近共同祖先，比如说上面的 B
+2. 然后对比当前分支相对于该祖先的历次提交，提取相应的修改并存为临时文件。注意⚠️：老的提交 X 和 Y 也没有被销毁，只是单纯地不能再被访问或者使用了
+3. 然后临时文件向前移动的时候如果发生冲突就需要解决冲突
+4. rebase 之后，master 的 HEAD 位置不变。因此要合并 master 分支和 bugfix 分支
+
+rebase有以下优势
+
+1. **线性提交历史**：rebase操作会将当前分支的提交移到目标分支的最后面，从而使提交历史更加线性清晰
+2. **减少合并提交**：rebase会避免创建额外的合并提交，使提交历史更加整洁
 
 ## *远程库*
 
@@ -208,16 +232,6 @@ Detached HEAD 状态通常发生在以下几种情况下
 
 1. 若是意外进入了detached HEAD状态，但没有进行任何修改，可以直接通过运行 `git switch -` 或 `git checkout -` 返回到之前所在的分支
 2. 若是在detached HEAD状态下进行了修改，并且希望将这些更改与一个新的分支关联起来，可以使用 `git branch <new-branch-name>` 来创建一个新的分支，然后使用 `git switch <new-branch-name>` 切换到新的分支，并commit更改
-
-### 高级操作
-
-* `git clone --depth=1`：浅克隆（shallow clone），不包括完整的版本历史信息
-* `git add -p`：交互式暂存
-* `git tag <name>`：打标签
-* `git rebase -i`：交互式变基
-* `git blame`：查看最后修改某行的人
-* `git bisect`：通过二分查找搜索历史记录
-* `.gitignore`： [指定](https://git-scm.com/docs/gitignore) 故意不追踪的文件
 
 # Git原理
 
@@ -364,5 +378,5 @@ Git 支持三种引用类型，不同的引用类型对应的引用文件各自�
 
 
 
-## *rebase vs. merge*
+
 

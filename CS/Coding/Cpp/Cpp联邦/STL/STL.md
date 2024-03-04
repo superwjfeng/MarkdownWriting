@@ -2145,7 +2145,7 @@ unordered系列是单向迭代器（哈希桶是单列表）
 
 ## *tuple类型*
 
-## *BITSET类型*
+## *bitset类型*
 
 ```c++
 template <size_t N> class bitset;
@@ -2165,16 +2165,20 @@ explicit bitset (const basic_string<charT,traits,Alloc>& str, typename basic_str
                  charT zero = charT('0'), charT one = charT('1'));
 // C-string
 template <class charT>
-explicit bitset (const charT* str, typename basic_string<charT>::size_type n = basic_string<charT>::npos, 
+explicit bitset (const charT* str, 
+                 typename basic_string<charT>::size_type n = basic_string<charT>::npos, 
                  charT zero = charT('0'), charT one = charT('1'));
 ```
 
 支持从一个整形或者 string/C字符串中构造
 
+默认每一位为０，给出的参数位数不足的用0填充
+
 ### 方法
 
 * 位访问
   * `operator[]`
+  * test 用来查下标处的元素是０还是 1，和 `operator[]` 功能一样，只是会对越界做检查，类似于vector的at
   * count：返回置位的个数
   * `bool test (size_t pos) const;`：是否在pos位置位
   * any：是否有任何位置位

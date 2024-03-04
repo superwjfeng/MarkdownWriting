@@ -1306,7 +1306,7 @@ $$
 
 <img src="dropout.png" width="50%">
 
-Droput是一种抑制过拟合的方法，它会在学习过程中随机删除神经元
+Droput是一种抑制过拟合的方法，它会在学习过程中随机关闭神经元
 
 ### 集成学习与Dropout的关联
 
@@ -1318,7 +1318,7 @@ Droput是一种抑制过拟合的方法，它会在学习过程中随机删除�
 
 ### 前向传播实现
 
-训练时，每传递一次数据，就会随机选择要删除的神经元, **p是要关闭neuron的概率**
+训练时，每传递一次数据，就会随机选择要删除的神经元，**p是要关闭neuron的概率**
 
 **测试时，虽然会传递所有的神经元信号，但是对于各个神经元的输出要乘上训练时的删除比例(1-p)后再输出**
 
@@ -1631,9 +1631,13 @@ Documentation：https://pytorch.org/docs/stable/index.html
 
 ### 不同深度学习框架的区别
 
-PyTorch是一个建立在Torch库之上的Python包，用来加速深度学习。它提供一种类似numpy的抽象方法来表示张量 Tensor（一种特殊设计的高效的多维数组结构），可以利用GPU来加速学习
+PyTorch是一个建立在Torch库之上的Python包，Torch本身就是一个科学计算框架，一开始并不支持Python，后来是由facebook将其用Python实现了
 
-### PyTorch主要的包
+PyTorch 用来加速深度学习，它提供一种类似numpy的抽象方法来表示张量 Tensor（一种特殊设计的高效的多维数组结构），可以利用GPU来加速学习
+
+### PyTorch结构 & 架构
+
+下面的结构图展示了 PyTorch 主要模块之间的关系
 
 * `torch`：类似于numpy的通用数组库，主要提供对于tensor的处理，可将tensor转换为 `torch.cuda.TensorFloat` 用来在GPU上进行计算
 * `torch.autograd`：用于构建计算图并自动获取梯度的包
@@ -1698,7 +1702,7 @@ torchvision 是独立于PyTorch的视觉处理包，需要独立安装，类似�
 
 ### TensorBoard可视化工具
 
-TensorBoard是 Google TensorFLow的可视化工具，被PyTorch借用了
+TensorBoard 是 Google TensorFlow 的可视化工具，被 PyTorch 借用了
 
 ## *PyTorch神经网络工具箱*
 
@@ -1720,7 +1724,7 @@ class Net(nn.Module):
         self.activation = activation
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, classes)
-
+ 
     def forward(self, x):
         x = x.view(-1, self.input_size) # flatten
         x = self.fc1(x)
@@ -1822,13 +1826,13 @@ for epoch in range(2):
 print('FINISH.')
 ```
 
-## *PyTorch Lighting*
+## *PyTorch Lightning*
 
-PyTorch Lighting 是对 PyTorch 的进一步第三方封装
+PyTorch Lightning 是对 PyTorch 的进一步第三方封装
 
 Documentation: https://pytorch-lightning.rtfd.io/en/latest/
 
-### Define a Lighting module
+### Define a Lightning module
 
 自定义Net要继承 `pl.lightning`，可以将最重要的网络结果、前向传播、train都写在一个class内
 

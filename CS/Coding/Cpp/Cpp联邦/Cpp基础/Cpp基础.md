@@ -3,7 +3,9 @@ Title: Cpp
 Author: Weijian Feng 封伟健
 ---
 
+<img src="Cpp标准变迁.png">
 
+-- https://www.modernescpp.com/index.php/c23-the-next-c-standard/
 
 # 数据类型
 
@@ -995,7 +997,7 @@ ADD(a | b, a&b);
 
 C++17 将 inline 扩展到定义类的非常量静态成员变量的能力
 
-## *`std::optional` （17）*
+## *`std::optional`（17）*
 
 https://blog.csdn.net/qq_21438461/article/details/131892081
 
@@ -1065,6 +1067,19 @@ class optional {
 * 优化代码可读性
 
 * 在元模版编程中的作用
+
+
+## *结构化绑定（17）*
+
+### 多个返回值的场景
+
+结构化绑定 structured binding
+
+### 结构化绑定的类型
+
+* 绑定到原生数组
+* 绑定到结构体和类对象
+* 绑定到元祖和类元祖的对象
 
 # 复杂的const问题
 
@@ -2249,6 +2264,28 @@ noexcpet的特殊用法
 
 ### 强异常保证
 
+## *使用 noexcept*
+
+下面的内容来自于 *Effective Modern C++* - 条款14 只要函数不会抛出异常，就应该声明为noexcept
+
+### 声明为noexcept的好处
+
+开解？栈需要保存上下文来防止出错
+
+### swap & copy
+
+### 隐式noexcept
+
+C++98中允许内存释放函数，即 `operator delete` & `operator delete[]`，以及析构函数抛出异常是一种糟糕的行为（*EffectiveCpp.md* 条款8）
+
+C++11中则将这种约定升级成了语法特性：所有内存释放函数和析构函数都默认的为隐式noexcept。析构函数未隐式地声明为noexcpet的唯一场合是所在类中有数据成员（包括继承而来的成员以及在其他数据成员中包含的数据成员）的类别显式地将其析构函数声明为可能抛出异常的，即 `noexcept(false)`
+
+
+
+宽松契约 wide contract
+
+狭窄契约 narrow contract
+
 ## *异常体系*
 
 ### 自定义异常体系
@@ -3009,4 +3046,8 @@ Pimpl, Pointer to implementation 指向实现的指针是一种C++中的惯用�
 * 隐藏库依赖性：内部实现类可以包含库的特定细节，从而将库依赖性隔离在内部。这有助于减少对外部库的直接依赖，从而提高了代码的可维护性和可移植性提高安全性：通过将内部实现细节隐藏在内部实现类中，可以提高代码的安全性，减少不当访问和滥用的风险
 
 不过因为Pimpl多封装了一层，所以当阅读源代码的时候也会更加痛苦
+
+# 模块（20）
+
+模块 module 是C++20引入的新特性，它的主要用途是将大型工程中的代码拆分成独立的逻辑单元，以方便大型工程的代码管理
 

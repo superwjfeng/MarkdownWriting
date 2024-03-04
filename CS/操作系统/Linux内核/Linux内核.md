@@ -1,24 +1,94 @@
 # 源代码
 
+## *编译内核*
+
+以 Linux 5.6.18 内核为例
+
+```cmd
+$ wget https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-5.6.14.tar.xz
+```
+
+
+
+整体式结构：每个模块可以相对独立的编译
+
 ## *代码结构*
 
-* arch：包含和硬件体系结构相关的代码，每种平台占一个相应的目录。比如说和ARM体系存放在arm目录下，其中包括kerel（内核核心部分）、mm（内存管理）、nwfpe（浮点单元仿真）、lib（硬件相关工具函数）、boot（引导程序）、configs（各开发板的默认配置文件所在）
-* block：部分块设备驱动程序
-* crypto：常用加密和散列算法（如AES、SHA等），还有一些压缩和CRC校验算法
-* Documentation：关于内核各部分的参考文档
-* drivers：设备驱动程序，一般每种不同的设备的驱动程序占用一个子目录
-* fs：各种支持的文件系统的相关代码，如ext、fat、ntfs等
-* include：这个目录包括了核心的大多数include文件。另外对于每种支持的体系结构分别有一个子目录
-* init：内核初始化代码（注意不是系统引导代码）
-* ipc：此目录包含了核心的进程间通讯代码
-* kernel：内核的最核心部分，包括进程调度、定时器等，和平台相关的一部分代码放在 `arch/*/kernel` 目录下
-* lib：此目录包含了核心的库代码。与处理器结构相关库代码被放在 `arch/*/ib/` 目录下
-* mm：内存管理代码，和平台相关的一部分代码放在 `arch/*/mm` 目录下
-* net：网络相关代码，实现了各种常见的网络协议
-* scripts：用于配置内核的脚本文件
-* security：主要是一个SELinux的模块
-* sound：常用音频设备的驱动程序等
-* usr：目前实现了一个cpio
+以 Linux 5.6.18 内核为例
+
+```
+$ tree -L 1
+.
+├── arch
+├── block
+├── certs
+├── COPYING
+├── CREDITS
+├── crypto
+├── Documentation
+├── drivers
+├── fs
+├── include
+├── init
+├── ipc
+├── Kbuild
+├── Kconfig
+├── kernel
+├── lib
+├── LICENSES
+├── MAINTAINERS
+├── Makefile
+├── mm
+├── net
+├── README
+├── samples
+├── scripts
+├── security
+├── sound
+├── tools
+├── usr
+└── vir
+```
+
+* 文件夹
+  * arch：包含和硬件体系结构相关的代码，每种平台占一个相应的目录。比如说和ARM体系存放在arm目录下，其中包括kerel（内核核心部分）、mm（内存管理）、nwfpe（浮点单元仿真）、lib（硬件相关工具函数）、boot（引导程序）、configs（各开发板的默认配置文件所在）
+  * block：部分块设备驱动程序
+  * certs：与认证和签名相关的代码
+  * crypto：常用加密和散列算法（如AES、SHA等），还有一些压缩和CRC校验算法
+  * documentation：关于内核各部分的参考文档、协议规范代码
+  * drivers：设备驱动程序，一般每种不同的设备的驱动程序占用一个子目录。比如 USB 总线、PCI/PCIe总线、显示器、网卡等
+  * fs：各种支持的文件系统的相关代码，如ext、fat、ntfs等
+  * include：这个目录包括了核心的大多数include文件。另外对于每种支持的体系结构分别有一个子目录
+  * init：内核初始化代码（注意不是系统引导代码），直接关联到内存的各个组件入口
+  * ipc：此目录包含了核心的进程间通讯代码，比如信号量、共享内存等
+  * kernel：内核的核心代码，是所有体系结构所共享的内核部分。包括进程调度、定时器等，和平台相关的一部分代码放在 `arch/*/kernel` 目录下
+  * lib：此目录包含了核心的C标准库（子集）代码。与处理器结构相关库代码被放在 `arch/*/ib/` 目录下
+  * LICENSES：Linux 内核根据 Licenses/preferred/GPL-2.0 中提供GNU 通用公共许可证版本2
+  * mm：内存管理代码，和平台相关的一部分代码放在 `arch/*/mm` 目录下
+  * net：网络相关代码，实现了各种常见的网络协议，比如 TCP、WiFi、IPv6 等
+  * samples：内核实例代码
+  * scripts：用于配置内核的脚本文件
+  * security：内核安全模型相关的代码，主要是一个SELinux的模块
+  * sound：常用音频设备的驱动程序等（声卡驱动）
+  * tools：与内核交互的工具
+  * usr：用户打包和压缩内核的实现的源码，目前实现了一个cpio
+  * virt：/kvm 虚拟化目录相关支持实现
+
+* 文件
+  * .clang-format：内核代码格式化
+  * .cocciconfig
+  * .get_maintainer.ignore
+  * .gitattributes
+  * .gitignore
+  * .mailmap
+  * COPYING：许可和授权信息
+  * CREDITS：贡献者列表
+  * Kbuild：内核设定脚本
+  * Kconfig：开发人员配置内核的时候所用到的参数等
+  * MAINTAINERS：目前维护开发的人员列比哦啊
+  * Makefile：用于编译内核的主要文件
+  * README：编译内核信息
+
 
 # 进程 & 线程
 
