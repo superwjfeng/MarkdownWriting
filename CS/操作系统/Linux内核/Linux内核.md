@@ -14,6 +14,8 @@ $ wget https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-5.6.14.tar.xz
 
 ## *代码结构*
 
+### 代码组成
+
 以 Linux 5.6.18 内核为例
 
 ```
@@ -89,129 +91,114 @@ $ tree -L 1
   * Makefile：用于编译内核的主要文件
   * README：编译内核信息
 
+### 内核核心架构
+
+<img src="内核核心架构.drawio.png" width="60%">
+
+## *系统调用设计*
+
+<https://oska874.github.io/读核/Linux系统调用的定义.html>
+
+Linux的系统调用都是用定义在 `include/linux/syscalls.h` 中的 `SYSCALL_DEFINEx` 来实现的
+
+# 内核数据结构
+
+## *链表*
+
+https://zhjwpku.com/2018/11/20/kernel-data-structure-list-and-hlist.html
+
+### 双向链表
+
+和STL使用链表来直接管理数据不同，内核中的链表的数据结构中只有指针，没有数据。双向链表的实现采用侵入式的方式，链表节点不保存任何数据内容，而是将链表结构作为具体数据结构的成员
+
+因为内核是用C写的，不支持模版和泛型编程，也就是说list不能保存一种通用形式的数据，所以每个node中不包含数据。具体的数据管理需要额外单独完成
+
+```c
+// include/linux/types.h
+struct list_head {
+	struct list_head *next, *prev;
+};
+```
+
+双向链表的头不存储真实数据，它通常作为链表遍历的入口存在于系统的全局变量
+
+### 无锁链表
+
+```c
+// include/linux/llist.h
+struct llist_head {
+	struct llist_node *first;
+};
+
+struct llist_node {
+	struct llist_node *next;
+};
+```
+
+## *哈希链表*
+
+### hlist
+
+```c
+// include/linux/types.h
+struct hlist_head {
+	struct hlist_node *first;
+};
+
+struct hlist_node {
+	struct hlist_node *next, **pprev;
+};
+```
+
+### hlist_bl
+
+hlist_bl 是 hlist 一个特殊版本。一般在使用 hlist 用作 hashtable 的时候，会给每个 hlist 定义一个 spinlock，而为了减少这种内存开销，hlist_bl 利用 hlist_bl_head->first 的地址最后一位来代替 spinlock，这种方式可行的原因是因为指针通常为4字节8字节对齐，最后一位一定为0
+
+```c
+// include/linux/list_bl.h
+```
+
+## *红黑树*
+
+
+
+```c
+// include/linux/rbtree.h
+struct rb_node {
+	unsigned long  __rb_parent_color;
+	struct rb_node *rb_right;
+	struct rb_node *rb_left;
+} __attribute__((aligned(sizeof(long))));
+    /* The alignment might seem pointless, but allegedly CRIS needs it */
+
+struct rb_root {
+	struct rb_node *rb_node;
+};
+```
+
+
+
+
+
+使用场景：CFS、虚拟内存、epoll
 
 # 进程 & 线程
 
 ## *task_struct*
 
+### Linux进程
+
+Linux内核把进程叫做任务 task，进程的虚拟地址空间可分为用户虚拟地址空间和内核虚拟地址空间，所有进程共享内核虚拟地址空间，每个进程有独立的用户虚拟地址空间
+
+进程有两种特殊的形式：没有用户虚拟地址空间的进程叫内核线程，共享用户虚拟地址空间的进程叫用户线程。共享同一个用户虚拟地址空间的所有用户线程叫线程组
+
+### task_struct 解析
+
+Linux中的 `task_struct` 类型的结构体被成为进程控制块 Process Control Block, PCB 或者进程描述符 process descriptor ，用来组织、管理进程资源。Linux内核涉及进程和程序的所有算法都围绕task_struct数据结构而建立操作
+
+定义在 `include/linux/sched.h` 中
+
 <img src="task_struct.png">
-
-```c
-struct task_struct {
-    volatile long state;  //说明了该进程是否可以执行,还是可中断等信息
-    unsigned long flags;  //Flage 是进程号,在调用fork()时给出
-    int sigpending;       //进程上是否有待处理的信号
-    mm_segment_t addr_limit; //进程地址空间,区分内核进程与普通进程在内存存放的位置不同
-                             //0-0xBFFFFFFF for user-thead
-                             //0-0xFFFFFFFF for kernel-thread
-    //调度标志,表示该进程是否需要重新调度,若非0,则当从内核态返回到用户态,会发生调度
-    volatile long need_resched;
-    int lock_depth;  //锁深度
-    long nice;       //进程的基本时间片
-    //进程的调度策略有三种：实时进程:SCHED_FIFO, SCHED_RR, 分时进程:SCHED_OTHER
-    unsigned long policy;
-    struct mm_struct *mm; //进程内存管理信息
-    int processor;
-    //若进程不在任何CPU上运行, cpus_runnable 的值是0，否则是1 这个值在运行队列被锁时更新
-    unsigned long cpus_runnable, cpus_allowed;
-    struct list_head run_list; //指向运行队列的指针
-    unsigned long sleep_time;  //进程的睡眠时间
-    //用于将系统中所有的进程连成一个双向循环链表, 其根是init_task
-    struct task_struct *next_task, *prev_task;
-    struct mm_struct *active_mm;
-    struct list_head local_pages;       //指向本地页面      
-    unsigned int allocation_order, nr_local_pages;
-    struct linux_binfmt *binfmt;  //进程所运行的可执行文件的格式
-    int exit_code, exit_signal;
-    int pdeath_signal;     //父进程终止时向子进程发送的信号
-    unsigned long personality;
-    //Linux可以运行由其他UNIX操作系统生成的符合iBCS2标准的程序
-    int did_exec:1; 
-    pid_t pid;    //进程标识符，用来代表一个进程
-    pid_t pgrp;   //进程组标识，表示进程所属的进程组
-    pid_t tty_old_pgrp;  //进程控制终端所在的组标识
-    pid_t session;  //进程的会话标识
-    pid_t tgid;
-    int leader;     //表示进程是否为会话主管
-    struct task_struct *p_opptr,*p_pptr,*p_cptr,*p_ysptr,*p_osptr;
-    struct list_head thread_group;   //线程链表
-    struct task_struct *pidhash_next; //用于将进程链入HASH表
-    struct task_struct **pidhash_pprev;
-    wait_queue_head_t wait_chldexit;  //供wait4()使用
-    struct completion *vfork_done;  //供vfork() 使用
-    unsigned long rt_priority; //实时优先级，用它计算实时进程调度时的weight值
-
-    //it_real_value，it_real_incr用于REAL定时器，单位为jiffies, 系统根据it_real_value
-    //设置定时器的第一个终止时间. 在定时器到期时，向进程发送SIGALRM信号，同时根据
-    //it_real_incr重置终止时间，it_prof_value，it_prof_incr用于Profile定时器，单位为jiffies。
-    //当进程运行时，不管在何种状态下，每个tick都使it_prof_value值减一，当减到0时，向进程发送
-    //信号SIGPROF，并根据it_prof_incr重置时间.
-    //it_virt_value，it_virt_value用于Virtual定时器，单位为jiffies。当进程运行时，不管在何种
-    //状态下，每个tick都使it_virt_value值减一当减到0时，向进程发送信号SIGVTALRM，根据
-    //it_virt_incr重置初值。
-    unsigned long it_real_value, it_prof_value, it_virt_value;
-    unsigned long it_real_incr, it_prof_incr, it_virt_value;
-    struct timer_list real_timer;   //指向实时定时器的指针
-    struct tms times;      //记录进程消耗的时间
-    unsigned long start_time;  //进程创建的时间
-    //记录进程在每个CPU上所消耗的用户态时间和核心态时间
-    long per_cpu_utime[NR_CPUS], per_cpu_stime[NR_CPUS]; 
-    //内存缺页和交换信息:
-    //min_flt, maj_flt累计进程的次缺页数（Copy on　Write页和匿名页）和主缺页数（从映射文件或交换
-    //设备读入的页面数）； nswap记录进程累计换出的页面数，即写到交换设备上的页面数。
-    //cmin_flt, cmaj_flt, cnswap记录本进程为祖先的所有子孙进程的累计次缺页数，主缺页数和换出页面数。
-    //在父进程回收终止的子进程时，父进程会将子进程的这些信息累计到自己结构的这些域中
-    unsigned long min_flt, maj_flt, nswap, cmin_flt, cmaj_flt, cnswap;
-    int swappable:1; //表示进程的虚拟地址空间是否允许换出
-    //进程认证信息
-    //uid,gid为运行该进程的用户的用户标识符和组标识符，通常是进程创建者的uid，gid
-    //euid，egid为有效uid,gid
-    //fsuid，fsgid为文件系统uid,gid，这两个ID号通常与有效uid,gid相等，在检查对于文件
-    //系统的访问权限时使用他们。
-    //suid，sgid为备份uid,gid
-    uid_t uid,euid,suid,fsuid;
-    gid_t gid,egid,sgid,fsgid;
-    int ngroups; //记录进程在多少个用户组中
-    gid_t groups[NGROUPS]; //记录进程所在的组
-    //进程的权能，分别是有效位集合，继承位集合，允许位集合
-    kernel_cap_t cap_effective, cap_inheritable, cap_permitted;
-    int keep_capabilities:1;
-    struct user_struct *user;
-    struct rlimit rlim[RLIM_NLIMITS];  //与进程相关的资源限制信息
-    unsigned short used_math;   //是否使用FPU
-    char comm[16];   //进程正在运行的可执行文件名
-     //文件系统信息
-    int link_count, total_link_count;
-    //NULL if no tty 进程所在的控制终端，如果不需要控制终端，则该指针为空
-    struct tty_struct *tty;
-    unsigned int locks;
-    //进程间通信信息
-    struct sem_undo *semundo;      //进程在信号灯上的所有undo操作
-    struct sem_queue *semsleeping; //当进程因为信号灯操作而挂起时，他在该队列中记录等待的操作
-    //进程的CPU状态，切换时，要保存到停止进程的task_struct中
-    struct thread_struct thread;
-     
-    struct fs_struct *fs;        //文件系统信息
-    struct files_struct *files;  //打开文件信息
-      
-    spinlock_t sigmask_lock;     //信号处理函数
-    struct signal_struct *sig;   //信号处理函数
-    sigset_t blocked;            //进程当前要阻塞的信号，每个信号对应一位
-    struct sigpending pending;   //进程上是否有待处理的信号
-    unsigned long sas_ss_sp;
-    size_t sas_ss_size;
-    int (*notifier)(void *priv);
-    void *notifier_data;
-    sigset_t *notifier_mask;
-    u32 parent_exec_id;
-    u32 self_exec_id;
-
-    spinlock_t alloc_lock;
-    void *journal_info;
-};
-```
-
-Linux中的 `task_struct` 类型的结构体是进程描述符 process descriptor ，用来组织、管理进程资源
 
 ## *进程状态*
 
@@ -227,7 +214,7 @@ Linux中的 `task_struct` 类型的结构体是进程描述符 process descripto
 
   <img src="runningStatus.png">
 
-* TASK_INTERRUPTIBLE / S睡眠状态 Sleeping：意味着进程在等待睡眠完成（这里的睡眠也可叫做可中断睡眠 **interruptible sleep**），S状态对应的理论状态为阻塞态和挂起态，在等待非CPU资源就位，或者说在**非CPU硬件的队列**里排队。当等待的资源就位后，产生一个硬件中断或信号来环境进程。sOS可以通过调度算法在内存不够时将进程换出到Swap区
+* TASK_INTERRUPTIBLE / S 浅睡眠状态 Sleeping：意味着进程在等待睡眠完成（这里的睡眠也可叫做可中断睡眠 **interruptible sleep**），S状态对应的理论状态为阻塞态和挂起态，在等待非CPU资源就位，或者说在**非CPU硬件的队列**里排队。当等待的资源就位后，产生一个硬件中断或信号来环境进程。sOS可以通过调度算法在内存不够时将进程换出到Swap区
 
   * 情况一
 
@@ -242,7 +229,7 @@ Linux中的 `task_struct` 类型的结构体是进程描述符 process descripto
 
     一直在等待用户输入，所以一直处于IO的队列中，处于睡眠状态
 
-* TASK_UNINTERRUPTIBLE / D磁盘休眠状态 Disk sleep：也可叫做深度睡眠/不可中断睡眠 **uninterruptible sleep**，不可以被被动唤醒，在这个状态的进程通常会等待IO的结束
+* TASK_UNINTERRUPTIBLE / D 磁盘休眠状态 Disk sleep 或者深睡眠状态：也可叫做深度睡眠/不可中断睡眠 **uninterruptible sleep**，不可以被被动唤醒，在这个状态的进程通常会等待IO的结束
 
   * 例子：一个进程正在往硬盘或者往其他IO设备写入数据，但此时该进程仍然占用了内存资源。若此时OS压力过大，可能会选择终止处于S状态的进程以保护整体的OS。当进程处于D状态时，则不能被OS终止，只能等该进程结束读写后自动醒来时，OS再结束它
   * D状态一般用于硬盘的读写，因为涉及到用户的数据比较重要
@@ -351,13 +338,7 @@ struct list_head tasks {
 
 ### pidhash & 链表
 
-## *进程组织*
-
-### TASK_RUNNING
-
-### 等待队列
-
-## *进程切换*
+## *线程*
 
 ### 理解 `pthread_t` 线程id
 
@@ -393,7 +374,562 @@ void *startRoutine(void *args) {
 
 <img src="用户级tid和内核级lwp.png">
 
-## *内核线程*
+### 内核线程
+
+内核线程是直接由内核本身启动的进程。内核线程实际上是将内核函数委托给独立的进程，与系统中其他进程并行执行（实际上也并行于内核自身的执行）。内核线程经常称之为（内核）守护进程
+
+内核线程与普通进程的区别在于它没有独立的用户地址空间，即 task_struct 中的 mm 为空
+
+它们用于执行下列任务等
+
+* 周期性地将修改的内存页与页来源块设备同步，比方说使用mmap的文件映射
+* 若内存页很少使用，则写入交换区
+* 定期将 page cache 冲刷落盘
+* 管理延时动作 deferred action
+* 实现文件系统的事务日志
+
+# 进程调度
+
+http://www.wowotech.net/process_management/447.html
+
+## *优先级*
+
+### 优先级取值
+
+```c
+// include/linux/sched/prio.h
+/* Linux 内核优先级 */
+#define MAX_USER_RT_PRIO	100
+#define MAX_RT_PRIO		MAX_USER_RT_PRIO
+
+#define MAX_PRIO		(MAX_RT_PRIO + NICE_WIDTH)
+#define DEFAULT_PRIO		(MAX_RT_PRIO + NICE_WIDTH / 2)
+```
+
+限期进程的优先级比实时进程要高，实时进程的优先级比普通进程要高
+
+```
+高优先级                                                       低优先级
+<--------------------------------------------------------------------
+限期进程              实时进程                           普通进程
+     -1 0                                99 100                   139
+```
+
+* 限期进程 deadline process 的优先级是-1
+* 实时进程 realtime process 是优先级高，需要立即被执行的过程，它的优先级范围为 1\~99，优先级数值越大，表示优先级越高;
+* 普通进程 normal process 的静态优先级为100\~139，优先级数值越小，表示优先级越高，可以通过修改nice值改变普通进程的优先级，优先级等于120加上nice值
+
+```c
+// in task_struct
+/* 下面4个是进程调度的优先级 */
+int				prio;
+int				static_prio;
+int				normal_prio;
+unsigned int			rt_priority;
+```
+
+* prio 是动态优先级
+* static_prio 静态优先级是进程创建的时候分配的，可以使用系统调用来修改它
+
+### 不同类型进程的优先级
+
+<img src="不同进程的优先级.jpg">
+
+
+
+```
+fork, vfork, clone（用户空间） ->
+	sys_fork, sys_vfork, sys_clone, kthread_create（内核空间）->
+        _do_fork_ ->
+            copy_process
+```
+
+## *调度器*
+
+### Linux进程调度器系统
+
+Linux内核中用来调度进程（即安排进程的执行过程）的模块称为调度器 Scheduler，它可以切换进程状态 process status。调度器相当于CPU中央处理器的管理员，主要负责完成做两件事情
+
+* 选择某些就绪进程来执行
+
+  <img src="调度器Overview.drawio.png" width="50%">
+
+  每一个调度器类可以分为主调度器和周期性调度器，主调度器通过 `schedule()` 来完成进程的选择和切换，而周期性调度器则根据频率自动调用 `scheduler_tick()`，作用根据进程运行时间触发调度
+
+* 打断某些执行的进程让它们变为就绪状态
+
+  <img src="进程调度器的功能.drawio.png" width="60%">
+
+  如果调度器享可以将就绪状态切换到执行状态，**同时也可以把执行状态切换到就绪状态**，称该调度器为抢占式调度器 Preemptive Scheduler
+
+* 注意⚠️：阻塞状态是进程主动进入的，然后阻塞状态等待相应的资源就绪，此时让出了 CPU 的使用权
+
+### 公共部分
+
+Linux支持的调度器有
+
+* RT scheduler 实时进程的实时调度器：用 `rt_sched_class` 来描述，调度策略有SCHED_FIFO 和 SCHED_RR
+* CFS scheduler 普通进程的完全公平调度器：用 `rt_sched_class` 来描述，调度策略有SCHED_NORMAL和SCHED_BATCH
+* Deadline scheduler 期限调度器：用 `dl_sched_class` 来描述，调度策略为SCHED_DEADLINE
+* Idle scheduler 空闲调度器：用 `idle_sched_class` 来描述，调度策略为SCHED_IDLE
+
+Linux将调度器公共的部分抽象出来，使用`struct sched_class`结构体描述一个具体的调度类
+
+```c
+// 
+/* 进程调度器类 */
+struct sched_class {
+	/* Kernel中有多个调度类，按照调度优先级拍成一个链表 */
+	const struct sched_class *next;
+
+#ifdef CONFIG_UCLAMP_TASK
+	int uclamp_enabled;
+#endif
+	/* 将进程加入到执行队列中，即将调度实体（即进程）存放到红黑树中，并对nr_running自动+1 */
+	void (*enqueue_task) (struct rq *rq, struct task_struct *p, int flags);
+	/* 将进程从执行队列中删除，并对nr_running自动-1 */
+	void (*dequeue_task) (struct rq *rq, struct task_struct *p, int flags);
+	/* 放弃CPU执行权限，实际上此函数执行先出队后入队，在这种情况下直接将调度实体存放在红黑树的最右端 */
+	void (*yield_task)   (struct rq *rq);
+	bool (*yield_to_task)(struct rq *rq, struct task_struct *p, bool preempt);
+	/* 专门用于检查当前进程是否可被新进程抢占 */
+	void (*check_preempt_curr)(struct rq *rq, struct task_struct *p, int flags);
+	/* 选择下一个要运行的进程，prev是将要被调度出的任务，返回值是将要被调度的任务 */
+	struct task_struct *(*pick_next_task)(struct rq *rq);
+	/* 当一个任务将要被调度出时队列时执行 */
+	void (*put_prev_task)(struct rq *rq, struct task_struct *p);
+	void (*set_next_task)(struct rq *rq, struct task_struct *p, bool first);
+
+#ifdef CONFIG_SMP
+	int (*balance)(struct rq *rq, struct task_struct *prev, struct rq_flags *rf);
+	int  (*select_task_rq)(struct task_struct *p, int task_cpu, int sd_flag, int flags);
+	void (*migrate_task_rq)(struct task_struct *p, int new_cpu);
+
+	void (*task_woken)(struct rq *this_rq, struct task_struct *task);
+
+	void (*set_cpus_allowed)(struct task_struct *p,
+				 const struct cpumask *newmask);
+
+	void (*rq_online)(struct rq *rq);
+	void (*rq_offline)(struct rq *rq);
+#endif
+
+	void (*task_tick)(struct rq *rq, struct task_struct *p, int queued);
+	void (*task_fork)(struct task_struct *p);
+	void (*task_dead)(struct task_struct *p);
+
+	/*
+	 * The switched_from() call is allowed to drop rq->lock, therefore we
+	 * cannot assume the switched_from/switched_to pair is serliazed by
+	 * rq->lock. They are however serialized by p->pi_lock.
+	 */
+	void (*switched_from)(struct rq *this_rq, struct task_struct *task);
+	void (*switched_to)  (struct rq *this_rq, struct task_struct *task);
+	void (*prio_changed) (struct rq *this_rq, struct task_struct *task,
+			      int oldprio);
+
+	unsigned int (*get_rr_interval)(struct rq *rq,
+					struct task_struct *task);
+
+	void (*update_curr)(struct rq *rq);
+
+#define TASK_SET_GROUP		0
+#define TASK_MOVE_GROUP		1
+
+#ifdef CONFIG_FAIR_GROUP_SCHED
+	void (*task_change_group)(struct task_struct *p, int type);
+#endif
+};
+```
+
+1. next：指向下一个调度类（比自己低一个优先级）。在Linux中，每一个调度类都是有明确的优先级关系，高优先级调度类管理的进程会优先获得cpu使用权
+2. enqueue_task：入队列，向该调度器管理的runqueue中添加一个进程，即将进程从ready改为running状态
+3. dequeue_task：出队列，向该调度器管理的runqueue中删除一个进程，即将进程从running改为ready状态
+4. check_preempt_curr：当一个进程被唤醒或者创建的时候，需要检查当前进程是否可以抢占当前cpu上正在运行的进程，如果可以抢占需要标记TIF_NEED_RESCHED flag
+5. pick_next_task：从runqueue中选择一个最适合运行的task。问题是我们依据什么标准来挑选最适合运行的进程呢？一般是按照优先级的顺序
+
+### 调度器类型
+
+```c
+// kernel/sched/sched.h
+// 按照优先级从上到下排列
+extern const struct sched_class stop_sched_class; // 停机调度类
+extern const struct sched_class dl_sched_class;   // 限期调度类
+extern const struct sched_class rt_sched_class;   // 实时调度类
+extern const struct sched_class fair_sched_class; // 公平调度类
+extern const struct sched_class idle_sched_class; // 空闲调度类
+```
+
+上面的调度类是按照优先级从上到下排列的，在内核中这种优先级的表示就是通过一个单链表来表示的
+
+* Stop Scheduler 停机调度类：优先级最高的调度器类，可以抢占所有其他进程，而其他进程无法抢占停机进程
+
+* Deadline Scheduler 期限调度器：是最早使用的优先算法，使用红黑树把进程按照绝对截止期限从小到大排序，每次调度时选择绝对截止期限最小的进程
+
+  具体来说Deadline 调度器是一种实时 I/O 调度器，旨在确保 I/O 请求在给定的截止期限内完成。它通过为每个请求设置截止期限，优先执行截止期限最近的请求。这有助于避免 I/O 请求因等待时间过长而导致性能下降
+
+  适用于对 I/O 响应时间要求敏感的实时系统
+
+* Runtime Scheduler 实时调度类：为每个调度优先级都维护一个队列。具体见下
+
+* Fair Scheduler 公平调度类：使用完全公平调度算法，引入了虚拟运行时间 vruntime 的概念。具体见下
+
+* Idle Scheduler 空闲调度器：每个CPU上都有一个空闲线程，即0号线程，空闲调度类优先级别最低，仅当没有其他进程可以调度的时候才会调度空闲进程
+
+  空闲调度器主要用于在系统处于空闲状态时执行 IO 操作。当系统没有其他任务运行时，空闲调度器可以执行挂起的 IO 操作，以充分利用系统资源。空闲调度是最不会影响其他活动任务的性能的调度器
+
+### 进程调度策略
+
+```c
+// include/uapi/linux/sched.h
+#define SCHED_NORMAL		0
+#define SCHED_FIFO		1
+#define SCHED_RR		2
+#define SCHED_BATCH		3
+/* SCHED_ISO: reserved but not implemented yet */
+#define SCHED_IDLE		5
+#define SCHED_DEADLINE		6
+```
+
+* SCHED_NORMAL：普通进程调度策略，使task选择CFS调度器来调度运行
+* SCHED_FIFO 是一种 run to completion 的算法，采用先进先出的策略（first come, first serve），没有时间片的限制，获得CPU 控制权的进程会一直执行直到主动放弃CPU或者被更高优先级的实时进程抢占
+* SCHED_RR 采用 round robin 的策略，比 SCHED_FIFO多维护了一个时间片，相同优先级之间的进程能够轮流执行，每次执行的实际是一个固定的时间片
+* SCHED_BATCH：普通进程调度策略，批量处理，使task选择CFS调度器来调度运行
+* SCHED_IDLE：普通进程调度策略，使task以最低优先级选择CFS调度器来调度运行
+* SCHED_DEADLINE：限期进程调度策略，使task选择限期调度器来调度运行
+
+注意⚠️：虽然有 SCHED_IDLE 调度策略，但实际上 Stop 和 Idle 调度器用户都是无法选择使用的，只能被内核使用
+
+## *CFS*
+
+Completely Fair Scheduler, CFS 完全公平调度器，顾名思义对待每个进程都是公平的，让每个进程都运行一段相同的时间片，即 CFS 是一种基于时间片轮训的调度算法
+
+
+
+实际运行时间 = 调度周期 \* 进程权重 / 所有进程权重之和
+
+
+
+为了找到虚拟运行时间最小的进程，内核使用了一棵红黑树来保存
+
+### vruntime
+
+CFS 定义了一种新的调度模型，它给 cfs_rq（cfs 的 run_queue）中的每一个进程都设置了一个虚拟时钟 virtual runtime, vruntime。若一个进程得以执行，则随着执行时间的不断增长，其 vruntime 也将不断增大，而没有被调度执行的进程的 vruntime 则不变
+
+```c
+static const int prio_to_weight[40] = {
+    /* -20 */     88761,     71755,     56483,     46273,     36291,
+    /* -15 */     29154,     23254,     18705,     14949,     11916,
+    /* -10 */      9548,      7620,      6100,      4904,      3906,
+    /*  -5 */      3121,      2501,      1991,      1586,      1277,
+    /*   0 */      1024,       820,       655,       526,       423,
+    /*   5 */       335,       272,       215,       172,       137,
+    /*  10 */       110,        87,        70,        56,        45,
+    /*  15 */        36,        29,        23,        18,        15
+};
+```
+
+若新进程的vruntime初始值为0，会导致新进程立刻被调度，而且在一段时间内都是最小的
+
+### CFS调度器类
+
+```c
+const struct sched_class fair_sched_class = {
+	.next			= &idle_sched_class,
+	.enqueue_task		= enqueue_task_fair,
+	.dequeue_task		= dequeue_task_fair,
+	.yield_task		= yield_task_fair,
+	.yield_to_task		= yield_to_task_fair,
+
+	.check_preempt_curr	= check_preempt_wakeup,
+
+	.pick_next_task		= __pick_next_task_fair,
+	.put_prev_task		= put_prev_task_fair,
+	.set_next_task          = set_next_task_fair,
+
+#ifdef CONFIG_SMP
+	.balance		= balance_fair,
+	.select_task_rq		= select_task_rq_fair,
+	.migrate_task_rq	= migrate_task_rq_fair,
+
+	.rq_online		= rq_online_fair,
+	.rq_offline		= rq_offline_fair,
+
+	.task_dead		= task_dead_fair,
+	.set_cpus_allowed	= set_cpus_allowed_common,
+#endif
+
+	.task_tick		= task_tick_fair,
+	.task_fork		= task_fork_fair,
+
+	.prio_changed		= prio_changed_fair,
+	.switched_from		= switched_from_fair,
+	.switched_to		= switched_to_fair,
+
+	.get_rr_interval	= get_rr_interval_fair,
+
+	.update_curr		= update_curr_fair,
+
+#ifdef CONFIG_FAIR_GROUP_SCHED
+	.task_change_group	= task_change_group_fair,
+#endif
+
+#ifdef CONFIG_UCLAMP_TASK
+	.uclamp_enabled		= 1,
+#endif
+};
+```
+
+## *runqueue*
+
+系统中每个CPU都会有一个全局的就绪队列 cpu runqueue，使用`struct rq`结构体描述，它是per-cpu类型，即每个cpu上都会有一个`struct rq` 结构体
+
+<img src="vruntime红黑树.png">
+
+### cfs_rq
+
+```c
+/* CFS-related fields in a runqueue */
+struct cfs_rq {
+	struct load_weight	load;
+	unsigned long		runnable_weight;
+	unsigned int		nr_running;
+	unsigned int		h_nr_running;      /* SCHED_{NORMAL,BATCH,IDLE} */
+	unsigned int		idle_h_nr_running; /* SCHED_IDLE */
+
+	u64			exec_clock;
+	u64			min_vruntime;
+#ifndef CONFIG_64BIT
+	u64			min_vruntime_copy;
+#endif
+
+	struct rb_root_cached	tasks_timeline;
+
+	/*
+	 * 'curr' points to currently running entity on this cfs_rq.
+	 * It is set to NULL otherwise (i.e when none are currently running).
+	 */
+	// sched_entity 是可被内核调度的实体
+	struct sched_entity	*curr;
+	struct sched_entity	*next;
+	struct sched_entity	*last;
+	struct sched_entity	*skip;
+    // ...
+}
+```
+
+cfs_rq 是跟踪就绪队列信息以及管理就绪态调度的实体，cfs_rq 中维护着一棵按照 vruntime 排序的红黑树。`tasks_timeline->rb_root` 是红黑树的根，`tasks_timeline->rb_leftmost` 指向红黑树中最左边的调度实体，即虚拟赶时间最小的调度实体
+
+```c
+// include/linux/rbtree.h
+struct rb_root_cached {
+	struct rb_root rb_root;
+	struct rb_node *rb_leftmost;
+};
+```
+
+### 红黑树
+
+```c
+// include/linux/rbtree.h
+struct rb_node {
+	unsigned long  __rb_parent_color;
+	struct rb_node *rb_right;
+	struct rb_node *rb_left;
+} __attribute__((aligned(sizeof(long))));
+    /* The alignment might seem pointless, but allegedly CRIS needs it */
+
+struct rb_root {
+	struct rb_node *rb_node;
+};
+```
+
+### sched_entity
+
+sched_entity
+
+## *实时进程调度*
+
+`const struct sched_class rt_sched_class` 这个实时调度器类定义在 `kernel/sched/rt.c` 中，基本和fair_sched_class是一样的，这里就不再赘述
+
+### 优先级队列
+
+```c
+// kernel/sched/sched.h
+struct rt_prio_array {
+	DECLARE_BITMAP(bitmap, MAX_RT_PRIO+1); /* include 1 bit for delimiter */
+	struct list_head queue[MAX_RT_PRIO];
+};
+```
+
+### sched_rt_entity
+
+表示被实时调度的实体，包含整个实时调度实体的数据信息
+
+```c
+// include/linux/sched.h
+struct sched_rt_entity {
+	struct list_head		run_list;       // 指向运行队列的指针，用于加入运行队列
+	unsigned long			timeout;        // 设置时间超时
+	unsigned long			watchdog_stamp; // 用于记录jiffies值
+	unsigned int			time_slice;     // 时间片
+	unsigned short			on_rq;        
+	unsigned short			on_list;
+
+	struct sched_rt_entity		*back;      // 临时用于从上往下连接到RT调度实体使用
+#ifdef CONFIG_RT_GROUP_SCHED
+	struct sched_rt_entity		*parent;    // 指向父RT实体
+	/* rq on which this entity is (to be) queued: */
+	struct rt_rq			*rt_rq;         // RT调度实体所属的实时运行队列，被调度
+	/* rq "owned" by this entity/group: */
+	struct rt_rq			*my_q;          // RT调度实体所拥有的实时运行队列，用于管理子任务或子组任务
+#endif
+} __randomize_layout;
+```
+
+### rt_rq
+
+rt_rq 是实时调度类的运行队列
+
+```c
+// kernel/sched/sched.h
+/* Real-Time classes' related field in a runqueue: */
+struct rt_rq {
+	struct rt_prio_array	active;  // 优先级队列
+	unsigned int		rt_nr_running; // 在RT运行队列当中所有活动的任务数
+	unsigned int		rr_nr_running; // 在RT运行队列上可运行的实时任务的数量
+#if defined CONFIG_SMP || defined CONFIG_RT_GROUP_SCHED
+	struct {
+		int		curr; /* highest queued rt task prio 当前RT任务的最高优先级 */
+#ifdef CONFIG_SMP
+		int		next; /* next highest 下一个要运行的RT任务的优先级，如果两个任务都有最高优先级，curr==next*/
+#endif
+	} highest_prio;
+#endif
+#ifdef CONFIG_SMP
+	unsigned long		rt_nr_migratory; // 队列上可以被迁移到其他运行队列的实时任务的数量
+	unsigned long		rt_nr_total;
+	int			overloaded;
+	struct plist_head	pushable_tasks;
+
+#endif /* CONFIG_SMP */
+	int			rt_queued;
+
+	int			rt_throttled;
+	u64			rt_time;
+	u64			rt_runtime;
+	/* Nests inside the rq lock: */
+	raw_spinlock_t		rt_runtime_lock;
+
+#ifdef CONFIG_RT_GROUP_SCHED
+	unsigned long		rt_nr_boosted;
+
+	struct rq		*rq;
+	struct task_group	*tg;
+#endif
+};
+```
+
+## *多核调度*
+
+关于 SMPs 和 NUMA 的多核架构可以看 *计算机体系架构.md*
+
+补充一个经过实践检验的经验：**SMPs服务器CPU利用率最好的情况是2～4个CPU**
+
+### 多核调度要考虑的问题
+
+在多核处理器系统当中，内核必须考虑几个额外的问题以确保良好的调度
+
+* CPU负荷必须尽可能公平地在所有的处理器上共享
+* 进程与系统中某些处理器的亲合性 thread affinity / NUMA affinity 必须是可定制的
+* 内核必须能够将进程从一个CPU迁移到另一个
+
+Linux内核的SMPs调度就是将进程安排/迁移到合适的CPU中去，保持各CPU负载均衡的过程
+
+
+
+
+
+
+
+
+
+用户访问一个中心数据库
+
+
+
+### CPU的调度域和调度组
+
+Linux内核把所有同一个级别的CPU归纳为一个调度组 scheduling group，然后把同一级别的调度组组成一个调度域 scheduling domain
+
+根据CPU的实际物理属性的分类（SMT 超线程、MC 多核、SoC 普通处理器）以及Linux内核分类（CONFIG_SCHED_SMT、 CONFIG_SCHED_MC、DIE）的不同。Linux内核对CPU的管理是通过bitmap来管理的，并且定义4状态：possible/present/online/active，具体内核源码的处理如下
+
+```c
+// include/linux/cpumask.h
+extern struct cpumask __cpu_possible_mask;
+extern struct cpumask __cpu_online_mask;
+extern struct cpumask __cpu_present_mask;
+extern struct cpumask __cpu_active_mask;
+// 表示系统当中有多少个可以运行的CPU核心
+#define cpu_possible_mask ((const struct cpumask *)&__cpu_possible_mask)
+// 表示系统当中有多少个正在处于运行状态的CPU核心
+#define cpu_online_mask   ((const struct cpumask *)&__cpu_online_mask)
+// 表示系统当中有多少个具备online条件的CPU核心，它们不一定都是处于online核心，有的CPU核心可能被热插拔
+#define cpu_present_mask  ((const struct cpumask *)&__cpu_present_mask)
+// 表示系统当中有多少个活跃的CPU核心
+#define cpu_active_mask   ((const struct cpumask *)&__cpu_active_mask)
+```
+
+
+
+
+
+软件看到的处理器就是最底层的处理器，也就是说如果支持超线程/硬件线程，那么看到的就是超线程，否则就是一个核心
+
+
+
+## *进程调度实操*
+
+### chrt
+
+chrt 用于为特定的进程或线程设置不同的调度策略和优先级，如实时调度策略（SCHED_FIFO、SCHED_RR）或分时调度策略（SCHED_OTHER）
+
+```cmd
+$ chrt [options] [priority] command [arguments...]
+```
+
+* options 是一些可选的标志，用于指定调度策略等参数
+* priority 是进程的优先级，一般是一个整数值，实时调度策略的优先级范围通常是 1 到 99
+* command 是要执行的命令
+* arguments 是命令的参数
+
+以下是一些常用的选项
+
+* -m 或 --max：显示指定调度策略的最大优先级值
+* -p 或 --pid：指定一个已存在的进程的 PID，而不是启动新进程
+* -a 或 --all-tasks：operate on all the tasks (threads) for a given pid
+* -r 或 --rr：将进程设置为实时轮转调度策略（SCHED_RR）
+* -b 或 --batch：将进程设置为批处理调度策略（SCHED_BATCH）
+* -f 或 --fifo：将进程设置为实时先进先出调度策略（SCHED_FIFO）
+
+
+
+
+
+Linux的调度器为非实时的进程预留了5%的CPU时间片，避免某死循环实时进程完全占满了CPU
+
+```cmd
+$ sysctl -a | grep sched_rt_
+
+kernel.sched_rt_period_us = 1000000
+kernel.sched_rt_runtime_us = 950000 # 在period 时间里RT进 程最多能运行的时间
+```
+
+`busy -j2` 这个程序调度进程变成实时调度的时候，CPU占用率会从200%变成190%，因为一个线程会留出5%给普通调度的进程
+
+
+
+两个都改为FIFO，则同优先级的进程会把另一个实时进程的抢占完，比普通进程还惨
 
 # Paging of x86-64
 
@@ -474,6 +1010,30 @@ x86-64的物理分页见上
 
 # 内存管理
 
+
+
+<img src="内存管理.drawio.png" width="60%">
+
+
+
+内存管理子系统架构可以分为：用户空间、内核空间及硬件部分3个层面，具体结构如
+下图所示：
+1、用户空间：应用程序使用malloc（）申请内存资源/free（）释放内存资源。
+2、内核空间：内核总是驻留在内存中，是操作系统的一部分。内核空间为内核保留，
+不允许应用程序读写该区域的内容或直接调用内核代码定义的函数。
+3、硬件：处理器包含一个内存管理单元（Memory Management Uint, MMU）的部
+件，负责把虚拟地址转换为物理地址。
+
+
+
+```cmd
+$ grep vmalloc /proc/vmallocinfo
+```
+
+## *NUMA中的内存组织*
+
+
+
 ## *伙伴系统管理物理内存*
 
 伙伴系统 Buddy System
@@ -482,13 +1042,208 @@ x86-64的物理分页见上
 
 # 虚拟内存
 
-# 锁 & 进程间通信
+### mm_struct
 
-## *内核锁*
+```c
+// include/linux/mm_types.h
+```
 
-### RCU
+
+
+
+
+调用层级如下
+
+```
+new/delete
+	-> STL allocator (optional)
+		-> ptmalloc/tcmalloc/jemalloc
+            -> sbrk/brk/mmap/munmap
+                -> Wrapper: sys_brk/sys_mmap/sys_munmap
+                    -> kmalloc/vmalloc
+                        -> get_free_page
+```
+
+
+
+### 用户虛拟地址空间划分
+
+进程的用户虚拟空间的起始地址是0，长度为一个宏 TASK_SIZE，它由每种处理器架构自己定义
+
+ARM64架构定义的宏TASK_SIZE如下
+
+```c
+// arch/arm64/include/asm/memory.h
+```
+
+* 32位用户空间程序：TASK_SIZE的值是TASK_SIZE_32，即 `0x100000000=4GB`
+* 64位用户空间程序：TASK_SIZE的值是TASK_SIZE_64，即 $2^{VA\_BITS}$​ 字节。VA_BITS 是编译内核的时候选择的虚拟地址位数
+
+
+
+
+
+## *内存映射原理*
+
+一个进程的虚拟地址空间主要由两个数据结构进行描述。一个是task_struct管理的mm_struct，另外一个是mm_struct管理的vm_area_struct。mm_struct结构体描述一个进程整个虚拟地址空间。vm_area_struct结构体描述虚拟地址空间的一个区间（称为虚拟区）
+
+
+
+```c
+// include/linux/mm_types.h
+struct vm_area_struct {
+    /* The first cache line has the info for VMA tree walking. */
+	// 这两个成员分别用来保存该虚拟内存空间的首地址和末地址后第一个字节的地址
+	unsigned long vm_start;		/* Our start address within vm_mm. */
+	unsigned long vm_end;		/* The first byte after our end address
+					   within vm_mm. */
+	struct vm_area_struct *vm_next, *vm_prev; // 分别指向VMA链表的前后成员 
+	// VMA的数据采用红黑树管理
+	struct rb_node vm_rb;
+	unsigned long rb_subtree_gap;
+	/* Second cache line starts here. */
+	struct mm_struct *vm_mm;	/* The address space we belong to. 指向内存描述符，即虚拟内存区域所属的用户虚拟地址空间 */
+	pgprot_t vm_page_prot; // 访问权限，即一个保护位
+	unsigned long vm_flags;		/* Flags, see mm.h. */
+
+    /* 为了支持查询一个文件区间呗映射到那些虚拟内存区域，把一个文件映射到的所有虚拟内存区域加入该
+    文件地址空间结构 address_space 的成员i_mmap指向的区域树 */
+	struct {
+		struct rb_node rb;
+		unsigned long rb_subtree_last;
+	} shared;
+    // ... 
+} __randomize_layout;
+```
+
+
+
+创建内存映射时，在进程的用户虚拟地址空间 mm_struct 中分配一个虚拟内存区域 vm_area_struct。内核采用的是延迟分配物理内存的策略，在进程第一次访问虚拟页的时候，产生缺页异常
+
+* 文件映射是有文件支持的内存映射：分配物理页，把文件的指定区间的数据读到物理页中，然后在页表中记录把刚刚读的物理页到虚拟页鹅映射。文件的数据源是在 disk 上的
+* 匿名映射是没有文件支持的内存映射：分配物理页，然后同样地在页表中把物理页映射到 虚拟页。没有数据源
+
+
+
+
+
+
+
+两个进程可以使用共享的文件映射实现共享内存。匿名映射通常是私有映射，共享的匿名映射只可能出现在父进程和子进程之间。在进程的虚拟地址空间中，代码段和数据段是私有的文件映射，未初始化数据段，堆栈是私有的匿名映射
+
+
+
+### mmap的原理
+
+<https://nieyong.github.io/wiki_cpu/mmap详解.html>
+
+<https://www.cnblogs.com/huxiao-tee/p/4660352.html>
+
+<img src="mmap原理.png">
+
+管理虚拟进程空间的mm_struct结构体中有mmap指向 vm_area_struct，用于管理每一个虚拟内存段
+
+mmap内存映射的实现过程，大致可以分为三个阶段
+
+1. **进程启动映射过程，并在虚拟地址空间中为映射创建虚拟映射区域**
+
+   1. 进程在用户空间发起系统调用接口mmap
+   2. 在当前进程的虚拟地址空间中，寻找一段空闲的满足要求的连续的虚拟地址
+   3. 为此虚拟区分配一个vm_area_struct结构，并对这个结构的各个域进行初始化
+   4. 将新建的虚拟区结构 vm_area_struct 插入进程的虚拟地址区域链表或树中
+
+2. **调用内核空间的系统调用函数mmap（不同于用户空间函数），实现文件物理地址和进程虚拟地址的一一映射关系**
+
+   1. 为映射分配了新的虚拟地址区域后，通过待映射的文件指针，在文件描述符表中找到对应的文件描述符，通过文件描述符，链接到内核“已打开文件集”中该文件的文件结构体（struct file），每个文件结构体维护着和这个已打开文件相关各项信息
+   2. 通过该文件的文件结构体，链接到 file_operations 模块，调用内核函数 sys_mmap
+   3. sys_mmap 通过虚拟文件系统的inode定位到文件磁盘物理地址
+   4. 通过remap_pfn_range函数建立页表，即实现了文件地址和虚拟地址区域的映射关系。此时，这片虚拟地址并没有任何数据关联到主存中
+
+3. **进程发起对这片映射空间的访问，引发缺页异常，实现文件内容到物理内存（主存）的拷贝**
+
+   前两个阶段仅在于创建虚拟区间并完成地址映射，但是并没有将任何文件数据的拷贝至主存。真正的文件读取是当进程发起读或写操作时
+
+   1. 进程的读或写操作访问虚拟地址空间这一段映射地址，通过查询页表，发现这一段地址并不在物理页面上。因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中，因此引发缺页异常
+   2. 缺页异常进行一系列判断，确定无非法操作后，内核发起请求调页过程
+   3. 调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没有则调用nopage函数把所缺的页从磁盘装入到主存中
+   4. 之后进程即可对这片主存进行读或者写的操作，如果写操作改变了其内容，一定时间后系统会自动回写脏页面到对应磁盘地址，也即完成了写入到文件的过程
+
+注意：修改过的脏页并不会立即更新回文件中，而是有一段时间的延迟，可以调用 `msync()` 来强制同步, 这样所写的内容就能立即保存到文件里了
+
+
+
+
+
+
+
+### vm_flags
+
+```c
+// include/linux/mm.h
+#define VM_NONE		0x00000000
+
+#define VM_READ		0x00000001	/* currently active flags */
+#define VM_WRITE	0x00000002
+#define VM_EXEC		0x00000004
+#define VM_SHARED	0x00000008
+
+/* mprotect() hardcodes VM_MAYREAD >> 4 == VM_READ, and so for r/w/x bits. */
+#define VM_MAYREAD	0x00000010	/* limits for mprotect() etc */
+#define VM_MAYWRITE	0x00000020
+#define VM_MAYEXEC	0x00000040
+#define VM_MAYSHARE	0x00000080
+
+#define VM_GROWSDOWN	0x00000100	/* general info on the segment */
+#define VM_UFFD_MISSING	0x00000200	/* missing pages tracking */
+#define VM_PFNMAP	0x00000400	/* Page-ranges managed without "struct page", just pure PFN */
+#define VM_DENYWRITE	0x00000800	/* ETXTBSY on write attempts.. */
+#define VM_UFFD_WP	0x00001000	/* wrprotect pages tracking */
+
+#define VM_LOCKED	0x00002000
+#define VM_IO           0x00004000	/* Memory mapped I/O or similar */
+// ...
+```
+
+## *系统调用*
+
+
+
+
+
+```
+mmap
+	-> sys_mmap # mm/mmap.c
+		-> ksys_mmap_pgoff # mm/mmap.c
+			-> vm_mmap_pgoff # mm/util.c
+				-> do_mmap_pgoff # include/linux/mm.h
+					-> do_mmap # mm/mmap.c
+```
+
+
+
+# 内核锁
+
+原子操作、信号量（semaphore）、读写信号量（rw_semaphore）、spinlock、BKL（Big Kernel Lock）、rwlock、brlock（只包含在2.4内核中）、RCU（只包含在2.6内核中）和seqlock（只包含在2.6内核中）
+
+## *自旋锁*
+
+## *RCU*
+
+### RCU 的使用场景
+
+Mutex和Spinlock这种锁不论读写，只允许一个用户。RCU本质是一种更细粒度的读写锁，允许同时读
 
 RCU, Read-Copy-Update 是一种用于实现并发数据访问的机制，在 2.5 版本引入，通常用于多线程环境下对共享数据的访问和更新。它的设计目标是允许读操作可以在不加锁的情况下并发进行，而不会阻塞写操作
+
+写者要删除对象，必须等待所有访问被删除对象读者访问结束的时候，才能够执行销毁操作实现。RCU 优势是读者没有任何同步开销；不需要获取任何的锁，不需要执行原子指令、不需要执行内存屏障。但是写者的同步开销比较写者需要延迟对象的释放、复制被修改的对象，写者之间必须使用锁互斥操作方法
+
+RCU 经常用于读者性能要求比较高的场景
+
+* RCU 只能够保护动态分配的数据结构，必须是通过指针访问此数据结构
+* 受RCU 保护的临界区内不能sleep
+* 读写不对称，对写者的性能没有要求，但是读者性能要求比较高
+
+### 使用过程
 
 它进行并发读写的过程如下：
 
@@ -496,6 +1251,155 @@ RCU, Read-Copy-Update 是一种用于实现并发数据访问的机制，在 2.5
 2. 拷贝 copy：当需要进行写操作时，RCU并不直接在原始数据上进行修改，而是创建一个数据的副本。这样，读操作可以继续在原始数据上进行，不受影响
 3. 更新 update：更新操作在新的副本上完成，而不是直接在原始数据上进行修改。一旦更新完成以及在所有进行读访问的使用者结束对旧副本的读取之后，**指针将指向新的数据**，这个过程是原子的。对于已经在进行的读操作，它们会继续引用原始数据，直到它们完成为止。这确保了读操作不会在修改过程中受到干扰
 4. 回收 reclaim：一旦没有任何读操作引用原始数据，该数据可以被安全地回收
+
+### 宽限期
+
+怎么判断读者已经完成访问？等待所有读者完成读的时间称为宽限期 grace period
+
+### 使用场景例子
+
+RCU 一个重要的应用场景是链表，可以有效地提高遍历读取数据的效率，读取链表成员数据时候通常只需要令 `rcu_read_lock()`。允许多个线程同时读取链表，并且允许另一个写线程同时修改链表
+
+经过 RCU 保护重写过的链表位于 `include/linux/rculist.h`
+
+* 添加链表项
+
+  ```c
+  // include/linux/rculist.h
+  static inline void list_add_rcu(struct list_head *new, struct list_head *head)
+  {
+  	__list_add_rcu(new, head, head->next);
+  }
+  
+  static inline void __list_add_rcu(struct list_head *new,
+  		struct list_head *prev, struct list_head *next)
+  {
+  	if (!__list_add_valid(new, prev, next))
+  		return;
+  
+  	new->next = next;
+  	new->prev = prev;
+  	rcu_assign_pointer(list_next_rcu(prev), new);
+  	next->prev = new;
+  }
+  ```
+
+* 删除链表项
+
+  ```c
+  // include/linux/rculist.h
+  static inline void list_del_rcu(struct list_head *entry)
+  {
+  	__list_del_entry(entry);
+  	entry->prev = LIST_POISON2;
+  }
+  
+  // include/linux/list.h
+  static inline void __list_del_entry(struct list_head *entry)
+  {
+  	if (!__list_del_entry_valid(entry))
+  		return;
+  
+  	__list_del(entry->prev, entry->next);
+  }
+  ```
+
+* 更新链表项
+
+  ```c
+  // include/linux/rculist.h
+  static inline void list_replace_rcu(struct list_head *old,
+  				struct list_head *new)
+  {
+  	new->next = old->next;
+  	new->prev = old->prev;
+  	rcu_assign_pointer(list_next_rcu(new->prev), new);
+  	new->next->prev = new;
+  	old->prev = LIST_POISON2;
+  }
+  ```
+
+### RCU的层次结构
+
+RCU根据CPU数量的大小按照树形结构来组成其层次结构，称为RCU Hierarchy
+
+RCU层次结构根据CPU数量决定，内核中有宏帮助构建RCU层次架构，其中 CONFIG_RCU_FANOUT_LEAF 表示一个子叶子的CPU数量，CONFIG_RCU_FANOUT 表示每个层数最多支持多少个叶子数量
+
+## *内存优化屏障*
+
+### 优化屏障
+
+为了提高程序的执行性能，在编程时，指令一般不按照源程序顺序执行，**编译器、CPU以及硬件**都可能会对程序的执行顺序进行优化。然而在一些情况下，优化会造成程序的逻辑错误，所以就有了优化屏障 optimizaiton barrier 来避免编译的重新排序优化操作，保证编译程序时在优化屏障之前的指令不会在优化屏障之后执行
+
+* 编译器优化：为提高系统性能，编译器在不影响逻辑的情况下会调整指令的执行顺序
+* CPU 执行优化：为提高流水线的性能，CPU 的乱序执行 OoO 可能会让后面的寄存器冲突的指令先于前面指令完成
+* 硬件优化：在多处理器系统当中，硬件工程师会使用存储缓冲区、使无效队列协助缓存和缓存一致性协议实现高效性能，这会引入处理器之间的内存访问乱序问题
+
+比如说C语言中的volatile也是一种优化屏障。而Linux则使用宏barrier来实现优化屏障，如gcc编译器的优化屏障宏定义
+
+```c
+// include/linux/compiler-gcc.h
+/* The "volatile" is due to gcc bugs */
+#define barrier() __asm__ __volatile__("": : :"memory")
+```
+
+### 内存屏障
+
+内存屏障 memory barrier，也称为屏障指令等，是一类同步屏障指令。效果是编译器或CPU对内存访问操作的时候，需要严格按照一定顺序来执行，也就是内存屏障之前的指令和内存屏障之后的指令不会由于系统优化等原因而导致乱序
+
+Linux内核支持3种内存屏障：编译器屏障、处理器内存屏障、内存映射IO写屏障（Memory Mapping IO, MMIO，此屏障已被废弃新驱动不应该使用）
+
+| 内存屏障类型 | 强制性的内存屏障         | SMP的内存屏障                |
+| ------------ | ------------------------ | ---------------------------- |
+| 通用内存屏障 | `mb()`                   | `smp_mb()`                   |
+| 写内存屏障   | `wmb()`                  | `smp_wmb()`                  |
+| 读内存屏障   | `rmb()`                  | `smp_rmb()`                  |
+| 数据依赖屏障 | `read_barrier_depends()` | `smp_read_barrier_depends()` |
+
+## *其他锁*
+
+
+
+
+
+### 近似的 per-CPU 计数器
+
+per-CPU 用来加速SMP系统的计数操作，类似于RCU，不直接去修改计数器变量，而是修改每个CPU本地的cache
+
+```c
+#ifdef CONFIG_SMP
+
+struct percpu_counter {
+	raw_spinlock_t lock;
+	s64 count;
+#ifdef CONFIG_HOTPLUG_CPU
+	struct list_head list;	/* All percpu_counters are on a list */
+#endif
+	s32 __percpu *counters;
+};
+```
+
+# IPC
+
+# 驱动
+
+# 模块
+
+模块化软件管理系统通常会处理软件包的版本管理和依赖解决，确保安装的软件与系统中其他软件的兼容性，并且满足所需的依赖关系。这简化了软件包的管理和更新过程，使系统更加稳定和可靠
+
+### Modules Environment
+
+Module environment 是一个专门管理环境变量的工具，一般应用于软件或运行库等设备有多个版本，且需要分别配置这些环境变量
+
+```shell
+$ module list                  # list loaded modules
+$ module avail                 # list all compilers / packages available
+$ module load <package-name>   # load a module
+$ module unload <package-name> # unload a module
+$ module switch <package-name> # switch module ( unload and load )
+```
+
+
 
 # 中断 & 异常
 
@@ -559,145 +1463,6 @@ $ cat /proc/softirqs
 ### /proc/interrupts
 
 /proc/interrupts 提供了硬中断的运行情况
-
-# 进程调度
-
-http://www.wowotech.net/process_management/447.html
-
-## *核心数据结构*
-
-### 公共部分
-
-Linux将调度器公共的部分抽象出来，使用`struct sched_class`结构体描述一个具体的调度类
-
-```c
-struct sched_class {
-	const struct sched_class *next;
-	void (*enqueue_task) (struct rq *rq, struct task_struct *p, int flags);
-	void (*dequeue_task) (struct rq *rq, struct task_struct *p, int flags);
-	void (*check_preempt_curr)(struct rq *rq, struct task_struct *p, int flags);
-	struct task_struct * (*pick_next_task)(struct rq *rq, struct task_struct *prev, struct rq_flags *rf);
-    /* ... */
-}; 
-```
-
-1. next：指向下一个调度类（比自己低一个优先级）。在Linux中，每一个调度类都是有明确的优先级关系，高优先级调度类管理的进程会优先获得cpu使用权
-2. enqueue_task：入队列，向该调度器管理的runqueue中添加一个进程
-3. dequeue_task：出队列，向该调度器管理的runqueue中删除一个进程
-4. check_preempt_curr：当一个进程被唤醒或者创建的时候，需要检查当前进程是否可以抢占当前cpu上正在运行的进程，如果可以抢占需要标记TIF_NEED_RESCHED flag
-5. pick_next_task：从runqueue中选择一个最适合运行的task。问题是我们依据什么标准来挑选最适合运行的进程呢？一般是按照优先级的顺序
-
-### Linux调度器
-
-Linux支持的调度器有
-
-* RT scheduler 实时进程的实时调度器：用 `rt_sched_class` 来描述，调度策略有SCHED_FIFO 和 SCHED_RR
-* CFS scheduler 普通进程的完全公平调度器：用 `rt_sched_class` 来描述，调度策略有SCHED_NORMAL和SCHED_BATCH
-* Deadline scheduler：用 `dl_sched_class` 来描述，调度策略为SCHED_DEADLINE
-* Idle scheduler 空闲调度器：用 `idle_sched_class` 来描述，调度策略有为SCHED_IDLE
-
-### Deadline & Idle scheduler
-
-这两种调度方式不太常用，所以这简单介绍一下
-
-* Deadline Scheduler截止期限调度器
-  * 原理：Deadline 调度器是一种实时 I/O 调度器，旨在确保 I/O 请求在给定的截止期限内完成。它通过为每个请求设置截止期限，优先执行截止期限最近的请求。这有助于避免 I/O 请求因等待时间过长而导致性能下降
-  * 特点：
-    * 通过 I/O 请求的截止期限进行调度
-    * 对于实时任务，可以提供更可预测的 I/O 响应时间
-  * 适用场景：适用于对 I/O 响应时间要求敏感的实时系统
-* Idle Scheduler空闲调度器
-  * 原理：空闲调度器主要用于在系统处于空闲状态时执行 I/O 操作。当系统没有其他任务运行时，空闲调度器可以执行挂起的 I/O 操作，以充分利用系统资源
-  * 特点：
-    * 在系统空闲时执行 I/O 操作，以提高资源利用率
-    * 不会影响其他活动任务的性能
-  * 适用场景：适用于需要在系统空闲时执行 I/O 操作的场景，以防止浪费系统资源
-
-## *普通进程调度*
-
-Completely Fair Scheduler, CFS 完全公平调度器
-
-### vruntime
-
-```c
-static const int prio_to_weight[40] = {
-    /* -20 */     88761,     71755,     56483,     46273,     36291,
-    /* -15 */     29154,     23254,     18705,     14949,     11916,
-    /* -10 */      9548,      7620,      6100,      4904,      3906,
-    /*  -5 */      3121,      2501,      1991,      1586,      1277,
-    /*   0 */      1024,       820,       655,       526,       423,
-    /*   5 */       335,       272,       215,       172,       137,
-    /*  10 */       110,        87,        70,        56,        45,
-    /*  15 */        36,        29,        23,        18,        15
-};
-```
-
-若新进程的vruntime初始值为0，会导致新进程立刻被调度，而且在一段时间内都是最小的
-
-### runqueue
-
-系统中每个CPU都会有一个全局的就绪队列 cpu runqueue，使用`struct rq`结构体描述，它是per-cpu类型，即每个cpu上都会有一个`struct rq` 结构体
-
-<img src="vruntime红黑树.png">
-
-## *实时进程调度*
-
-### SCHED_RR 策略
-
-SCHED_RR 采用 round robin 的策略，比 SCHED_FIFO多维护了一个时间片，相同优先级之间的进程能够轮流执行，每次执行的实际是一个固定的时间片
-
-### SCHED_FIFO 策略
-
-SCHED_FIFO 是一种 run to completion 的算法，采用先进先出的策略，获得CPU 控制权的进程会一直执行直到主动放弃CPU或者被更高优先级的实时进程抢占
-
-## *实验*
-
-Linux的调度器为非实时的进程预留了5%的CPU时间片，避免某死循环实时进程完全占满了CPU
-
-```cmd
-$ sysctl -a | grep sched_rt_
-
-kernel.sched_rt_period_us = 1000000
-kernel.sched_rt_runtime_us = 950000 # 在period 时间里RT进 程最多能运行的时间
-```
-
-`busy -j2` 这个程序调度进程变成实时调度的时候，CPU占用率会从200%变成190%，因为一个线程会留出5%给普通调度的进程
-
-
-
-两个都改为FIFO，则同优先级的进程会把另一个实时进程的抢占完，比普通进程还惨
-
-
-
-
-
-
-
-
-
-### chrt
-
-chrt 用于为特定的进程或线程设置不同的调度策略和优先级，如实时调度（SCHED_FIFO、SCHED_RR）或普通调度（SCHED_OTHER）
-
-```cmd
-$ chrt [options] [priority] command [arguments...]
-```
-
-* options 是一些可选的标志，用于指定调度策略等参数
-* priority 是进程的优先级，一般是一个整数值，实时调度策略的优先级范围通常是 1 到 99
-* command 是要执行的命令
-* arguments 是命令的参数
-
-以下是一些常用的选项
-
-* -m 或 --max：显示指定调度策略的最大优先级值
-* -p 或 --pid：指定一个已存在的进程的 PID，而不是启动新进程
-* -a 或 --all-tasks：operate on all the tasks (threads) for a given pid
-* -r 或 --rr：将进程设置为实时轮转调度策略（SCHED_RR）
-* -b 或 --batch：将进程设置为批处理调度策略（SCHED_BATCH）
-* -f 或 --fifo：将进程设置为实时先进先出调度策略（SCHED_FIFO）
-
-一个常用的组合
 
 # 设备驱动
 
@@ -1325,45 +2090,6 @@ struct address_space {
 # 文件访问
 
 ## *读写文件*
-
-## *内存映射*
-
-### mmap的原理
-
-<https://nieyong.github.io/wiki_cpu/mmap详解.html>
-
-<https://www.cnblogs.com/huxiao-tee/p/4660352.html>
-
-<img src="mmap原理.png">
-
-管理虚拟进程空间的mm_struct结构体中有mmap指向 vm_area_struct，用于管理每一个虚拟内存段
-
-mmap内存映射的实现过程，大致可以分为三个阶段
-
-1. **进程启动映射过程，并在虚拟地址空间中为映射创建虚拟映射区域**
-
-   1. 进程在用户空间发起系统调用接口mmap
-   2. 在当前进程的虚拟地址空间中，寻找一段空闲的满足要求的连续的虚拟地址
-   3. 为此虚拟区分配一个vm_area_struct结构，并对这个结构的各个域进行初始化
-   4. 将新建的虚拟区结构 vm_area_struct 插入进程的虚拟地址区域链表或树中
-
-2. **调用内核空间的系统调用函数mmap（不同于用户空间函数），实现文件物理地址和进程虚拟地址的一一映射关系**
-
-   1. 为映射分配了新的虚拟地址区域后，通过待映射的文件指针，在文件描述符表中找到对应的文件描述符，通过文件描述符，链接到内核“已打开文件集”中该文件的文件结构体（struct file），每个文件结构体维护着和这个已打开文件相关各项信息
-   2. 通过该文件的文件结构体，链接到file_operations模块，调用内核函数 sys_mmap
-   3. sys_mmap 通过虚拟文件系统的inode定位到文件磁盘物理地址
-   4. 通过remap_pfn_range函数建立页表，即实现了文件地址和虚拟地址区域的映射关系。此时，这片虚拟地址并没有任何数据关联到主存中
-
-3. **进程发起对这片映射空间的访问，引发缺页异常，实现文件内容到物理内存（主存）的拷贝**
-
-   前两个阶段仅在于创建虚拟区间并完成地址映射，但是并没有将任何文件数据的拷贝至主存。真正的文件读取是当进程发起读或写操作时
-
-   1. 进程的读或写操作访问虚拟地址空间这一段映射地址，通过查询页表，发现这一段地址并不在物理页面上。因为目前只建立了地址映射，真正的硬盘数据还没有拷贝到内存中，因此引发缺页异常
-   2. 缺页异常进行一系列判断，确定无非法操作后，内核发起请求调页过程
-   3. 调页过程先在交换缓存空间（swap cache）中寻找需要访问的内存页，如果没有则调用nopage函数把所缺的页从磁盘装入到主存中
-   4. 之后进程即可对这片主存进行读或者写的操作，如果写操作改变了其内容，一定时间后系统会自动回写脏页面到对应磁盘地址，也即完成了写入到文件的过程
-
-注意：修改过的脏页并不会立即更新回文件中，而是有一段时间的延迟，可以调用 `msync()` 来强制同步, 这样所写的内容就能立即保存到文件里了
 
 # 页回收
 

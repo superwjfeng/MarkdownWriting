@@ -1804,7 +1804,7 @@ int main() {
 struct Point {
     int x;
     int y;
-}p1; //声明类型的同时定义变量p1
+} p1; //声明类型的同时定义变量p1
 struct Point p2; //定义结构体变量p2
 //初始化：定义变量的同时赋初值。
 struct Point p3 = {x, y};

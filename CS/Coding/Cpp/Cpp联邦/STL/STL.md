@@ -647,9 +647,25 @@ STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 
 
 * `max_element` & `min_element`：获取容器中最大、最小值的pos迭代器
 
+  ```c++
+  template <class ForwardIterator>
+  ForwardIterator max_element (ForwardIterator first, ForwardIterator last);
+  
+  template <class ForwardIterator, class Compare>
+  ForwardIterator max_element (ForwardIterator first, ForwardIterator last, Compare comp);
+  ```
+
 * `distance`：返回两个迭代器之间的距离
 
-* `lower_bound` & `upper_bound`
+* `lower_bound` & `upper_bound`：返回 `[first, last)` 之间不小于/不大于 val 的迭代器。应该采用的是二分法查找，所以复杂度是 ***O(logN)***
+
+  ```c++
+  template <class ForwardIterator, class T>
+  ForwardIterator lower_bound (ForwardIterator first, ForwardIterator last, const T& val);
+  
+  template <class ForwardIterator, class T, class Compare>
+  ForwardIterator lower_bound (ForwardIterator first, ForwardIterator last, const T& val, Compare comp);
+  ```
 
 ## *排序*
 

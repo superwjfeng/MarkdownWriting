@@ -1,4 +1,4 @@
-# ROS1 & ROS2 架构
+# ROS1 & ROS2介绍
 
 Robotic OperatingSystem, ROS是一个用于编写机器人软件的灵活框架，它集成了大量的工具、库和协议，提供了类似操作系统所提供的功能，包括硬件抽象描述、底层驱动程序管理、共用功能的执行、程序间的消息传递、程序发行包管理，可以极大简化繁杂多样的机器人平台下的复杂任务创建与稳定行为控制。
 
@@ -17,41 +17,132 @@ Robotic OperatingSystem, ROS是一个用于编写机器人软件的灵活框架�
   * Master是核心管理者
   * ROS社区提供的大量机器人应用包里的模块以节点为单位运行，以ROS标准的IO作为接口，开发者不需要关注模块的内部实现机制
 
-## *计算图*
-
-计算图 Computation Graph，也被称为计算图谱或计算图模型，是一种表示计算任务和数据流的图形模型。计算图通常用于描述和可视化计算机程序中的操作和数据之间的关系
-
-从计算图的角度看，ROS系统软件的功能模块以节点为单位独立运行，可以分布于多个相同或不同的主机中
-
-### 节点 Node
-
-节点 Node是一些执行运算任务的进程，一个系统一般会由多个节点组成，也称为软件模块
-
-ROS节点管理器就是ROS Master用来管理各种节点。Master调用RPC来提供登记列表和对其他计算图表的查找功能
-
-### 消息 Message
-
-节点之间的通信机制基于发布-订阅模式的消息 Message 通信
-
-### 话题 Subject
-
 ## *ROS2架构设计*
 
 ROS2：https://www.guyuehome.com/34382
 
+### ROS2 版本迭代
+
+1. **ROS 2 Ardent Apalone**: 这是 ROS 2 的第一个正式版本，于2017年12月发布。它为ROS 2提供了一个稳定的基础，并引入了许多重要的功能和改进
+2. **ROS 2 Bouncy Bolson**: 发布于2018年6月，Bouncy Bolson 引入了一些重要的新特性和改进，包括更好的文档、改进的安全性和可靠性，以及对Real-Time发布的初步支持
+3. **ROS 2 Crystal Clemmys**: 于2018年12月发布，Crystal Clemmys 在之前版本的基础上引入了更多的功能和改进，包括对Python 3的全支持，更好的实时性能，以及更多的功能包
+4. **ROS 2 Dashing Diademata**: 在2019年5月发布，Dashing Diademata 版本继续加强了ROS 2的稳定性和功能，包括更多的工具、库和改进，以支持开发人员构建更复杂的机器人系统
+5. **ROS 2 Eloquent Elusor**: 发布于2019年12月，Eloquent Elusor 版本引入了一些重要的新特性和改进，包括更好的安全性、改进的Real-Time支持和更好的文档
+6. **ROS 2 Foxy Fitzroy**: 在2020年6月发布，Foxy Fitzroy 版本引入了许多新特性和改进，包括更好的性能、更多的功能包、更好的文档和改进的可靠性
+7. **ROS 2 Galactic Geochelone**: 这是截至2022年1月的最新版本。Galactic Geochelone 带来了许多新的功能和改进，包括更好的Real-Time支持、更多的工具和库，以及更好的跨平台支持
+8. **ROS2 Humble Hawksbill LTS** 是第一个ROS2的长期支持版，于2022年发布
+
+### ROS2相比于ROS1的优势
+
+ROS1是基于学术研究目的所开发的，但随着AI的出现，大量机器人产品开始商业化，ROS1的架构无法再满足实际的需求
+
+ROS2更多的下面几个方面考虑来设计
+
+* 多机器人系统：构建多机器人系统的标准方法
+* 跨平台：适用windows、RTOS等多种系统
+* 实时性：提供实时性方面的设计与功能保证
+* 网络连接：在各种网络环境下保证数据完整性
+* 产品化：从科学研究到消费产品的完美过渡
+* 项目管理：胜任完整生命周期下的项目管理
+
+ROS2并不是基于ROS1的，而是在吸收了ROS1架构的优势和经验后，重新构建源代码而成的
+
+* 架构的颠覆：ROS1的架构下，所有节点需要使用Master进行管理，而ROS2使用基于DDS的Discovery机制，抛弃了Master机制，也就是说**各个节点可以通过DDS节点相互发现，各个节点是平等的**，可以实现一对一、一对多、多对多的通信
+* API的重新设计：ROS1中的大部分代码都基于2009年2月设计的API，而ROS2重新设计了用户API（现代C++和Python3），但使用方法类似
+* 构建系统的升级：ROS1使用rosbuild、catkin管理项目，在构建一些大型项目常常会出现报错，ROS2使用升级版的ament、colcon
+
+### ROS2架构
+
 <img src="ROS1ROS2架构对比.drawio.png" width="80%">
 
-# Catkin
+* OS
+  * ROS1: Linux
+  * ROS2: Linux、Windows、MAC、RTOS
+* 通讯
+  * ROS1: TCPROS / UDPROS
+  * ROS2: DDS
+* 节点模型
+  * ROS1: publish/subscribe
+  * ROS2: discovery
+* 进程
+  * ROS1: Nodelet
+  * ROS2: Intra-process
+
+### ROS2的核心概念
+
+ROS2保留了很多ROS1的概念，以便利用户的迁移
+
+* 工作空间 Workspace：开发过程的大本营
+* 功能包 Package：功能源码的聚集地
+* 节点 Node：机器人的工作细胞
+* 话题 Topic：节点间传递数据的桥梁
+* 服务 Service：节点间的你问我答
+* 通信接口 Interface：数据传递的标准结构
+* 参数 Parameter：机器人系统的全局字典
+* 动作 Action：完整行为的流程管理
+* 分布式通信 Distributed Communication：多计算平台的任务分配
+* DDS, Data Distribution Service：机器人的神经网络
+
+### 安装 ROS2
+
+1. 设置编码
+
+   ```cmd
+   $ sudo apt update && sudo apt install locales
+   $ sudo locale-gen en_US en_US.UTF-8
+   $ sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 
+   $ export LANG=en_US.UTF-8
+   ```
+
+2. 添加源
+
+   ```cmd
+   $ sudo apt update && sudo apt install curl gnupg lsb-release 
+   $ sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg 
+   $ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+   ```
+
+3. 安装ROS2
+
+   ```cmd
+   $ sudo apt update
+   $ sudo apt upgrade
+   $ sudo apt install ros-humble-desktop
+   ```
+
+4. 设置环境变量
+
+   ```cmd
+   $ source /opt/ros/humble/setup.bash
+   $ echo " source /opt/ros/humble/setup.bash" >> ~/.bashrc
+   ```
+
+## *ROS API*
+
+http://wiki.ros.org/roscpp
+
+ROS支持多种语言的客户端：roscpp、rospy、roslisp、rosjava、roslibjs
+
+roscpp 是一个方便的接口，允许开发者使用C++来编写ROS Node，这些节点可以发布和订阅ROS消息，调用ROS服务（Service），以及使用ROS参数服务器（Parameter Server）等功能
+
+### roscpp的内部库
+
+* [cpp_common](http://wiki.ros.org/cpp_common)：ROS通信相关软件包，包含 ROS 中间件/通信包，核心客户端库（roscpp、rospy、roslisp）和图形自省工具（rostopic、rosnode、rosservice、rosparam），它们为主题、节点、提供实现和工具服务和参数
+* [roscpp_serialization](http://wiki.ros.org/roscpp_serialization)：提供序列化和反序列化上层接口
+* [roscpp_traits](http://wiki.ros.org/roscpp_traits)：消息的元数据，元信息包括消息类型的名称、数据结构、MD5校验和（一种用于检测消息内容是否发生变化的哈希值）以及完整的消息定义
+* [rostime](http://wiki.ros.org/rostime)：ros独有的自己封装了一个时间库，类似C++的时间库
+
+# 构建系统
 
 ## *海龟仿真例程*
 
-```shell
+```cmd
 $ roscore
 $ rosrun turtlesim turtlesim_node
 $ rosrun turtlesim turtle_teleop_key
 ```
 
-## *catkin_make*
+## *ROS1: catkin*
 
 `catkin_make` 的可选参数
 
@@ -78,11 +169,15 @@ catkin_make [args]
                          用来覆盖由于不同编译工具产生的错误
 ```
 
+## *ROS2: ament & colcon*
+
+### colcon
+
 ## *工作空间*
 
 ### 工作空间
 
-工作空间 workspace 是一个存放工程开发相关文件的文件夹。ROS默认采用catkin编译系统，它封装了cmake
+工作空间 workspace 是一个存放工程开发相关文件的文件夹
 
 <img src="工作空间结构.drawio.png" width="70%">
 
@@ -90,12 +185,13 @@ catkin_make [args]
 
 * src 代码空间 Source Space：开发过程中最常用的文件夹，用来存储所有ROS功能包的源码文件
 * build 编译空间 Build Space：用来存储工作空间编译过程中产生的缓存信息和中间文件
-* devel 开发空间 Development Space：用来放置**编译生成的可执行文件**
-* install 安装空间 Install Space：编译成功后，可以使用 `make install` 命令将可执行文件安装到该空间中，运行该空间中的环境变量脚本，即可在终端中运行这些可执行文件。安装空间并不是必需的，很多工作空间中可能并没有该文件夹
+* devel 开发空间 Development Space（ROS1）：用来放置**编译生成的可执行文件**
+* install 安装空间 Install Space：编译成功后，可以使用 `make install` 命令将可执行文件安装到该空间中，运行该空间中的环境变量脚本，即可在终端中运行这些可执行文件。安装空间并不是必需的，很多工作空间中可能并没有该文件夹。ROS2**编译生成的可执行文件**会放置在这里
+* log 日志空间 Log Sapce
 
 ### 创建工作空间
 
-```shell
+```cmd
 $ mkdir -p ~/catkin_ws/src
 $ cd ~/catkin_ws/src
 $ catkin_init_workspace
@@ -103,29 +199,55 @@ $ catkin_init_workspace
 
 创建完成后，可以在**工作空间的根目录**下使用catkin_make命令编译整个工作空间
 
-```shell
+```cmd
 $ cd ~/catkin_ws/
 $ catkin_make
 ```
 
 编译过程中在工作空间的根目录里会自动产生build和devel两个文件夹及其中的文件。在编译完成后，在devel文件夹中已经产生几个 `setup.*sh` 形式的环境变量设置脚本。使用source命令运行这些脚本文件，则工作空间中的环境变量可以生效
 
-```shell
+```cmd
 $ source devel/setup.bash
 $ echo"source/WORKSPACE/devel/setup.bash">>~/.bashrc # 加入bash配置文件，避免每次重新启动bash都要打一遍
 ```
 
-### 创建功能包
+### 创建 & 编译功能包
 
-```shell
-$ catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
-```
+* ROS1
 
-其中的可选参数depend是所依赖的其他功能包
+  ```cmd
+  $ catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
+  ```
+
+  其中的可选参数depend是所依赖的其他功能包
+
+* ROS2
+
+  * 创建功能包
+
+    ```cmd
+    $ ros2 pkg create --build-type <build-type> <package_name>
+    ```
+
+    * **pkg**：表示功能包相关的功能
+
+    * **create**：表示创建功能包
+
+    * **build-type**：表示新创建的功能包是C++还是Python的，如果使用C/C++，就写ament_cmake；如果使用Python，就写ament_python
+
+    * **package_name**：新建功能包的名
+
+  * 编译功能包
+
+    ```cmd
+    $ cd ~/dev_ws
+    $ colcon build   # 编译工作空间所有功能包
+    $ source install/local_setup.bash
+    ```
 
 ### 工作空间覆盖机制
 
-不同的工作空间中可能存在相同命名的功能包，如果这些工作空间的环境变量都已经设置了，那么此时要依靠Overlaying 工作空间覆盖机制来解决
+不同的工作空间中可能存在相同命名的功能包，如果这些工作空间的环境变量都已经设置了，那么此时要依靠 Overlaying 工作空间覆盖机制来解决
 
 所有工作空间的路径会依次在ROS_PACKAGE_PATH环境变量中记录，当设置多个工作空间的环境变量后，新设置的路径在ROS_PACKAGE_PATH中会自动放置在最前端。此时最前面的同名功能包会对后面的同名功能包形成覆盖
 
@@ -147,8 +269,8 @@ $ catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
 * msg：放置功能包自定义的消息类型
 * srv：放置功能包自定义的服务类型
 * action：放置功能包自定义的动作指令
-* CMakeLists.txt：编译器编译功能包的规则。
-* package.xml：功能包清单
+* CMakeLists.txt：编译器编译功能包的规则
+* package.xml：功能包清单。rosdep工具会读取它然后自动安装相关依赖
 * yaml：yaml文件一般存储了ROS需要加载的参数信息，一些属性的配置。通常在launch文件或程序中读取.yaml文件，把参数加载到参数服务器上。通常我们会把yaml文件存放在 param/路径下
 
 ### package.xml
@@ -194,40 +316,152 @@ $ catkin_create_pkg <package_name> [depend1] [depend2] [depend3]
 
 ## *命名空间*
 
-# roscpp
+# 节点
 
 ## *intro*
 
-http://wiki.ros.org/roscpp
+节点 Node 是一个执行特定的任务的独立任务模块，从OS的角度看就是一个独立的进程
 
-ROS支持多种语言的客户端：roscpp、rospy、roslisp、rosjava、roslibjs
+所以在修改程序之后一定要重新编译，编译完之后会自动把可执行文件放到install中，然后之后rosrun的都是install下面的可执行文件
 
-roscpp 是一个方便的接口，允许开发者使用C++来编写ROS Node，这些节点可以发布和订阅ROS消息，调用ROS服务（Service），以及使用ROS参数服务器（Parameter Server）等功能
+### 节点命令行
 
-### roscpp的内部库
+```cmd
+$ ros2 node list               # 查看节点列表
+$ ros2 node info <node_name>   # 查看节点信息
+```
 
-* [cpp_common](http://wiki.ros.org/cpp_common)：ROS通信相关软件包，包含 ROS 中间件/通信包，核心客户端库（roscpp、rospy、roslisp）和图形自省工具（rostopic、rosnode、rosservice、rosparam），它们为主题、节点、提供实现和工具服务和参数
-* [roscpp_serialization](http://wiki.ros.org/roscpp_serialization)：提供序列化和反序列化上层接口
-* [roscpp_traits](http://wiki.ros.org/roscpp_traits)：消息的元数据，元信息包括消息类型的名称、数据结构、MD5校验和（一种用于检测消息内容是否发生变化的哈希值）以及完整的消息定义
-* [rostime](http://wiki.ros.org/rostime)：ros独有的自己封装了一个时间库，类似C++的时间库
+## *Python实现*
 
-## *节点初始、关闭以及NodeHandle*
+### 面向过程
 
-## *spin 自旋/轮询*
+```python
+#!/usr/bin/env python3 
+# -*- coding: utf-8 -*-
 
-## *param*
+"""
+@作者: 古月居(www.guyuehome.com)
+@说明: ROS2节点示例-发布“Hello World”日志信息, 使用面向过程的实现方式
+"""
 
-### Parameter Server
+import rclpy                                     # ROS2 Python接口库
+from rclpy.node import Node                      # ROS2 节点类
+import time
 
-## *时钟*
+def main(args=None):                             # ROS2节点主入口main函数
+    rclpy.init(args=args)                        # ROS2 Python接口初始化
+    node = Node("node_helloworld")               # 创建ROS2节点对象并进行初始化
+    
+    while rclpy.ok():                            # ROS2系统是否正常运行
+        node.get_logger().info("Hello World")    # ROS2日志输出
+        time.sleep(0.5)                          # 休眠控制循环时间
+    
+    node.destroy_node()                          # 销毁节点对象    
+    rclpy.shutdown()                             # 关闭ROS2 Python接口
+```
 
-## *日志 & 异常*
+### 面向对象
 
-# 通信
+一种更好的方式是封装成类
 
-## *分布式通信*
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+@作者: 古月居(www.guyuehome.com)
+@说明: ROS2节点示例-发布“Hello World”日志信息, 使用面向对象的实现方式
+"""
+
+import rclpy                                     # ROS2 Python接口库
+from rclpy.node import Node                      # ROS2 节点类
+import time
+
+"""
+创建一个HelloWorld节点, 初始化时输出“hello world”日志
+"""
+class HelloWorldNode(Node):
+    def __init__(self, name):
+        super().__init__(name)                       # ROS2节点父类初始化
+        while rclpy.ok():                            # ROS2系统是否正常运行
+            self.get_logger().info("Hello World")    # ROS2日志输出
+            time.sleep(0.5)                          # 休眠控制循环时间
+
+def main(args=None):                                 # ROS2节点主入口main函数
+    rclpy.init(args=args)                            # ROS2 Python接口初始化
+    node = HelloWorldNode("node_helloworld_class")   # 创建ROS2节点对象并进行初始化
+    node.destroy_node()                              # 销毁节点对象
+    rclpy.shutdown()                                 # 关闭ROS2 Python接口
+```
+
+### 配置功能包
+
+完成代码的编写后需要设置功能包的编译选项，让系统知道Python程序的入口，打开功能包的setup.py文件，加入如下入口点的配置
+
+```xml
+entry_points={
+    'console_scripts': [
+     'node_helloworld       = learning_node.node_helloworld:main',
+    ],
+```
+
+## *C++实现*
+
+### 面向对象代码编写
+
+```c++
+/***
+@作者: 古月居(www.guyuehome.com)
+@说明: ROS2节点示例-发布“Hello World”日志信息, 使用面向对象的实现方式
+***/
+#include <unistd.h>
+#include "rclcpp/rclcpp.hpp"
+
+/***
+创建一个HelloWorld节点, 初始化时输出“hello world”日志
+***/
+class HelloWorldNode : public rclcpp::Node {
+    public:
+        HelloWorldNode() : Node("node_helloworld_class") {       // ROS2节点父类初始化
+            while(rclcpp::ok()) {                                // ROS2系统是否正常运行
+                RCLCPP_INFO(this->get_logger(), "Hello World");  // ROS2日志输出
+                sleep(1);                                        // 休眠控制循环时间
+            }
+        }
+};
+
+// ROS2节点主入口main函数
+int main(int argc, char * argv[]) {
+
+    // ROS2 C++接口初始化
+    rclcpp::init(argc, argv);        
+    
+    // 创建ROS2节点对象并进行初始化                 
+    rclcpp::spin(std::make_shared<HelloWorldNode>()); 
+    
+    // 关闭ROS2 C++接口
+    rclcpp::shutdown();                               
+    
+    return 0;
+}
+```
+
+### 修改 CMakeLists.txt
+
+https://zhuanlan.zhihu.com/p/626034094
+
+```cmake
+add_executable(RosNode src/main.cpp)
+ament_target_dependencies(RosNode rclcpp)
+```
+
+# ROS1通信/计算图
+
+## *ROS1的通信机制*
 
 ### 话题通信
+
+话题通信是一种发布者/订阅者模式，具有**单向、异步**的特点
 
 <img src="基于发布订阅模型的话题通信模型.jpeg" width="60%">
 
@@ -247,7 +481,7 @@ Talker和Listener谁先启动没有强制要求，这里只是假设Talker首先
 
 ### 服务通信
 
-服务是一种带有数据应答的通信机制，和话题的通信相比，减少了话题订阅中第4、5步Listener与Talker之间的RPC调用
+服务 service 是一种带有数据应答的CS通信模式，和话题的通信相比，减少了话题订阅中第4、5步Listener与Talker之间的RPC调用
 
 <img src="基于clientServer的服务通信机制.jpeg" width="60%">
 
@@ -271,13 +505,13 @@ Talker和Listener谁先启动没有强制要求，这里只是假设Talker首先
 
 注意：若Talker向Master更新参数值，Listener在不重新查询参数值的情况下是无法知晓参数值已经被更新的。需要一种动态参数更新的机制
 
-## *Publisher & Subscriber*
+## *话题*
 
 ### 准备工作
 
 1. 创建ROS工作空间
 
-   ```shell
+   ```cmd
    $ mkdir -p ~/catkin_ws/src
    $ cd ~/catkin_ws
    $ catkin_make
@@ -286,7 +520,7 @@ Talker和Listener谁先启动没有强制要求，这里只是假设Talker首先
 
 2. 创建ROS包
 
-   ```shell
+   ```cmd
    $ cd ~/catkin_ws/src
    $ catkin_create_pkg my_ros_tutorial std_msgs roscpp
    ```
@@ -423,17 +657,106 @@ Subscriber需要调用回调函数，当有信息到来时就调用回调函数
    $ rosrun my_ros_tutorial subscriber_node
    ```
 
-## *Server & Client*
+## *服务*
 
 ### 自定义srv
+
+# ROS2通信/计算图
+
+## *DDS*
+
+### DDS简介
+
+可以说DDS, Data Distribution Service 数据分发服务 是ROS2的最大特点，DDS是一种用于实时系统间通信的标准和协议，它由OMG, Object Management Group 对象管理组织 制定
+
+DDS强调**以数据为中心**，可以提供丰富的**服务质量策略**，以保障数据进行实时、高效、灵活地分发，可满足各种分布式实时通信应用需求。DDS旨在解决分布式实时系统中数据通信的需求，特别适用于复杂的实时系统，如工业自动化、航空航天、军事系统等
+
+### DSS在ROS2中的角色
+
+<img src="ROS2架构.jpg">
+
+ROS2设计了一个Middleware中间件，即一个统一标准，不管我们用那个DDS，保证上层编程使用的函数接口都是一样的。此时兼容性的问题就转移给了DDS厂商
+
+### DDS Domain
+
+### QoS
+
+DDS的另外一个重要特性是QoS, Quality of Service 质量服务策略。QoS是一种网络传输策略，应用程序指定所需要的网络传输质量行为，QoS服务实现这种行为要求，尽可能地满足客户对通信质量的需求，可以理解为**数据提供者和接收者之间的合约**
+
+<img src="QoS.png" width="60%">
+
+具体的QoS策略有
+
+* **DEADLINE**策略，表示通信数据必须要在每次截止时间内完成一次通信
+* **HISTORY**策略，表示针对历史数据的一个缓存大小
+* **RELIABILITY**策略，表示数据通信的模式，配置成BEST_EFFORT，就是尽力传输模式，网络情况不好的时候，也要保证数据流畅，此时可能会导致数据丢失，配置成RELIABLE，就是可信赖模式，可以在通信中尽量保证图像的完整性，我们可以根据应用功能场景选择合适的通信模式
+* **DURABILITY**策略，可以配置针对晚加入的节点，也保证有一定的历史数据发送过去，可以让新节点快速适应系统
+
+## *主题*
+
+### 命令行
+
+### Python实现
+
+### C++实现
+
+## *服务*
+
+### 命令行
+
+### Python实现
+
+### C++实现
 
 ## *分布式多机通信*
 
 首先需要确定ROS多机系统中的所有计算机应处于同一网络
 
+### 分布式数据传输
+
+### 分布式网络分组
+
 # 消息
 
-ROS的msg文件提供自动的跨平台的和跨语言的序列化与反序列化，从而支持通信
+## *intro*
+
+ROS中的msg、svg和action文件的功能就是protobuf的proto文件，根据这些协议来提供自动的跨平台的和跨语言的序列化与反序列化，从而支持通信
+
+```
+# 话题 .msg 文件
+int32 x
+int32 y
+```
+
+```
+# 服务 .svg 文件
+# 请求数据
+int64 a
+int64 b
+
+# 应答数据
+int64 sum
+```
+
+```
+# 动作 .action 文件
+# 目标
+bool enable
+
+# 结果
+bool finish
+
+# 反馈
+int32 state
+```
+
+### 命令行的使用
+
+```cmd
+$ ros2 interface list                    # 查看系统接口列表
+$ ros2 interface show <interface_name>   # 查看某个接口的详细定义
+$ ros2 interface package <package_name>  # 查看某个功能包中的接口定义
+```
 
 ## *预定义消息*
 
@@ -527,6 +850,12 @@ string frame_id
   ```
 
 最后可以使用 `rosmsg show <msg名>` 来查看msg内容
+
+# 工程
+
+## *日志*
+
+## *异常*
 
 # 常用组件
 
@@ -754,9 +1083,3 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 ```
-
-# Vision
-
-# SLAM
-
-# ML/DL

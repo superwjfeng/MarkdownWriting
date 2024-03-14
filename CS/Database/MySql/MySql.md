@@ -1778,13 +1778,6 @@ Binlog是Server层实现的MySQL用于复制和恢复的日志。它记录了所
 * 幻读：幻读和不可重复读都是读取了另一条已经提交的事务，不同的是不可重复读的重点是修改，幻读的重点在于新增或者删除
 * 对于并行事务，脏读暴露出的问题是不应该让别人看到自己没有commit的东西，因为可能要执行回滚，这段数据无效；不可重复读暴露出的问题的时候不该在自己没有commit的情况下看到别人commit的内容，因为有可能读取到不同的东西
 
-###  广义数据库隔离分级
-
-* 弱隔离分级
-  * 读-提交 Read Committed
-  * 快照级隔离 snapshot isolation/可重复读 repeatable read
-* 串行化
-
 ### SQL中的隔离分级标准
 
 * 读-未提交 Read Uncommitted 在该隔离级别，所有的事务都可以看到其他事务没有提交的执行结果，也就可以直接操作该结果。实际生产中不可能使用这种隔离级别的，因为相当于没有任何隔离性，也会有很多并发问题，如脏读、幻读和不可重复读等
@@ -1831,9 +1824,7 @@ Binlog是Server层实现的MySQL用于复制和恢复的日志。它记录了所
   COMMITTED | REPEATABLE READ | SERIALIZABLE}
   ```
 
-## <span id="MVCC">*MVCC*</span>
-
-Multi-Version Concurrency Control 多版本并发控制是一种用来解决读写冲突的无锁并发控制
+## <span id="MVCC">*MySQL的MVCC实现*</span>
 
 ### 数据库快照 snapshot
 

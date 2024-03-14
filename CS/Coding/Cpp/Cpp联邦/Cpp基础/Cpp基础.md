@@ -695,6 +695,51 @@ int main() {
 
 ### no_unique_address (20)
 
+# 基本语法更新
+
+## *流程控制*
+
+### 范围 for（11、17）
+
+关于范围 for 的具体实现可以看 *STL.md*
+
+### 支持初始化语句的if & switch（17）
+
+C++17允许在执行条件语句之前执行一个初始化语句
+
+```c++
+if (init; condition) {}
+else if (init; condition) {}
+else {}
+```
+
+在初始化语句中声明的变量能够在 if 的作用域继续使用。事实上，该变量的生命周期会一直伴随整个 if 结构，包括 else if 和 else 部分
+
+因为 if 中初始化的变量的生命周期仅仅在这个 if 中，所以配合 lock_guard 自动加锁、解锁是个不错的主意
+
+```c++
+if (std::lock_guard<std::mutex> lock(mx); shared_flag) {
+    shared_flag = false;
+}
+```
+
+switch同理，下面的例子出自 *现代C++语言核心特性解析*
+
+```c++
+switch (std::unique_lock<std::mutex> lk(cv_m); cv.wait_for(lk, 100ms)) {
+    case std::cv_status::timeout:  
+        break;
+    case std::cv_status::no_timeout:
+        break;
+}
+```
+
+## *range（20）*
+
+https://zhuanlan.zhihu.com/p/86809598
+
+## *三向比较（20）*
+
 # C++函数
 
 ## *C++版本*
