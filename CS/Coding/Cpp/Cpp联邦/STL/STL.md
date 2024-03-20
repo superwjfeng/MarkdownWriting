@@ -1924,7 +1924,7 @@ struct pair {
 
 根据应用场景的不同，STL总共实现了两种不同结构的关联式容器：树形结构与哈希结构
 
-树形结构的关联式容器主要有四种：map、set、multimap、multiset。这四种容器的共同点式使用平衡搜索树（即红黑树）作为其底层结构
+树形结构的关联式容器主要有四种：map、set、multimap、multiset。这四种容器的共同点式使用平衡搜索树（即红黑树）作为其底层结构，所以底层是自动排序好的
 
 ### set
 
@@ -2154,6 +2154,20 @@ unordered系列是单向迭代器（哈希桶是单列表）
   如果是想对 value 排序的话，首先不能使用 `std::sort`，因为 sort 需要的是 RandomAccessIterator，而 map 是 Bidirectional Iterator，unordered_map 则是 forward iterator
 
   解决方法是把 unordered_map 的所有 pair 倒入一个 vector（RandomAccessIterator），然后再用 sort，当然 sort 要自己给出 Compare 函数来指定是对 `pair->second`，即 value 进行比较
+
+### multimap
+
+* upper_bound：返回一个指向第一个大于 key 的元素的迭代器
+
+  ```c++
+  iterator upper_bound (const key_type& k);const_iterator upper_bound (const key_type& k) const;
+  ```
+
+* lower_bound：返回一个指向第一个不小于 key 的元素的迭代器。如果找到了一个与 key 相等的元素
+
+  ```c++
+  iterator lower_bound (const key_type& k);const_iterator lower_bound (const key_type& k) const;
+  ```
 
 # 其他数据结构
 

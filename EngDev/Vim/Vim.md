@@ -681,7 +681,7 @@ $ tar xzvf nvim-linux64.tar.gz
 
 ```cmd
 $ cd /usr/local/bin 
-$ ln -s /nvim-linux64/bin/nvim nvim
+$ ln -s path/to/nvim-linux64/bin/nvim nvim
 ```
 
 Optional：将 nvim 设置为 vim 别名

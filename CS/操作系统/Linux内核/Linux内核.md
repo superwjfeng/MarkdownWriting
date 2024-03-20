@@ -1060,7 +1060,7 @@ Linux内核中用来调度进程（即安排进程的执行过程）的模块称
 
 * 注意⚠️：阻塞状态是进程主动进入的，然后阻塞状态等待相应的资源就绪，此时让出了 CPU 的使用权
 
-### 公共部分
+### 公共调度器接口
 
 Linux支持的调度器有
 
@@ -1069,7 +1069,7 @@ Linux支持的调度器有
 * Deadline scheduler 期限调度器：用 `dl_sched_class` 来描述，调度策略为SCHED_DEADLINE
 * Idle scheduler 空闲调度器：用 `idle_sched_class` 来描述，调度策略为SCHED_IDLE
 
-Linux将调度器公共的部分抽象出来，使用`struct sched_class`结构体描述一个具体的调度类
+Linux将调度器公共的部分抽象出来，使用`struct sched_class`结构体描述调度类的接口
 
 ```c
 // kernel/sched/sched.h
@@ -1119,21 +1119,25 @@ extern const struct sched_class idle_sched_class; // 空闲调度类
 
 上面的调度类是按照优先级从上到下排列的，在内核中这种优先级的表示就是通过一个单链表来表示的
 
-* Stop Scheduler 停机调度类：优先级最高的调度器类，可以抢占所有其他进程，而其他进程无法抢占停机进程
+* Stop Scheduler 停机调度类：内核使用该调度类来停止 CPU，该调度类用来强行停止CPU 上的其他任务，所以停机调度类是优先级最高的调度器类，可以抢占所有其他进程，而其他进程无法抢占停机进程
+
+  该调度类只有在SMP架构的系统中存在，内核使用该调度类来完成负载均衡与CPU热插拔等工作
 
 * Deadline Scheduler 期限调度器：是最早使用的优先算法，使用红黑树把进程按照绝对截止期限从小到大排序，每次调度时选择绝对截止期限最小的进程
 
-  具体来说Deadline 调度器是一种实时 I/O 调度器，旨在确保 I/O 请求在给定的截止期限内完成。它通过为每个请求设置截止期限，优先执行截止期限最近的请求。这有助于避免 I/O 请求因等待时间过长而导致性能下降
+  具体来说Deadline 调度器是一种实时 IO 调度器，旨在确保 IO 请求在给定的截止期限内完成。它通过为每个请求设置截止期限，优先执行截止期限最近的请求。这有助于避免 IO 请求因等待时间过长而导致性能下降
 
-  适用于对 I/O 响应时间要求敏感的实时系统
+  适用于对 IO 响应时间要求敏感的实时系统
 
 * Runtime Scheduler 实时调度类：为每个调度优先级都维护一个队列。具体见下
 
 * Fair Scheduler 公平调度类：使用完全公平调度算法，引入了虚拟运行时间 vruntime 的概念。具体见下
 
-* Idle Scheduler 空闲调度器：每个CPU上都有一个空闲线程，即0号线程，空闲调度类优先级别最低，仅当没有其他进程可以调度的时候才会调度空闲进程
+* Idle Scheduler 空闲调度器：每个CPU上都有一个空闲线程，即0号线程 kthread，空闲调度类优先级别最低，仅当没有其他进程可以调度的时候才会调度空闲进程来降低 CPU 的功耗，从而避免 CPU 无事可做进入空转
 
   空闲调度器主要用于在系统处于空闲状态时执行 IO 操作。当系统没有其他任务运行时，空闲调度器可以执行挂起的 IO 操作，以充分利用系统资源。空闲调度是最不会影响其他活动任务的性能的调度器
+
+每个调度器类的实现都在 `kernel/sched/*.c` 中，在调用的时候通过宏定义来实现类似于C++继承的效果
 
 ### 进程调度策略
 
@@ -1148,23 +1152,37 @@ extern const struct sched_class idle_sched_class; // 空闲调度类
 #define SCHED_DEADLINE		6
 ```
 
-* SCHED_NORMAL：普通进程调度策略，使task选择CFS调度器来调度运行
-* SCHED_FIFO 是一种 run to completion 的算法，采用先进先出的策略（first come, first serve），没有时间片的限制，获得CPU 控制权的进程会一直执行直到主动放弃CPU或者被更高优先级的实时进程抢占
-* SCHED_RR 采用 round robin 的策略，比 SCHED_FIFO多维护了一个时间片，相同优先级之间的进程能够轮流执行，每次执行的实际是一个固定的时间片
-* SCHED_BATCH：普通进程调度策略，批量处理，使task选择CFS调度器来调度运行
-* SCHED_IDLE：普通进程调度策略，使task以最低优先级选择CFS调度器来调度运行
-* SCHED_DEADLINE：限期进程调度策略，使task选择限期调度器来调度运行
+* 停机调度：只有一个进程需要调度，所以不需要定义任何调度策略
+* 限期进程调度策略 SCHED_DEADLINE：使task选择限期调度器来调度最高级别的优先级运行
+* 实时进程
+  * SCHED_FIFO 是一种 run to completion 的算法，采用先进先出的策略（first come, first serve），没有时间片的限制，获得CPU 控制权的进程会一直执行直到主动放弃CPU或者被更高优先级的实时进程抢占
+  * SCHED_RR 采用 round robin 的策略，比 SCHED_FIFO多维护了一个时间片，相同优先级之间的进程能轮流执行，每次执行的实际是一个固定的时间片
 
-注意⚠️：虽然有 SCHED_IDLE 调度策略，但实际上 Stop 和 Idle 调度器用户都是无法选择使用的，只能被内核使用
+* 普通进程调度策略
+  * SCHED_NORMAL：使CFS调度器选择task来调度运行
+  * SCHED_BATCH：普通进程调度策略，批量处理，使task选择CFS调度器来调度运行
+  * SCHED_IDLE：普通进程调度策略，使task以最低优先级选择CFS调度器来调度运行。注意⚠️：虽然叫做IDLE，但并不是Idle进程的调度策略，而是CFS的调度策略
+
+* Idle进程调度同停机进程
+
+Stop 和 Idle 调度器用户都是无法选择使用的，只能被内核使用
+
+在用户层可以通过proc文件系统来查询某个进程的调度策略
+
+```cmd
+$ grep 'policy' /proc/133971/sched
+policy                                       :                    0
+```
 
 ### 就绪队列
+
+就绪队列 `struct rq` 是per-CPU的，这样可以避免多个CPU访问同一个rq时产生并发问题
 
 虽然用来管理进程调度的数据结构叫做 runqueue 就绪队列，但是并不是所有的 runqueue 都实现成了队列的形式，比如CFS管理的 runqeueu 就是一棵红黑树
 
 ```c
+// kernel/sched/sched.h
 ```
-
-
 
 ### 调度实体
 
@@ -1176,9 +1194,13 @@ extern const struct sched_class idle_sched_class; // 空闲调度类
 // include/linux/sched.h
 struct task_struct {
     // ...
-    const struct sched_class	*sched_class;
+	const struct sched_class	*sched_class;
 	struct sched_entity		se;
 	struct sched_rt_entity		rt;
+#ifdef CONFIG_CGROUP_SCHED
+	struct task_group		*sched_task_group;
+#endif
+	struct sched_dl_entity		dl;
     // ...
 };
 
@@ -1205,32 +1227,11 @@ struct sched_entity {
 
 ## *优先级*
 
-### 优先级取值
+### 优先级的内核表示
 
-```c
-// include/linux/sched/prio.h
-/* Linux 内核优先级 */
-#define MAX_USER_RT_PRIO	100
-#define MAX_RT_PRIO		MAX_USER_RT_PRIO
+下面是内核空间的优先级范围，注意⚠️：不同于用户空间的 nice 值（-20~19）。用户空间的 nice 值（-20~19）会被映射到内核空间普通进程的优先级范围，`[-20, 19] + 120 -> [100, 139]`
 
-#define MAX_PRIO		(MAX_RT_PRIO + NICE_WIDTH)
-#define DEFAULT_PRIO		(MAX_RT_PRIO + NICE_WIDTH / 2)
-```
-
-限期进程的优先级比实时进程要高，实时进程的优先级比普通进程要高
-
-下面是内核空间的优先级范围，注意⚠️：不同于用户空间的 nice 值（-20~19）。用户空间的 nice 值（-20~19）会被映射到内核空间普通进程的优先级范围，`[-20, 19] -> [100, 139]`
-
-```
-高优先级                                                       低优先级
-<--------------------------------------------------------------------
-限期进程              实时进程                           普通进程
-     -1 0                                99 100                   139
-```
-
-* 限期进程 deadline process 的优先级是-1
-* 实时进程 realtime process 是优先级高，需要立即被执行的过程，它的优先级范围为 1\~99，优先级数值越大，表示优先级越高;
-* 普通进程 normal process 的静态优先级为100\~139，优先级数值越小，表示优先级越高，可以通过修改nice值改变普通进程的优先级，优先级等于120加上nice值
+在 task_struct 中有4种不同类型的优先级取值，不同调度器的调度策略回用到它们之间的搭配计算
 
 ```c
 // in task_struct
@@ -1241,44 +1242,180 @@ int				normal_prio;
 unsigned int			rt_priority;
 ```
 
-* prio 和 normal_prio 是动态优先级
-* static_prio 静态优先级是进程创建的时候分配的，可以使用 `nice()` 和 `sched_setscheduler()` 系统调用来修改它，否则在进程运行期间会一直保持恒定
-* rt_priority 表示实时进程的优先级
+* 限期进程 deadline process 的优先级是-1，最高
 
-### 不同类型进程的优先级
+* static_prio 静态优先级是进程创建的时候分配的，可以使用 `nice()` 和 `sched_setscheduler()` 系统调用来修改它，否则在进程运行期间会一直保持恒定。静态优先级为100\~139，**优先级数值越小，表示优先级越高**，可以通过修改nice值改变普通进程的优先级，优先级等于120加上nice值
+
+  下面的宏可以用来实现不同形式的优先级之间的转换
+
+  ```c
+  // include/linux/sched/prio.h
+  /* Linux 内核优先级 */
+  #define MAX_USER_RT_PRIO	100
+  #define MAX_RT_PRIO		MAX_USER_RT_PRIO
+  
+  /* 用户层的nice值于静态优先级相互转换的宏 */
+  #define MAX_PRIO		(MAX_RT_PRIO + NICE_WIDTH)
+  #define DEFAULT_PRIO		(MAX_RT_PRIO + NICE_WIDTH / 2)
+  ```
+
+* rt_priority 表示实时进程 realtime process 的优先级：它的优先级范围为 1\~99，**优先级数值越大，表示优先级越高**
+
+* normal_prio 归一化优先级
+
+  上面的优先级表示是不统一的，比如static_pro和rt_priority的增长方式相反，这对上层使用会造成很多不变（不知道为什么一开始要设计成这样），所以 normal_prio 归一化优先级将优先级统一归一化到 `[-1, 139]` 区间内，数值越小，优先级越高
+
+  计算 normal_prio：普通优先级的计算需要分为是期限调度、实时调度还是普通调度进程，与effective_prio相比，实时进程的检测不再基于优先级数值，而是通过task_struct中设置的调度策略 `task_struct->rt_priority` 来检测
+
+  ```c
+  // kernel/sched/core.c
+  static inline int normal_prio(struct task_struct *p)
+  {
+  	int prio;
+  
+  	if (task_has_dl_policy(p))
+  		prio = MAX_DL_PRIO-1;
+  	else if (task_has_rt_policy(p))
+  		prio = MAX_RT_PRIO-1 - p->rt_priority;
+  	else
+  		prio = __normal_prio(p);
+  	return prio;
+  }
+  
+  static inline int __normal_prio(struct task_struct *p)
+  {
+  	return p->static_prio;
+  }
+  ```
+
+  **在归一化优先级的努力下，最终内核中的优先级可以统一为下面的表示**
+
+  ```c
+  高优先级                                                       低优先级
+  <--------------------------------------------------------------------
+  限期进程              实时进程                           普通进程
+       -1 0                                99 100                   139
+  <--------------------------------------------------------------------
+                                                     用户层nice值映射
+                                              -20                    19
+  ```
+
+* prio 动态优先级：**这是在调度器工作时实际使用到的优先级**，它通过 `effective_prio` 函数来计算
+
+  计算动态优先级 prio：辅助函数rt_prio，会检测普通优先级是否在实时范围中，即是否小于RT_RT_PRIO。如果是就返回prio，否则返回normal_prio
+
+  ```c
+  // kernel/sched/core.c
+  static int effective_prio(struct task_struct *p)
+  {
+  	p->normal_prio = normal_prio(p);
+  	/*
+  	 * If we are RT tasks or we were boosted to RT priority,
+  	 * keep the priority unchanged. Otherwise, update priority
+  	 * to the normal priority:
+  	 */
+  	if (!rt_prio(p->prio))
+  		return p->normal_prio;
+  	return p->prio;
+  }
+  
+  p->prio = effective_prio(p);
+  ```
 
 <img src="不同进程的优先级.jpg">
 
-## *CFS*
+## *历史：O(1) & O(N) 调度器*
 
-Completely Fair Scheduler, CFS 完全公平调度器，顾名思义对待每个进程都是公平的，让每个进程都运行一段相同的时间片，即 CFS 是一种基于时间片轮训的调度算法
+### O(N) 调度器
 
+O(N) 调度器在内核2.4版本引入，顾名思义，调度器算法的时间复杂度为 O(N)。下面的讨论基于内核2.4.18版本，代码位于 `kernel/sched.c` 中
 
+* 大致逻辑
 
-实际运行时间 = 调度周期 \* 进程权重 / 所有进程权重之和
+  O(N) 调度器采用一个全局的运行队列来管理任务，该队列的表头保存在全局变量 `runqueue_head` 中。所有的就绪任务都会被放入该队列中。**每次调度时，系统会遍历整个队列然后挑出最适合的任务，即优先级最高的任务来执行**。链表的遍历复杂度是O(N)，因此该调度算法的时间复杂度为 O(N)
 
+  `schedule()` 是调度逻辑的入口，其中任务的优先级通过 `goodness()` 来判断
 
+* 时间分配
 
-为了找到虚拟运行时间最小的进程，内核使用了一棵红黑树来保存
+  O(N) 调度器按照 轮 round 来计量调度周期，在每轮调度中，调度器根据各个任务的优先级为其分配时间
 
-### vruntime
+  如果在遍历队列时没有找到合适的任务，那么说明所有任务的运行时间都已经耗尽，本次调度周期已经结束了，调度器需要为任务分配时间、开启新的一轮调度周期
 
-CFS 定义了一种新的调度模型，它给 cfs_rq（cfs 的 run_queue）中的每一个进程都设置了一个虚拟时钟 virtual runtime, vruntime。若一个进程得以执行，则随着执行时间的不断增长，其 vruntime 也将不断增大，而没有被调度执行的进程的 vruntime 则不变
+* 调度时机：什么时候会发生调度？
+
+  * 进程主动发起调度，内核代码中有很多地方都主动调用了 `schedule()`
+  * timer 发现当前进程已经耗尽了自己的时间，触发调度
+
+### O(1) 调度器
+
+随着多核时代的来临，全局唯一的 O(N) 调度器需要被多个CPU核心所共享，O(N) 调度器的可扩展性变得越来越差。O(1) 调度器就是对针对这种需求进行的优化，由Linux在2.6.0版本中引入，直到后来被CFS取代
+
+在O(N) 调度器中，runqueue 实际上只是个逻辑概念，内核只是用一个链表将就绪任务连接起来而已。实际上内核中并没有单独定义一个数据结构。O(1) 调度器引入了我们现在非常熟悉的结构体 `struct runqueue` 来封装就绪队列的信息
+
+如上文所述，O(N) 的全局队列有很多问题，所以 O(1) 将 ruqnueue 设计成了 per-CPU，即每个CPU有一个自己的运行队列，这样互相之间就不会干扰了
+
+<img src="O1调度器.drawio.png" width="50%">
+
+为了降低时间复杂度，调度器在runqueue中又为每个优先级单独维护了一个任务列表，这部分信息封装在数据结构 `struct prio_array` 中
 
 ```c
-static const int prio_to_weight[40] = {
-    /* -20 */     88761,     71755,     56483,     46273,     36291,
-    /* -15 */     29154,     23254,     18705,     14949,     11916,
-    /* -10 */      9548,      7620,      6100,      4904,      3906,
-    /*  -5 */      3121,      2501,      1991,      1586,      1277,
-    /*   0 */      1024,       820,       655,       526,       423,
-    /*   5 */       335,       272,       215,       172,       137,
-    /*  10 */       110,        87,        70,        56,        45,
-    /*  15 */        36,        29,        23,        18,        15
+// kernel/sched.c
+struct prio_array {
+    unsigned int nr_active;
+    unsigned long bitmap[BITMAP_SIZE];
+    struct list_head queue[MAX_PRIO];
 };
 ```
 
-若新进程的vruntime初始值为0，会导致新进程立刻被调度，而且在一段时间内都是最小的
+<img src="O1调度器的任务列表.drawio.png" width="60%">
+
+其中数组 `queue` 中的每个元素都是一个任务列表，位图 `bitmap` 用来标识列表是否为空。有了 `prio_array` 的支持，调度器在寻找下一个任务时的时间复杂度就变为了O(1)，这就是 O(1) 调度器名字的由来：找下一个就绪任务的复杂度
+
+## *CFS*
+
+Completely Fair Scheduler, CFS 完全公平调度器，在内核 2.16 被引入。顾名思义，CFS的效果就是对待每个进程都是公平的，让每个进程都运行一段相同的时间片，即 CFS 是一种基于时间片轮训的调度算法
+
+### 衡量公平性
+
+O(N) 和 O(1) 调度器衡量公平性的核心是基于尽量去识别那些可能是高优先级的交互式任务，考量进程在CPU 上的运行时间、在runqueue中的等待时间、睡眠时间以及进程睡眠时的状态等。但这种做法实际上是没有科学根据的，本质上仍然是在猜
+
+CFS借鉴了案由Con Kolivas提出的RSDL, Rotating Staircase Deadline Scheduler方案：同O(1)一样，在每个调度周期内，RSDL会根据任务的优先级为其分配固定的CPU时间，并且为每一个优先级维护一个任务列表。但在任务运行过程中，任务不会始终呆在自己优先级所对应的任务列表中，而是随着时间的消耗顺着优先级的任务阶梯逐级下降，直到所有任务的运行时间耗尽，调度器再开启下一轮调度
+
+CFS放弃了猜测进程交互性的无谓尝试，而是直接根据任务的优先级来给任务分配时间，与RSDL不同的是，CFS还更进一步放弃了调度周期的概念，引入了 虚拟时间 vruntime 来判断任务是否得到了公平对待
+
+### 调度的标准：vruntime
+
+现实世界总是不公平的，调度器要维持公平性，实际上就是要去除不公平性，那么在每次调度时，调度器选择当前消耗CPU时间最少的进程即可
+
+CFS 定义了一种新的调度模型，它给 cfs_rq（cfs 的 run_queue）中的每一个进程都设置了一个虚拟时间 virtual runtime, vruntime。若一个进程得以执行，则随着执行时间的不断增长，其 vruntime 也将不断增大，而没有被调度执行的进程的 vruntime 则不变
+
+不同的优先级实际上就是不同的权重，Linux中将普通进程的nice值 `[-20, 19]` 映射成了下面这个权重数组 `sched_prio_to_weight` ：
+
+```c
+// kernel/sched/core.c
+const int sched_prio_to_weight[40] = {
+ /* -20 */     88761,     71755,     56483,     46273,     36291,
+ /* -15 */     29154,     23254,     18705,     14949,     11916,
+ /* -10 */      9548,      7620,      6100,      4904,      3906,
+ /*  -5 */      3121,      2501,      1991,      1586,      1277,
+ /*   0 */      1024,       820,       655,       526,       423,
+ /*   5 */       335,       272,       215,       172,       137,
+ /*  10 */       110,        87,        70,        56,        45,
+ /*  15 */        36,        29,        23,        18,        15,
+};
+```
+
+权重与nice值的关系是：`weight = 1024 / (1.25^nice)`。这样设计的目的是为了满足CFS的分配原则：进程的nice数值每变化1，那么其获得的CPU时间将变化10%
+
+```
+88761 / (88761 + 71755) = 55.3%
+71755 / (88761 + 71755) = 44.7%
+```
+
+实际运行时间 = 调度周期 \* 进程权重 / 所有进程权重之和
+
+vruntime 越小就会被越先调度，因为它受到的不公平待遇最多。新进程的vruntime初始值为0，会导致新进程立刻被调度，而且在一段时间内都是最小的
 
 ### CFS调度器类
 
@@ -1329,13 +1466,13 @@ const struct sched_class fair_sched_class = {
 };
 ```
 
-## *runqueue*
+### cfs_rq 就绪队列的管理
+
+为了找到虚拟运行时间最小的进程，内核使用了一棵红黑树来保存
 
 系统中每个CPU都会有一个全局的就绪队列 cpu runqueue，使用`struct rq`结构体描述，它是per-cpu类型，即每个cpu上都会有一个`struct rq` 结构体
 
 <img src="vruntime红黑树.png">
-
-### cfs_rq
 
 ```c
 /* CFS-related fields in a runqueue */
@@ -1377,21 +1514,7 @@ struct rb_root_cached {
 };
 ```
 
-### 红黑树
-
-```c
-// include/linux/rbtree.h
-struct rb_node {
-	unsigned long  __rb_parent_color;
-	struct rb_node *rb_right;
-	struct rb_node *rb_left;
-} __attribute__((aligned(sizeof(long))));
-    /* The alignment might seem pointless, but allegedly CRIS needs it */
-
-struct rb_root {
-	struct rb_node *rb_node;
-};
-```
+## *组调度*
 
 ## *实时进程调度*
 
@@ -1497,8 +1620,6 @@ Linux内核的SMPs调度就是将进程安排/迁移到合适的CPU中去，保�
 
 
 
-
-
 用户访问一个中心数据库
 
 
@@ -1529,9 +1650,11 @@ extern struct cpumask __cpu_active_mask;
 
 
 
-软件看到的处理器就是最底层的处理器，也就是说如果支持超线程/硬件线程，那么看到的就是超线程，否则就是一个核心
+软件看到的处理器就是最底层的处理器，也就是说如果支持超线程/硬件线程，那么看到的就**
 
+## *负载追踪*
 
+## *负载均衡*
 
 ## *进程调度实操*
 
@@ -1653,7 +1776,7 @@ x86-64的物理分页见上
 * 中间页目录 PMD Page Middle Directory
 * 页表项 PTE Page Table Entry
 
-# 内存管理
+# 物理内存
 
 
 
@@ -1688,6 +1811,8 @@ $ grep vmalloc /proc/vmallocinfo
 ### 内存管理子系统的层次结构
 
 内存管理子系统使用节点 node、区域 zone 和页 page 的三级结构来描述物理内存
+
+<img src="物理内存管理层次结构.drawio.png" width="80%">
 
 * 内存节点
   * NUMA体系的内存节点，根据处理器和内存的距离划分
