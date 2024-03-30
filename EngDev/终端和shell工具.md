@@ -53,6 +53,39 @@ Set-PSReadlineKeyHandler -Key DownArrow -Function HistorySearchForward
 
 # git的自动补全
 Import-Module posh-git
+
+# 一些常用的别名
+Set-Alias ll Get-ChildItem
+Set-Alias vim nvim # 确保已经安装了nvim
+```
+
+### 权限问题
+
+PowerShell 默认可能会禁止执行未签名的脚本，以提供额外的安全性。错误信息表明你遇到了执行策略问题，因为系统策略阻止了 `Microsoft.PowerShell_profile.ps1` 脚本的执行。
+
+你可以通过更改 PowerShell 的执行策略来允许脚本执行。最常用的执行策略有：
+
+- **Restricted**：不允许任何脚本运行。
+- **AllSigned**：只运行由可信发行者签名的脚本。
+- **RemoteSigned**：运行本地脚本和由可信发行者签名的远程脚本。
+- **Unrestricted**：运行所有脚本（这是最不安全的选项）。
+
+要查看当前的执行策略，可以使用：
+
+```
+powershell复制代码Get-ExecutionPolicy
+```
+
+若要将执行策略更改为 RemoteSigned（通常是推荐选项），允许本地脚本执行和已签名的远程脚本执行，可以使用以下命令：
+
+```
+powershell复制代码Set-ExecutionPolicy RemoteSigned
+```
+
+执行上述命令时，你需要以管理员身份运行 PowerShell。如果你不是管理员或者希望只对当前用户更改执行策略，可以使用 `-Scope` 参数指定：
+
+```
+powershell复制代码Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 ### oh-my-posh
@@ -93,5 +126,9 @@ Nerd Fonts 是一个开源项目，提供了一系列字体，专门设计用于
 带有 Windows Compatible 后缀的字体，专门为 Windows 系统优化过
 
 带有 Mono 后缀的字体，所有字符大小相同，不带 Mono 后缀的字体，图标字符比常规字符大 1.5 倍
+
+推荐 ComicShannsMono
+
+win中添加字体的方式是将下载的字体解压缩后右键安装即可
 
 ## *tmux*

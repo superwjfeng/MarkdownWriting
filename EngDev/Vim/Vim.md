@@ -701,7 +701,9 @@ Optional：将 nvim 设置为 vim 别名
    alias vim="nvim"
    ```
 
-如果要在window上安装的话，只需要到github上下载win对应的release即可
+如果要在window上安装的话，只需要到github上下载win对应的release即可 <https://github.com/neovim/neovim/releases/download/v0.9.5/nvim-win64.zip>
+
+
 
 ### 从Vim迁移到NeoVim
 
