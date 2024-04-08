@@ -768,6 +768,31 @@ UML Class Diagram Tutorial：https://www.visual-paradigm.com/guide/uml-unified-m
 
 * 表示包
 
+## *状态机*
+
+UML 是一个首先使用、广泛被认可的这样的一个标准。那么大家其实在不同的工具，他们在交互交流的时候，都会用 UML 的一些语义来表达自己的模型领域它是什么样的一个含义。然后状态机在 UML 里面它本身设计得也比较灵活，就它也是在市面上的一些常见的状态机模型里算是表达能力非常强，抽象度非常高，然后也有一些复杂的功能含义在里面的这样的一种设计
+
+UML 的语义里，这个从状态之间的跳转都是由事件来触发的。所以 UML 的状态机是一个事件触发式的状态机
+
+guard condition 就是跳转发生的这样的一个额外的条件
+
+UML 里面的 action 就是状态跳转发生了以后，它会触发一些行为
+
+
+
+UML 它的 priority 是根据父子关系来的，越是在子层级的跳转，它的 priority 越高
+
+### 扩展
+
+* Hierachically nested states 层级状态：状态机它不光是平铺的，它是有层级关系的。不要有父子关系可不可以？那当然是可以的。那但但是我们为什么要用父子关系来表达呢？就父子关系其实表达的是一种对状态的精细化描述。
+* Orthogonal regions 正交状态
+
+### 历史状态
+
+举一个典型的场景：从一个状态A进入了状态B，状态A本身有很多的状态，此时想要从状态B revert回来，比如说要在A的子状态C中做一个临时的操作，但是当C完成之后它原来处于A这个状态的信息已经丢失了
+
+因此有一些 transition 我可以与其说跳入这个父状态，我可以跳入这个父状态的 history 状态就是它的历史状态
+
 
 ## *用例图*
 
@@ -843,7 +868,7 @@ https://blog.csdn.net/sinat_21107433/article/details/102927937
 
 很多对象不是孤立的，它的状态或行为的改变很有可能会影响其他关联对象的状态或行为。
 
-观察者模式 Observer Pattern 是一种行为型设计模式，用于定义一种一对多的依赖关系，当一个对象的状态发生变化时，其所有依赖对象都会自动收到通知并被更新。
+观察者模式 Observer Pattern 是一种行为型设计模式，用于定义一种一对多的依赖关系，当一个对象的状态发生变化时，其所有依赖对象都会自动收到通知并被更新
 
 观察者模式也被称为发布-订阅模式 Publish-Subscribe、模型-视图模式 Model-View、源-监听器模式 Source-Listener、从属者模式 Denpendents，它提供了一种松耦合的方式，允许主题（被观察者）和观察者之间的互动，而不需要彼此了解具体的细节。
 
@@ -868,17 +893,115 @@ https://blog.csdn.net/sinat_21107433/article/details/102927937
 ### Pros & Cons
 
 * Pros
-  * 松耦合：观察者模式实现了松耦合，主题和观察者之间互不依赖，使系统更易于维护和扩展
+  * 松耦合（松耦合的意思是一方改变一方可不变）：观察者模式实现了松耦合，主题和观察者之间互不依赖，使系统更易于维护和扩展
   * 可重用性：可以轻松添加或删除观察者，而不需要修改主题的代码，从而提高了代码的可重用性
   * 广播通知：主题可以通知多个观察者，适用于需要广播消息的场景，以确保多个对象都能及时获得更新
 * Cons
   * 可能导致性能问题：当主题有大量观察者并频繁发出通知时，可能会引发性能问题，因为观察者都会被通知，这可能会导致系统开销增加
   * 通知顺序不确定：观察者的通知顺序通常不确定，这可能会导致一些问题，例如观察者之间的竞争条件
-  * 可能引发循环引用：观察者和目标项目依赖。可能会出现观察者之间的循环引用，这可能导致内存泄漏
+  * 可能引发循环引用：如果观察者具体实现代码有问题，会导致主题和观察者对象形成循环引用，在某些采用计数垃圾回收器可能导致无法回收
+
+### Observer的不足：用信号 & 槽机制来应对
+
+**Observer的基类设计不利于同时观察多个不同类型的事件，这直接导致了信号 & 槽机制的产生和使用，这部分可以看Qt信号 & 槽部分**
+
+> 陈硕：《Linux 多线程服务端编程》1.14 Observer 之谬
+>
+> Observer 模式的本质问题在于其面向对象的设计。换句话说，我认为正是面向对象（OO）本身造成了 Observer 的缺点。Observer 是基类，这带来了非常强的耦合，强度仅次于友元（friend）。这种耦合不仅限制了成员函数的名字、参数、返回值，还限制了成员函数所属的类型（必须是observer的派生类)。
+>
+> Observer class 是基类，这意味着如果 Foo 想要观察两个类型的事件（比如时钟和温度），需要使用多继承。这还不是最糟糕的，如果要重复观察同一类型的事件（比如 1 秒一次的心跳和 30 秒一次的自检），就要用到一些伎俩来 work around，因为不能从一个 Base class 继承两次。
+>
+> 在 C++ 里为了替换 Observer，可以用 Signal/Slots，我指的不是 QT 那种靠语言扩展的实现，而是完全靠标准库实现的 thread safe、race condition free、thread contention free 的 Signal /Slots，并且不强制要求 shared_ptr 来管理对象，也就是说完全解决了 1.8 列出的 Observer 遗留问题。这会用到 2.8 介绍的“借 shared_ptr 实现 copy-on-write”技术。
+
+```C++
+#include <iostream>
+#include <list>
+#include <string>
+
+// Observer 抽象基类
+class Observer {
+public:
+    virtual void update(std::string& event_message) = 0;
+};
+
+// Subject 抽象基类
+class Subject {
+    std::list<Observer*> observers;
+public:
+    void attach(Observer* observer) {
+        observers.push_back(observer);
+    }
+
+    void detach(Observer* observer) {
+        observers.remove(observer);
+    }
+
+    void notify(std::string event_message) {
+        for (Observer* observer : observers) {
+            observer->update(event_message);
+        }
+    }
+};
+
+// 具体的观察者，我们希望它能观察多种类型的事件
+class ConcreteObserver : public Observer {
+public:
+    void update(std::string& event_message) override {
+        std::cout << "Received event: " << event_message << std::endl;
+    }
+};
+
+// 两个具体的主题
+class Clock : public Subject {
+public:
+    // Clock 特有的函数，比如定期通知
+    void tick() {
+        notify("Clock tick");
+    }
+};
+
+class Thermometer : public Subject {
+public:
+    // Thermometer 特有的函数，比如气温变化通知
+    void temperatureChanged() {
+        notify("Temperature changed");
+    }
+};
+
+int main() {
+    Clock clock;
+    Thermometer thermometer;
+
+    // 假设我们希望一个观察者同时观察时钟和温度计
+    ConcreteObserver observer;
+    
+    // 订阅两种事件
+    clock.attach(&observer);
+    thermometer.attach(&observer);
+
+    // 触发事件
+    clock.tick();           // 观察者应该收到 "Clock tick"
+    thermometer.temperatureChanged();  // 观察者应该收到 "Temperature changed"
+
+    return 0;
+}
+```
 
 ## *Strategy pattern*
 
 ## *MVC*
+
+MVC是一种在GoF总结出来的23个设计模式之外的一种复合设计模式，即多种设计模式的组合,并不仅仅只是一个单独的一个模式组
+
+MVC全名是 Model View Controller，是模型 model - 视图 view－控制器 controller 的缩写。MVC是一种软件设计典范，用一种将业务逻辑、数据、界面显式分离的方法组织代码，将业务逻辑聚集到一个部件里面，在改进和个性化定制界面及用户交互的同时，不需要重新编写业务逻辑。MVC被独特的发展起来用于映射传统的输入、处理和输出功能在一个逻辑的图形化用户界面的结构中
+
+- Model 模型 表示应用程序核心（如数据库）
+- View 视图 显示效果（HTML页面）
+- Controller 控制器 处理输入（业务逻辑）
+
+### MVP模式
+
+Model-View-Presenter, MVP 是从经典的模式MVC演变而来，它们的基本思想有相通的地方Controller/Presenter负责逻辑的处理，Model提供数据，View负责显示
 
 # 测试
 

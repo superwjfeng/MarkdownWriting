@@ -437,7 +437,7 @@ cout << useF(func1, 11.11) << endl;
 // 函数对象
 std::function<double(double)> func2 = Functor();
 cout << useF(func2, 11.11) << endl;
-// lamber表达式
+// lambda表达式
 std::function<double(double)> func3 = [](double d)->double { return d/4; };
 cout << useF(func3, 11.11) << endl;
 ```
@@ -611,8 +611,6 @@ C++11引入的专用移动迭代器 move iterator 不是用来拷贝元素，而
 ## *条款34：优先使用lambda，而非 `std::bind`*
 
 # `<algorithm>` 库函数
-
-### `<algorithm>` 库
 
 STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 知乎 <https://zhuanlan.zhihu.com/p/426355690>
 
@@ -2228,7 +2226,66 @@ explicit bitset (const charT* str,
 ```c++
 ```
 
+## *any（17）*
 
+C++17引入了`std::any`库，它是一种类型安全的容器，可存储任意类型的数据。与`void*`不同，`std::any`可以检查是否存储了值，并且可以安全地检索和转换存储的值
+
+使用 `std::any` 的时候，可以放入任何类型的对象，并在之后查询或取回原始类型的值。这比 `void*` 更安全，因为 `std::any` 会保留类型信息，并且不需要进行手动的类型转换
+
+```c++
+#include <any>
+#include <iostream>
+
+int main() {
+    // 创建一个空的 any 对象
+    std::any a;
+
+    // 给 any 对象赋予不同类型的值
+    a = 1; // 存储 int
+    std::cout << std::any_cast<int>(a) << std::endl; // 输出：1
+
+    a = 3.14; // 现在存储 double
+    std::cout << std::any_cast<double>(a) << std::endl; // 输出：3.14
+
+    a = true; // 现在存储 bool
+    std::cout << std::any_cast<bool>(a) << std::endl; // 输出：true
+
+    // 检查 any 是否有内容
+    if (!a.has_value()) {
+        std::cout << "a is empty" << std::endl;
+    }
+
+    // 错误的类型转换将抛出 std::bad_any_cast 异常
+    try {
+        std::cout << std::any_cast<float>(a) << std::endl; // 运行时错误：bad_any_cast
+    } catch (const std::bad_any_cast& e) {
+        std::cout << e.what() << std::endl; // 输出：bad any_cast
+    }
+
+    // 可以使用 .type() 来获取当前存储值的类型信息
+    const std::type_info& ti = a.type();
+    std::cout << "Current type: " << ti.name() << std::endl; // 输出可能依赖于具体实现
+
+    // 使用 std::any_cast 来直接提取值（如果类型正确）
+    if (a.type() == typeid(bool)) {
+        bool b = std::any_cast<bool>(a);
+        std::cout << "Bool value: " << b << std::endl; // 输出：Bool value: true
+    }
+
+    // 清空 any 对象中的值
+    a.reset();
+
+    if (!a.has_value()) {
+        std::cout << "a is now empty" << std::endl; // 输出：a is now empty
+    }
+
+    return 0;
+}
+```
+
+在上面的例子中，我们创建了一个 `std::any` 对象 `a` 并对其进行了多次赋值操作。当尝试用 `std::any_cast` 转换为错误类型时，程序捕获并处理了 `std::bad_any_cast` 异常。通过 `has_value()` 方法，我们可以检查 `std::any` 对象是否包含值。使用 `reset()` 方法来清除存储的值，并使 `std::any` 对象为空。使用 `type()` 方法可以得到当前存储值的类型信息。
+
+请注意，频繁使用 `std::any` 可能会引入性能开销，因为类型擦除和运行时类型识别通常涉及额外的间接性和动态分配。所以在考虑使用 `std::any` 时，确保这些代价是合理的。
 
 # 标准库特殊设施
 
