@@ -255,7 +255,7 @@ $ git init
 
 <img src="git版本库内容.png" width="35%">
 
-Object是git管理的最基本的单元，object代表了一个普通的文件。每一个被 git 管理的文件都会计算出一个 hash 值然后压缩放置于 `.git/objects` 目录中。修改的工作区内容的索引会写入对象库的一个新的git对象 object 中
+Object是git管理的最基本的单元，object代表了一个普通的文件。每一个被git管理的文件都会计算出一个hash值然后压缩放置于 `.git/objects` 目录中。修改的工作区内容的索引会写入对象库的一个新的git对象 object 中
 
 一共有四个Object类型
 
@@ -332,7 +332,7 @@ Blobs、树和提交都一样，它们都是对象。当它们引用其他对象
 
 但是哈希值是记不住了，所以要给他们起别名，也就是建立一个用string表示的reference 引用。和C++不同，这里reference应该被理解为指针，它可以不断变动指向不同的哈希值（或者说commit）。这样，Git 就可以使用诸如 “master” 这样人类可读的名称来表示历史记录中某个特定的提交，而不需要在使用一长串十六进制字符了
 
-```
+```python
 references = map<string, string>
 
 def update_reference(name, id):
