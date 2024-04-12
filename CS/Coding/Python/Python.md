@@ -567,6 +567,29 @@ print(f"My name is {name} and I am {age} years old.")
 
 字符串是以字符为单位进行处理的，bytes类型是以字节为单位处理的
 
+### f-string
+
+f-string，即格式化字符串 formatted string，从 Python 3.6 开始引入的 f-string 提供了一种更简洁易读的方式来嵌入 Python 表达式到字符串常量中
+
+当在字符串前加上 `f` 或 `F` 前缀，并将变量或表达式放在大括号 `{}` 中时，Python 会在运行时计算这些表达式的值，并将它们插入到字符串中。因此，f-string 是构建动态字符串时的便捷方法
+
+```python
+proj_dir = "/path/to/project"
+proj_name = "MyProject"
+case_list_file = "cases.txt"
+
+# 使用 f-string 将变量插入到字符串中
+info_str = f'mff_dir: {proj_dir}, proj_name: {proj_name}, case_list_file: {case_list_file}'
+
+print(info_str)
+```
+
+输出将会是
+
+```
+mff_dir: /path/to/mff, proj_name: MyProject, case_list_file: cases.txt
+```
+
 ## *字典 & 集合*
 
 ### 字典和 `std::unordered_map` 的区别
@@ -751,7 +774,22 @@ student(classroom=101, name="Jack", tel=66666666, age=20)
 动态参数，是指不限定传入参数个数的参数包，**必须放在所有的位置参数和默认参数后面**
 
 * `*args`：会将实际参数打包成一个元组传入形式参数。如果参数是个列表，会将整个列表当做一个参数传入
-* `**kwargs`：两个星表示接受键值对的动态参数，数量任意。调用的时候会将实际参数打包成字典
+* `**kwargs` (keyword arguments)：两个星表示接受键值对的动态参数（没有被命名的KV参数），数量任意。调用的时候会将实际参数打包成字典
+
+```Python
+def print_all_args(*args, **kwargs):
+    for arg in args:
+        print(arg)
+    for key, value in kwargs.items():
+        print(f"{key}: {value}")
+
+print_all_args('pos1', 'pos2', arg1='value1', arg2='value2')
+# 输出：
+# pos1
+# pos2
+# arg1: value1
+# arg2: value2
+```
 
 ### 万能参数
 
@@ -791,7 +829,18 @@ LEGB 规则：Python以 L-E-G-B 的顺序依次寻找变量
 
 ### `global` 和 `nonlocal` 关键字
 
-* `global`：指定当前变量使用外部的全局变量
+* global可以在任何地方指定当前变量使用外部的全局变量
+
+  ```python
+  a = 10
+  b = 6
+  def fun():
+      global a 
+      a = 2 # 这里的a就是上面的a，修改了全局a的值
+      b = 4 # 局部变量b，和外面的b灭有关系
+  ```
+
+* nonlocal和global的区别在于作用范围仅对于所在子函数的上一层函数中拥有的局部变量，必须在上层函数中已经定义过，且非全局变量，否则报错
 
 ## *匿名函数/lambda表达式*
 
@@ -1169,6 +1218,8 @@ Python会为实例化的类配备大量默认的魔法函数 Magic method/dunder
 
 * `__module__`：输出所属的模块名
 
+* `__file__`：当前.py文件的绝对路径
+
 * `__doc__`：输出说明性文档和信息
 
   ```python
@@ -1364,6 +1415,19 @@ def People():
 
 # IO
 
+## *输入*
+
+### input
+
+`input` 函数用于从标准输入（通常是键盘）读取用户输入的数据。当 `input` 函数被调用时，程序会暂停执行，等待用户输入文本并按下回车键
+
+```python
+variable = input(prompt)
+```
+
+- `prompt` 是一个字符串，用作提示用户输入的文本。这个参数是可选的，如果不提供，用户将不会看到任何提示信息
+- 当用户完成输入并按下回车键后，输入的文本将作为字符串返回，并可以被赋值给变量
+
 ## *文件*
 
 ### 打开文件
@@ -1372,29 +1436,31 @@ def People():
 
 <img src="openMode.png" width="60%">
 
-使用文件完毕后，需要用文件方法 `close()` 来关闭，但是比起这种方法，经常会使用更便捷的with来处理。在使用结束后, 它会帮你正确的关闭文件
+使用文件完毕后，需要用文件方法 `close()` 来关闭，但是比起这种方法，经常会使用更便捷的with来处理。在使用结束后，它会帮助用户正确的关闭文件，不需要再进行其他操作
 
 ```python
 with open('filename', 'r') as f:
      read_data = f.read()
 ```
 
-### Pickle 包
+### with-as关键字
 
-https://blog.csdn.net/ITBigGod/article/details/86477083
+[Python中的with-as用法 - 简书 (jianshu.com)](https://www.jianshu.com/p/c00df845323c)
 
->The [`pickle`](https://docs.python.org/3/library/pickle.html#module-pickle) module implements binary protocols for serializing and de-serializing a Python object structure. *“Pickling”* is the process whereby a Python object hierarchy is converted into a byte stream, and *“unpickling”* is the inverse operation, whereby a byte stream (from a [binary file](https://docs.python.org/3/glossary.html#term-binary-file) or [bytes-like object](https://docs.python.org/3/glossary.html#term-bytes-like-object)) is converted back into an object hierarchy. Pickling (and unpickling) is alternatively known as “serialization”, “marshalling,” [1](https://docs.python.org/3/library/pickle.html#id7) or “flattening”; however, to avoid confusion, the terms used here are “pickling” and “unpickling”.
-
-用 `pickle.load()` 进行序列化 serializing or pickling 和 `pickle.dump()` 进行反序列化 de-serializing or unpickling
-
-所谓序列化就是按照一种规定的Protocal转换为字节流放到内存中，这相比于和硬盘文件IO快得多
-
-下面的例子是i2dl中的MemoryImageFolderDataset类，用于将不大的Dataset放到内存中，来加快IO速度
+`with-as` 语句在Python中通常用于简化异常处理和清理代码，尤其是在处理资源时。它允许你包装代码块的执行，以便资源的分配和释放可以被自动管理。这种做法在Python中通常称为上下文管理器 context manager
 
 ```python
-with open(os.path.join(self.root_path, 'cifar10.pckl'), 'rb') as f:
-    save_dict = pickle.load(f)
+with expression as variable:
+    with_block
 ```
+
+- `expression` 部分通常是一个会返回上下文管理器对象的表达式。上下文管理器对象需要实现特定的方法 (`__enter__` 和 `__exit__`) 来定义在代码块开始执行前后应该发生什么
+- `as variable` 部分是可选的，如果存在，它将把 `__enter__` 方法的返回值赋予变量，这个变量通常用于`with`块内
+- `with_block` 是需要执行的代码块，在这个块内部可以使用由`as variable`定义的变量
+
+一个常见的常见就是上面的打开文件，相比于C/C++那种用open打开文件，获得一个文件句柄进行操作，用完后还要关闭它，python直接用with-as就行了
+
+在上面的例子中`open()` 函数返回了一个文件对象，这个对象作为上下文管理器用来保证无论如何都能安全地关闭文件。当进入`with`代码块时，文件会被打开，并且`file`变量会引用这个文件对象。当离开`with`代码块时，无论是正常退出还是因为异常而退出，`__exit__`方法会被调用，此时文件会被自动关闭
 
 ### File方法
 
@@ -1410,14 +1476,108 @@ with open(os.path.join(self.root_path, 'cifar10.pckl'), 'rb') as f:
 
 os 模块提供了非常丰富的方法用来处理文件和目录
 
-### `os` 包中的常用方法
+```python
+import os
+```
 
-### `os.path` 模块中的常用方法
+### 操作目录
 
 `__file__` 是当前.py文件的绝对路径
 
-* `os.path.abspath(path)`：返回某个路径的绝对路径
-* `os.path.dirname(path)`：返回某路径的目录名
+* 获取当前目录
+
+  ```python
+  current_directory = os.getcwd()
+  ```
+
+* 改变当前目录
+
+  ```python
+  os.chdir('/path/to/your/directory')
+  ```
+
+* 列出目录内容
+
+  ```python
+  entries = os.listdir('/path/to/your/directory')
+  print(entries)
+  ```
+
+* 创建目录
+
+  ```python
+  os.mkdir('/path/to/new/directory')
+  ```
+
+  递归创建目录
+
+  ```python
+  os.makedirs('/path/to/new/directory/with/subdirectory', exist_ok=True)
+  ```
+
+### 操作路径
+
+`os.path` 模块用于对路径的各种操作
+
+* 检查路径是否存在
+
+  ```python
+  is_exist = os.path.exists('/path/to/check')
+  ```
+
+* 检查路径类型
+
+  ```python
+  is_file = os.path.isfile('/path/to/check')
+  is_dir = os.path.isdir('/path/to/check')
+  ```
+
+* 路径拼接
+
+  ```python
+  full_path = os.path.join('directory', 'subdirectory', 'file.txt')
+  ```
+
+* 分解路径
+
+  ```python
+  head, tail = os.path.split('/path/to/split/file.txt')
+  ```
+
+* 获取文件名和扩展名
+
+  ```python
+  basename = os.path.basename('/path/to/some/file.txt')  # 返回 'file.txt'
+  dirname = os.path.dirname('/path/to/some/file.txt')    # 返回 '/path/to/some'
+  name, extension = os.path.splitext('/path/to/some/file.txt')  # 返回 ('/path/to/some/file', '.txt')
+  ```
+
+* 获取绝对路径
+
+  ```python
+  absolute_path = os.path.abspath('relative/path/to/file')
+  ```
+
+### 环境变量
+
+`environ`是一个代表当前环境变量的字典对象。环境变量通常包含了系统运行时的配置信息，比如用户的主目录、执行路径（PATH）以及操作系统类型等。
+
+通过`os.environ`可以访问和修改这些环境变量。因为它是一个字典，所以可以用所有标准的字典操作对其进行读取、修改、添加或删除环境变量
+
+```python
+import os
+
+# 获取名为'HOME'的环境变量值
+home_directory = os.environ.get('HOME')
+print(home_directory)
+
+# 设置一个新的环境变量，或者修改一个已有的环境变量
+os.environ['NEW_VAR'] = 'SomeValue'
+
+# 打印出所有的环境变量及其值
+for key, value in os.environ.items():
+    print(f"{key}: {value}")
+```
 
 ### 与系统相关的其他方法
 
@@ -1427,9 +1587,146 @@ os 模块提供了非常丰富的方法用来处理文件和目录
 
 # 网络编程
 
-# 多线程
+## *socket*
+
+`socket` 库提供了基本的 BSD 套接字接口。它是 Python 网络编程的底层库，支持 TCP 和 UDP 协议，并允许你实现客户端和服务器应用程序。
+
+```python
+import socket
+
+# 创建一个 socket 对象
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 连接到服务器
+s.connect(('example.com', 80))
+
+# 发送数据
+s.sendall(b'GET / HTTP/1.1\r\nHost: example.com\r\n\r\n')
+
+# 接收响应数据
+data = s.recv(1024)
+
+print(data.decode())
+
+# 关闭连接
+s.close()
+```
+
+
+
+## *http*
+
+### Server
+
+`http.server` 模块可以用来快速创建一个简易的 HTTP 服务器。这通常用于测试或本地开发阶段，而不推荐在生产环境中使用
+
+```python
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'Hello, World!')
+
+if __name__ == '__main__':
+    httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
+    print("Serving at port 8000")
+    httpd.serve_forever()
+```
+
+### Cient
+
+`http.client` 是一个用于 HTTP 客户端的库，它提供了一些类和方法来发送 HTTP 请求和接收 HTTP 响应
+
+```python
+import http.client
+
+# 创建一个 HTTPConnection 对象
+conn = http.client.HTTPSConnection("www.example.com")
+
+# 发送 GET 请求
+conn.request("GET", "/")
+
+# 获取响应
+resp = conn.getresponse()
+print(resp.status, resp.reason)
+
+# 读取响应内容
+data = resp.read()
+print(data)
+
+# 关闭连接
+conn.close()
+```
+
+
+
+## *urllib*
+
+## *ssl*
+
+# 进程 & 线程
+
+## *进程*
+
+subprocess 模块允许我们启动一个新进程，并连接到它们的输入/输出/错误管道，从而获取返回值
+
+### run方法
+
+Popen 是 subprocess的核心，子进程的创建和管理都靠它处理
+
+```python
+subprocess.run(args, *, stdin=None, input=None, stdout=None, stderr=None,
+               capture_output=False, shell=False, cwd=None, timeout=None,
+               check=False, encoding=None, errors=None, text=None, env=None, universal_newlines=None)
+```
+
+- args：表示要执行的命令。必须是一个字符串，字符串参数列表
+- stdin、stdout 和 stderr：子进程的标准输入、输出和错误。其值可以是 subprocess.PIPE、subprocess.DEVNULL、一个已经存在的文件描述符、已经打开的文件对象或者 None。subprocess.PIPE 表示为子进程创建新的管道。subprocess.DEVNULL 表示使用 os.devnull。默认使用的是 None，表示什么都不做。另外，stderr 可以合并到 stdout 里一起输出
+- timeout：设置命令超时时间。如果命令执行时间超时，子进程将被杀死，并弹出 TimeoutExpired 异常
+- check：如果该参数设置为 True，并且进程退出状态码不是 0，则弹 出 CalledProcessError 异常
+- encoding: 如果指定了该参数，则 stdin、stdout 和 stderr 可以接收字符串数据，并以该编码方式编码。否则只接收 bytes 类型的数据
+- shell：如果该参数为 True，将通过操作系统的 shell 执行指定的命令
+
+### Popen
+
+run 方法调用方式返回 CompletedProcess 实例，和直接 Popen 差不多，实现是一样的，实际也是调用 Popen。Popen相比于run方法提供了更精细的控制
+
+## *线程*
+
+Python 的多线程是通过内置的 `threading` 模块来实现的。这个模块允许创建和管理线程
+
+```python
+import threadings
+def thread_function(name):
+    print(f"Thread {name} starting")
+
+my_thread = threading.Thread(target=thread_function, args=("MyThread",))
+
+my_thread.start()
+# ...
+my_thread.join()
+```
+
+
+
+## *GIL*
+
+Global Interpreter Lock）。这是一种线程管理机制，并不根属于*Python*语言，而是存在于CPython中。
+
+Python 中的全局解释器锁（GIL）。GIL 是 Python 解释器中的一个技术，它确保任何时候只有一个线程在执行 Python 字节码。这意味着即便在多核处理器上，Python 程序的单个进程内部也无法实现真正的并行计算。尽管如此，多线程仍然非常有用：
+
+- 在 I/O 密集型应用（比如网络交云、文件操作）中，由于线程经常处于等待状态，多线程可以显著提高程序性能，因为线程可以在不占用 CPU 执行时间的情况下完成工作。
+- 在某些操作延迟较长的任务中，多线程可以改善用户界面的响应性，例如 GUI 应用程序。
 
 # 异步IO & 协程
+
+## *异步IO*
+
+## *协程*
 
 # IPython的使用技巧
 
@@ -1444,6 +1741,84 @@ Python shell不能直接执行shell命令，需要借助sys；IPython通过 `!` 
 # 常用的Python工具包
 
 关于conda和pip的使用可以看 *包管理工具.md*
+
+## *argparse*
+
+argparse 是 Python 标准库中的一个模块，用于编写用户友好的命令行界面。程序定义它需要的参数，argparse 将会从 `sys.argv` 中解析出那些参数。argparse 模块还会自动生成帮助和使用手册，并在用户给程序传递无效参数时报错
+
+### 基本用法
+
+1. 创建 `ArgumentParser` 对象
+
+   ```python
+   import argparse
+   parser = argparse.ArgumentParser(description='这是一个示例程序.')
+   ```
+
+2. 使用 `add_argument` 方法添加参数
+
+   [python之parser.add_argument()用法——命令行选项、参数和子命令解析器-CSDN博客](https://blog.csdn.net/qq_34243930/article/details/106517985)
+
+   * name or flags：选项字符串的名字或者列表,例如foo或者 `-f,--foo`
+   * action：命令行遇到参数时的动作，默认值是store
+   * store_const：表示赋值为const
+   * append,将遇到的值存储成列表,也就是如果参数重复则会保存多个值;
+   * append_const,将参数规范中定义的一个值保存到一个列表;
+   * count：存储遇到的次数。此外也可以继承 `argparse.Action` 自定义参数解析
+   * nargs-应该读取的命令行参数个数,可以是具体的数字,或者是?号,当不指定值时对于Positional argument使用default,对于Optional argument使用const;或者是*号,表示0或多个参数;或者是+号表示1或多个参数
+   * const：action和nargs所需要的常量值
+   * default：不指定参数时的默认值
+   * type：命令行参数应该被转换成的类型
+   * choices：参数可允许的值的一个容器
+   * required-可选参数是否可以省略(仅针对可选参数)。
+   * help：参数的帮助信息。当指定为 `argparse.SUPPRESS` 时表示不显示该参数的帮助信息
+   * metavar：在usage说明中的参数名称。对于必选参数默认就是参参数名称，对于可选参数默认是全大写的参数名称
+   * dest：解析后的参数名称。默认情况下，对于可选参数选取最长长的名称，中划线转换为下划线
+
+   ```python
+   parser.add_argument('echo', help='描述这个参数的作用')
+   parser.add_argument('-v', '--verbose', action='store_true', help='增加输出的详细性')
+   ```
+
+   - 第一个参数通常是位置参数（如 `'echo'`）
+
+   - `-v` 或 `--verbose` 表示可选参数。
+
+3. 使用 `parse_args()` 解析添加参数的参数对象，获得解析对象
+
+4. 程序其他部分,当需要使用命令行参数时,使用解析对象.参数获取
+
+下面是一段完整的代码示例：
+
+```python
+import argparse
+
+# 初始化解析器
+parser = argparse.ArgumentParser(description="这是一个示例程序.")
+# 添加位置参数
+parser.add_argument("echo", help="echo 参数的帮助信息")
+# 添加可选参数
+parser.add_argument("-v", "--verbose", action="store_true", help="显示更多信息")
+
+# 解析参数
+args = parser.parse_args()
+
+# 根据参数执行不同的操作
+if args.verbose:
+    print(f"你输入了 '{args.echo}', 并且激活了详细模式.")
+else:
+    print(args.echo)
+```
+
+### 进阶功能
+
+除了上述功能，`argparse` 还支持很多其他功能，比如：
+
+- 为参数指定数据类型
+- 选择性地使参数成为必须提供项 (`required=True`)
+- 设置默认值 (`default=` 值)
+- 限制参数的选择范围 (`choices=[...]`)
+- 支持变长参数列表 ( `nargs='+'` 或 `'*'` 等)
 
 ## *tqdm 进度条*
 
