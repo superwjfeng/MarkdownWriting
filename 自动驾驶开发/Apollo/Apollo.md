@@ -16,14 +16,6 @@ By-wire 线控：车能被电脑控制
 
 
 
-
-
-汽车制动防抱死系统 Antilock Brake System, ABS：模拟不停的点刹。其工作原理就是由轮速感应器监测车轮的转速，获得的信号汇集到ECU内分析，一旦监测到车轮快要抱死时，电子控制器会发出指令给制动压力调节器，由它实现制动、保压、减压、再增压的过程，避免轮胎抱死
-
-
-
-
-
 function safety (ISO26262)  & cyber security
 
 # Apollo介绍

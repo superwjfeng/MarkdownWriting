@@ -280,6 +280,13 @@ Python中的深浅拷贝问题是针对组合对象，也就是 list、set、dic
 
 组合对象 list，set，dict（没有tuple）都自带了copy浅拷贝方法，而深拷贝则需要导入`copy`模块，调用`deepcopy`方法，copy的 `copy` 方法对应浅拷贝
 
+### `isinstance()` &  `type()`
+
+[python isinstance()方法的使用 - 志不坚者智不达 - 博客园 (cnblogs.com)](https://www.cnblogs.com/linwenbin/p/10491669.html)
+
+* isinstance 会认为子类是一种父类类型，考虑继承关系
+* type 不会认为子类是一种父类类型，不考虑继承关系
+
 ## *运算符*
 
 由于Python动态语言的灵活性，Python的运算符和C++中有很多细节上的区别
@@ -1695,6 +1702,12 @@ subprocess.run(args, *, stdin=None, input=None, stdout=None, stderr=None,
 
 run 方法调用方式返回 CompletedProcess 实例，和直接 Popen 差不多，实现是一样的，实际也是调用 Popen。Popen相比于run方法提供了更精细的控制
 
+
+
+
+
+![image-20240416115836410](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416115836410.png)
+
 ## *线程*
 
 Python 的多线程是通过内置的 `threading` 模块来实现的。这个模块允许创建和管理线程
@@ -1715,18 +1728,34 @@ my_thread.join()
 
 ## *GIL*
 
-Global Interpreter Lock）。这是一种线程管理机制，并不根属于*Python*语言，而是存在于CPython中。
+Global Interpreter Lock, GIL 全局解释器锁。这是一种线程管理机制，并不根属于*Python*语言，而是存在于CPython中。
 
-Python 中的全局解释器锁（GIL）。GIL 是 Python 解释器中的一个技术，它确保任何时候只有一个线程在执行 Python 字节码。这意味着即便在多核处理器上，Python 程序的单个进程内部也无法实现真正的并行计算。尽管如此，多线程仍然非常有用：
+GIL 是 Python 解释器中的一个技术，它确保任何时候只有一个线程在执行 Python 字节码。这意味着即便在多核处理器上，Python 程序的单个进程内部也无法实现真正的并行计算。尽管如此，多线程仍然非常有用：
 
-- 在 I/O 密集型应用（比如网络交云、文件操作）中，由于线程经常处于等待状态，多线程可以显著提高程序性能，因为线程可以在不占用 CPU 执行时间的情况下完成工作。
+- 在 IO 密集型应用（比如网络交云、文件操作）中，由于线程经常处于等待状态，多线程可以显著提高程序性能，因为线程可以在不占用 CPU 执行时间的情况下完成工作。
 - 在某些操作延迟较长的任务中，多线程可以改善用户界面的响应性，例如 GUI 应用程序。
+
+![image-20240416115347933](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416115347933.png)
 
 # 异步IO & 协程
 
 ## *异步IO*
 
 ## *协程*
+
+# 异常和垃圾回收
+
+## *异常*
+
+
+
+
+
+# Python编译
+
+![image-20240416113720018](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416113720018.png)
+
+### 编译缓存
 
 # IPython的使用技巧
 

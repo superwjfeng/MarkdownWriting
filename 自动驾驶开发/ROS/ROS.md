@@ -485,10 +485,10 @@ Talker和Listener谁先启动没有强制要求，这里只是假设Talker首先
 
 <img src="基于clientServer的服务通信机制.jpeg" width="60%">
 
-1. Talker注册
+1. Talker向Master注册
    * 通过1234端口向ROS Master发起**RPC**，注册Talker信息、发布信息的话题名 bar
    * ROS Master会将节点的注册信息加入注册列表中
-2. Listener注册：同样向ROS Master发起**RPC**，注册Listener信息、需要订阅的话题名 bar
+2. Listener向Master注册：同样向ROS Master发起**RPC**，注册Listener信息、需要订阅的话题名 bar
 3. ROS Master进行信息匹配：Master根据Listener的订阅信息从注册列表中进行查找，若没有找到匹配的发布者则等待发布者的加入；若找到匹配的发布者信息，则通过**RPC**向Listener发送Talker的**TCP地址信息**
 4. Listener与Talker建立网络连接：Listener接收到确认信息后，使用TCP尝试与Talker建立网络连接，并且发送服务的请求数据
 5. Talker向Listener发布服务应答数据Talker接收到服务请求和参数后，开始执行服务功能，执行完成后，向Listener发送应答数据
@@ -856,6 +856,15 @@ string frame_id
 ## *日志*
 
 ## *异常*
+
+## *rosbag*
+
+rosbag 主要用于记录、回放、分析 rostopic 中的数据。它可以将指定 rostopic 中的数据记录到 .bag 后缀的数据包中，便于对其中的数据进行离线分析和处理。
+对于 subscribe 某个 topic 的节点来说，它无法区分这个 topic 中的数据到底是实时获取的数据还是从 rosbag 中回放的数据。这就有助于我们基于离线数据快速重现曾经的实际场景，进行可重复、低成本的分析和调试
+
+* `rosbag record -a`：将当前发布的所有 topic 数据都录制保存到一个 rosbag 文件中，录制的数据包名字为日期加时间
+* 也可以只记录某些感兴趣的 topic：`rosbag record /topic_name1 /topic_name2 /topic_name3`
+* `rosbag info`：可以显示数据包中的信息
 
 # 常用组件
 

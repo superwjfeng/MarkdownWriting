@@ -2367,7 +2367,14 @@ int main()
 
 ### 预定义宏
 
+[C++ 的 __LINE__和 __FUNCTION__ - pzf9266 - 博客园 (cnblogs.com)](https://www.cnblogs.com/pzf9266/p/9389212.html)
 
+Linux几个调试宏`__FUNCTION__ ，__TIME__ ，__LINE__ ，__FILE__`这几个宏是编译器内置的，不是在哪个头文件中包含的
+
+* `__FUNCTION__` ：函数名
+* `__TIME__` ：文件运行的时间
+* `__LINE__` ：所在行数
+* `__FILE__`：文件的名字 
 
 ### 可变参数宏 `__VA_ARGS__`
 
