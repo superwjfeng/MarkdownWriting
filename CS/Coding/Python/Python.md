@@ -1747,9 +1747,51 @@ GIL 是 Python 解释器中的一个技术，它确保任何时候只有一个�
 
 ## *异常*
 
+### 使用异常处理
 
+```python
+try:
+    # 尝试执行的代码块
+    pass
+except ExceptionType1:
+    # 处理ExceptionType1
+    pass
+except (ExceptionType2, ExceptionType3) as e:
+    # 共同处理ExceptionType2 和 ExceptionType3
+    # 可以通过e获取异常实例
+    pass
+else:
+    # 如果没有异常发生，则执行这里的代码
+    pass
+finally:
+    # 无论是否发生异常，最终都会执行的代码块
+    pass
+```
 
+### 内置异常
 
+- `SyntaxError`：代码语法错误
+- `IndexError`：列表索引超出范围
+- `KeyError`：字典中查找一个不存在的关键字
+- `FileNotFoundError`：读取一个不存在的文件
+- `ValueError`：传入一个调用者不期望的值，即使该值的类型是正确的
+- `TypeError`：操作或函数应用于不适当类型的对象
+
+### 手动抛出异常
+
+```python
+raise [Exception [, args [, traceback]]]
+```
+
+### 用户自定义异常
+
+```python
+class MyCustomError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+```
+
+可以继承自`Exception`类或其子类来创建自定义的异常类型
 
 # Python编译
 

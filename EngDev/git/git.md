@@ -82,7 +82,7 @@ Git 处理snapshot场景的方法是使用一种叫做 staging area 暂存区的
 
 ## *分支操作*
 
-### 分支和合并
+### 切换分支
 
 移动HEAD指针来指向不同的分支指针，分支指针再指向不同的commit ID。分支指针都放在 `.git/refs` 下面，分成了本地的heads和远端的remotes
 
@@ -98,8 +98,44 @@ Last commit before new branch<-|     |->new commit due to new branch
 * `git branch`：显示本地分支，`git branch -r` 查看远端分支。`git branch --set-upstream-to=origin/master`
   * `git branch <name>`: 创建分支
   * `git branch -d <BranchName>` 删除某条分支，注意删除某条分支的时候必须先切换到其他的分支上
-* `git checkout <branch>`：切换到特定的分支
-* `git checkout -b <name>`：创建分支并切换到该分支。相当于 `git branch <name>; git checkout <name>`
+  
+* checkout切换分支
+
+  * `git checkout <branch>`：切换到特定的分支
+
+  * `git checkout -b <name>`：创建分支并切换到该分支。相当于 `git branch <name>; git checkout <name>`
+
+  * checkout的使用前提：要保证当前分支上没有未提交的更改。如果有未commit的更改，需要先comimt它们，或者将它们暂存起来，即使用 `git stash` 将它们储藏起来，否则Git不允许切换分支以防止潜在的冲突。如果只是恢复文件，那么未提交的其他文件变动不会影响checkout操作
+
+    否则就会报下面的错误
+
+    ```
+    error: Your local changes to the following files would be overwritten by checkout:
+    	>>>>>>>>>>>> some changed files
+    Please commit your changes or stash them before you switch branches.
+    Aborting
+    ```
+
+
+* stash暂存未commit的内容：临时保存（或“暂存”）当前工作目录和索引（即暂存区）的修改状态，以便可以在一个干净的工作基础上切换分支或者做其他操作。这是一个非常有用的工具，尤其是当不想通过提交就保存当前进度的时候
+
+  ```cmd
+  git stash
+  git stash save "Your stash message" # 等价于 等价于 git stash
+  git stash list # 列出所有暂存的进度
+  git stash apply # 应用最近的暂存进度
+  git stash apply stash@{n} # 应用特定的暂存进度，其中 n 对应 git stash list 显示的暂存序号
+  git stash drop # 删除最近的暂存进度
+  git stash clear # 应用并删除最近的暂存进度
+  git stash pop # 清空所有暂存进度
+  git stash branch <branchname> stash@{n} # 创建一个新的分支并应用某个暂存进度，这条命令很好用，如果有冲突的话需要手动解决
+  # 但是如果同名的远端branch已经存在的话建议不要用，因为会创建一个同名的本地分支，而stash的内容会覆盖branch上同名的文件，而远端的内容可能是不一样的
+  ```
+
+* 从Git 2.23版本开始，Git引入了新的`git switch`和`git restore`命令，以提供更符合直觉的方式来分别处理分支切换和文件恢复的行为
+
+### 合并分支
+
 * `git merge <revision>`：合并到当前分支
 * `git mergetool`: 使用工具来处理合并冲突
 * `git rebase <basename> <topic_name>`: 将一系列补丁 topic_name 变基 rebase 到新的基线 basename
@@ -232,6 +268,114 @@ Detached HEAD 状态通常发生在以下几种情况下
 
 1. 若是意外进入了detached HEAD状态，但没有进行任何修改，可以直接通过运行 `git switch -` 或 `git checkout -` 返回到之前所在的分支
 2. 若是在detached HEAD状态下进行了修改，并且希望将这些更改与一个新的分支关联起来，可以使用 `git branch <new-branch-name>` 来创建一个新的分支，然后使用 `git switch <new-branch-name>` 切换到新的分支，并commit更改
+
+## *子模块*
+
+Git Submodule 是一个将其他 Git 仓库作为子目录嵌入到当前 Git 仓库中的功能。如果项目依赖于第三方代码或者其他组件，可以使用 submodule 来管理这些外部资源
+
+### 添加 Submodule
+
+1. **添加新的submodule**：要在你的项目中添加新的 submodule，你需要使用 `git submodule add` 命令，后面跟着仓库地址和希望将该仓库添加到的路径。
+
+   ```cmd
+   git submodule add <repository> <path>
+   ```
+
+   例如：
+
+   ```cmd
+   git submodule add https://github.com/user/repo.git external/repo
+   ```
+
+2. **初始化 submodule**：如果你克隆了一个包含 submodules 的项目，则需要初始化 submodule。
+
+   ```cmd
+   git submodule init
+   ```
+
+3. **更新 submodule**：初始化之后，使用以下命令更新 submodule，以获取其内容。
+
+   ```cmd
+   git submodule update
+   ```
+
+### 克隆包含 Submodule 的仓库
+
+**当要克隆一个包含 submodules 的仓库时，submodules 不会自动被克隆**。需要通过下面的命令进行初始化和更新：
+
+```cmd
+git clone --recurse-submodules <repository>
+```
+
+如果已经克隆了不带 submodules 的仓库，可以执行下面的命令来拉取 submodules：
+
+```cmd
+git submodule update --init --recursive
+```
+
+### 检出 Submodule 特定版本
+
+如果想要检出 submodule 的特定提交或标签，你需要进入到 submodule 目录中，然后像在普通的 Git 仓库一样切换分支或检出提交：
+
+```cmd
+cd <submodule_path>
+git checkout <tag_or_branch_or_commit>
+```
+
+完成以上操作后，应该在主仓库中做个提交来记录 submodule 的状态更改
+
+### 对所有模块做相同的操作
+
+`git submodule foreach` 能在每一个子模块中运行任意命令。比如说下面的命令 
+
+```cmd
+git submodule foreach --recursive git reset --hard
+```
+
+### 拉取所有 Submodule 的最新变更
+
+如果想要更新项目中所有submodule到最新提交，可以使用下面的命令：
+
+```cmd
+git submodule update --remote
+```
+
+这个命令会将每个submodule都更新到它们所跟踪分支（默认是 master）的最新提交
+
+### 提交和推送包含 Submodule 的变更
+
+当在submodule中做了变更并且提交这些变更后，在主仓库也会看到submodule有变更。此时需要在主仓库做一个新的提交以跟踪submodule的新状态
+
+然后，正常地推送主仓库和submodule仓库：
+
+```cmd
+git push --recurse-submodules=on-demand
+```
+
+这种方式确保同时推送主仓库和submodule的变更
+
+### 删除 Submodule
+
+删除submodule稍微复杂一些，需要几步操作：
+
+1. 删除submodule相关的配置信息：
+
+   ```cmd
+   git submodule deinit -f <path_to_submodule>
+   git rm -f <path_to_submodule>
+   ```
+
+2. 从 `.gitmodules` 文件和 `.git/config` 移除submodule配置
+
+3. 如果需要的话，手动从工作树中删除 submodule 目录：
+
+   ```cmd
+   rm -rf .git/modules/<path_to_submodule>
+   ```
+
+4. 提交这些变更到主仓库
+
+以上就是Git Submodule的一些基础用法。Submodule能够很好地用于管理和维护项目依赖，但它增加了项目管理的复杂性，尤其是对于新手来说。因此，在开始使用前要仔细考虑是否真的需要它
 
 # Git原理
 
@@ -369,6 +513,20 @@ Git 支持三种引用类型，不同的引用类型对应的引用文件各自�
 
 
 
+
+
+
+
+
+分析一下这些步骤
+
+Cloning into 'tool/build_management/cache/devcar/mf_system'...
+Username for 'https://devops.momenta.works': weijian.feng@momenta.ai
+Password for 'https://weijian.feng@momenta.ai@devops.momenta.works':
+remote: Azure Repos
+remote: Found 896710 objects to send. (14539 ms)
+Receiving objects: 100% (896710/896710), 488.88 MiB | 22.78 MiB/s, done.
+Resolving deltas: 100% (384322/384322), done.
 
 
 

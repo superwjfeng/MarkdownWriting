@@ -816,20 +816,41 @@ echo "hello, world"
 ### 变量相关命令
 
 * 撤销变量：unset命令
-* set命令用于设置或修改Shell的选项和参数。`set`命令可以用于启用或禁用各种Shell功能，以及设置全局或局部变量。它还可以用于设置特殊的Shell行为。下面是一些常见的`set`命令的用法和示例
+
+* set命令用于设置或修改Shell的选项和参数，从而用于启用或禁用各种Shell功能，以及设置全局或局部变量。它还可以用于设置特殊的Shell行为。下面是一些常见的`set`命令的用法和示例
+  
+  [Linux set命令 | 菜鸟教程 (runoob.com)](https://www.runoob.com/linux/linux-comm-set.html)
+  
   * 启用和禁用选项：
     * `set -x`：启用脚本的调试模式，会输出每个命令执行前的提示
     * `set +x`：禁用调试模式
-    * `set -e`：如果某个命令返回非零退出状态，则立即退出脚本
+    * `set -e`：如果某个命令返回非零退出状态，则立即退出脚本，比如没有grep到相关的内容就会返回非0
     * `set +e`：禁用上述的"立即退出"模式
-    * `set -u`：对未初始化的变量执行操作时，产生错误
+    * `set -u`：对未初始化的变量执行操作时，产生错误。这是编程的好习惯
     * `set +u`：禁用对未初始化变量的错误检查
+    
   * 设置位置参数：
     * `set --`：清除所有位置参数
     * `set -- arg1 arg2 arg3`：设置新的位置参数
+    
   * 修改特殊行为：
     * `set -o option`：启用某个特殊行为选项
     * `set +o option`：禁用某个特殊行为选项
+    
+  * debug
+  
+    * [Fu, Wei: 让你的 shell 脚本变得可控 (fuweid.com)](https://fuweid.com/post/2017-control-your-shell-script/)
+  
+    ```shell
+    ARGS=$*
+    if [ -n "$ARGS" ]
+    then
+    	print "with argument"
+    fi
+    	print "without argument"
+    ```
+  
+    注意：需要在 `$ARGS` 上加上双引号，否则shell会把它当作 `if str` 来处理，那么 -n 自然也就不为空，起不到检查空串的作用
 
 ## *传参*
 

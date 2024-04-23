@@ -43,7 +43,9 @@
   * 例子：如果目标是 `dir/a.foo.b`，并且目标的模式是 `a.%.b`，那么，`$*` 的值就是 `dir/a.foo`。这个变量对于构造有关联的文件名是比较有较
   * 如果目标中没有模式的定义，那么 `$*` 也就不能被推导出，但是，如果目标文件的后缀是make所识别的，那么`$*` 就是除了后缀的那一部分。例如：如果目标是 `foo.c`，因为 `.c` 是make所能识别的后缀名，所以，`$*` 的值就是 `foo`。这个特性是GNU make的，很有可能不兼容于其它版本的make，所以应该尽量避免使用 `$*`，除非是在隐含规则或是静态模式中。如果目标中的后缀是make所不能识别的，那么 `$*` 就是空值
 
-`%` 是Makefile的Pattern Rule中的通配符，而 `*` 则是shell script的通配符
+注意：**`%` 是Makefile的Pattern Rule中的通配符，而 `*` 则是shell script的通配符**
+
+`$` 还有一个作用是执行shell/Linux命令
 
 ### 在不同层级上忽略错误
 
@@ -330,6 +332,30 @@ endforeach()
 ```
 
 ## *函数 & 宏*
+
+### execute_process
+
+[CMake I execute_process命令详解（配置）-CSDN博客](https://blog.csdn.net/weixin_39766005/article/details/122857619)
+
+```cmake
+execute_process(COMMAND <cmd1> [<arguments>]
+             [COMMAND <cmd2> [<arguments>]]...
+             [WORKING_DIRECTORY <directory>]
+             [TIMEOUT <seconds>]
+             [RESULT_VARIABLE <variable>]
+             [RESULTS_VARIABLE <variable>]
+             [OUTPUT_VARIABLE <variable>]
+             [ERROR_VARIABLE <variable>]
+             [INPUT_FILE <file>]
+             [OUTPUT_FILE <file>]
+             [ERROR_FILE <file>]
+             [OUTPUT_QUIET]
+             [ERROR_QUIET]
+             [COMMAND_ECHO <where>]
+             [OUTPUT_STRIP_TRAILING_WHITESPACE]
+```
+
+执行一个和多个comman子进程
 
 ## *属性*
 
@@ -1317,6 +1343,26 @@ DESTINATION：
 CMAKE_INSTALL_PREFIX 默认是在 /usr/local/
 
 cmake -DCMAKE_INSTALL_PREFIX=/usr 在cmake的时候指定CMAKE_INSTALL_PREFIX变量的路径
+
+## *依赖关系*
+
+### 可视化
+
+[cmake 依赖图-掘金 (juejin.cn)](https://juejin.cn/s/cmake 依赖图)
+
+可以通过graphviz来可视化依赖关系。为了生成 CMake 依赖图，可以使用 `--graphviz` 选项。例如，在 Linux 系统中，可以运行以下命令：
+
+```cmd
+cmake --graphviz=myproject.dot /path/to/source/dir
+```
+
+这将在当前目录下生成名为 `myproject.dot` 的文件，它描述了 `/path/to/source/dir` 目录中的 CMake 依赖关系。然后，我们可以使用 Graphviz 工具将 .dot 文件转换为图像，例如：
+
+```cmd
+dot -Tpng myproject.dot -o myproject.png
+```
+
+这将生成名为 `myproject.png` 的 PNG 图像，其中显示了 CMake 依赖关系的图形化表示
 
 # Bazel
 
