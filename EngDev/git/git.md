@@ -52,6 +52,8 @@ Git 处理snapshot场景的方法是使用一种叫做 staging area 暂存区的
 * `git status`: 显示当前的仓库状态
 * `git add <filename>`: 添加文件到暂存区
 * `git commit -m "YOUR COMMIT"`：创建一个新的commit，放到本地的repository中
+  * `git commit --amend -m "YOUR NEW COMMIT"`：修改上一次的commit信息
+
 * `git log`: 显示历史日志
 * `git log --all --graph --decorate`: 可视化历史记录（有向无环图）
 * `git diff <filename>`: 显示与暂存区文件的差异
@@ -60,7 +62,6 @@ Git 处理snapshot场景的方法是使用一种叫做 staging area 暂存区的
 
 ### 撤销与回滚
 
-* `git commit --amend`: 编辑提交的内容或信息
 * `git reset [--soft | --mixed | --hard] <file>`: 用于回退 rollback。**本质是回退版本库中的内容**
   * `--mixed` 为**默认选项**，使用时可以不用带该参数。该参数将暂存区的内容退回为指定提交版本内容，工作区文件保持不变
   * `--soft` 参数对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
@@ -80,9 +81,19 @@ Git 处理snapshot场景的方法是使用一种叫做 staging area 暂存区的
 * 已经add到暂存区，但还没有commit到版本库中：`git reset [--mixed ｜ --hard] file`
 * 已经commit到版本库中：前提是没有push到远程库 `git reset --hard file`
 
-## *分支操作*
+### 在分支间复制文件
 
-### 切换分支
+[git 从别的分支复制文件或目录 | Yunfeng's Simple Blog (vra.github.io)](https://vra.github.io/2021/09/25/git-copy-from-another-branch/)
+
+当前是位于要复制文件到的分支，别忘了欲复制文件所在的文件如果是一个远程分支的话要加上origin/
+
+```cmd
+git checkout <欲复制文件所在的文件> -- <文件或目录>
+```
+
+## *分支的本质*
+
+### 查看分支
 
 移动HEAD指针来指向不同的分支指针，分支指针再指向不同的commit ID。分支指针都放在 `.git/refs` 下面，分成了本地的heads和远端的remotes
 
@@ -98,41 +109,46 @@ Last commit before new branch<-|     |->new commit due to new branch
 * `git branch`：显示本地分支，`git branch -r` 查看远端分支。`git branch --set-upstream-to=origin/master`
   * `git branch <name>`: 创建分支
   * `git branch -d <BranchName>` 删除某条分支，注意删除某条分支的时候必须先切换到其他的分支上
-  
-* checkout切换分支
 
-  * `git checkout <branch>`：切换到特定的分支
+## *切换分支*
 
-  * `git checkout -b <name>`：创建分支并切换到该分支。相当于 `git branch <name>; git checkout <name>`
+* `git checkout <branch>`：切换到特定的分支
 
-  * checkout的使用前提：要保证当前分支上没有未提交的更改。如果有未commit的更改，需要先comimt它们，或者将它们暂存起来，即使用 `git stash` 将它们储藏起来，否则Git不允许切换分支以防止潜在的冲突。如果只是恢复文件，那么未提交的其他文件变动不会影响checkout操作
+* `git checkout -b <name>`：创建分支并切换到该分支。相当于 `git branch <name>; git checkout <name>`
 
-    否则就会报下面的错误
+* checkout的使用前提：要保证当前分支上没有未提交的更改。如果有未commit的更改，需要先comimt它们，或者将它们暂存起来，即使用 `git stash` 将它们储藏起来，否则Git不允许切换分支以防止潜在的冲突。如果只是恢复文件，那么未提交的其他文件变动不会影响checkout操作
 
-    ```
-    error: Your local changes to the following files would be overwritten by checkout:
-    	>>>>>>>>>>>> some changed files
-    Please commit your changes or stash them before you switch branches.
-    Aborting
-    ```
+  否则就会报下面的错误
 
-
-* stash暂存未commit的内容：临时保存（或“暂存”）当前工作目录和索引（即暂存区）的修改状态，以便可以在一个干净的工作基础上切换分支或者做其他操作。这是一个非常有用的工具，尤其是当不想通过提交就保存当前进度的时候
-
-  ```cmd
-  git stash
-  git stash save "Your stash message" # 等价于 等价于 git stash
-  git stash list # 列出所有暂存的进度
-  git stash apply # 应用最近的暂存进度
-  git stash apply stash@{n} # 应用特定的暂存进度，其中 n 对应 git stash list 显示的暂存序号
-  git stash drop # 删除最近的暂存进度
-  git stash clear # 应用并删除最近的暂存进度
-  git stash pop # 清空所有暂存进度
-  git stash branch <branchname> stash@{n} # 创建一个新的分支并应用某个暂存进度，这条命令很好用，如果有冲突的话需要手动解决
-  # 但是如果同名的远端branch已经存在的话建议不要用，因为会创建一个同名的本地分支，而stash的内容会覆盖branch上同名的文件，而远端的内容可能是不一样的
+  ```
+  error: Your local changes to the following files would be overwritten by checkout:
+  	>>>>>>>>>>>> some changed files
+  Please commit your changes or stash them before you switch branches.
+  Aborting
   ```
 
-* 从Git 2.23版本开始，Git引入了新的`git switch`和`git restore`命令，以提供更符合直觉的方式来分别处理分支切换和文件恢复的行为
+### stash暂存文件
+
+stash暂存未commit的内容：临时保存（或“暂存”）当前工作目录和索引（即暂存区）的修改状态，以便可以在一个干净的工作基础上切换分支或者做其他操作。这是一个非常有用的工具，尤其是当不想通过提交就保存当前进度的时候
+
+```cmd
+git stash
+git stash save "Your stash message" # 等价于 等价于 git stash
+git stash list # 列出所有暂存的进度
+git stash apply # 应用最近的暂存进度
+git stash apply stash@{n} # 应用特定的暂存进度，其中 n 对应 git stash list 显示的暂存序号
+git stash drop # 删除最近的暂存进度
+git stash clear # 应用并删除最近的暂存进度
+git stash pop # 清空所有暂存进度
+git stash branch <branchname> stash@{n} # 创建一个新的分支并应用某个暂存进度，这条命令很好用，如果有冲突的话需要手动解决
+# 但是如果同名的远端branch已经存在的话建议不要用，因为会创建一个同名的本地分支，而stash的内容会覆盖branch上同名的文件，而远端的内容可能是不一样的
+```
+
+从Git 2.23版本开始，Git引入了新的`git switch`和`git restore`命令，以提供更符合直觉的方式来分别处理分支切换和文件恢复的行为
+
+stash是一种栈操作
+
+## *分支合并 & 合并冲突的解决*
 
 ### 合并分支
 

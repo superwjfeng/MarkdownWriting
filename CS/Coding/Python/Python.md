@@ -470,7 +470,7 @@ python没有实现独立的栈和队列数据结构，而是利用列表的appen
 
 ## *元组 Tuple*
 
-用方括号 `[]` 扩起来的是元组，用圆括号 `()` 括起来的列表。元组就是不可变的列表
+用方括号 `[]` 扩起来的是列表，用圆括号 `()` 括起来的元组。元组就是不可变的列表
 
 ### 元组中允许的操作
 
@@ -502,7 +502,7 @@ python没有实现独立的栈和队列数据结构，而是利用列表的appen
 
 字符串是不可变类型，但支持对它的切片和取子串（相当于就是产生了一个新对象）
 
-字符串可以用单引号 `''` 或双引号 `""` 括起来表示。Python 3 还支持三重引号 `''' '''` 或 `""" """`，用于跨多行的字符串表示。没有固定的规则要求使用单引号还是双引号，一条默认的规则是如果字符串中包含了单引号转义字符，最好使用双引号；反之如果字符串中包含了双引号转义字符，则最好使用单引号
+字符串可以用单引号 `''` 或双引号 `""` 括起来表示。Python 3 还支持三重引号 `''' '''` 或 `""" """`，用于跨多行的字符串表示。**没有固定的规则要求使用单引号还是双引号**，一条默认的规则是如果字符串中包含了单引号转义字符，最好使用双引号；反之如果字符串中包含了双引号转义字符，则最好使用单引号
 
 ```python
 string1 = 'Hello, World!'
@@ -1679,7 +1679,13 @@ conn.close()
 
 ## *进程*
 
+[subprocess Python执行系统命令最优选模块 - 金色旭光 - 博客园 (cnblogs.com)](https://www.cnblogs.com/goldsunshine/p/17558075.html#gallery-1)
+
 subprocess 模块允许我们启动一个新进程，并连接到它们的输入/输出/错误管道，从而获取返回值
+
+Subprocess模块开发之前，标准库已有大量用于执行系统级别命令的的方法，比如os.system、os.spawn等。但是略显混乱使开发者难以抉择，因此subprocess的目的是打造一个统一模块来替换之前执行系统界别命令的方法。所以推荐使用subprocess替代了一些老的方法，比如：os.system、os.spawn等
+
+<img src="subprocess模块.png">
 
 ### run方法
 
@@ -1705,6 +1711,10 @@ run 方法调用方式返回 CompletedProcess 实例，和直接 Popen 差不多
 
 
 
+
+
+
+run和popen最大的区别在于：run方法是阻塞调用，会一直等待命令执行完成或失败；popen是非阻塞调用，执行之后立刻返回，结果通过返回对象获取
 
 ![image-20240416115836410](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416115836410.png)
 
@@ -1795,7 +1805,23 @@ class MyCustomError(Exception):
 
 # Python编译
 
-![image-20240416113720018](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416113720018.png)
+### Python的执行过程
+
+1. 启动解析器
+  * 启动Python解释器
+  * 加载内建模块和第三方库
+  * 设置一些全局变量，比如 `__name__`
+2. 编译源文件
+  * 解释器读取源文件，然后将其转换成抽象语法树 AST
+  * 编译成字节码
+  * 编译后的字节码会被保存在对应的 `__pycache__/xxx.pyc` 文件中，如果 `.pyc` 文件存在且 `.py` 源文件没有改变，则解释器跳过上述两步直接加载 `.pyc` 文件里的字节码来执行
+3. 执行
+   * Python虚拟机（PVM）顺序执行（除非遇到控制指令）字节码
+4. 垃圾回收和清理退出
+   * 通过引用计数对垃圾对象进行析构和内存回收
+   * 结束时回收所有Python对象占用的内存，关闭Python虚拟机
+   * 返回状态码
+   * 结束Python解释器进程
 
 ### 编译缓存
 
@@ -1881,6 +1907,31 @@ else:
     print(args.echo)
 ```
 
+### 默认值问题
+
+如果在使用 `argparse` 的 `add_argument` 方法时没有指定 `default` 参数，那么默认值的行为依赖于该参数是否为可选（optional）或位置（positional）参数：
+
+* **对于可选参数**（通常以 `-` 或 `--` 开头），如果命令行中没有给出该参数，则默认值为 `None`
+* **对于位置参数**（那些不以 `-` 或 `--` 开头的参数），你必须在命令行中提供这个参数，否则 `argparse` 会报错。不存在默认值的概念，因为它们是必须由用户明确提供的
+
+### 参数列表的覆盖
+
+```python
+arguments = ['-m', '0', 
+           '-c', case_path,
+           '-e', extend_path,
+           '-r', root_path, 
+           '-u', master_uri]
+if not flag:
+    arguments += ['-m', '1']	
+```
+
+arguments 是一个列表，当执行 `+=` 操作时，会将右侧的列表元素追加到左侧的列表中。这种操作不会替换或覆盖原有元素，而是在列表末尾添加新元素
+
+这意味着如果代码后面执行了 `arguments += ['-m', '1']`，它会在列表的末尾添加 `'-m'` 和 `'1'` 这两个元素
+
+因此，原始列表中包含的 `'-m', '0'` 不会被删除或更改，但现在列表中会有两组 `'-m'` 和对应值。这可能导致问题，因为通常情况下命令行解析器（如 `argparse`）会根据参数的最后一次出现来解析值。在这种情况下，如果传递整个 `simulator_arguments` 列表给解析器，`'-m'` 的值可能会被解析为 `'1'` 而不是 `'0'`，因为它是最后出现的
+
 ### 进阶功能
 
 除了上述功能，`argparse` 还支持很多其他功能，比如：
@@ -1890,6 +1941,69 @@ else:
 - 设置默认值 (`default=` 值)
 - 限制参数的选择范围 (`choices=[...]`)
 - 支持变长参数列表 ( `nargs='+'` 或 `'*'` 等)
+
+## *logging*
+
+Python内置的日志模块`logging`是一个非常灵活的系统，它可以帮用户跟踪应用程序中发生的事件。日志消息可以记录到文件、sys.stderr、由Socket传输，或者以其他方式处理。
+
+### 基本配置
+
+在开始记录之前，需要进行一些基本配置。这可以通过调用`logging.basicConfig()`来完成：
+
+```python
+import logging
+
+def basicConfig(*, filename: Optional[StrPath]=..., filemode: str=..., format: str=..., datefmt: Optional[str]=..., style: str=..., level: Optional[_Level]=..., stream: Optional[IO[str]]=..., handlers: Optional[Iterable[Handler]]=...) -> None  # 设置日志级别
+
+logging.basicConfig(filename='example.log'， format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+```
+
+日志级别按照严重性递增的顺序分为：DEBUG, INFO, WARNING, ERROR, 和 CRITICAL。设置了特定的日志级别后，该级别及以上的日志消息才会被输出。
+
+### 日志等级
+
+可以使用不同的方法来记录不同级别的日志，例如：
+
+```python
+logging.debug('This is a debug message')
+logging.info('This is an info message')
+logging.warning('This is a warning message')
+logging.error('This is an error message')
+logging.critical('This is a critical message')
+```
+
+### 日志重定向
+
+默认情况下，日志消息都是输出到标准输出（即屏幕）。但是，也可以很容易地将它们重定向到一个文件
+
+### 日志记录器对象
+
+如果应用程序比较复杂，可能需要对日志进行更细致的控制。这时候就需要创建日志记录器(Logger)对象：
+
+```python
+logger = logging.getLogger('example_logger')
+logger.setLevel(logging.DEBUG)
+
+# 创建一个handler，用于写入日志文件
+fh = logging.FileHandler('example.log')
+
+# 再创建一个handler，用于将日志输出到控制台
+ch = logging.StreamHandler()
+
+# 定义handler的输出格式
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+# 给logger添加handler
+logger.addHandler(fh)
+logger.addHandler(ch)
+
+# 记录一条日志
+logger.debug('This is a debug message')
+```
+
+在上面的代码中，我们创建了一个日志记录器对象，并给它添加了两个处理程序：一个将日志消息写入文件，另一个将它们发送到标准输出。每个处理程序都可以有自己的日志级别和格式
 
 ## *tqdm 进度条*
 
