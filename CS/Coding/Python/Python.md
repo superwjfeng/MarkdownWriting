@@ -246,6 +246,8 @@ math.pi = 5
 
 ### 可变对象 & 不可变对象对引用赋值的影响
 
+对不可变类型的变量重新赋值，实际上是重新创建一个不可变类型的对象，并将原来的变量重新指向新创建的对象（如果没有其他变量引用原有对象的话（即引用计数为0），原有对象就会被回收）
+
 对象赋值 `b = a` 
 
 * 如果 a 指向的是可更改对象，之后只要通过 a 改动其所指向的对象中的元素（因为赋值就是引用），b 所指的对象中的元素就会随之改变；反之（通过 b 进行改动）亦然
@@ -1259,6 +1261,10 @@ Python会为实例化的类配备大量默认的魔法函数 Magic method/dunder
           self._b = b
   ```
 
+  Python 中并没有像 C++ 那样的初始化列表 `{}`。C++ 的初始化列表，Python中统一使用 `()` 来初始化，比如说 `dict()`
+
+  Python 类还有一个 `__new__` 的特殊方法，它是实际的构造器，负责返回一个新的类实例，在大多数情况下，你不需要重写它，除非你有特殊的需求，比如控制创建实例的过程
+
 * `__call__()` 令类成为一个可调用对象，相当于C++中的 `operator()` 仿函数。如果为一个类编写了该方法，那么在该类的实例后面加括号，可会调用这个方法，即 `对象()` 或者 `类()()`。这个魔法函数很重要，基本上都要自定义实现
 
   ```python
@@ -1746,6 +1752,99 @@ GIL 是 Python 解释器中的一个技术，它确保任何时候只有一个�
 - 在某些操作延迟较长的任务中，多线程可以改善用户界面的响应性，例如 GUI 应用程序。
 
 ![image-20240416115347933](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416115347933.png)
+
+## *eval & exec*
+
+`eval()` 和 `exec()` 都是Python内置的、用于动态执行代码的函数，exec的功能更强大一些。都定义在builtins.pyi中
+
+### eval
+
+```python
+def eval(
+    __source: Union[str, bytes, CodeType], __globals: Optional[Dict[str, Any]] = ..., __locals: Optional[Mapping[str, Any]] = ...
+```
+
+`eval()` 可以用来动态地计算数学表达式，或者从字符串中解析出数据结构
+
+```python
+# 用 eval() 来计算数学表达式
+expression = '3 * (4 + 5)'
+result = eval(expression)
+print(result)  # 输出: 27
+
+# 用 eval() 解析字符串为列表
+list_str = '[1, 2, 3, 4, 5]'
+my_list = eval(list_str)
+print(my_list)  # 输出: [1, 2, 3, 4, 5]
+```
+
+### exec
+
+```python
+def exec(
+    __source: Union[str, bytes, CodeType],
+    __globals: Optional[Dict[str, Any]] = ...,
+    __locals: Optional[Mapping[str, Any]] = ...,
+) -> Any: ...
+
+# Execute the given source in the context of globals and locals.
+```
+
+`exec()` 可以用来执行较为复杂的代码片段，例如定义变量、执行循环等操作
+
+```python
+# 定义一个Python代码字符串
+code = """
+def factorial(n):
+    result = 1
+    for i in range(1, n+1):
+        result *= i
+    return result
+
+# 计算阶乘并打印结果
+fact_5 = factorial(5)
+print('The factorial of 5 is:', fact_5)
+"""
+
+# 使用 exec() 执行定义的代码
+exec(code)
+```
+
+### 二者的区别
+
+1. **用途**：
+   - `eval()` 用于计算单个Python表达式的值并返回结果。它主要用于数学运算或字典/列表解析等。
+   - `exec()` 用于执行动态创建的程序代码，可以是一段复杂的代码块，包括定义变量、循环、类和函数定义等，并不返回任何结果。
+2. **返回值**：
+   - `eval()` 执行Python表达式并返回表达式的值。
+   - `exec()` 不返回任何值，即返回值为 `None`。
+3. **输入**：
+   - `eval()` 只能接受单个表达式作为输入，比如 `'3 + 5'` 或者 `'"Hello " + "World!"'` 等。
+   - `exec()` 可以执行复杂的Python代码，包括包含多条语句的字符串。
+4. **安全性**：
+   - `eval()` 的风险在于，如果它处理的表达式来自不可信的源，可能会导致意料之外的行为，甚至安全问题。因此，使用时需要特别小心。
+   - `exec()` 同样存在安全风险，因为它能够执行更复杂的代码块，恶意代码的危害性也更大。
+
+```python
+# 使用 eval()
+result = eval('3 * 5')
+print(result)  # 输出：15
+
+# 使用 exec()
+exec('result = 3 * 5')
+print(result)  # 输出：15
+
+# eval() 只能执行表达式
+try:
+    eval('for i in range(5): print(i)')
+except SyntaxError as e:
+    print("SyntaxError:", e)
+
+# exec() 可以执行复杂的代码块
+exec('for i in range(5): print(i)')
+```
+
+
 
 # 异步IO & 协程
 
