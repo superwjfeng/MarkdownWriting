@@ -703,8 +703,6 @@ Optional：将 nvim 设置为 vim 别名
 
 如果要在window上安装的话，只需要到github上下载win对应的release即可 <https://github.com/neovim/neovim/releases/download/v0.9.5/nvim-win64.zip>
 
-
-
 ### 从Vim迁移到NeoVim
 
 NeoVim的配置文件：`~/.config/nvim/init.vim`（需要手动创建）
@@ -767,6 +765,26 @@ require("lazy").setup(<plugins>, [opts])
 SpaceVim的配置在`~/.SpaceVim.d`文件夹中
 
 # 插件
+
+Nerd-commentator
+
+vim-surround
+
+switch
+
+SimpylFold
+
+Tagbar
+
+semshi 高亮cursor所处的关键字
+
+coc 变量重命名、剪切板记录
+
+far 查找引用等
+
+undotree
+
+nertree 文件树
 
 ## *插件推荐*
 
