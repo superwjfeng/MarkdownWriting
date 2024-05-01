@@ -1879,6 +1879,8 @@ finally:
 
 ### 内置异常
 
+<img src="Python异常体系.png">
+
 - `SyntaxError`：代码语法错误
 - `IndexError`：列表索引超出范围
 - `KeyError`：字典中查找一个不存在的关键字

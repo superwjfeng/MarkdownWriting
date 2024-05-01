@@ -190,10 +190,10 @@ Git 设计了三种对象
 
 <img src="git三个区域.png" width="60%">
 
-* 工作区 Working directory：放需要管理的代码和文件的目录
-* 暂存区 Stage area/index：一般放在 `.git` 目录下的index文件中
-* 版本库 Repository (locally)：`.git` 这个隐藏目录被称为Git的版本库
-* 远程库 Remote Repository：远端的代码托管仓库，不是必须的
+* 工作区 working directory：放需要管理的代码和文件的目录
+* 暂存区 stage area/index：一般放在 `.git` 目录下的index文件中
+* 版本库 commit history / 本地库 Repository (locally)：`.git` 这个隐藏目录被称为Git的版本库
+* 远程库 remote repository：远端的代码托管仓库，不是必须的
 
 ### init-db / git init
 
@@ -419,100 +419,36 @@ Git 支持三种引用/指针类型，不同的指针类型对应的引用文件
 * `git commit -m "YOUR COMMIT"`：创建一个新的commit，放到本地的repository中
   * `git commit --amend -m "YOUR NEW COMMIT"`：修改上一次的commit信息
 * `git push`：push到远端库
-* `git fetch`：只拉取
+* `git fetch`：将远程主机的最新内容拉到本地，用户在检查了以后决定是否合并到工作本机分支中
+* `git pull`：将远程主机的最新内容拉下来后直接合并，即 `git pull = git fetch + git merge`
 * `git diff <filename>`：显示与暂存区文件的差异
 * `git diff <revision> <filename>`：显示某个文件两个版本之间的差异
 
-### 从分区中删除
+### 将删除操作记录到暂存区
 
-`git rm` 是 Git 版本控制系统中的一个命令，其作用是用于从工作区和索引中删除文件。这意味着这些文件将不再被跟踪，并且在下一次提交时，这些文件将不会出现在仓库中。
+`git rm` 的作用是从工作区中删除文件，并将这次删除操作提交到暂存区。这意味着这些文件将不再被跟踪，在下一次提交时，这些文件将不会出现在版本库中
 
-当你执行 `git rm <file>` 命令时，Git 会做两件事情：
+如果想要删除多个文件，可以使用通配符或者手动指定每个文件的路径来一次性删除多个文件，也可以构造一个命令列表来进行批量删除
 
-1. 它会从工作目录中删除指定的文件，即物理地从文件系统中移除该文件。
-2. 它会更新索引（stage area），准备在下次提交时将这个删除操作保存到版本历史中。
+比方说用通配符批量删除特定模式的文件
 
-如果你想要删除多个文件，可以使用通配符或者手动指定每个文件的路径来一次性删除多个文件。你也可以构造一个命令列表来进行批量删除。
+```cmd
+git rm '*.log'
+```
 
-以下是一些批量使用 `git rm` 的方法:
+* `git rm` 要删除的文件是没有修改过的，就是说和当前版本库文件的内容相同，否则就要使用 `git rm -f`
 
-1. 使用通配符批量删除特定模式的文件：
+* `git rm --cached` 用于从暂存区中移除文件，但不会从工作目录中删除该文件。换句话说，它用于停止追踪某个文件，而不会实际删除这个文件的物理副本
 
-   ```cmd
-   git rm '*.log'
-   ```
+  这个命令还是很使用的，比如说下面的场景
 
-   这将删除所有以 `.log` 结尾的文件。
-
-2. 使用 `xargs` 批量删除文件：
-
-   如果有一个文件列表（例如存储在 `files-to-remove.txt` 中），并且你想要删除所有列出的文件，可以使用 `xargs` 命令：
-
-   ```
-   bash复制代码cat files-to-remove.txt | xargs git rm
-   ```
-
-   这将读取 `files-to-remove.txt` 文件中的每行，并将每行作为参数传递给 `git rm`。
-
-3. 使用 `find` 命令结合 `git rm` 删除满足特定条件的文件：
-
-   ```
-   bash复制代码find . -name '*.tmp' -exec git rm '{}' \;
-   ```
-
-   这个命令将找到所有以 `.tmp` 结尾的文件，并对每个找到的文件执行 `git rm`。
-
-请注意，如果你要删除的文件已经被添加到了 Git 的追踪中，那么使用 `git rm` 是正确的做法。如果文件还没有被 Git 追踪（即未被添加到索引中），那么只需简单地从文件系统中删除它们即可。
+  * 当意外地将一个不应该提交到仓库的文件添加到了暂存区（例如敏感配置文件、编译生成的二进制文件等），并且想要撤销这个操作，可以使用 `git rm --cached` 来移除该文件的跟踪状态，然后通常会将其加入`.gitignore`文件以防未来误提交
+  * 调整 `.gitignore` 文件后，需要清理当前暂存区中已跟踪但是现在应该被忽略的文件
 
 ### 日志
 
 * `git log`：显示历史日志
 * `git log --all --graph --decorate`：可视化历史记录（有向无环图）
-
-## *回滚*
-
-### reset & revert
-
-<img src="reset_revert.png">
-
-* `git reset [--soft | --mixed | --hard] <file>`：用于回退 rollback。**本质是回退版本库中的内容**
-  * `--mixed` 为**默认选项**，使用时可以不用带该参数。该参数将暂存区的内容退回为指定提交版本内容，工作区文件保持不变
-  * `--soft` 参数对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
-  * `--hard` 参数将暂存区与工作区都退回到指定版本。**切记工作区有未提交的代码时不要用这个命令**，因为工作区会回滚，没有commit的代码就再也找不回了，所以使用该参数前一定要慎重
-  * file的说明
-    * 可以直接使用commit id，表示指定退回的版本
-    * 一般会使用HEAD来替代：HEAD 表示当前版本，`HEAD^` 上一个版本，`HEAD^^` 上上一个版本，以此类推。也可以使用 `~数字` 来替代，比如 `HEAD~0` 表示当前版本，`HEAD~1` 为上一个版本，依次类推
-  * 不过现在 `git reset` 提供了后悔药，它是可以来回双向rollback的，可以使用**reflog**来查看commit ID
-* `git checkout -- <file>`：丢弃修改，让工作区中的文件回到最近一次add或commit时的状态
-
-### restore
-
-`git restore`：git2.32版本后取代git reset 进行许多撤销操作
-
-* `git restore <file>`：丢弃工作目录中的文件更改，使其恢复为最近一次提交时的状态
-* `git restore --source=<commit> <file>`： 将指定文件恢复到指定提交时的状态
-* `git restore --staged <file>`：将暂存区中的文件恢复到工作目录中，同时保持最近一次提交时的状态
-
-reset和restore的区别主要在于
-
-* `git reset` 主要用于更改当前分支的 HEAD 指向，可以用来重置暂存区和工作目录，以及移动分支的指向
-* `git restore` 用于丢弃本地修改，将文件恢复到暂存区域或提交时的状态。它可以还原暂存区或工作目录中的文件，但不会更改 HEAD
-
-总的来说，`git reset` 更多地涉及分支管理和提交历史的变更，而 `git restore` 则更专注于恢复文件状态到之前的快照
-
-### git rm
-
-### git revert
-
-### 不同的场景
-
-应用场景：撤销回滚的目的是为了防止自己写的代码影响到远程库这个公共空间中的代码
-
-* 还没有add到暂存区
-  * `git checkout -- <file>`，注意一定要带上 `--`，否则checkout就是用来对branch进行操作的
-  * `git reset --hard file`
-* 已经add到暂存区，但还没有commit到版本库中：`git reset [--mixed ｜ --hard] file`
-* 已经commit到版本库中：前提是没有push到远程库 `git reset --hard file`
 
 ## *分支介绍*
 
@@ -543,7 +479,7 @@ Last commit before new branch<-|     |->new commit due to new branch
 
 ## *切换分支*
 
-### checkout
+### checkout 检出
 
 * `git checkout <branch>`：切换到特定的分支
 
@@ -597,7 +533,7 @@ git stash clear                     # 应用并删除最近的暂存进度
 
 ### 多次stash的栈原理
 
-多次stash是一种栈操作
+多次stash是一种栈操作，index小的位于栈顶
 
 ```
 stash@{index}: WIP on [分支名]: [最近一次的commitID] [最近一次的提交信息]
@@ -612,6 +548,126 @@ git stash pop                  # 清空所有暂存进度
 git stash branch <branchname> stash@{n} # 创建一个新的分支并应用某个暂存进度，这条命令很好用，如果有冲突的话需要手动解决
 # 但是如果同名的远端branch已经存在的话建议不要用，因为会创建一个同名的本地分支，而stash的内容会覆盖branch上同名的文件，而远端的内容可能是不一样的
 ```
+
+<img src="stash栈.png">
+
+[how does stashing work in git - internals - Stack Overflow](https://stackoverflow.com/questions/18527171/how-does-stashing-work-in-git-internals)
+
+[Git Stash用法总结 - 张小凯的博客 (jasonkayzk.github.io)](https://jasonkayzk.github.io/2020/05/03/Git-Stash用法总结/)
+
+[git（四）之分支之间的stash_分支如何 git stash-CSDN博客](https://blog.csdn.net/LS7011846/article/details/90576413)
+
+## *回滚*
+
+### checkout的时候发生了什么
+
+checkout分支的时候，git做了这么三件事情
+
+1. 将HEAD指向那个分支的最后一次commit
+2. 将HEAD指向的commit里所有文件的snapshot替换掉Index区域里原来的内容
+3. 将Index区域里的内容填充到Working Directory里
+
+### Commit Level
+
+```
+                         head    index   work dir  wd safe
+Commit Level
+reset --soft [commit]    REF     NO      NO        YES
+reset [commit]           REF     YES     NO        YES
+reset --hard [commit]    REF     YES     YES       NO
+checkout [commit]        HEAD    YES     YES       YES
+
+File Level
+reset (commit) [file]    NO      YES     NO        YES
+checkout (commit) [file] NO      YES     YES       NO
+```
+
+head一列中的REF表示该命令移动了HEAD指向的分支引用所指向的位置，而HEAD则表示只移动了HEAD自身，NO则表示不会移动HEAD或HEAD指向的分支。 wd safe (workdir safe) 一列中，YES表示不会覆盖在workspace的修改，NO代表会覆盖在workspace的修改
+
+* reset
+
+  * `git reset [--soft | --mixed | --hard]`：三个不同的参数实际上就决定上面checkout运行到那个步骤。**当不指定branch的时候，默认是 `HEAD^`，即上一次comimt**
+
+    * `--soft`：只移动HEAD，对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
+    * `--mixed`：为**默认选项**，使用时可以不用带该参数。该参数将暂存区的内容退回为指定提交版本内容，工作区文件保持不变
+    * `--hard`：将暂存区与工作区都退回到指定版本。**切记工作区有修改过的，但未提交的代码时不要用这个命令**，因为工作区会回滚，没有commit的代码就再也找不回了，所以使用该参数前一定要慎重
+
+    ```
+    working index HEAD target         working index HEAD
+    ----------------------------------------------------
+      A       B     C    D     --soft   A       B     D
+                               --mixed  A       D     D
+                               --hard   D       D     D
+                               --merge (disallowed)
+    ```
+
+    target代表想要reset到哪个commit
+
+  * 当指定了commit id或者branch时，表示指定退回的版本
+
+    * 一般会使用HEAD来替代：HEAD 表示当前版本，`HEAD^` 上一个版本，`HEAD^^` 上上一个版本，以此类推。也可以使用 `~数字` 来替代，比如 `HEAD~0` 表示当前版本，`HEAD~1` 为上一个版本，依次类推
+
+    * 向前回滚了之后如何向后回滚？ `git reset` 提供了后悔药，它是可以来回双向rollback的，可以使用**reflog**来查看commit ID
+
+* `git checkout [commit]` 和 `git reset --hard` 的区别在于
+
+  * checkout不会修改工作区中修改了但没有commit的内容，而reset则会全部覆盖
+
+  * checkout branch不会移动当前分支的指向，而reset会移动到ref [git rm命令 & git reset和checkout区别 - kongbursi - 博客园 (cnblogs.com)](https://www.cnblogs.com/kongbursi-2292702937/p/15020513.html)
+
+    <img src="checkout用于回滚和reset的区别.png">
+
+### File Level
+
+* 如果`git reset <file>` 指定了某个具体的文件，那么作用如下，相当于unstage了这个文件，或者说reset到当前的HEAD上。需要注意的是带文件参数的git reset没有 `--hard, --soft` 这两个参数，只有 `--mixed` 参数
+
+  * HEAD不会动
+  * 将那个commit的snapshot里的那个文件放到Index区域中
+
+* `git checkout -- <file>`：丢弃工作区的所有修改，让工作区中的文件回到最近一次commit时的状态
+
+  `git checkout -- 文件名` 命令中的 `--` 表示命令行在 `--` 之后没有更多的选项。这样的好处是，**如果碰巧有一个分支与文件名重名**，仍然可以恢复该文件，而不是切换到同名的分支
+
+  ```cmd
+  git chekcout <commit-hash> -- . # 还原全部文件到某个特定的提交
+  ```
+
+### restore
+
+对于 File Level 的回滚操作，其实使用restore更加合适。`git restore`：git 2.32版本后取代git reset 进行许多撤销操作
+
+* `git restore <file>`：丢弃工作目录中的文件更改，使其恢复为最近一次提交时的状态
+* `git restore --source=<commit> <file>`： 将指定文件恢复到指定提交时的状态
+* `git restore --staged --worktree <file>`：默认情况下 `git restore` 只影响工作目录，如果想要将暂存区或工作目录的文件恢复到工作目录中，同时保持最近一次提交时的状态，就要加上 `--staged --worktree`
+
+reset和restore的区别主要在于
+
+* `git reset` 主要用于更改当前分支的 HEAD 指向，可以用来重置暂存区和工作目录，以及移动分支的指向
+* `git restore` 用于丢弃本地修改，将文件恢复到暂存区域或提交时的状态。它可以还原暂存区或工作目录中的文件，但不会更改 HEAD
+
+总的来说，`git reset` 更多地涉及分支管理和提交历史的变更，而 `git restore` 则更专注于恢复文件状态到之前的快照
+
+### git revert
+
+<img src="reset_revert.png">
+
+`git reset` 是会**修改**版本历史的，它会丢弃掉一些版本历史
+
+而 `git revert` 是根据那个commit逆向生成一个新的commit，版本历史是不会被破坏的
+
+如果已经push到远程库还想回退，那么只能使用revert
+
+### 不同的场景
+
+应用场景：撤销回滚的目的是为了防止自己写的代码影响到远程库这个公共空间中的代码
+
+* 还没有add到暂存区
+  * `git checkout -- <file>`，注意一定要带上 `--`，否则checkout就是用来对branch进行操作的
+  * `git reset --hard file`
+* 已经add到暂存区，但还没有commit到版本库中：`git reset [--mixed ｜ --hard] file`
+* 已经commit到版本库中：前提是没有push到远程库 `git reset --hard file`
+
+# 冲突
 
 ## *分支合并 & 合并冲突的解决*
 
