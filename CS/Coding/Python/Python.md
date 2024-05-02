@@ -1687,7 +1687,7 @@ conn.close()
 
 ## *ssl*
 
-# 进程 & 线程
+# 进程 & 线程 & 协程
 
 ## *进程*
 
@@ -1720,22 +1720,18 @@ subprocess.run(args, *, stdin=None, input=None, stdout=None, stderr=None,
 
 run 方法调用方式返回 CompletedProcess 实例，和直接 Popen 差不多，实现是一样的，实际也是调用 Popen。Popen相比于run方法提供了更精细的控制
 
-
-
-
-
-
-
 run和popen最大的区别在于：run方法是阻塞调用，会一直等待命令执行完成或失败；popen是非阻塞调用，执行之后立刻返回，结果通过返回对象获取
-
-![image-20240416115836410](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416115836410.png)
 
 ## *线程*
 
-Python 的多线程是通过内置的 `threading` 模块来实现的。这个模块允许创建和管理线程
+Python的设计者认为操作系统本身的线程调度已经非常成熟稳定了，没有必要自己搞一套。所以Python的线程就是C语言的一个pthread，并通过操作系统调度算法进行调度（例如linux是CFS）
+
+### threading
+
+Python 的多线程是通过内置的 thread 和 threading 模块来实现的。thread提供了低级别的、原始的线程以及一个简单的锁，而threading高级模块提供其他方法，是对thread的进一步封装，大部分情况下都是直接用threading模块
 
 ```python
-import threadings
+import threading
 def thread_function(name):
     print(f"Thread {name} starting")
 
@@ -1746,18 +1742,73 @@ my_thread.start()
 my_thread.join()
 ```
 
+### TLS
 
+Python中TLS的管理是由 `threading.local` 来实现的。这意味着该数据结构中的数据对于每个线程来说都是唯一的，不同的线程不能访问其他线程中的数据。这可以用来避免在多线程环境中共享资源时出现同步问题。
+
+```python
+import threading
+
+# 创建一个全局的threading.local对象
+mydata = threading.local()
+
+def process_data():
+    # 输出当前线程关联的mydata.x的值，如果没有，则设为0
+    print(f"Initial value in thread {threading.current_thread().name}: {getattr(mydata, 'x', 0)}")
+    
+    mydata.x = 0
+    for _ in range(5):
+        mydata.x += 1  # 在当前线程内计数
+    # 输出当前线程与最终mydata.x的值
+    print(f"Final value in thread {threading.current_thread().name}: {mydata.x}")
+
+# 创建并启动两个线程
+t1 = threading.Thread(target=process_data, name="Thread-A")
+t2 = threading.Thread(target=process_data, name="Thread-B")
+
+t1.start()
+t2.start()
+
+t1.join()
+t2.join()
+```
 
 ## *GIL*
 
-Global Interpreter Lock, GIL 全局解释器锁。这是一种线程管理机制，并不根属于*Python*语言，而是存在于CPython中。
+Global Interpreter Lock, GIL 全局解释器锁。这是一种线程管理机制，并不属于Python语言的一个整体特性，而是存在于CPython实现的解释器中
 
-GIL 是 Python 解释器中的一个技术，它确保任何时候只有一个线程在执行 Python 字节码。这意味着即便在多核处理器上，Python 程序的单个进程内部也无法实现真正的并行计算。尽管如此，多线程仍然非常有用：
+GIL是Python解释器设计的历史遗留问题，通常我们用的解释器是官方实现的CPython，要真正利用多核，除非重写一个不带GIL的解释器
 
-- 在 IO 密集型应用（比如网络交云、文件操作）中，由于线程经常处于等待状态，多线程可以显著提高程序性能，因为线程可以在不占用 CPU 执行时间的情况下完成工作。
-- 在某些操作延迟较长的任务中，多线程可以改善用户界面的响应性，例如 GUI 应用程序。
+> In CPython, the global interpreter lock, or GIL, is a mutex that prevents multiple native threads from executing Python bytecodes at once. This lock is necessary mainly because CPython’s memory management is not thread-safe. (However, since the GIL exists, other features have grown to depend on the guarantees that it enforces.
 
-![image-20240416115347933](C:\Users\weijian.feng\AppData\Roaming\Typora\typora-user-images\image-20240416115347933.png)
+GIL 是 Python 解释器中的一个技术，它确保任何时候只有一个线程在执行 Python 字节码。Python内部会计算执行当前线程执行字节码的数量，当达到了一定阈值后就强制释放GIL。这意味着即便在多核处理器上，Python 程序的单个进程内部也无法实现真正的并行计算。Python的多线程只适合于IO密集型的程序使用
+
+- 在 IO 密集型应用（比如网络交互、文件操作）中，由于IO线程经常处于等待状态，它可以释放掉GIL，让其他线程执行。因此多线程可以显著提高程序性能，因为线程可以在不占用 CPU 执行时间的情况下完成工作
+- 在某些操作延迟较长的任务中，多线程可以改善用户界面的响应性，例如 GUI 应用程序
+
+移除GIL的一些最新进展：[Python团队官宣下线GIL：可选择性关闭 | 量子位 (qbitai.com)](https://www.qbitai.com/2023/07/72584.html)
+
+### 使用多进程来替代多线程
+
+multiprocessing库的出现很大程度上是为了弥补thread库因为GIL而低效的缺陷。它完整的复制了一套thread所提供的接口方便迁移。唯一的不同就是它使用了多进程而不是多线程。每个进程有自己的独立的GIL，因此也不会出现进程之间的GIL争抢
+
+当然multiprocessing也不是万能良药。它的引入会增加程序实现时线程间数据通讯和同步的困难
+
+## *异步IO*
+
+## *协程*
+
+### Python协程的发展历史
+
+1. Python2.5 为生成器引用 `.send()`、`.throw()`、`.close()` 方法
+2. Python3.3 为引入yield from，可以接收返回值，可以使用yield from定义协程
+3. Python3.4 加入了asyncio模块
+4. Python3.5 增加async、await关键字，在语法层面的提供支持
+5. Python3.7 使用async def + await的方式定义协程
+6. 此后asyncio模块更加完善和稳定，对底层的API进行的封装和扩展
+7. Python将于3.10版本中移除以yield from的方式定义协程
+
+# 调用程序
 
 ## *eval & exec*
 
@@ -1850,13 +1901,108 @@ except SyntaxError as e:
 exec('for i in range(5): print(i)')
 ```
 
+## *调用C/C++程序*
 
+###  ctypes库
 
-# 异步IO & 协程
+`ctypes` 是Python的一个标准库，它允许调用C库中的函数。这种方式不需要写额外的C代码，只需要知道目标函数的签名即可
 
-## *异步IO*
+```python
+from ctypes import cdll
 
-## *协程*
+# 加载动态链接库（假设库文件名为"libexample.so"）
+lib = cdll.LoadLibrary('libexample.so')
+
+# 调用其中的函数（假设有一个名为func的函数）
+result = lib.func()
+```
+
+对于Windows上的`.dll` 或 macOS 的 `.dylib` 文件也可以使用相类似的方法
+
+### Python/C API
+
+Python提供了一套用C语言编写扩展模块的API，这样可以把C或C++编写的代码编译成Python模块，并直接在Python程序中导入使用
+
+```C
+#include <Python.h>
+
+static PyObject* my_function(PyObject* self, PyObject* args) {
+    // ... 实现功能 ...
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef MyMethods[] = {
+    {"my_function",  my_function, METH_VARARGS, "Description"},
+    {NULL, NULL, 0, NULL}
+};
+
+static struct PyModuleDef mymodule = {
+    PyModuleDef_HEAD_INIT,
+    "mymodule",
+    NULL,
+    -1,
+    MyMethods
+};
+
+PyMODINIT_FUNC PyInit_mymodule(void) {
+    return PyModule_Create(&mymodule);
+}
+```
+
+此代码创建了一个简单的Python模块，其中包含了一个函数`my_function`。编译这段代码生成的模块可以在Python中直接被导入和使用。
+
+### SWIG
+
+SWIG, Simplified Wrapper and Interface Generator 是一个自动化工具，可以将C和C++代码转换为多种高级编程语言的扩展，包括Python
+
+需要写一个SWIG接口文件，该文件定义了想要在Python中使用的C/C++代码的部分
+
+```python
+/* example.i */
+%module example
+%{
+#include "example.h"
+%}
+
+int some_function(int arg);
+// 其他需要暴露给Python的声明...
+```
+
+然后，使用SWIG工具生成Python绑定代码，并与原生C/C++代码一起编译为Python扩展模块
+
+### Cython
+
+Cython是一个优化静态编译器，用于将Python代码以及Cython特定语法的代码转换为C代码，并编译为Python扩展模块
+
+```python
+# example.pyx
+def my_function():
+    # ... 实现功能 ...
+    pass
+```
+
+需要编写一个`.pyx`文件，在里面实现功能，然后使用Cython工具将其编译为C代码，并进一步生成Python模块
+
+### CFFI 
+
+CFFI, C Foreign Function Interface 是另一种可以在Python中调用C代码的工具，它旨在提供一个简单的调用接口，并支持调用被封装的C代码
+
+```python
+from cffi import FFI
+
+ffi = FFI()
+
+# 定义C函数的接口
+ffi.cdef("""
+    int some_function(int x);
+""")
+
+# 加载库
+C = ffi.dlopen("example.so")
+
+# 调用函数
+result = C.some_function(10)
+```
 
 # 异常和垃圾回收
 
