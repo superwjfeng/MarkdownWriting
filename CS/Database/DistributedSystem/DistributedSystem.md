@@ -1105,6 +1105,154 @@ Hadoop是一个开源的分布式计算框架，用于实现和执行MapReduce�
 * GFS采用了分块存储的方式，将文件分成固定大小的块，并在多个服务器上复制这些块以提高可用性。它还使用主从体系结构来协调数据访问和元数据管理
 * GFS的设计灵感和MapReduce一样，旨在支持大规模数据处理任务。这两者共同为Google处理大数据提供了强大的基础设施
 
+# MapReduce
+
+## *介绍*
+
+[MapReduce编程模型 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/134124471) 
+
+MapReduce是一切分布式框架的源头，是一种处理和生成大数据集的相关实现。它属于函数式编程的编程范式
+
+MapReduce由Google提出用于简化在分布式系统中的大规模数据处理。MapReduce模型的核心是将复杂的处理任务划分为小块，然后在多个计算节点上并行处理这些小块
+
+### 应用场景
+
+MapReduce适用于需要在大规模数据集上进行并行处理的场合。其典型应用包括但不限于：
+
+- 大规模数据排序
+- 日志分析
+- 文档索引构建
+- 统计计算
+
+### 技术实现
+
+最知名的MapReduce实现是Apache Hadoop，它是一个开源框架，使得在普通硬件的集群上对大数据进行分布式处理成为可能。除了Hadoop之外，其他系统如Apache Spark也提供了类似MapReduce的功能但更加优化，例如通过提供内存计算而不是仅依赖磁盘I/O，从而提高了处理速度
+
+MapReduce的强大之处在于其简单性和可扩展性，它可以轻松地扩展到数以千计的机器，并且处理PB级别以上的数据。然而，随着实时处理和复杂数据处理需求的增长，MapReduce的局限性也开始显现，比如处理链较长的作业效率低下等问题，这也是为什么许多组织开始转向更灵活的处理模型，如Apache Spark
+
+## *使用*
+
+MapReduce主要包括两个阶段：Map（映射）和Reduce（归约）。下面是这两个阶段的基本概念：
+
+### Map（映射）阶段
+
+- 输入：Map阶段接受原始数据作为输入
+- 处理过程：这个阶段由多个map任务组成，每个任务处理输入数据的一部分。Map任务读取输入数据，对数据进行处理，并产生一系列键值对（key-value pairs）作为输出
+- 目的：通常来说，map操作会对数据做一些变换和过滤，例如，对文档进行词频统计时，map函数可能会解析每个文档，并输出 `<word, 1>` 形式的键值对
+
+### Reduce（归约）阶段
+
+- 输入：Reduce阶段接受map阶段输出的所有键值对
+- 处理过程：在reduce阶段，具有相同键的所有值都被组合在一起。Reduce任务将这些值进行归约、合并或者总结，然后输出最终结果
+- 目的：例如，在词频统计的场景里，reduce函数可能会汇总同一单词的所有计数，并输出 `<word, total_count>` 形式的键值对
+
+### 使用流程
+
+1. 准备数据：数据需要经过预处理，格式化成适合MapReduce处理的形式
+2. 编写Map函数：根据问题需求定义map函数，该函数接收输入数据，并产生中间键值对
+3. 编写Reduce函数：定义reduce函数，它负责处理map阶段产生的所有中间键值对，并生成最终结果
+4. 执行MapReduce作业：提交MapReduce程序到集群，由框架（如Hadoop）控制整个数据处理流程
+5. 调试和优化：监控作业的执行状态，根据需要调试和调整性能
+
+## *Demo*
+
+让我们通过一个典型的MapReduce例子来理解它的工作流程，即“单词计数”（Word Count），这是一个统计给定文本中每个单词出现次数的任务
+
+假设我们有下面的简单文本分为两行：
+
+```
+hello world
+hello MapReduce
+```
+
+### Map阶段
+
+* 输入：原始文本。在Map阶段，每一行文本由一个map任务处理。map函数对每个单词输出一个键值对，键是单词，值是数字1
+* 输出：中间键值对
+
+对于上述输入，map的输出可能如下所示：
+
+```
+< hello, 1 >
+< world, 1 >
+< hello, 1 >
+< MapReduce, 1 >
+```
+
+### Shuffle阶段（框架处理）
+
+在实际的MapReduce模型中，系统会自动执行一个称为shuffle的过程，其中相同键的所有值都被聚集到一起，以便于Reduce阶段的处理。例如，`<hello, 1>`和`<hello, 1>`将被合并为`<hello, [1, 1]>`
+
+### Reduce阶段
+
+* 输入：经过shuffle过程处理后的键值对列表。reduce函数接收一个键以及相关联的值列表。它合并这些值来形成一个单一的值，通常是通过求和操作。
+* 输出：最终结果
+
+最后的reduce输出如下：
+
+```
+< hello, 2 >
+< world, 1 >
+< MapReduce, 1 >
+```
+
+这表示"hello"一词在文本中出现了两次，而"world"和"MapReduce"各出现了一次
+
+### 具体代码（使用Hadoop的MapReduce框架）：
+
+在下面这个Java例子中，我们定义了一个MapReduce作业，包括一个mapper类`TokenizerMapper`和一个reducer类`IntSumReducer`。`TokenizerMapper`把输入的文本切分成单词，并输出每个单词伴随着数字1。然后在reduce阶段，`IntSumReducer`将相同单词的所有值求和，得到最终的单词计数。作业配置在`main`方法中完成，并指定输入输出路径，之后提交给Hadoop集群执行
+
+```java
+public class WordCount {
+
+  public static class TokenizerMapper
+       extends Mapper<Object, Text, Text, IntWritable>{
+
+    private final static IntWritable one = new IntWritable(1);
+    private Text word = new Text();
+
+    public void map(Object key, Text value, Context context
+                    ) throws IOException, InterruptedException {
+      StringTokenizer itr = new StringTokenizer(value.toString());
+      while (itr.hasMoreTokens()) {
+        word.set(itr.nextToken());
+        context.write(word, one);
+      }
+    }
+  }
+
+  public static class IntSumReducer
+       extends Reducer<Text,IntWritable,Text,IntWritable> {
+    private IntWritable result = new IntWritable();
+
+    public void reduce(Text key, Iterable<IntWritable> values,
+                       Context context
+                       ) throws IOException, InterruptedException {
+      int sum = 0;
+      for (IntWritable val : values) {
+        sum += val.get();
+      }
+      result.set(sum);
+      context.write(key, result);
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    Job job = Job.getInstance(conf, "word count");
+    job.setJarByClass(WordCount.class);
+    job.setMapperClass(TokenizerMapper.class);
+    job.setCombinerClass(IntSumReducer.class);
+    job.setReducerClass(IntSumReducer.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(IntWritable.class);
+    FileInputFormat.addInputPath(job, new Path(args[0]));
+    FileOutputFormat.setOutputPath(job, new Path(args[1]));
+    System.exit(job.waitForCompletion(true) ? 0 : 1);
+  }
+}
+```
+
 # 分布式组件
 
 ## *Lease*
