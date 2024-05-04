@@ -1,6 +1,6 @@
 # Introduction
 
-## *编译器构造*
+## *编译器构造 *
 
 <img src="三段优化编译器结构.drawio.png" width="80%">
 
@@ -249,13 +249,15 @@ e -> ε
   Id = ({le}|{di})+
   ```
 
-## *构造DFA*
+## *RE -> NFA*
 
 DFA 和 NFA 的相关内容看 *计算理论.md*
 
 ### Thompson算法
 
 Thompson算法 / Thompson构造法由C语言&Unix之父之一的Ken Thompson提出。它的核心思想是先构造识别子表达式的ε-NFA，再通过几个简单的规则将ε-NFA合并，最终得到识别完整正则表达式的ε-NFA。Thompson构造法的优点是构造速度快，且构造的ε-NFA状态数较少
+
+也可以说Thompson算法的思想是 produce $\mathcal{O}(n)$ states for regular expressions of length n
 
 基于对RE的结构做归纳
 
@@ -283,6 +285,12 @@ Thompson算法 / Thompson构造法由C语言&Unix之父之一的Ken Thompson提�
 考虑这样一个例子：`a(b|c)*`
 
 <img src="Thompson算法例子.drawio.png" width="60%">
+
+### Berry-Sethi 算法
+
+
+
+## *构造DFA*
 
 ### 子集构造算法
 

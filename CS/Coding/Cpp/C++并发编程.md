@@ -249,12 +249,6 @@ C++17 引入了两种新的锁类型 `std::shared_mutex` 和 `std::shared_timed_
 
 wait的Pred返回false的时候就阻塞，notify用于唤醒
 
-## *future*
-
-### 等待多个future
-
-`std::experimental::when_all()`
-
 ## *时钟*
 
 `std::chrono` 是 C++ 标准库中用于处理时间和时钟的库，头文件是 `<chrono>` 它提供了一种类型安全的方式来处理时间点、时间间隔和时钟。它是 C++11 引入的一个重要部分，用于更精确地处理时间，特别是在多线程和跨平台开发中非常有用
@@ -388,6 +382,32 @@ private:
 
 
 ### flex_barrier
+
+# 异步
+
+## *异步IO*
+
+### future
+
+独占future, unique future `std::future<>` 和共享future, shared future `std::shared_future<> 参考了 `std::unique_ptr` 和 `std::shared_ptr` 的设计 
+
+同一事件仅仅允许关联唯一一个 `std::future` 实例，但可以关联多个 `std::shared_future` 实例
+
+若没有关联数据，我们应使用特化的模板 `std::future<void>` 和 `std::shared_future<void>`
+
+future 对象本身不提供同步访问。 若多个线程需访问同一个 future 对象, 必须用互斥或其他同步方式进行保护
+
+### 从另外一个线程返回结果
+
+
+
+## *使用future实现函数式编程*
+
+
+
+## *等待多个future*
+
+`std::experimental::when_all()`
 
 # 原子操作
 
