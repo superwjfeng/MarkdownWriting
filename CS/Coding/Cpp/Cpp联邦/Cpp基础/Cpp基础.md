@@ -805,10 +805,6 @@ switch (std::unique_lock<std::mutex> lk(cv_m); cv.wait_for(lk, 100ms)) {
 }
 ```
 
-## *range（20）*
-
-https://zhuanlan.zhihu.com/p/86809598
-
 ## *三向比较（20）*
 
 # C++函数
@@ -1286,11 +1282,11 @@ https://www.cnblogs.com/zpcdbky/p/4902688.html 这篇文章很好地阐述了为
 
 const修饰指针的三种情况
 
-* 常量指针 pointer to const/底层const low-level const：`int const *p` 或者 `const int *p`：cosnt修饰的是 `*p`，不能修改 `*p`所指向的值，但可以修改p地址本身
-* 指针常量 const pointer/顶层const top-level const：`int* const p`：p一个指针常量，不能修改指针p，即p指向的地址不可修改，但 `*p` 指向的地址所存储的值可以修改
+* 常量指针 pointer to const/底层const low-level const：`int const *p` 或者 `const int *p`：const修饰的是 `*p`，不能修改 `*p`所指向的值，但可以修改p地址本身
+* 指针常量 const pointer/顶层const top-level const：`int* const p`：p是一个指针常量，不能修改指针p，即p指向的地址不可修改，但 `*p` 指向的地址所存储的值可以修改
 * `const int* const p`：同时是指针常量和常量指针
 
-底层const和顶层const是C++ Primer引入的概念。可以这么理解：顶层const是指const修饰的是对象的本身，而底层const则是从底层来看是某个对象的地址，const修饰的是这个地址指向的对象。注意：**对顶层const取指针会得到一个底层const**，因为底层const指向常量
+底层const和顶层const是C++ Primer引入的概念。可以这么理解：顶层const是指const修饰的是对象的本身，而**底层const则是从底层来看是某个对象的地址**，const修饰的是这个地址指向的对象。注意：**对顶层const取指针会得到一个底层const**，因为底层const指向常量
 
 注意⚠️：处于简洁的目的，在笔者的笔记中采用 pointer to const 和 const pointer 的记法
 

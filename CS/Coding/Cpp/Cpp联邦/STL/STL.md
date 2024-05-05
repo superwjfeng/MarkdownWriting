@@ -568,6 +568,45 @@ ostream &os;
 auto g = std::bind(f, a, ref(os) , _1, c, _2);
 ```
 
+### 通用的函数调用器 invoke (17, 2o, 23)
+
+[C++函数式编程 | Zhao Zhengyang (zzy979.github.io)](https://zzy979.github.io/posts/cpp-functional-programming/#6标准库函数对象)
+
+```C++
+INVOKE(std::forward<F>(f), std::forward<Args>(args)...)
+
+template< class F, class... Args>
+constexpr std::invoke_result_t<F, Args...>
+  invoke(F&& f, Args&&... args) noexcept(/* see below */);
+
+// since q C++23
+template< class R, class F, class... Args >
+constexpr R
+    invoke_r( F&& f, Args&&... args ) noexcept(/* see below */);
+```
+
+`std::invoke` 是 C++17标准库中引入的一个函数模板，用于统一地调用可调用对象（函数、函数指针、成员函数指针、仿函数等）。它解决了在 C++ 中调用可调用对象的一致性和灵活性问题
+
+### reference_wrapper
+
+```C++
+template <class T> class reference_wrapper;
+```
+
+类模板`std::reference_wrapper`将引用包装为一个可拷贝、可赋值的对象，通常用于将引用存储在STL容器中，或者将对象按引用方式传递给`std::bind`、`std::thread`、`std::make_pair`等
+
+注：普通引用本身无法拷贝和赋值，必须借助`std::reference_wrapper`实现，而指针本身就支持这些操作。实际上，`std::reference_wrapper`的底层实现就是保存了一个指针
+
+`std::reference_wrapper<T>`对象可隐式转换为`T&`。如果保存的引用是可调用的（即函数对象），则`std::reference_wrapper`也可以使用相同的参数调用
+
+通常不直接使用这个类模板，而是使用辅助函数`std::ref`和`std::cref`来创建`std::reference_wrapper`对象
+
+```C++
+template <class T> reference_wrapper<T> ref (T& elem) noexcept;
+template <class T> reference_wrapper<T> ref (reference_wrapper<T>& x) noexcept;
+template <class T> void ref (const T&&) = delete;
+```
+
 ### 包装器在TCP server 派发任务中的应用
 
 看计算机网络套接字编程 TCP server 部分
@@ -2413,6 +2452,16 @@ e.discard(u)         // 将引擎推进u步：u的类型为 unsigned long long
 ```
 
 ### 其他随机数分布
+
+
+
+
+
+# range（20）
+
+https://zhuanlan.zhihu.com/p/86809598
+
+C++20引入的ranges库是对STL算法库的扩展，使得算法和迭代器可以通过组合变得更加强大。Ranges库的核心概念是**视图 view**，它是间接表示可迭代序列**范围 range**的轻量级对象
 
 # 疑惑
 

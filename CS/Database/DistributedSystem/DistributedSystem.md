@@ -1253,6 +1253,89 @@ public class WordCount {
 }
 ```
 
+# Flink
+
+[Flink入门教程 | Zhao Zhengyang (zzy979.github.io)](https://zzy979.github.io/posts/flink-tutorial/)
+
+Apache Flink 是一个开源流处理框架，用于进行有状态的计算和实时数据处理。Flink最初是由柏林工业大学的几位博士生在2011年创建的，并且最终在2014年成为Apache软件基金会的一个顶级项目。它被设计为分布式、高性能、可容错及易于扩展的系统
+
+### 1. 环境搭建
+
+部署和运行Flink作业的第一步通常是设置执行环境。这可能涉及到在本地机器上安装Flink，或者在一个集群（如Hadoop YARN, Apache Mesos, Kubernetes等）上进行配置。
+
+### 2. 应用开发
+
+开发Flink应用程序通常涉及以下步骤：
+
+- **编写代码**：使用Java或Scala（也支持Python API - PyFlink），根据需求编写数据处理逻辑。
+- **定义数据源（Source）**：指定数据输入的来源，如Kafka消息队列、文件系统、数据库等。
+- **转换操作（Transformations）**：根据业务逻辑定义各种转换操作，比如`map`、`filter`、`reduce`、`join`等。
+- **定义数据汇（Sink）**：指定数据输出的目标地点，如文件系统、数据库、消息队列等。
+
+### 3. 编译和打包
+
+将开发好的Flink应用程序编译并打包成JAR文件，这样可以轻松地在不同的环境中部署和运行。
+
+### 4. 提交作业
+
+使用命令行工具或Flink Web UI将打包好的JAR文件提交给Flink集群执行。
+
+### 5. 监控和管理
+
+一旦Flink作业提交至集群，就可以通过Flink提供的Web UI监控作业的执行情况。可以查看作业的运行状态、吞吐量、延迟以及其他重要的度量指标。另外，也可以进行作业的取消、保存点（Savepoints）创建和恢复等管理操作。
+
+### 示例代码
+
+下面是一个简单的Flink Java API示例，演示了如何编写一个计算数据流中的单词频率的Flink Job：
+
+```java
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.util.Collector;
+
+public class WordCount {
+
+  public static void main(String[] args) throws Exception {
+    // 创建执行环境
+    final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+    // 输入数据
+    DataStream<String> text = env.fromElements(
+        "Hello Flink",
+        "Flink World",
+        "Hello World"
+    );
+
+    // 处理逻辑
+    DataStream<Tuple2<String, Integer>> counts = text
+        .flatMap(new Tokenizer())
+        .keyBy(value -> value.f0)
+        .sum(1);
+
+    // 输出结果
+    counts.print();
+
+    // 执行作业
+    env.execute("Flink Java Word Count");
+  }
+
+  public static final class Tokenizer implements FlatMapFunction<String, Tuple2<String, Integer>> {
+    @Override
+    public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
+      // 根据空格分割单词
+      for (String word : value.split("\\s")) {
+        // 每出现一次则计数增加1
+        out.collect(new Tuple2<>(word, 1));
+      }
+    }
+  }
+}
+```
+
+这个例子展示了Flink API的核心概念，比如数据流(DataStream), 转换(Transformations)，以及如何在Flink中实现Word Count程序。
+
 # 分布式组件
 
 ## *Lease*

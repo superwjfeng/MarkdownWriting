@@ -399,7 +399,29 @@ future 对象本身不提供同步访问。 若多个线程需访问同一个 fu
 
 ### 从另外一个线程返回结果
 
+```c++
+template <class Fn, class... Args> future<typename result_of<Fn(Args...)>::type> async (Fn&& fn, Args&&... args);
 
+template <class Fn, class... Args> future<typename result_of<Fn(Args...)>::type> async (launch policy, Fn&& fn, Args&&... args);
+```
+
+`fn` 是指向调用对象的函数指针，`args` 则是传递给调用独享的参数结构体
+
+可以使用函数模板async按异步方式来启动任务，它会返回一个future对象。线程运行完毕得到的结果就会保存在future对象中，当要用这个值的时候，只需要在future 对象上调用 `get()`，当前线程就会阻塞，以便future对象准备妥当并返回该值
+
+按默认情况下，`std::async()` 的具体实现会自行决定，即等待future 时，是启动新线程，还是同步执行任务。大多数情况下，我们正希望如此。但是C++标准还式给给 `std::async()` 补充了一个参数，以指定采用哪种运行方式。参数的类型是 `std::launch`，其值可以是：
+
+* `std::launch::deferred`：指定在当前线程上延后调用任务函数，直到等到在future上调用了 `wait()` 或 `get()`，任务函数才会执行。注意：若延后调用任务函数，则任务函数有可能永远不会运行
+* `std::launch::async`：指定必须另外开启专属的线程，在其上运行任务函数
+* `std::launch::deferred | std::launch::async`，表示由 `std::async()` 的实现自行选择运行方式，这是选项的**默认值**
+
+### 包装任务
+
+`std::packaged_task` 将一个函数和future对象封装起来，使其能异步执行，并且它的返回值或异常会被存储在与之相关联的 `std::future` 对象中
+
+### 异步同步：`std::promise`
+
+`std::promise` 可以手动设置值或异常，然后通过 `std::future` 获得这个值或异常
 
 ## *使用future实现函数式编程*
 
@@ -530,3 +552,22 @@ C++20 引入了协程 coroutine 的概念，**它是一种支持异步执行的�
 
 ### promise_type
 
+
+
+# EM Cpp 编程建议
+
+本章来自 *Effective Modern C++*
+
+## *条款35：优先选用基于任务而非基于线程的程序设计*
+
+## *条款36：如果异步是必要的，则指定 `std::launch::async`*
+
+## *条款37：使 `std::thread` 类别对象在所有路径都不可联结*
+
+## *条款38：对变化多端的线程句柄析构函数行为保持关注*
+
+## *条款39：考虑针对一次性事件通信使用以void为模板类型实参的期望*
+
+## *条款40：对并发使用 `std::atomic`，对特种内存使用volatile*
+
+volatileness 可以翻译为不稳定、挥发性
