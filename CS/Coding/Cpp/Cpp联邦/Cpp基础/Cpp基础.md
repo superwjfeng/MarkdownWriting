@@ -421,6 +421,10 @@ if (true) {
 
 这里是不会造成作用域冲突的，因为匿名枚举的作用域是在定义他们的struct中
 
+## *条款10：优先选用限定作用域的强枚举，而非不限作用域的弱枚举*
+
+本节来自 *Effective Modern C++*
+
 ## *C++的强制类型转换*
 
 <https://learn.microsoft.com/zh-cn/cpp/cpp/casting-operators?view=msvc-170>
@@ -566,51 +570,6 @@ auto lockAndCall (FuncType func,
 				PtrType ptr) -> decltype (func(ptr)) {
     MuxGuard g(mutex);
 	return func(ptr);
-}
-```
-
-## *优先使用 using 别名声明*
-
-本章选自 *Effective Modern Cpp.md* - 条款9：优先考虑别名声明而非typedef
-
-C语言和C++98都提供了用 typedef 给类型起别名，从而简化一些特别长的自定义类型
-
-C++11规定了一种新的方法，称为**别名声明 alias declaration** ，用关键字using来定义类型别名，比如
-
-```c++
-using iterator = _list_iterator<T, Ref, Ptr>;
-```
-
-但是给指针这种复合类型和常量起类型别名要小心一点，因为可能会产生一些意想不到的后果
-
-using 相较于 typedef 的优势主要是在跟模板相关的时候
-
-* typedef 只能给一个实例化的类起别名，比如
-
-  ```c++
-  typedef Blob<string> StrBlob;
-  ```
-
-  若给要给模板起别名，则必须要在定义的类里面
-
-  ```c++
-  template<typename T> class myVector1 {
-      typedef std::vector<T> type;
-  }
-  ```
-
-* C++11标准允许我们为类模板直接定义一个类型别名，比如说下面的代码中，将twin定义为两个成员类型相同的一个模板pair的别名
-
-  ```c++
-  template<typename T> using myVector2 = std::vector<T>;
-  ```
-
-但真正的好处在于 using 可以避免使用 typenmame 来避免二义性
-
-```c++
-template<template T> Widge {
-	typename myVector1<T>::type myVec1; // 使用了依赖名，要用typename
-	myVector2<T> myVec2; // 不需要typename
 }
 ```
 
@@ -1178,7 +1137,7 @@ class optional {
 
 * 优化代码可读性
 
-* 在元模版编程中的作用
+* 在元模板编程中的作用
 
 
 ## *结构化绑定（17）*
@@ -2210,7 +2169,7 @@ alignas 除了上面的一般用法，还有两个特殊之处
 
 ### 其他方法
 
-C++11除了 alignof 和 alignas 之外，还提供了一些其他的类模版和函数模版来支持进一步的对齐控制
+C++11除了 alignof 和 alignas 之外，还提供了一些其他的类模板和函数模板来支持进一步的对齐控制
 
 ### 使用 new 分配指定对齐字节长度的对象（17）
 
@@ -2897,7 +2856,7 @@ makeInvestment2(Ts &&...params) {
 template <typename... Ts> auto makeInvestment3(Ts &&...params) {}
 ```
 
-当要使用自定义析构器时，其必须被指定为 `std::unique_ptr` 的第二个模版实参
+当要使用自定义析构器时，其必须被指定为 `std::unique_ptr` 的第二个模板实参
 
 ## *条款19：使用 `std::shared_ptr` 管理具备共享所有权的资源*
 
