@@ -462,7 +462,7 @@ git rm '*.log'
 
 ### 查看分支
 
-移动HEAD指针来指向不同的分支指针，分支指针再指向不同的commit ID。分支指针都放在 `.git/refs` 下面，分成了本地的heads和远端的remotes
+移动HEAD指针来指向不同的分支指针，分支指针再指向不同的commit ID。**分支指针都放在 `.git/refs` 下面**，分成了本地的heads和远端的remotes，还有打的tags
 
 注意：在新建branch的时候是在当时的分支上进行了一次commit，即
 
@@ -524,9 +524,10 @@ stash暂存未commit的内容：临时保存（或“暂存”）当前工作目
 git stash
 git stash save "Your stash message" # 等价于 等价于 git stash
 git stash list                      # 列出所有暂存的进度
-git stash apply                     # 应用最近的暂存进度
+git stash apply                     # 应用某个存储，但不会把存储从存储列表中删除，默认使用第一个存储,即stash@{0}
+git stash pop        # 命令恢复之前缓存的工作目录，将缓存堆栈中的对应stash删除，并将对应修改应用到当前的工作目录下，默认为第一个stash，即stash@{0}
 git stash drop                      # 删除最近的暂存进度
-git stash clear                     # 应用并删除最近的暂存进度
+git stash clear                     # 清空栈中所有的暂存进度，使用这个命令一定要慎重
 ```
 
 从Git 2.23版本开始，Git引入了新的`git switch`和`git restore`命令，以提供更符合直觉的方式来分别处理分支切换和文件恢复的行为
@@ -544,7 +545,6 @@ WIP, Work In Progess，index用于后面取出所对应储藏的修改
 ```cmd
 git stash apply stash@{index}  # 应用特定index的暂存进度
 git stash drop stash@{index}   # 将指定index的储藏从储藏记录列表中删除
-git stash pop                  # 清空所有暂存进度
 git stash branch <branchname> stash@{n} # 创建一个新的分支并应用某个暂存进度，这条命令很好用，如果有冲突的话需要手动解决
 # 但是如果同名的远端branch已经存在的话建议不要用，因为会创建一个同名的本地分支，而stash的内容会覆盖branch上同名的文件，而远端的内容可能是不一样的
 ```
