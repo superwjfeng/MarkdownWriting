@@ -1664,7 +1664,7 @@ template < class T, class Alloc = allocator<T> > class vector; // generic templa
     }
     ```
 
-## *emplace_back 的优势*
+## *emplace_back*
 
 ```c++
 template < class T, class Alloc = allocator<T> > class vector {
@@ -1711,6 +1711,10 @@ tests.emplace_back(10, 20); // 不需要移动
 ### 编译时的性能对比
 
 因为 emplace_back 使用了可变参数模版，所以在编译时就需要实例化模版，当参数不同的调用多的话，无疑会增加编译时的开销
+
+### push_back的优势场景
+
+既然emplace_back理论上总是比push_back要高效，那么为什么不总是使用emplace_back呢？这是因为push_back在实际中
 
 ## *list 链表*
 
