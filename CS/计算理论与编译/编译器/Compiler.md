@@ -8,8 +8,12 @@
 
 前端负责理解源语言程序
 
-* 词法分析 Lexical Analysis (Parser)：扫描源代码字符流，并将其组织成有意义的词法单元 token 序列
-* 语法分析 Syntax Analysis：语法分析器检查源代码的语法结构是否符合编程语言的规则，并按照语法规则将代码组织成树状结构（比如 抽象语法树 Abstract Syntax Tree, AST）
+* 词法分析 Lexical Analysis（Lexical Analyzer/Lexer/Scanner）：扫描源代码字符流，并将其组织成有意义的词法单元 token 序列
+
+* 语法分析 Syntax Analysis（Parser）：语法分析器检查源代码的语法结构是否符合编程语言的规则，并按照语法规则将代码组织成树状结构（比如 抽象语法树 Abstract Syntax Tree, AST）
+
+  也有说Parser是包括了词法分析和语法分析两步的，即输入一个字符串序列，输出对应的AST
+
 * 语义分析 Semantic Analysis：检查变量的声明、类型匹配、函数调用等，以确保程序在逻辑上是合理的
 
 ### 优化/中端
