@@ -233,13 +233,19 @@ func main() {
 2. import声明，告诉编译器自己要用到哪些包
 3. 包级别的类型、变量、常量、函数声明（不区分顺序）
 
+### 行分隔符
+
+在 Go 程序中，一行代表一个语句结束。每个语句不需要像 C 家族中的其它语言一样以分号 `;` 结尾，因为这些工作都将由 Go 编译器自动完成
+
+如果打算将多个语句写在同一行，它们则必须使用 `;` 人为区分，但在实际开发中并不鼓励这种做法
+
 ## *变量*
 
 ### 声明
 
 `var name type = expression`：`var` 关键字创建一个具体类型的变量，设置初始值。注意声明和赋值的区别，赋值用来更新一个**已经定义**的实体
 
-go中没有未初始化变量（包括未赋值的返回值），修正了C语言中随机初始化变量带来的麻烦，比如野指针
+go中没有未初始化的变量（包括未赋值的返回值），修正了C语言中随机初始化变量带来的麻烦，比如野指针
 
 * 隐式声明：若type省略，则编译器会根据expression自动决定其type
 * 若expression省略，**没有显式初始化，则全部初始化为0或者0的同义值**，比如 `""` 、`false`、`nil`
@@ -266,6 +272,16 @@ go编译器不允许局部变量定义了但不使用，会报错。如果要这
 
 下面两段代码展示了go的逃逸 escape 机制
 
+### 匿名变量
+
+如果在函数调用时需要忽略某个返回值，则可以使用匿名变量（由下划线`_`表示）
+
+```go
+_, exists := myMap["key"] // 忽略第一个返回值，只获取映射中的布尔值
+```
+
+匿名变量不会占用命名空间，不分配内存，因此不存在重复定义的问题
+
 ### 包和文件
 
 ## *数据类型*
@@ -287,7 +303,7 @@ go编译器不允许局部变量定义了但不使用，会报错。如果要这
 
 * 字符串 string：go 语言的字符串的字节使用 UTF-8 编码标识 Unicode 文本
 
-* boolean
+* boolean：ture 和 false
 
 * 只读常量 const
 
@@ -302,6 +318,12 @@ go编译器不允许局部变量定义了但不使用，会报错。如果要这
   	i, k
   )
   ```
+
+### 常量
+
+```go
+const identifier [type] = value
+```
 
 ### 聚合类型 aggregate type
 
@@ -494,16 +516,97 @@ for _, value := range myArray {
 func function_name( [parameter list] ) [return_types] {
    body
 }
+
+// example
+func add(x int, y int) int {
+    return x + y
+}
 ```
 
-* 形参列表指定了一组变量的参数名和参数类型，若几个形参或返回值的类型一样，那么类型只要写一次就够了
+## *参数*
+
+形参列表指定了一组变量的参数名和参数类型，若几个形参或返回值的类型一样，那么类型只要写一次就够了
+
+* Go 语言中函数的参数默认是通过值传递（即副本传递）。如果想要通过引用传递来改变原始数据，可以使用指针作为参数
 * 返回列表指定了函数返回值的类型
 
+### 变长参数
+
+Go支持变长参数 Variadic Functions，用三个点 `...` 表示。这允许向函数传递零个或多个同类型的参数
+
+```go
+func sum(numbers ...int) int {
+    total := 0
+    for _, number := range numbers {
+        total += number
+    }
+    return total
+}
+
+func main() {
+    fmt.Println(sum(1, 2, 3)) // 输出：6
+}
+```
 
 
-## *多返回值*
+
+## *返回值*
 
 返回值是创建了局部变量
+
+### 多返回值
+
+Go语言支持从函数返回多个值，这在其他编程语言中比较少见
+
+比如说可以同时返回函数的结果和错误状态等信息
+
+```go
+func divide(dividend float64, divisor float64) (float64, error) {
+    if divisor == 0.0 {
+        return 0.0, errors.New("cannot divide by zero")
+    }
+    return dividend / divisor, nil
+}
+```
+
+
+
+### 命名返回值
+
+Go 允许给返回值命名。当使用命名的返回值时，可以在函数中直接操作这些变量，然后使用 `return` 关键字来返回当前的值
+
+```go
+func sumAndProduct(x, y int) (sum, product int) {
+    sum = x + y
+    product = x * y
+    // 返回当前的 sum 和 product 变量的值
+    return
+}
+```
+
+
+
+
+
+
+
+## *lambda闭包*
+
+```go
+increment := func(start int) func() int {
+    value := start
+    return func() int {
+        value++
+        return value
+    }
+}
+
+counter := increment(10)
+fmt.Println(counter()) // 输出：11
+fmt.Println(counter()) // 输出：12
+```
+
+
 
 # 面向对象
 

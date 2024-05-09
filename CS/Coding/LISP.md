@@ -4,15 +4,7 @@
 
 [LISP - 基本语法 - Lisp教程 (yiibai.com)](https://www.yiibai.com/lisp/lisp_basic_syntax.html)
 
-
-
-
-
-[736. Lisp 语法解析 - 力扣（LeetCode）](https://leetcode.cn/problems/parse-lisp-expression/description/)
-
-
-
-# LISP
+# LISP (Common Lisp)
 
 LISP, LISt Processing language 是一种编程语言，它主要用于人工智能（AI）领域的研究。LISP语言 John McCarthy 在1958年设计，并且它是继FORTRAN之后第二古老的高级编程语言
 
@@ -20,16 +12,50 @@ LISP, LISt Processing language 是一种编程语言，它主要用于人工智�
 
 ## *运行环境*
 
-## *基本语法*
+### 安装LISP
 
-LISP语言的核心在于它简单而统一的语法。它主要由S-表达式（Symbolic Expressions）和原子构成，原子包括符号（symbols）、数字等基本数据类型。下面是对LISP语法的一个概览：
+Lisp 有很多不同的实现。比较流行的开源版本有 [SBCL](http://sbcl.org/)、[GNU Lisp](http://clisp.org/) 和 [GNU Common Lisp](https://www.gnu.org/software/gcl/)（GCL）。可以使用发行版的包管理器安装它们中的任意一个，在本文中，笔者使用的是 `clisp`（即 GNU Lisp，一种 ANSI Common Lisp 的实现）
+
+在ubuntu上直接用包管理器来安装就行了
+
+```cmd
+$ sudo apt install clisp
+```
+
+### REPL
+
+REPL, Read-Eval-Print-Loop 是clisp的运行时环境，和python的运行时环境很相似
+
+## *数据类型*
+
+LISP语言的核心在于它简单而统一的语法。它主要由S-表达式（Symbolic Expressions）和原子构成，原子包括符号（symbols）、数字等基本数据类型
 
 ### S-表达式
 
-S-表达式是用来表示数据和代码的基本结构。它们可以是原子或者由多个S-表达式组合而成的列表。
+[S-expressions（S-表达式） (binghe.github.io)](https://binghe.github.io/pcl-cn/chap04/s-expressions.html)
 
-- **原子 atom**：最简单的S-表达式，例如数字`42`，字符串`"hello"`（string要用双引号 `""`），或者符号`foo`
-- **列表 list**：由若干S-表达式组成且放置在圆括号内，如`(a b c)`
+````
+原子 -> 数字 | 符号
+S表达式 -> 原子 | (S表达式 . S表达式)
+````
+
+S表达式是用来表示数据和代码的基本结构。它们可以是原子或者由多个S-表达式组合而成的列表。所有的复合表达式都是由S表达式组合而成
+
+- **原子 atom**：最简单的S-表达式
+  - 数字 Numbers
+    - 整数 Integers
+    - 浮点数 Floating-point numbers
+    - 有理数 Rational numbers：包括分数表示形式
+    - 复数 Complex numbers
+  - 字符 Characters：单个文本字符
+  - 字符串 Strings：字符序列，通常被双引号包围
+
+- 复合类型
+  - 列表 List：由若干S-表达式组成且放置在圆括号内，如`(a b c)`
+  - 向量 Vectors：类似于数组的数据结构，能够通过索引高效地访问元素
+  - 数组 Arrays：高维的数据结构，可用于创建矩阵等结构
+  - 哈希表 Hash tables：提供键-值对存储机制，允许快速访问关联数据
+
 
 ### 单引号
 
@@ -37,17 +63,141 @@ LISP计算一切，包括函数的参数和列表的成员。但有时候，我�
 
 要做到这一点，我们需要先原子或列表中带有单引号
 
+### 运算符
+
+下面是Lisp中的一些基本运算符，但是Lisp的强大之处在于可以用这些构建块来定义自己的运算符（实际上是函数），从而扩展语言的能力
+
+* 数学运算符：`+ - * /`、`mod` 求模、`incf` 和 `decf` 类似于C的 `++ --`
+* 比较运算符：`= /= < > <= >=`、`equal` 或 `eql` 检查两个对象是否相等（适用范围和精度有差异）
+* 逻辑运算符：`and or not`
+
+## *变量 & 常量*
+
+### 变量
+
+变量用来存储数据值，可以在程序运行时改变其内容。变量可以通过多种不同的方式创建和赋值
+
+* 全局变量
+
+  - 全局变量通常使用 `defvar` 或者 `defparameter` 关键字定义
+
+  - `defvar` 仅在变量未被定义时初始化其值，而 `defparameter` 总是重新初始化变量
+  - 注意：Lisp 社区中有一个约定，全局变量名通常以 `*` 符号包围
+
+  ```lisp
+  (defvar *global-var* "Initial value")  ; 创建一个全局变量并初始化
+  (defparameter *another-global* 123)    ; 创建另一个全局变量并初始化
+  ```
+
+* 局部变量
+
+  - 局部变量通常使用 `let` 和 `let*` 构造创建
+
+  - `let` 用于创建新的作用域，并在这个作用域内定义变量
+
+  - `let*` 类似于 `let`，但是允许后续的变量定义依赖于前面的变量定义
+
+  ```lisp
+  (let ((local-var 10)
+        (another-local "Hello"))
+    ;; 在这里 local-var 和 another-local 是可用的
+    )
+  ```
+
+### 常量
+
+在LISP中，常量变量在程序执行期间，从来没有改变它们的值。常量使用 `defconstant` 声明
+
+```lisp
+(defconstant +pi+ 3.14159) ; 创建一个常量表示圆周率
+```
+
+## *分支控制*
+
+### 条件
+
+* if
+
+  ```lisp
+  (if condition then-part else-part)
+  
+  ; 一个例子
+  (if (> x 0)
+      (print "x is positive")
+      (print "x is non-positive")) 
+  ```
+
+* cond 是更复杂的条件控制结构，可以支持多个分支。类似于switch
+
+  ```lisp
+  (cond
+    (test1 result1)
+    (test2 result2)
+    ...
+    (t default-result))
+  
+  ; 一个例子
+  (cond
+    ((> x 10) (print "x is greater than 10"))
+    ((< x 5)  (print "x is less than 5"))
+    (t        (print "x is between 5 and 10 inclusive")))
+  ```
+
+  每个分支都有一个测试条件（`test1`, `test2`, ...）和对应的结果（`result1`, `result2`, ...）。如果一个测试条件为真，它对应的结果就会被执行。`t` 对应于 `default`，它在所有其他条件都不满足时执行
+
+* when 和 unless 是带有内建条件的特殊情况。`when` 执行内部的表达式，仅当 `condition` 为真时；而 `unless` 则相反，仅当 `condition` 为假时才执行内部的表达式
+
+  ```lisp
+  (when condition
+    form1
+    form2
+    ...)
+  
+  (unless condition
+    form1
+    form2
+    ...)
+  
+  ; 一个例子
+  (when (> x 10)
+    (print "x is greater than 10"))
+  
+  (unless (<= x 10)
+    (print "x is greater than 10"))
+  ```
+
+### 循环
+
+* loop：循环loop结构是迭代通过LISP提供的最简单的形式。在其最简单的形式，它可以重复执行某些语句(次)，直到找到一个return语句
+* loop for：loop结构可以实现一个for循环迭代一样作为最常见于其他语言
+* do：do 结构也可用于使用LISP进行迭代。它提供了迭代的一种结构形式
+* dotimes：dotimes构造允许循环一段固定的迭代次数
+* dolist：dolist来构造允许迭代通过列表的每个元素
+
+## *函数*
+
 ### 列表和函数调用
 
-LISP中的函数调用也表示为S-表达式。一个列表如果作为代码执行，则其第一个元素通常是函数或操作符，后续元素是该函数的参数。
+LISP中的函数调用也表示为S-表达式。一个列表如果作为代码执行，则其第一个元素通常是函数或操作符，后续元素是该函数的参数
 
 例如，计算两数之和的表达式写作：`(＋ 3 4)`
 
-这里的 `＋` 是函数名（在LISP中是一个符号），`3` 和 `4` 是它的参数。当这个S-表达式被求值时，会执行加法运算并返回结果 `7`。
+```lisp
+[1]> (+ 3 4)
+7
+```
 
-### 特殊形式和函数定义
+这里的 `＋` 是函数名（在LISP中是一个符号），`3` 和 `4` 是它的参数。当这个S-表达式被求值时，会执行加法运算并返回结果 `7`
 
-除了普通的函数调用，LISP也有几个特殊形式的构造，如用于条件判断的`if`，以及用于定义新函数的`defun`。
+### 定义函数
+
+除了普通的函数调用，LISP也有几个特殊形式的构造，如用于条件判断的`if`，以及用于定义新函数的`defun`
+
+```lisp
+(defun my-function (param1 param2)
+  ;; 在这里 param1 和 param2 是函数参数变量
+  )
+```
 
 例如，定义一个加法函数的方式如下所示：
 
@@ -58,23 +208,21 @@ LISP中的函数调用也表示为S-表达式。一个列表如果作为代码�
 
 这里，`defun` 是一个特殊形式，用于定义函数 `add`，该函数接受两个参数 `x` 和 `y` 并返回它们的和。
 
-### 条件表达式
+### 谓词
 
-条件表达式允许根据不同的条件执行不同的分支。最常见的条件表达式是`if`。
-
-下面是使用`if`的一个例子：
-
-```lisp
-(if (> x 0)
-    (print "x is positive")
-    (print "x is non-positive"))
-```
-
-如果 `x` 大于 `0`，则打印 `"x is positive"`；否则，打印 `"x is non-positive"`。
+谓词是函数，测试其参数对一些特定的条件和返回nil，如果条件为假，或某些非nil值条件为true
 
 ### 宏（Macros）
 
-LISP的宏系统允许用户扩展语言的语法，创建自己的特殊形式。宏看起来像函数调用，但是它们在编译时间进行代码转换，而不是在运行时求值。
+LISP的宏系统允许用户扩展语言的语法，创建自己的特殊形式。宏看起来像函数调用，但是它们在编译时间进行代码转换，而不是在运行时求值
+
+使用 `defmacro` 来定义宏
+
+```lisp
+(defmacro macro-name (parameter-list)
+ "Optional documentation string."
+ body-form)
+```
 
 ### 示例程序
 
@@ -89,9 +237,17 @@ LISP的宏系统允许用户扩展语言的语法，创建自己的特殊形式�
 
 在这个函数中，如果 `n` 等于 `0`，就返回 `1`；否则，返回 `n` 乘以 `n-1` 的阶乘。
 
-整体上，LISP的语法非常简洁，几乎所有的结构都可以表示为嵌套的S-表达式。这种设计使得LISP代码具有高度的灵活性，能够轻松地表示复杂的数据结构和算法。
+整体上，LISP的语法非常简洁，几乎所有的结构都可以表示为嵌套的S-表达式。这种设计使得LISP代码具有高度的灵活性，能够轻松地表示复杂的数据结构和算法
 
+## *类和结构体*
 
+### 结构体
+
+### 类
+
+## *实现一个LISP的语法解析器*
+
+[736. Lisp 语法解析 - 力扣（LeetCode）](https://leetcode.cn/problems/parse-lisp-expression/description/)
 
 # Scheme
 
