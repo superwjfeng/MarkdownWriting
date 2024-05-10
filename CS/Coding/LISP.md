@@ -2,6 +2,10 @@
 
 [为什么Lisp语言如此先进？（译文） - 阮一峰的网络日志 (ruanyifeng.com)](https://www.ruanyifeng.com/blog/2010/10/why_lisp_is_superior.html)
 
+[初识函数式编程和Lisp之后的一点感想 - wanghui - 博客园 (cnblogs.com)](https://www.cnblogs.com/wanghui9072229/archive/2011/05/17/2048892.html)
+
+[[转载\]LISP 语言是怎么来的–LISP 和 AI 的青梅竹马 – AI分享站 (aisharing.com)](http://www.aisharing.com/archives/648)
+
 [LISP - 基本语法 - Lisp教程 (yiibai.com)](https://www.yiibai.com/lisp/lisp_basic_syntax.html)
 
 # LISP (Common Lisp)
@@ -33,6 +37,8 @@ LISP语言的核心在于它简单而统一的语法。它主要由S-表达式�
 ### S-表达式
 
 [S-expressions（S-表达式） (binghe.github.io)](https://binghe.github.io/pcl-cn/chap04/s-expressions.html)
+
+[理解S表达式 | 何幻 (thzt.github.io)](https://thzt.github.io/2015/04/02/s-expression/)
 
 ````
 原子 -> 数字 | 符号

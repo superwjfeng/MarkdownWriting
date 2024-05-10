@@ -8,13 +8,13 @@
 
 前端负责理解源语言程序
 
-* 词法分析 Lexical Analysis（Lexical Analyzer/Lexer/Scanner）：扫描源代码字符流，并将其组织成有意义的词法单元 token 序列
+* 词法分析 Lexical Analysis（Lexical Analyzer/Lexer/Scanner）：扫描源代码字符流，提取出有意义的词法单元 token，以token序列的形式输出
 
-* 语法分析 Syntax Analysis（Parser）：语法分析器检查源代码的语法结构是否符合编程语言的规则，并按照语法规则将代码组织成树状结构（比如 抽象语法树 Abstract Syntax Tree, AST）
+* 句法分析 Syntax Analysis（Parser）：文法分析器检查源代码的语法结构是否符合编程语言的规则，并按照语法规则将代码组织成树状结构（比如抽象语法树 Abstract Syntax Tree, AST）
 
-  也有说Parser是包括了词法分析和语法分析两步的，即输入一个字符串序列，输出对应的AST
+  也有说Parser是包括了词法分析和文法分析两步的，即输入一个字符串序列，输出对应的AST
 
-* 语义分析 Semantic Analysis：检查变量的声明、类型匹配、函数调用等，以确保程序在逻辑上是合理的
+* 语义分析 Semantic Analysis：将语义信息映射到上一步形成的语法树上，比如检查变量的声明、类型匹配、函数调用等，以确保程序的逻辑正确
 
 ### 优化/中端
 
@@ -432,11 +432,13 @@ q1:
 		goto q1
 ```
 
-# Syntax Analysis 语法分析
+# Syntax Analysis 句法分析
+
+## *intro*
 
 <img src="语法分析器.drawio.png" width="60%">
 
-语法分析器的输入是token流，借助的规则则是 CFG 上下文无关语法/形式语言 或者说下推自动机。具体来说，给定文法G和句子s，语法分析要回答的问题是：是否存在对句子s的推导
+句法分析器的输入是token流，借助的规则则是 CFG 上下文无关语法/形式语言 或者说下推自动机。具体来说，给定文法G和句子s，语法分析要回答的问题是：是否存在对句子s的推导
 
 关于CFG、推导树和二义性的内容可以看 *计算理论.md*
 
@@ -446,6 +448,12 @@ q1:
   * 暴力搜索
   * 递归下降
   * LL(1)
+
+### AST
+
+抽象语法树是源代码的一种树状结构表示，它表示了源代码的句法结构，但忽略了不影响语义的细节，如空格、注释等。每个节点代表程序的一部分，例如声明、表达式、控制流结构等
+
+编译器不像人能直接理解语句的含义，AST更有结构性，后续阶段可以针对这颗树做各种分析
 
 ## *暴力搜索*
 
@@ -592,21 +600,38 @@ Antlr、YACC、Bison
 
 ### SLR分析算法
 
+## *语法树生成*
+
 # Semantic Analysis 语义分析
 
+[编译原理（十）——语义分析基础_语义分析·-CSDN博客](https://blog.csdn.net/weixin_43633784/article/details/108928207)
+
+[中国科学技术大学 编译原理 语义分析（类型检查、上下文相关分析） - 高志远的个人主页 (gaozhiyuan.net)](https://gaozhiyuan.net/compilers/ustc-semantic-analysis.html)
+
+<img src="语义分析器.drawio.png"  width="60%">
+
+语义分析也称为类型检查、上下文相关分析，负责检查程序（这个阶段已经是用AST来表示的）的上下文相关的属性
+
+大部分的程序设计语言都采用自然语言来表达程序语言的语义，即语言规范 Language Specification，比如C语言的 The ANSI/ISO C Specification Language (ACSL) 
+
+* **类型检查（Type Checking）**：编译器需要确认每个操作符是否与其操作数的类型匹配，并确定表达式和语句是否类型安全。例如，在不允许隐式类型转换的语言中，尝试将整数赋值给字符串类型的变量会导致编译时错误。
+* **标识符绑定（Identifier Binding）**：编译器需要链接每个变量和函数名（标识符）到它们的声明，这通常涉及到建立和维护一个符号表（Symbol Table），记录变量、函数名、类型等的信息以及它们的作用域。
+* **类型转换（Type Coercion）**：如果某个编程语言支持自动类型转换，则语义分析阶段需要插入必要的类型转换代码。比如，浮点数和整数相加时，需要将整数转换为浮点数。
+* **作用域规则检查（Scope Rule Checking）**：确认每个名称的引用是否符合其作用域的规则。例如，确保局部变量只能在它们声明的函数或代码块内部被访问。
+* **完整性验证（Completeness Verification）**：确保所有必须的定义和声明都已经提供。例如，在使用一个函数之前，它必须被声明。
+* **流控制验证（Flow Control Verification）**：检查程序的控制流路径（比如循环、条件分支等），以确保他们是合适和合理的（例如，避免无限循环、未初始化的变量使用或者未返回任何值的非void函数）。
+* **异常处理验证（Exception Handling Verification）**：对那些支持异常处理的语言，语义分析需要确保异常被恰当地声明、抛出和捕获。
+* **访问权限检查（Access Rights Checking）**：在面向对象的语言中，检查类成员（属性、方法等）的访问权限，例如private、protected和public等的正确使用。
 
 
-# Optimization
 
-Common Subexpression Elimination, CSE
+## *符号表*
 
-# Backend
-
+符号表是一个数据结构，用于存储变量、类型、函数、类等标识符的信息，包括其名称、类型、作用域、内存位置等。当编译器在源代码中遇到一个标识符时，它会在符号表中查找该标识符的相关信息，以确保其被正确使用
 
 
 
-
-
+编程语言的类型系统 Type System 定义了类型之间的操作和关系。语义分析会执行类型检查，确定表达式中各个操作数的类型是否满足操作符要求的类型，并且确保函数调用时参数类型与定义匹配
 
 ## *自举*
 
@@ -638,3 +663,22 @@ Common Subexpression Elimination, CSE
 4. 步骤3：使用步骤2的编译器生成全功能编译器。如果需要添加新的语言功能，则从步骤2重新开始。从这时候开始，可以使用步骤3生成的编译器代替自举编译器来继续语言的开发
 
 全功能编译器被构建了两次，用于比较两个阶段的输出。 如果它们有不同，则自举编译器或者全功能编译器存在缺陷/÷
+
+# Optimization
+
+Common Subexpression Elimination, CSE
+
+
+
+
+
+
+
+# Backend
+
+
+
+
+
+
+
