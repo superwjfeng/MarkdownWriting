@@ -4,7 +4,7 @@
 
 ### DSL的定义
 
-Domain Specific Language, DSL 领域特定语言是针对某一特定领域,具有受限表达性的一种计算机程序设计语言
+Domain Specific Language, DSL 领域特定语言是针对某一特定领域，具有受限表达性的一种计算机程序设计语言
 
 * 计算机程序设计语言 computer programming language：人们用DSL指挥计算机去做一些事。同大多数现代程序设计语言一样，其结构设计成便于人们理解的样子，但它应该还是可以由计算机执行的语言
 * 语言性 language nature：SL 是一种程序设计语言，因此它必须具备连贯的表达能力，不论是一个表达式还是多个表达式组合在一起

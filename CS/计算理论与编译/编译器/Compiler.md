@@ -8,7 +8,7 @@
 
 前端负责理解源语言程序
 
-* 词法分析 Lexical Analysis（Lexical Analyzer/Lexer/Scanner）：扫描源代码字符流，提取出有意义的词法单元 token，以token序列的形式输出
+* 词法分析 Lexical Analysis/Scanning（Lexical Analyzer/Lexer/Scanner）：扫描源代码字符流，提取出有意义的词法单元 token，以token序列的形式输出
 
 * 句法分析 Syntax Analysis（Parser）：文法分析器检查源代码的语法结构是否符合编程语言的规则，并按照语法规则将代码组织成树状结构（比如抽象语法树 Abstract Syntax Tree, AST）
 
@@ -743,7 +743,7 @@ SDT
 
 符号表是为生成中间代码所服务的，在生成中间代码后符号表就不再需要了
 
-符号表是一个数据结构，用于存储变量、类型、函数、类等标识符的信息，包括其名称、类型、作用域、内存位置等。**当编译器在源代码中遇到一个标识符时，它会在符号表中查找该标识符的相关信息，以确保其被正确使用**
+符号表是一个数据结构，用于存储变量、类型、函数、类等标识符的信息，包括其名称、类型、作用域、内存位置、参数类型和传递方法、返回类型等。**当编译器在源代码中遇到一个标识符时，它会在符号表中查找该标识符的相关信息，以确保其被正确使用**
 
 ### 根据符号表构造访问链
 
@@ -821,6 +821,12 @@ https://developer.baidu.com/article/detail.html?id=3249854#
 
 # 中间代码生成
 
+三地址代码 three-address code
+
+* 每个三地址赋值指令的右部最多只有一个运算符
+* 编译器应该生成一个临时名字以存放一个三地址指令计算得到的值
+* 有些三地址指令的运算分量少于三个
+
 # Optimization
 
 Common Subexpression Elimination, CSE
@@ -832,6 +838,10 @@ Common Subexpression Elimination, CSE
 
 
 # Backend
+
+## *代码生成*
+
+代码生成器以源程序的中间表示 IR 作为输入，并把它映射到目标语言
 
 
 
