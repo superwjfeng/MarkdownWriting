@@ -5,7 +5,9 @@ Author: Weijian Feng 封伟健
 
 <img src="Cpp标准变迁.png">
 
--- https://www.modernescpp.com/index.php/c23-the-next-c-standard/
+https://www.modernescpp.com/index.php/c23-the-next-c-standard/
+
+C with classes `->` C++1.0 `->` ... `->` C++98（C++标准第一个版本，引入STL库）`->` C++11（增加了许多特性，使得C++更像是一种新语言）`->` C++14 `->` C++17 `->` C++20（自C++11以来最大的发行版，引入了许多新的特性）`->` C++23
 
 # 数据类型
 
@@ -767,10 +769,6 @@ switch (std::unique_lock<std::mutex> lk(cv_m); cv.wait_for(lk, 100ms)) {
 ## *三向比较（20）*
 
 # C++函数
-
-## *C++版本*
-
-C with classes `->` C++1.0 `->` ... `->` C++98（C++标准第一个版本，引入STL库）`->` C++11（增加了许多特性，使得C++更像是一种新语言）`->` C++14 `->` C++17 `->` C++20（自C++11以来最大的发行版，引入了许多新的特性）`->` C++23
 
 ## *命名空间 namespace*
 
