@@ -45,7 +45,7 @@
 
 注意：**`%` 是Makefile的Pattern Rule中的通配符，而 `*` 则是shell script的通配符**
 
-`$` 还有一个作用是执行shell/Linux命令
+`@` 还有一个作用是执行shell/Linux命令
 
 ### 在不同层级上忽略错误
 
@@ -66,9 +66,15 @@ clean:
     rm -f test
 ```
 
-Makefile是一种汇编语言
+Makefile是一种DSL语言
 
 * 一对make指令是由依赖关系和依赖方法组成的
+  
+  ```makefile
+  target: prerequisites
+      recipe
+  ```
+  
   * 依赖关系：文件之间的关系，即 `目标文件: 依赖文件`
   * 依赖方法：如何通过依赖关系编译文件
   
@@ -101,6 +107,12 @@ Makefile是一种汇编语言
 当明确运行 `make` 命令并指定伪目标（比如 `make clean`）时，伪目标中定义的命令总是会被执行，不像普通目标一样只有在构建时会根据文件的时间戳判断有最新的改动才需要重新构建
 
 不能把为目标和普通目标写成相同的名字，但是为了避免这重名，可以直接将伪目标定义为 `.PHONY` 来区分，不过像clean和all这种很常用的，笔者看到很多人都不写 `.PHONY`
+
+### Tab问题
+
+任何以制表符（tab）开头的命令（不论是makefile语句还是shell命令）都必须是某个目标（target）的配方（recipe）的一部分
+
+之前犯过一个这个错误，看起来完全正确，但是报了一个这个错误 `recipe commences before first target.  Stop`，发现是因为用了tab，所以直接解析成一个target了
 
 ## *变量*
 
