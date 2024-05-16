@@ -1,6 +1,4 @@
-# Makefile
-
-## *intro*
+# Build系统
 
 ### build系统
 
@@ -29,9 +27,13 @@
 
 总的来说，Makefile 是一个静态的构建工具，需要手动编写，而 CMake 是一个用于生成 Makefile 或其他构建系统的工具，它提供了更灵活的方式来管理和构建项目，特别是在需要跨平台支持的情况下。使用 CMake 可以减少构建系统的维护成本，提高项目的可移植性
 
-## *Makefile规则*
+# Makefile
 
-### Makefile中的特殊符号
+makefile是一门用于自动化构建系统的DSL语言
+
+## *Makefile中的特殊符号*
+
+### `$` 转义符号
 
 * `$@` 表示目前规则中所有的目标文件的集合
 * `$^` 表示所有的依赖文件的集合
@@ -45,17 +47,51 @@
 
 注意：**`%` 是Makefile的Pattern Rule中的通配符，而 `*` 则是shell script的通配符**
 
-`@` 还有一个作用是执行shell/Linux命令
+### makefile调用shell命令
 
-### 在不同层级上忽略错误
+* **在规则的命令行中直接使用：** 对于每个规则，其下面缩进的命令部分通常是直接被当作 shell 命令执行的。这些命令会在 make 需要构建该目标时被执行
 
-* 单条命令：在命令前加上 `-`
-* 单条规则中的所有命令：直接以 `.IGNORE` 作为目标
-* 全局：make时加上 `-i` 或者 `--ignore-errors`
+  ```makefile
+  all:
+      echo "This is a shell command"
+  ```
 
-如果make时加上 `-k` 或者 `--keep-going`，那么在执行时若某条规则中的命令出错了，就中止该规则的执行，但是继续执行其他规则
+* **通过 $(shell ...) 函数：** 另一种方法是使用 Makefile 的 `shell` 函数。这允许在变量赋值过程中执行 shell 命令，并捕获其输出
 
-### 编写Makefile
+  ```makefile
+  FILES := $(shell ls -1)
+  
+  all:
+      @echo "Files: $(FILES)"
+  ```
+
+  在这个例子中，`$(shell ls -1)` 会执行 `ls -1` 命令并将输出的文件列表赋给 `FILES` 变量。然后，我们可以在 Makefile 的其他地方使用这个变量
+
+### `@` 隐藏输出
+
+`@` 单独使用的作用是在执行shell/Linux命令时**不输出该命令本身，只输出命令的结果**。通常，在 Makefile 中编写命令时，默认情况下执行的每条命令都会被打印到控制台上。如果在命令前加上`@`，那么这条命令就不会被打印，只有命令的输出结果会显示出来
+
+注意：`@` 应当紧跟在Tab之后，否则会报错。也就是说，`@` 不能用于用 `;` 分隔的（非第一条）多条shell指令中
+
+```makefile
+SHELL := /bin/bash
+VAR=foo
+all:
+	@VAR=bar; @echo $$VAR; @echo $(VAR)
+```
+
+上面的代码会报错
+
+```
+$ make all
+/bin/bash: line 1: @echo: command not found
+/bin/bash: line 1: @echo: command not found
+make: *** [Makefile:4: all] Error 127
+```
+
+## *编写Makefile*
+
+### 基本组成
 
 ```makefile
 test: test.cc # 依赖关系 -> 目标文件: 依赖文件
@@ -68,37 +104,18 @@ clean:
 
 Makefile是一种DSL语言
 
-* 一对make指令是由依赖关系和依赖方法组成的
-  
-  ```makefile
-  target: prerequisites
-      recipe
-  ```
-  
-  * 依赖关系：文件之间的关系，即 `目标文件: 依赖文件`
-  * 依赖方法：如何通过依赖关系编译文件
-  
-* `make` **默认执行遇到的第一对依赖关系和依赖方法**，其余的需要 `make+依赖关系`，如 `make clean`
+一对make指令是由依赖关系和依赖方法组成的
 
-* 如果依赖关系中的文件找不到，就继续往下找，比如说下面的makefile所有指令都会执行
+```makefile
+target: prerequisite
+	recipe (shell commands)
+	
+target: prerequisite; recipe (shell commands)
+```
 
-  ```makefile
-  main: main.o add.o # 没找到main.o add.o，继续往下找
-      g++ main.o add.o -o main
-  main.o add.o: main.s add.s
-  	g++ -cmain.s -o main.o
-  	g++ -c add.s -o add.o
-  main.s add.s: main.i add.i
-  	g++ -S main.i -o main.s
-  	g++ -S add.i -o add.s
-  main.i add.i: main.cpp add.cpp
-  	g++ -E main.cpp -o main.i
-  	g++ -E add.cpp -o add.i
-  ```
-
-* make是如何知道目标已经是最新的呢？根据文件的最近修改时间，若可执行程序的修改时间比所有相关文件的修改时间都要晚，那么可执行程序就是最新的
-
-<img src="PHONY_comparison.png">
+* 依赖关系：文件之间的关系，即 `目标target: 依赖target`
+* 依赖方法 recipe：如何通过依赖关系编译文件
+* 注意：recipe之前一定要用tab缩进，关于tab缩进的坑可以看下面的章节。如果是写在同一行上的话用 `;` 隔开就可以了
 
 ### 伪目标 `.PHONY`
 
@@ -108,22 +125,157 @@ Makefile是一种DSL语言
 
 不能把为目标和普通目标写成相同的名字，但是为了避免这重名，可以直接将伪目标定义为 `.PHONY` 来区分，不过像clean和all这种很常用的，笔者看到很多人都不写 `.PHONY`
 
-### Tab问题
+### 在不同层级上忽略错误
 
-任何以制表符（tab）开头的命令（不论是makefile语句还是shell命令）都必须是某个目标（target）的配方（recipe）的一部分
+* 单条命令：在命令前加上 `-`
+* 单条规则中的所有命令：直接以 `.IGNORE` 作为目标
+* 全局：make时加上 `-i` 或者 `--ignore-errors`
 
-之前犯过一个这个错误，看起来完全正确，但是报了一个这个错误 `recipe commences before first target.  Stop`，发现是因为用了tab，所以直接解析成一个target了
+如果make时加上 `-k` 或者 `--keep-going`，那么在执行时若某条规则中的命令出错了，就中止该规则的执行，但是继续执行其他规则
+
+### 条件判断
+
+Makefile 文件中的条件语句允许基于特定条件来决定执行哪些部分的代码。`ifeq` 是 Makefile 中用于条件判断的关键字之一，它用来比较两个参数是否相等
+
+```makefile
+ifeq (arg1, arg2)
+# 如果 arg1 和 arg2 相等，则执行这里的命令
+else
+# 如果 arg1 和 arg2 不相等，则执行这里的命令
+endif
+```
+
+这里的 `arg1` 和 `arg2` 可以是变量或者字符串
+
+make 是在读取 Makefile 时就计算条件表达式的值，并根据条件表达式 的值来选择语句，所以最好不要把自动化变量（如 `$@` 等）放入条件表达式中，因为自动化变量是在运行时才有的
+
+## *makefile DSL语法解析的坑*
+
+[GNU make](https://www.gnu.org/software/make/manual/make.html#Recipe-Syntax)
+
+### Tab缩进问题
+
+[Makefile中的tab缩进 - 胡小兔 - 博客园 (cnblogs.com)](https://www.cnblogs.com/RabbitHu/p/makefile_tab.html)
+
+除了Python，Makefile是另一个严格要求缩进的DSL，Makefile把缩进视为语法的一部分。更坑的是，Makefile的缩进有一些特殊的规则
+
+* 缩进只允许用Tab（制表符），不允许用空格
+* 任何以Tab开头的命令（不论是makefile语句还是shell命令）都必须是某个target的recipe的一部分
+
+考虑下面的例子：之前犯过一个这个错误，在debug的时候想要往ifneq中间插入一个echo，看起来完全正确，但是报了一个这个错误 `recipe commences before first target.  Stop`
+
+```makefile
+ifneq ($(VERSION), )
+	echo TEST============= # 错误的插入
+	IMAGE_TAG := $(VERSION)
+else ifneq ($(DOCKER_TAG), )
+	IMAGE_TAG := $(DOCKER_TAG)
+endif
+```
+
+实际上这是因为在前面没有对应的target，所以即使是用tab了也不会被解释为recipe，而makefile中并没有echo函数，所以就报错了
+
+如果在前面加一个target，这时因为后面的IMAGE_TAG的变量定义式makefile形式的，所以也会报错
+
+因此规范的写法应该是**不要在非recipe语句的前面加tab**，如果是想要表示缩进的话就用空格
+
+```makefile
+ifneq ($(VERSION), )
+IMAGE_TAG := $(VERSION)
+else ifneq ($(DOCKER_TAG), )
+IMAGE_TAG := $(DOCKER_TAG)
+endif
+```
+
+### 幽灵空格
+
+[Makefile] 缩进与空格--记录踩过的坑 - 王赟康的文章 - 知乎
+https://zhuanlan.zhihu.com/p/145439685
+
+ghost white space 的问题的报错往往都很奇怪，无法一下子想到是空格的问题，所以极其难debug，只能指望makefile的维护者在编写的时候多留心这个问题
 
 ## *变量*
 
 ### 赋值
 
-* `=` 直接对变量赋值
+* `=` 直接对变量赋值，即递归方式展开
 * `+=` 追加赋值，`+=` 会继承之前的赋值符号，如果前面没有赋值，就等同于 `=`
-* `:=` 该符号右侧是否有变量，如有变量且变量的定义在后边，则忽略该右侧变量，其他情况同=号。主要是为了防止成环
+* `:=` 该符号右侧是否有变量，如有变量且变量的定义在后边，则忽略该右侧变量，其他情况同 `=` 号。主要是为了防止成环/递归展开式存在的问题和不方便，这种赋值方式称为直接展开
 * `?=` 如果符号左侧的变量已经定义过则跳过该句
 
-### 环境变量
+### `$` 引用变量
+
+如上所述，`$` 用于转义特殊符号
+
+和shell script引用变量可以使用 `${}` 或 `$x` 不同，当使用makefile中的变量时需要用 `$()` 或者 `${}` 来引用，不要漏掉括号，不然的话会去尝试转义 `$` 后面的第一个字母，也就是说当makefile变量的名字是一个字母的时候可以这么去引用
+
+而当要使用shell的环境变量时要用 `$$` 来转义
+
+```makefile
+SHELL := /bin/bash
+VAR=foo
+all:
+	VAR=bar; echo $$VAR; echo $(VAR)
+```
+
+```
+VAR=bar; echo $VAR; echo foo
+bar
+foo
+```
+
+比如上面的代码段中 `echo $$VAR` 就是去转义环境变量，而 `echo $(VAR)` 就是引用makefile的环境变量
+
+### 变量定义的方式
+
+有三种定义变量的方式
+
+* 通过环境变量定义：因为make是shell fork出来的进程，所以make会继承shell的环境变量表
+
+* 通过make的命令参数定义有两种方式，这两种方式的区别在于它们的覆盖优先级上
+
+  * 直接定义
+
+    ```makefile
+    $ make VAR="test" #通过命令行来定义一个叫做VAR的makefile变量
+    ```
+
+  * 通过 `-e` 定义
+
+    ```makefile
+    $ make -e VAR="test"1
+    ```
+
+* 通过makefile脚本来定义
+
+### 变量定义的优先级
+
+```makefile
+VAR = in makefile
+all:
+	@echo $(VAR)
+```
+
+1. make 命令参数定义的优先级最高，可以覆盖 make 进程环境表及 makefile 脚本定义
+
+   ```cmd
+   $ VAR="in environment" make VAR="in command"
+   in command
+   ```
+
+2. makefile 脚本定义变量中等，在没有 make 命令参数定义指定变量时，其优先级高于 make 进程环境表
+
+   ```cmd
+   $ VAR="in environment" make
+   in makefile
+   ```
+
+3. make 继承的进程环境表定义最低，仅当指定变量在 make 命令参数及 makefile 中都未定义时，才被使用。但是如果使用了 `-e` 的话，此时环境变量的优先级会高于makefile脚本，但仍低于命令行参数
+
+   ```cmd
+   $ make -e VAR="in environment"
+   in environment
+   ```
 
 ## *函数*
 
@@ -131,10 +283,11 @@ Makefile是一种DSL语言
 
 ### if 
 
-* 条件控制语句 Ifeq、ifneq、ifdef
 * 条件控制函数
 
 ## *隐含规则*
+
+# Makefile构建工具链
 
 ## *Autoconf*
 
@@ -169,6 +322,56 @@ autogen 是一个用于生成 configure 脚本的工具。它是 Autoconf 工具
 通过这个过程，开发者可以确保软件能够在不同的系统上进行配置和构建，同时允许用户在某些方面进行自定义。
 
 需要注意的是，并非所有的项目都使用 autogen。有些项目可能直接提供了预先生成的 configure 脚本，而不需要运行 autogen 这一步。使用 autogen 的目的在于自动生成 configure 脚本，减少配置和构建过程中的手动步骤
+
+## *makefile文件的执行顺序*
+
+[Makefile中语句的顺序_make不按照文件顺序执行-CSDN博客](https://blog.csdn.net/qq_35524916/article/details/77131555)
+
+* `make` 命令会**默认执行遇到的第一对 `target : prerequist`**，执行其余的target需要 `make+target`，如 `make clean`
+
+* 如果依赖关系中的文件找不到，就会根据预生成的依赖关系继续执行，比如说下面的makefile所有指令都会执行（所以并不是根据顺序语句来执行的，可能有依赖项是定义在前面）
+
+  ```makefile
+  main: main.o add.o # 没找到main.o add.o，继续往下找
+      g++ main.o add.o -o main
+  main.o add.o: main.s add.s
+  	g++ -cmain.s -o main.o
+  	g++ -c add.s -o add.o
+  main.s add.s: main.i add.i
+  	g++ -S main.i -o main.s
+  	g++ -S add.i -o add.s
+  main.i add.i: main.cpp add.cpp
+  	g++ -E main.cpp -o main.i
+  	g++ -E add.cpp -o add.i
+  ```
+
+
+### make的执行过程
+
+[Makefile中语句的顺序_make不按照文件顺序执行-CSDN博客](https://blog.csdn.net/qq_35524916/article/details/77131555)
+
+1. 依次读取变量 `MAKEFILES` 定义的makefile文件列表：在当前环境中查看一下有没有定义 `MAKEFILES` 这个环境变量， 如果环境变量 `MAKEFILES` 被定义了，那么make会在读取其它makefile之前，先读取 `MAKEFILE` 定义的列表中的名字（由空格分隔）。建议大家不要去定义这个环境变量，因为我们并不太了解这个变量的使用，那么经常会造成一些奇怪的错误
+2. 读取工作目录下的makefile文件（缺省的是根据命名的查找顺序 `GNUmakefile -> makefile -> Makefile`，首先找到那个就读取那个）
+3. 依次读取工作目录makefile文件中使用指示符 `include` 包含的文件
+4. 查找重建所有已读取的makefile文件的规则（如果存在一个目标是当前读取的某一个makefile文件，则执行此规则重建此makefile文件，完成以后从第一步开始重新执行）
+5. 初始化变量值并展开那些需要立即展开的变量和函数并根据预设条件确定执行分支，也就是说执行那些不属于任何target的语句
+6. 根据要执行的target以及其他目标的依赖关系建立依赖关系链表
+7. 执行除要执行的target以外的所有的目标的规则（规则中如果依赖文件中任一个文件的时间戳比目标文件新，则使用规则所定义的命令重建目标文件）
+8. 执行要执行的target所在的规则
+
+### 增量构建
+
+make 的一个核心特性，通常称为增量构建 incremental build 或选择性编译 selective compilation
+
+make是如何知道目标已经是最新的呢？根据文件的最近修改时间，若可执行程序的修改时间比所有相关文件的修改时间都要晚，那么可执行程序就是最新的
+
+当 make 被调用时，它会检查所有指定的目标和依赖项的时间戳。make 会比较目标文件和它的依赖文件的最后修改时间，以确定是否需要重新构建。这个过程可以被视作是一种基于时间戳的缓存：
+
+- **如果依赖文件的任何一个比目标文件新**，make 将执行相应规则中指定的命令来更新这个目标
+- **如果目标文件不存在**，make 同样将执行必要的命令来生成目标文件
+- **如果所有的依赖文件都没有比目标文件新**，make 则认为目标是最新的，不会执行任何操作
+
+<img src="PHONY_comparison.png">
 
 # CMake基础
 
