@@ -755,6 +755,8 @@ rebase有以下优势
 
 [git cherry-pick 教程 - 阮一峰的网络日志 (ruanyifeng.com)](https://www.ruanyifeng.com/blog/2020/04/git-cherry-pick.html)
 
+<img src="cherry-pick.drawio.png">
+
 有这么一个场景：分支feature2是基于分支feature1在很久前拉出来的，feature1已经先合入了dev，此时如果想要把feature2也合入dev就可能会有很多冲突（也需要很多审阅者lol），此时可以从dev单独拉一条分支出来，然后把需要的commit全部cherry-pick进新拉的分支
 
 
@@ -765,8 +767,8 @@ rebase有以下优势
 
 基础命令格式如下：
 
-```
-shell复制代码git cherry-pick <commit-hash>
+```cmd
+git cherry-pick <commit-hash>
 ```
 
 其中 `<commit-hash>` 是你想要拾取并应用到当前分支的那个提交的哈希值。

@@ -401,7 +401,7 @@ HighSchool h{1};
 
 ### 匿名枚举的使用
 
-C++的匿名枚举 anonymous enumeration 等价于静态常量，匿名枚举仍是弱枚举类型，具有unscoped的特
+C++的匿名枚举 anonymous enumeration 等价于静态常量，匿名枚举仍是弱枚举类型，具有unscoped的特性
 
 一种常用的使用方式如下
 
