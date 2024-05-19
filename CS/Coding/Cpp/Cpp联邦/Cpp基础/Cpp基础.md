@@ -2180,7 +2180,14 @@ void* operator new[](std::size_t, std::align_val_t);
 
 实际上，编译器会自动从类型对齐字节长度的属性中获取这个参数并且传参，不需要传入额外的参数
 
-# 异常
+# throw异常规范
+
+异常规范 Exception Specification 是 C++的语言功能特性之一，从 C++11 开始到 C++17 之前 C++同时有两种异常规范
+
+* 经典的try、throw、catch
+* C++11引入了noexcept
+
+从C++17开始，throw这种旧的异常规范就已经被放弃了，转而使用更安全、灵活、高效的noexcept新规范。C++20，连`throw()` 声明符也被C++标准移除。下面会介绍这两种异常体系
 
 ## *C++异常概念*
 
@@ -2188,36 +2195,61 @@ void* operator new[](std::size_t, std::align_val_t);
 
 C语言采用的是传统的错误处理机制
 
-* 终止程序，如 `assret`，缺陷是比较粗暴，难以排查，因为只有很严重的错误才应该直接终止程序
-* 返回错误码，如 `perror` 等，缺陷是需要程序员自己根据错误码来排查对应的错误
+* 运行时断言终止程序，如 `assret`，缺陷是比较粗暴，难以排查，因为只有很严重的错误才应该直接终止程序
+* 返回错误码，如 `perror` 等，缺陷是需要程序员自己得制定相应的错误码规则，根据错误码来排查对应的错误
 
 ### C++异常概念
 
 异常是一种处理错误的方式，当一个函数发现自己无法处理的错误时就可以抛异常，让函数的直接或间接地调用者来处理这个错误
 
-异常体系的三个关键字
+C++异常体系的三个关键字
 
-* `throw`：当问题出现时，程序会抛出一个异常，则是通过使用 `throw` 关键字来完成的
-* `catch`：在用户想要处理问题的地方，通过 `catch` 来捕获异常，可以有多个 `catch`
-* `try`：`try` 块中的代码标识符将被激活的特定异常，它后面通常跟着一个或多个 `catch` 块。`try` 块中的代码被称为保护代码
+* `throw`：当问题出现时，程序通过 throw 来主动抛出一个异常
 
-```cpp
-while (1) {
-    try {
-        Func(); // 保护代码里写throw来处理错误
-    }
-    catch (const char* errmsg) {
-        //...
-    }
-    catch (int msgNO) {
-        //...
-    }
-    //...
-    catch (...) { // 捕获任意类型的异常，防止出现未捕获异常时，程序直接终止
-        cout << "Unknown exception" << endl;
-    }
-}
-```
+  ```C++
+  // 定义一个函数，如果输入的数字小于0，则抛出一个异常
+  void checkNumber(int num) {
+      if (num < 0) {
+          throw "Number is negative";
+      }
+  }
+  ```
+
+  注意⚠️：`throw()` 是一个类型规范的说明符，用来承诺不会抛出任何类型的异常。`throw(int)` 则表示可能会抛出int类型的异常
+
+* `try`：try 是要对可能会抛异常的代码块使用的。如果代码块中抛出异常，块中的代码标识符将被激活的特定异常，它后面通常跟着一个或多个 catch 块。try 块中的代码被称为保护代码
+
+* `catch`：在用户想要处理问题的地方，通过 catch 来捕获异常，可以有多个 catch
+
+  ```C++
+  // try-catch
+  while (1) {
+      try {
+          Func(); // 保护代码里写throw来处理错误
+      }
+      catch (const char* errmsg) {
+          //...
+      }
+      catch (int msgNO) {
+          //...
+      }
+      //...
+      catch (...) { // 捕获任意类型的异常，防止出现未捕获异常时，程序直接终止
+          cout << "Unknown exception" << endl;
+      }
+  }
+  
+  // 比如说要try上面的函数
+  try {
+      int num;
+      std::cout << "Enter a number: ";
+      std::cin >> num;
+      checkNumber(num); // 调用函数检查输入的数字是否小于0
+      std::cout << "Number is positive." << std::endl;
+  } catch (const char* msg) { // 捕获异常，并输出异常信息
+      std::cerr << "Exception caught: " << msg << std::endl;
+  }
+  ```
 
 ## *异常的使用*
 
@@ -2264,7 +2296,104 @@ void Func() {
 }
 ```
 
+## *异常体系*
+
+### C++异常体系
+
+<img src="CppExceptionSystem.png.drawio.png" width="55%">
+
+注意一个点，除零错误不是C++的标准异常，因此如果不throw来try除零的代码，不会抛异常
+
+`throw std::invalid_argument("mannually throw");` 常被用来手动抛出异常
+
+### 自定义异常体系
+
+<img src="自定义异常体系.drawio.png">
+
+可以通过继承标准异常类（如 `std::exception`）来自定义异常
+
+```C++
+#include <iostream>
+#include <exception>
+
+// 自定义异常类，继承自 std::exception
+class MyException : public std::exception {
+public:
+    // 构造函数，接受一个异常消息作为参数
+    MyException(const char* message) : m_message(message) {}
+
+    // 重写 what() 方法，返回异常消息
+    const char* what() const noexcept override {
+        return m_message.c_str();
+    }
+
+private:
+    std::string m_message; // 异常消息
+};
+
+// 一个函数，可能会抛出自定义异常
+void someFunction() {
+    // 模拟抛出异常
+    throw MyException("Something went wrong!");
+}
+
+int main() {
+    try {
+        someFunction();
+    } catch (const MyException& e) {
+        // 捕获并处理自定义异常
+        std::cerr << "Custom exception caught: " << e.what() << std::endl;
+    }
+    return 0;
+}
+```
+
+## *异常的优缺点*
+
+### 优点
+
+* 比起错误码而言可以展示更丰富的信息，甚至可以包含堆栈调用的信息，帮助用户更好地定位程序bug
+* 调用链很深的情况下，可以直接抛异常给外层接受处，不需要层层返回
+* 很多的第三方库都包含异常，比如 `boost, gtest, gmock` 等等常用的库，使用它们的时候也需要使用异常
+* 部分函数使用异常更好处理，比如构造函数没有返回值，不方便使用错误码方式处理，比如越界使用异常或者直接 `assert` 终止程序
+
+### 缺点
+
+* 导致程序地执行流乱跳，非常混乱，有点像 `goto`。程序的运行有时候往往超乎用户想象，此时用比如打断点的方式可能就不能很好的调试程序。这个缺点是最严重的，其他缺点都或多或少有解决方法
+* 异常要拷贝对象，有一些多余的性能开销，但这个问题随着硬件发展已经几乎可以忽略
+* C++没有垃圾回收机制 Garbage Collection GC，需要用户自己管理资源。有了异常就非常容易造成内存泄漏、死锁等异常安全问题。这个需要使用RAII来处理资源的管理问题
+* C++标准库的异常体系定义的不好，导致不同公司、不同项目之间会自定义各自的异常体系，非常混乱
+* 虽然C++有异常规范，但由于各种历史原因，规范不是强制的。异常要尽量规范使用，否则会造成严重后果
+
+### 和Java对比
+
+在C++中，异常处理机制是作为一种可选的语言特性提供的，而不是强制性的。这意味着开发人员可以选择是否使用异常处理机制，并且可以在代码中自由地控制如何处理异常
+
+此外，C++的异常处理机制也有一些局限性和不足之处。例如
+
+1. 异常处理的成本较高：与Java相比，C++的异常处理机制需要更多的时间和空间成本，因为它涉及到堆栈展开和对象销毁等操作，而这些操作可能会导致性能下降
+2. 异常的类型不够严格：在C++中，异常可以是任何类型的对象，包括内置类型和自定义类型。这意味着异常的类型不够严格，可能会导致不必要的异常处理或者异常被忽略
+3. 异常的语义不够明确：C++的异常处理机制并没有明确定义异常的语义，例如何时应该抛出异常、何时应该捕获异常等问题。这可能会导致开发人员在使用异常处理时出现混淆或错误
+
+因此，尽管C++提供了异常处理机制，但它并没有像Java那样将异常处理视为必不可少的语言特性。在实际开发中，开发人员需要权衡使用异常处理的成本和好处，并根据实际情况选择是否使用异常处理
+
+异常总体而言，利大于弊，所以在大型工程中还是要鼓励使用异常，而且基本所有的面向对象语言都用异常来处理错误
+
+# noexcept异常规范
+
+下面的内容来自于 *Effective Modern C++ - 条款14 只要函数不会抛出异常，就应该声明为noexcept* 以及 *现代C++语言核心特性解析*
+
 ## *异常安全*
+
+### noexcept出现的原因
+
+使用 throw 声明函数是否抛出异常一直没有什么问题，直到 C++11 标准引入了右值语义和移动构造函数。移动构造函数中包含着一个严重的异常陷阱
+
+那就是在移动的过程了发生了异常怎么办，比如说复制一个容器中的所有元素，如果是左值纯复制的话就算有异常也不会影响原来的值，但是如果是移动右值的话原来的值都没有了
+
+实现一种回滚机制不行吗？不行，因为无法保证在回滚的过程中不发生异常，再下去就是套娃了
+
+简而言之，并没有很好的办法来使右值可以安全地抛出异常（这就是异常安全的概念）。**所以最好的方式就是不让涉及右值的操作抛出异常**
 
 ### 异常安全级别
 
@@ -2297,7 +2426,7 @@ void Func() {
 
 * 析构函数主要完成资源的清理，最好不要在析构函数中抛出异常，否则可能导致资源泄露
 
-* C++中异常经常会导致资源泄漏的问题，比如在 `new` 和 `delete` 中抛出了异常，导致内存泄漏（如下面的例子），且处理这种情况很麻烦。或者在 `lock` 和 `unlock` 之间抛出了异常导致死锁。C++经常使用RAII来解决以上问题
+* C++中异常经常会导致资源泄漏的问题，比如在 `new` 和 `delete` 中抛出了异常，导致内存泄漏（如下面的例子），且处理这种情况很麻烦。或者在 `lock` 和 `unlock` 之间抛出了异常导致死锁。C++对此的应对机制是使用RAII来解决以上问题（其实RAII的主要目的之一就是为了应对异常这种不正常的执行流）
 
   ```cpp
   void Func() {
@@ -2317,31 +2446,175 @@ void Func() {
 
 异常规范是一种最好遵守的建议，但它不能做到强制程序员遵守，因为C++需要兼容C语言，而C语言中并没有异常体系
 
-### 不抛出保证
-
-C++11中新增关键字 `noexcept`，表示不会抛异常。编译器默认所有的函数都是要抛出异常的，因此会对这些函数做一些额外的处理。若我们能确保某个方法不会抛出异常，则应该显式告诉编译器，即将方法声明为noexcept，这样可以提高效率
-
-noexcpet的特殊用法
-
-* `noexcept(bool)`：一般bool是一个constexpr的值，相当于是一个模板开关
-
-* 下面的noexcpet是一个表达式，根据内部函数是否抛出异常来返回true/false
-
-  ```c++
-  noexcept(noexcept(std::swap(x, y)))
-  ```
-
 ### 强异常保证
 
-## *使用 noexcept*
+## *noexcept的使用*
 
-下面的内容来自于 *Effective Modern C++* - 条款14 只要函数不会抛出异常，就应该声明为noexcept
+### noexcept声明符
 
-### 声明为noexcept的好处
+noexcept用作声明符的时候是比较简单的。C++11中新增关键字 `noexcept`，承诺不会抛出异常。**编译器默认所有的函数都是要抛出异常的，因此会对这些函数做一些额外的处理**。若我们能确保某个方法不会抛出异常，则应该显式告诉编译器，即将方法声明为noexcept，这样可以提高效率
 
-开解？栈需要保存上下文来防止出错
+注意⚠️：noexcept 只是告诉编译器不会抛出异常，但函数不一定真的不会抛出异常，这相当于是对编译器的一种承诺。不过编译器留了一个心眼，当在声明了 noexcept 的函数中仍然抛出异常时，程序会调用 `std::terminate` 去结束程序的生命周期
 
-### swap & copy
+noexcept有两种用法
+
+* 一般的noexcpet说明符
+
+  ```C++
+  int foo() noexcept { return 6; }
+  ```
+
+* `noexcept(bool)`：接受一个bool类型的参数，由于 noexcept 对表达式的评估是在编译阶段执行的，因此表达式必须是一个常量表达式。当为true时就是正常的noexcept，false时则表示有可能会抛出异常。这相当于是一个模板开关，广泛应用于TMP中
+
+  比如说下面我们希望只有在 T 是一个基础类型时复制函数才会被声明为noexcept
+
+  ```C++
+  template <class T>
+  T copy(const T &o) noexcept(std::is_fundamental<T>::value) { }
+  ```
+
+### noexcept运算符
+
+noexcept 不仅是声明符同时也是运算符，它既能规定函数是否抛出异常也能获取到函数是否抛出异常，这一点让程序员有办法更为灵活地控制异常
+
+noexcept还可以作为一种运算符，它根据内部函数是否抛出异常来返回true/false。因为该过程是在编译阶段进行，所以表达式本身并不会被执行。**表达式的结果取决于编译器是否在表达式中找到潜在异常**
+
+考虑上面的复制函数的例子，如果复制的参数虽然不是一个基本类型，但是这种数据类型却已经声明为了noexcept，那么根据传递性，我们也可以大胆地将复制函数声明为noexcept
+
+```c++
+int foo() noexcept { return 6; }
+int foo1() { return 66; }
+int foo2() throw() { return 666; }
+
+std::cout << "noexcept(foo())  = " << noexcept(foo()) << std::endl;  // true
+std::cout << "noexcept(foo1()) = " << noexcept(foo1()) << std::endl; // false
+std::cout << "noexcept(foo2()) = " << noexcept(foo2()) << std::endl; // true
+```
+
+具体到上面的例子就可以改写为下面的，其中外层的是接受一个bool的声明符，内层的则是一个操作符，判断 `T(o)` 是否可能抛出异常
+
+```C++
+template <class T> T copy(const T &o) noexcept(noexcept(T(o))) { }
+```
+
+### 用noexcept实现swap & copy
+
+```C++
+template<typename T> void swap_impl(T& a, T& b, std::integral_constant<bool, true>) noexcept {     
+    T tmp(std::move(a));
+    a = std::move(b);
+    b = std::move(tmp);
+}
+
+template<typename T> void swap_impl(T& a, T& b, std::integral_constant<bool, false>) {
+    T tmp(a);
+    a = b;
+    b = tmp;
+}
+
+template<typename T> void swap(T& a, T& b)
+noexcept(noexcept(swap_impl(a, b, std::integral_constant<bool, noexcept(T(std::move(a)))    
+                            && noexcept(a.operator=(std::move(b)))>()))) {  
+    swap_impl(a, b, std::integral_constant<bool, noexcept(T(std::move(a))) &&
+              noexcept(a.operator=(std::move(b)))>());
+}
+```
+
+
+
+
+
+### noexcept的效率提升
+
+* 如果声明了 noexcept，但抛出了异常，那么程序将不需要展开堆栈，并且它可以随时停止展开，另外，它也不会调用 `std::unexpected`，而是调用 `std::terminate` 结束程序
+* `throw()` 声明符需要展开堆栈，并调用 `std::unexpected`
+
+需要异常处理的函数的栈需要保存上下文来防止出错
+
+栈展开 stack unwinding：https://learn.microsoft.com/zh-cn/cpp/cpp/exceptions-and-stack-unwinding-in-cpp?view=msvc-170
+
+https://blog.csdn.net/rainharder/article/details/108377446
+
+## *设计*
+
+### 宽松契约 & 狭窄契约
+
+宽松契约 Wide Contract 和 狭窄契约 Narrow Contract 是在软件工程中常用的概念，用于描述函数或模块对于输入的期望程度以及与输入错误相关的行为
+
+* **宽松契约**：函数或模块对于其输入有宽松的期望。这意味着它们可能能够处理各种类型的输入，并且在输入不符合预期时可能会以某种方式进行容错或调整。它们通常更加健壮，能够处理不同的输入情况，并且在输入错误时可能不会引发错误，而是通过一些方式来继续执行。宽松契约通常更具灵活性，但也可能导致函数实现变得更加复杂，因为需要处理各种可能的情况
+
+  考虑一个函数 `calculateAverage`，它计算一组数字的平均值并返回结果。在宽松契约下，这个函数可能对于输入的类型和数量没有太多限制，可以容忍不同类型的输入，并且在某些情况下可能会调整自身以处理不同的输入。这是因为函数内部使用了迭代器遍历输入向量，所以函数实际上可以处理任何类型的容器，只要容器内部的元素类型可以进行加法操作和除法操作
+
+  ```C++
+  #include <iostream>
+  #include <vector>
+  
+  // 宽松契约：calculateAverage 函数对于输入没有严格要求
+  double calculateAverage(const std::vector<int>& numbers) {
+      if (numbers.empty()) {
+          return 0.0; // 空向量的平均值为 0
+      }
+      
+      double sum = 0.0;
+      for (int num : numbers) {
+          sum += num;
+      }
+      return sum / numbers.size();
+  }
+  
+  int main() {
+      std::vector<int> nums = {10, 20, 30, 40, 50};
+      std::cout << "Average: " << calculateAverage(nums) << std::endl;
+  
+      std::vector<double> otherNums = {3.5, 4.8, 6.2};
+      std::cout << "Average: " << calculateAverage(otherNums) << std::endl;
+  
+      std::vector<int> emptyVec;
+      std::cout << "Average: " << calculateAverage(emptyVec) << std::endl;
+  
+      return 0;
+  }
+  ```
+
+* **狭窄契约**：相比之下，狭窄契约对于其输入有更严格的要求。它们期望输入符合特定的条件或格式，并且在输入不符合预期时可能会引发错误或异常。狭窄契约通常会在遇到不正确的输入时立即停止执行，并且可能会抛出异常或错误消息以指示问题所在。虽然狭窄契约可能会使得代码更易于理解和维护，但它们也可能限制了函数的使用范围，因为调用者必须确保提供正确的输入
+
+  现在考虑一个函数 `divide`，它接受两个整数参数，并返回它们的商。在狭窄契约下，函数对于输入有严格的要求，例如不能接受除数为零的情况。在下面这个例子中，`divide` 函数对于除数不能为零的情况进行了检查，并在遇到除数为零的情况时抛出了 `std::invalid_argument` 异常。这是一个狭窄契约的例子，因为函数要求调用者确保提供的除数不为零，否则会引发异常
+
+  ```C++
+  #include <iostream>
+  
+  // 狭窄契约：divide 函数对于输入有严格要求
+  double divide(int dividend, int divisor) {
+      if (divisor == 0) {
+          throw std::invalid_argument("Divisor cannot be zero");
+      }
+      return static_cast<double>(dividend) / divisor;
+  }
+  
+  int main() {
+      try {
+          std::cout << "Result: " << divide(10, 2) << std::endl;
+          std::cout << "Result: " << divide(8, 0) << std::endl; // 这里将抛出异常
+      } catch (const std::invalid_argument& e) {
+          std::cerr << "Exception caught: " << e.what() << std::endl;
+      }
+  
+      return 0;
+  }
+  ```
+
+### noexcept函数的设计
+
+把一个API声明为noexcept是没有后悔药吃的，因为API被发布后会被别人调用，而如上所述，如果API被定义为noexcept，调用者在此之上可能也会依赖于这个noexcept
+
+因此实际中noexcept的使用是很谨慎的，实际上大部分API都是异常中立的（异常中立 Exception Neutrality是指代码的异常处理部分不应该依赖于特定的异常类型。这意味着异常处理代码应该尽可能地通用和灵活，能够处理各种可能抛出的异常，而不是针对特定类型的异常进行硬编码处理）
+
+只有下面几种情况可能会用到
+
+* 一定不会出现异常的函数。通常情况下，这种函数都非常简短，比如求一个整数的绝对值、对基本类型的初始化等 
+* 对于保证不会失败的函数，比如内存释放函数，一旦出现异常将会是非常严重的问题，相对于捕获和处理异常，终止程序返回错误码是一种更好的选择
+
+### 将noexcept作为模版类型的一部分
 
 ### 隐式noexcept
 
@@ -2349,56 +2622,10 @@ C++98中允许内存释放函数，即 `operator delete` & `operator delete[]`�
 
 C++11中则将这种约定升级成了语法特性：所有内存释放函数和析构函数都默认的为隐式noexcept。析构函数未隐式地声明为noexcpet的唯一场合是所在类中有数据成员（包括继承而来的成员以及在其他数据成员中包含的数据成员）的类别显式地将其析构函数声明为可能抛出异常的，即 `noexcept(false)`
 
+### 默认使用noexcept的函数
 
-
-宽松契约 wide contract
-
-狭窄契约 narrow contract
-
-## *异常体系*
-
-### 自定义异常体系
-
-<img src="自定义异常体系.drawio.png">
-
-### C++异常体系
-
-<img src="CppExceptionSystem.png.drawio.png" width="55%">
-
-注意一个点，除零错误不是C++的标准异常，因此如果不throw来try除零的代码，不会抛异常
-
-`throw std::invalid_argument("mannually throw");` 常被用来手动抛出异常
-
-## *异常的优缺点*
-
-### 优点
-
-* 比起错误码而言可以展示更丰富的信息，甚至可以包含堆栈调用的信息，帮助用户更好地定位程序bug
-* 调用链很深的情况下，可以直接抛异常给外层接受处，不需要层层返回
-* 很多的第三方库都包含异常，比如 `boost, gtest, gmock` 等等常用的库，使用它们的时候也需要使用异常
-* 部分函数使用异常更好处理，比如构造函数没有返回值，不方便使用错误码方式处理，比如越界使用异常或者直接 `assert` 终止程序
-
-### 缺点
-
-* 导致程序地执行流乱跳，非常混乱，有点像 `goto`。程序的运行有时候往往超乎用户想象，此时用比如打断点的方式可能就不能很好的调试程序。这个缺点是最严重的，其他缺点都或多或少有解决方法
-* 异常要拷贝对象，有一些多余的性能开销，但这个问题随着硬件发展已经几乎可以忽略
-* C++没有垃圾回收机制 Garbage Collection GC，需要用户自己管理资源。有了异常就非常容易造成内存泄漏、死锁等异常安全问题。这个需要使用RAII来处理资源的管理问题
-* C++标准库的异常体系定义的不好，导致不同公司、不同项目之间会自定义各自的异常体系，非常混乱
-* 虽然C++有异常规范，但由于各种历史原因，规范不是强制的。异常要尽量规范使用，否则会造成严重后果
-
-### 和Java对比
-
-在C++中，异常处理机制是作为一种可选的语言特性提供的，而不是强制性的。这意味着开发人员可以选择是否使用异常处理机制，并且可以在代码中自由地控制如何处理异常
-
-此外，C++的异常处理机制也有一些局限性和不足之处。例如
-
-1. 异常处理的成本较高：与Java相比，C++的异常处理机制需要更多的时间和空间成本，因为它涉及到堆栈展开和对象销毁等操作，而这些操作可能会导致性能下降
-2. 异常的类型不够严格：在C++中，异常可以是任何类型的对象，包括内置类型和自定义类型。这意味着异常的类型不够严格，可能会导致不必要的异常处理或者异常被忽略
-3. 异常的语义不够明确：C++的异常处理机制并没有明确定义异常的语义，例如何时应该抛出异常、何时应该捕获异常等问题。这可能会导致开发人员在使用异常处理时出现混淆或错误
-
-因此，尽管C++提供了异常处理机制，但它并没有像Java那样将异常处理视为必不可少的语言特性。在实际开发中，开发人员需要权衡使用异常处理的成本和好处，并根据实际情况选择是否使用异常处理
-
-异常总体而言，利大于弊，所以在大型工程中还是要鼓励使用异常，而且基本所有的面向对象语言都用异常来处理错误
+* 默认构造函数、默认复制构造函数、默认赋值函数、默认移动构造函数和默认移动赋值函数
+* 类型的析构函数以及 delete 运算符默认带有 noexcept 声明,请注意即使自定义实现的析构函数也会默认带有 noexcept 声明,除非类型本身或者其基类和成员明确使用 noexcept(false)声明析构函数, 以上也同样适用于 delete 运算符
 
 # 智能指针的原理
 

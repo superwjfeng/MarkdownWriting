@@ -1,4 +1,4 @@
-参考侯捷的 *STL源码剖析*，源码使用
+参考侯捷的 *STL源码剖析*，源码使用 Cygnus C++ 2.91.57 for Windows
 
 # lambda表达式
 
