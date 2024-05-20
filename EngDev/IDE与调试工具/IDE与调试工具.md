@@ -357,7 +357,7 @@ info register eax
 
    这将允许 GDB 自动加载任何路径下的 `.gdbinit` 文件，但请注意，这可能会引入一些安全风险
 
-# 转储文件调试分析
+# 核心转储文件调试分析
 
 Coredump文件，即核心转储文件 是在计算机程序崩溃或发生严重错误时生成的一种文件，用于帮助开发人员诊断和调试问题。这个文件包含了程序在崩溃时内存中的状态信息，包括变量的值、函数调用堆栈和程序计数器等信息
 
@@ -397,10 +397,11 @@ Coredump文件相当于是程序在眼中错误发生时刻的快照。注意：
 
    ```cmd
    $ sudo sh -c 'echo /home/wjfeng/core/core.%e.%p > /proc/sys/kernel/core_pattern'
+   sudo sh -c 'echo '/tmp/core.%t.%e.%p' | sudo tee /proc/sys/kernel/core_pattern'
    ```
-
+   
    `sh -c '...'`：这部分使用了 `sh`（shell）命令，它允许我们以单个命令的方式运行一系列命令。`-c` 选项表示后面跟着一个命令字符串。
-
+   
    <img src="coredump文件说明符.png">
 
 一些注意事项
