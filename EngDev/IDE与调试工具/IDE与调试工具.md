@@ -397,7 +397,7 @@ Coredump文件相当于是程序在眼中错误发生时刻的快照。注意：
 
    ```cmd
    $ sudo sh -c 'echo /home/wjfeng/core/core.%e.%p > /proc/sys/kernel/core_pattern'
-   sudo sh -c 'echo '/tmp/core.%t.%e.%p' | sudo tee /proc/sys/kernel/core_pattern'
+   sudo sh -c 'echo /tmp/core.%t.%e.%p > /proc/sys/kernel/core_pattern'
    ```
    
    `sh -c '...'`：这部分使用了 `sh`（shell）命令，它允许我们以单个命令的方式运行一系列命令。`-c` 选项表示后面跟着一个命令字符串。
