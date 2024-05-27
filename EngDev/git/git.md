@@ -772,7 +772,7 @@ rebase有以下优势
 git cherry-pick <commit-hash>
 ```
 
-其中 `<commit-hash>` 是你想要拾取并应用到当前分支的那个提交的哈希值。
+其中 `<commit-hash>` 是想要pick并应用到当前分支的那个提交的哈希值
 
 ### 选项
 
