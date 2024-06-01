@@ -26,8 +26,8 @@ JSON, JavaScript Object Notation 是一种轻量级的数据交换格式，易�
     * 布尔值 bool（true or false）
     * `null`
 * 复合类型
-    * list类型（也称array类型或者数组）：用方括号 `[]` 包围array，表示array的开始和结束。array可以包含多个值，这些值可以是不同类型的，比如字符串、数字、对象或者其他array
-    * dict类型（也称为对象 object）：大括号 `{}` 包围对象，表示对象开始和结束。在大括号内部，可以包含多个名称/值对，其中键（名称）是字符串。dict是JSON中最常用的表现形式
+    * **list类型（也称array类型或者数组）**：用方括号 **`[]`** 包围array，表示array的开始和结束。array可以包含多个值，这些值可以是不同类型的，比如字符串、数字、对象或者其他array
+    * **dict类型（也称为对象 object）**：大括号 **`{}`** 包围对象，表示对象开始和结束。在大括号内部，可以包含多个名称/值对，其中键（名称）是字符串。dict是JSON中最常用的表现形式
 
 ### 示例
 
@@ -109,6 +109,91 @@ Tencent/rapidjson - 单纯的 JSON 库，甚至没依赖 STL
 ## *YYJson*
 
 [ibireme/yyjson: The fastest JSON library in C (github.com)](https://github.com/ibireme/yyjson)
+
+[yyjson: API (ibireme.github.io)](https://ibireme.github.io/yyjson/doc/doxygen/html/md_doc__a_p_i.html)
+
+### JSON 解析
+
+要解析 JSON 数据，可以使用 `yyjson_read()` 函数。
+
+```c
+#include "yyjson.h"
+
+const char *json_str = "{\"name\":\"John\", \"age\":25}";
+yyjson_doc *doc = yyjson_read(json_str, strlen(json_str), 0);
+
+if (doc != NULL) {
+    yyjson_val *root = yyjson_doc_get_root(doc);
+    // 使用 root...
+    
+    yyjson_doc_free(doc);
+} else {
+    // 解析错误处理
+}
+```
+
+### 遍历 JSON 对象
+
+一旦你有了根对象，你就可以遍历 JSON 数据结构了。
+
+```c
+yyjson_obj_iter iter;
+yyjson_val *key, *val;
+
+if (yyjson_is_obj(root)) {
+    yyjson_obj_iter_init(root, &iter);
+    while ((key = yyjson_obj_iter_next(&iter))) {
+        const char *key_str = yyjson_get_str(key);
+        val = yyjson_obj_iter_get_val(key);
+        // 根据 val 类型进行处理
+    }
+}
+```
+
+### 获取特定 JSON 值
+
+你也可以直接获取特定的值：
+
+```c
+yyjson_val *name_val = yyjson_obj_get(root, "name");
+if (name_val && yyjson_is_str(name_val)) {
+    const char *name = yyjson_get_str(name_val);
+    printf("Name: %s\n", name);
+}
+
+yyjson_val *age_val = yyjson_obj_get(root, "age");
+if (age_val && yyjson_is_int(age_val)) {
+    int age = (int)yyjson_get_int(age_val);
+    printf("Age: %d\n", age);
+}
+```
+
+### 生成 JSON 字符串
+
+若要创建一个新的 JSON 对象并将其转换为字符串，可以使用以下代码：
+
+```c
+yyjson_mut_doc *mut_doc = yyjson_mut_doc_new(NULL);
+yyjson_mut_val *root = yyjson_mut_obj(mut_doc);
+
+yyjson_mut_val *name_val = yyjson_mut_str(mut_doc, "John");
+yyjson_mut_val *age_val = yyjson_mut_int(mut_doc, 25);
+
+yyjson_mut_obj_add(mut_doc, root, "name", name_val);
+yyjson_mut_obj_add(mut_doc, root, "age", age_val);
+
+char *json_out = yyjson_mut_write(mut_doc, YYJSON_WRITE_PRETTY, NULL);
+printf("%s\n", json_out);
+free(json_out);
+
+yyjson_mut_doc_free(mut_doc);
+```
+
+### 注意事项
+
+- 当你不再需要解析得到的 `yyjson_doc` 或生成的 `yyjson_mut_doc` 时，应该使用 `yyjson_doc_free()` 或 `yyjson_mut_doc_free()` 释放相应资源。
+- 确保在调用任何 `yyjson` 函数之前，检查函数是否存在返回值错误或空指针，以防止程序崩溃。
+- 文档中可能提供不同的 API ，根据实际情况选择适合您需求的 API。
 
 ## *Python的JSON包*
 

@@ -1319,40 +1319,13 @@ SpotBugs的特点和功能包括：
 4. IDE集成：SpotBugs可以与常见的集成开发环境（IDE）集成，如Eclipse和IntelliJ IDEA。这样开发人员可以在开发过程中实时检查代码，并及时发现问题
 5. 命令行支持：SpotBugs也提供命令行界面，可以通过命令行运行分析，方便集成到构建系统和持续集成流程中
 
-### LLVM Compiler Infrastructure
-
-LLVM, Low Level Virtual Machine 是一个开源的编译器基础设施项目，旨在为各种编程语言提供优化的编译器和工具，用来开发编译器前端前端和后端。LLVM的设计目标是提供可移植、高效和灵活的编译解决方案
-
-LLVM最早以C/C++为实作对象，到目前它已支援包括ActionScript、Ada、D语言、Fortran、GLSL、Haskell、Java字节码、Objective-C、Swift、Python、Ruby、Crystal、Rust、Scala以及C#等语言
-
-LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下是 LLVM 的关键组件
-
-<img src="LLVM的三阶段设计.png">
-
-1. 前端（Frontend）：LLVM 前端是与特定编程语言相关的部分。它能够将不同的源代码语言转换为 LLVM 的中间表示（LLVM IR），这种中间表示是一种低级别的、面向对象的指令集表示形式，类似于汇编语言
-2. 优化器（Optimizer）：LLVM 优化器是 LLVM 框架的核心组件之一。它可以对 LLVM IR 进行各种优化，包括常量折叠、循环优化、内联函数、代码消除、死代码消除等。这些优化可以显著提高程序的性能和执行效率
-3. 后端（Backend）：LLVM 后端负责将优化后的 LLVM IR 转换为目标平台的机器码。LLVM 支持多种不同的目标体系结构，包括x86、ARM、MIPS等，因此可以在多个平台上生成高效的机器码
-4. 工具链和库：LLVM 提供了一整套工具和库，用于构建编译器和开发工具。这些工具包括llvm-as（将汇编代码转换为 LLVM IR）、llvm-dis（将 LLVM IR 转换为可读的汇编代码）、llvm-link（将多个 LLVM 模块链接在一起）
-
-<img src="LLVM程序分析.drawio.png">
-
-### Clang Analyzer & Clang Tidy
-
-Clang Analyzer和Clang Tidy都是基于LLVM项目的开源静态代码分析工具，用于帮助开发人员发现和修复C、C++和Objective-C代码中的潜在问题和错误。它们可以作为Clang编译器的附加组件使用
-
-* Clang Analyzer： Clang Analyzer是基于LLVM静态分析框架的一部分，旨在检测代码中的常见编程错误、内存管理问题、并发问题等。它通过对源代码进行符号执行和路径敏感分析，构建程序的控制流图，并使用各种静态分析技术来检测可能的错误和缺陷。Clang Analyzer能够识别空指针引用、内存泄漏、使用未初始化的变量、并发问题等问题，并提供相关的警告和报告
-* Clang Tidy： Clang Tidy是另一个基于Clang的工具，用于进行静态代码分析和提供代码改进建议。它使用一系列可配置的检查器来检查代码，并提供建议和修复建议来改进代码质量和可读性。Clang Tidy可以检测和修复代码规范违规、不必要的复杂性、潜在的错误使用等问题。它还支持自定义规则和插件，以满足特定项目的需求
-
-Clang和GCC
-
-* Clang：Clang是基于LLVM项目开发的编译器前端。它采用模块化的设计，将编译过程划分为前端和后端。Clang的前端负责处理源代码，生成LLVM中间表示（LLVM IR）。它注重速度、可读性和可扩展性
-* GCC：GCC（GNU Compiler Collection）是GNU项目的一部分，它是一个集成的编译器系统。GCC以传统的单体设计为基础，包含前端、优化器和后端。它在代码生成方面具有丰富的优化和支持
+### Soot
 
 ## *动态分析工具*
 
 ### Dynamic binary instrumentation
 
-Dynamic Binary Instrumentation（动态二进制插桩）是一种在程序运行时动态修改和分析二进制代码的技术。它允许开发人员或安全研究人员在不修改源代码的情况下，对程序进行监视、分析和修改
+Dynamic Binary Instrumentation（动态二进制插桩）是一种在程序运行时动态+修改和分析二进制代码的技术。它允许开发人员或安全研究人员在不修改源代码的情况下，对程序进行监视、分析和修改
 
 动态二进制插桩通常涉及以下步骤：
 

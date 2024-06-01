@@ -756,13 +756,11 @@ rebase有以下优势
 
 [git cherry-pick 教程 - 阮一峰的网络日志 (ruanyifeng.com)](https://www.ruanyifeng.com/blog/2020/04/git-cherry-pick.html)
 
+cherry-pick 就如其名字所述，将某个分支的某几个需要的commit pick到目标分支中，这往往是因为要merge的src分支和dest分支的差距过大，不可能直接merge过去，因此就挑几个我们需要的（往往就是基于src分支新增的几个commit）merge到dest分支
+
+比如说有这么一个场景：分支feature2是基于分支feature1在很久前拉出来的，feature1已经先合入了dev，此时如果想要把feature2也合入dev就可能会有很多冲突（也需要很多审阅者lol），此时可以从dev单独拉一条分支出来，然后把需要的commit全部cherry-pick进新拉的分支
+
 <img src="cherry-pick.drawio.png">
-
-有这么一个场景：分支feature2是基于分支feature1在很久前拉出来的，feature1已经先合入了dev，此时如果想要把feature2也合入dev就可能会有很多冲突（也需要很多审阅者lol），此时可以从dev单独拉一条分支出来，然后把需要的commit全部cherry-pick进新拉的分支
-
-
-
-`git cherry-pick` 是一个 Git 命令，它允许你挑选并应用某个分支上的一个或多个特定提交到当前分支。使用这个命令时，你可以将一个分支中的修正、特性或改动“复制”到另一个分支，而不需要合并整个分支。
 
 ### 如何使用
 
@@ -778,15 +776,15 @@ git cherry-pick <commit-hash>
 
 `git cherry-pick` 提供了一些有用的选项，以下是其中的几个：
 
-- `-n` 或 `--no-commit`：应用更改但不自动创建提交。这允许你在继续操作（比如合并多个提交）之前编辑更改。
-- `-e` 或 `--edit`：在提交的过程中允许编辑提交信息。
-- `-x`：在提交信息中追加一行，说明这个提交是通过 `cherry-pick` 操作来的。
-- `-s` 或 `--signoff`：为提交添加签名，即添加一行 "Signed-off-by:"。
-- `-m <parent-number>` 或 `--mainline <parent-number>`：在拾取一个合并提交时，你必须指定主线，即应该考虑的父提交线路。
+- `-n` 或 `--no-commit`：应用更改但不自动创建提交。这允许你在继续操作（比如合并多个提交）之前编辑更改
+- `-e` 或 `--edit`：在提交的过程中允许编辑提交信息
+- `-x`：在提交信息中追加一行，说明这个提交是通过 `cherry-pick` 操作来的
+- `-s` 或 `--signoff`：为提交添加签名，即添加一行 "Signed-off-by:"
+- `-m <parent-number>` 或 `--mainline <parent-number>`：在拾取一个合并提交时，你必须指定主线，即应该考虑的父提交线路
 
 ### 示例
 
-假设有两个分支，`main` 和 `feature`，你想将 `feature` 分支上的一个提交应用到 `main` 分支。你可以按照以下步骤操作：
+假设有两个分支，`main` 和 `feature`，你想将 `feature` 分支上的一个提交应用到 `main` 分支。可以按照以下步骤操作：
 
 1. 首先检出到 `main` 分支：
 
@@ -806,10 +804,6 @@ git cherry-pick <commit-hash>
 
 - 当你执行 `cherry-pick` 时，可能会遇到冲突。此时，像处理普通合并冲突一样解决它们，然后继续完成 `cherry-pick` 操作。
 - `cherry-pick` 不是用来替代合并（`merge`）或变基（`rebase`）的。在选择使用它之前，请考虑你的版本控制策略是否真的需要这种类型的操作，因为它可以导致历史记录变得复杂
-
-
-
-
 
 ## *远程库*
 
