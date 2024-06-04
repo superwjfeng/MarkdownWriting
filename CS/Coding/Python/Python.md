@@ -1,6 +1,168 @@
-# 模块和包
-
 [Python最佳实践指南！ — The Hitchhiker's Guide to Python (pythonguidecn.readthedocs.io)](https://pythonguidecn.readthedocs.io/zh/latest/)
+
+
+
+# Python虚拟环境 & 包管理器
+
+## *pip*
+
+pip 是 Python 的包管理工具，用于安装和管理 Python 包（也称为模块或库）。它是 Python Package Index（PyPI）上的软件包仓库的客户端工具，允许用户轻松地下载、安装、升级和卸载 Python 包
+
+pip需要结合virtualenv或vene虚拟环境管理工具一起使用
+
+### **安装pip**
+
+* 在 Python 3.4 及更高版本中，`pip` 已经内置，无需额外安装
+
+* 在较早的 Python 版本中，可能需要手动安装 pip
+
+  ```cmd
+  python -m ensurepip --default-pip
+  ```
+
+在用户级别进行安装，而不是系统级别，通常使用 `--user` 选项。这样可以避免需要管理员权限
+
+### **基本命令**
+
+* `pip install <package>`：安装指定的 Python 包
+
+  * pip 能够自动解析和安装包的依赖项，确保所有必需的库和模块都被正确安装
+
+  * pip 可以进行版本控制，即允许用户指定要安装的包的特定版本，以确保项目的稳定性
+
+    ```cmd
+    pip install SomePackage==1.0.4
+    ```
+
+* `pip uninstall <package>`：卸载指定的 Python 包
+
+* `pip freeze`：列出当前环境中安装的所有包及其版本
+
+* `pip list`：以更简洁的格式列出已安装的包
+
+* `pip show <package>`：显示有关指定包的详细信息
+
+* `pip search <keyword>`：搜索 PyPI 上的包
+
+## *virtualenv & venv*
+
+考虑到虚拟环境的重要性，Python 从3.3 版本开始，自带了一个虚拟环境模块 [venv](https://cloud.tencent.com/developer/tools/blog-entry?target=https%3A%2F%2Fdocs.python.org%2F3%2Flibrary%2Fvenv.html&source=article&objectId=2124483)，关于该模块的详细介绍，可参考 [PEP-405](https://cloud.tencent.com/developer/tools/blog-entry?target=http%3A%2F%2Flegacy.python.org%2Fdev%2Fpeps%2Fpep-0405%2F&source=article&objectId=2124483) 。它的很多操作都和 virtualenv 类似。如果使用的是python3.3之前版本或者是python2，则不能使用该功能，依赖需要利用virtualenv进行虚拟环境管理
+
+### virtualenv
+
+virtualenv 是一个创建隔绝的Python环境的 工具。virtualenv创建一个包含所有必要的可执行文件的文件夹，用来使用Python工程所需的包
+
+```cmd
+pip install virtualenv
+```
+
+### venv
+
+## *conda*
+
+Conda是一个用于管理和部署软件包的开源包管理工具和环境管理器，Conda可以帮助用户创建、管理和切换不同的Python环境，并安装各种软件包，使得项目之间的依赖关系更加清晰和可管理
+
+用zsh安装sh可能会有问题，这时候可以换用bash安装
+
+安装conda [Miniconda — Anaconda documentation](https://docs.anaconda.com/free/miniconda/)
+
+### 使用
+
+* 创建和管理环境
+
+  * 使用Conda可以轻松创建新的Python环境，例如：
+
+    ```cmd
+    $ conda create --name myenv python=3.8
+    ```
+
+    这将创建一个名为 "myenv" 的新环境，并指定Python版本为3.8
+
+  * 激活环境：
+
+    ```cmd
+    $ conda activate myenv
+    ```
+
+    激活环境后可以在其中安装软件包，运行Python脚本等
+
+  * 退出环境：
+
+    ```cmd
+    $ conda deactivate
+    ```
+
+* 安装和管理软件包
+
+  * 使用Conda可以轻松安装、更新和删除软件包，例如：
+
+    ```cmd
+    $ conda install numpy
+    ```
+
+    这将安装名为 "numpy" 的Python包
+
+  * 更新软件包：
+
+    ```cmd
+    $ conda update numpy
+    ```
+
+  * 删除软件包：
+
+    ```cmd
+    $ conda remove numpy
+    ```
+
+* 创建环境文件
+
+  * 可以通过创建一个环境文件（例如environment.yml）来定义项目的环境依赖关系。这个文件可以包含项目所需的所有软件包及其版本信息
+
+  * 通过以下方式创建环境：
+
+    ```cmd
+    $ conda env export > environment.yml
+    ```
+
+* 从环境文件创建环境
+
+  * 若有一个环境文件，可以使用以下命令从文件中创建一个新的环境
+
+    ```cmd
+    $ conda env create -f environment.yml
+    ```
+
+* 查看已安装的环境和软件包
+
+  * 查看所有已创建的环境
+
+    ```
+    $ conda info --envs
+    ```
+
+  * 查看当前激活的环境中安装的软件包
+
+    ```cmd
+    $ conda list
+    ```
+
+### 仓库
+
+`conda` 使用它自己的软件仓库，称为 Anaconda Repository。此外，`conda` 还可以使用其他仓库，例如 conda-forge
+
+## *集大成之作：Pipenv*
+
+pipenv 是Kenneth Reitz（requests的作者）大神的作品。它结合了 Pipfile，pip，和virtualenv，能够有效管理Python多个环境，各种包
+
+https://cloud.tencent.com/developer/article/2124483
+
+https://www.cnblogs.com/zingp/p/8525138.html
+
+```cmd
+pip install pipenv
+```
+
+# 模块和包
 
 ## *模块 Module*
 
@@ -15,7 +177,7 @@ Python还可以导入并利用其他语言的代码库，如C/C++的动、静态
 一共有三种命名空间，查找变量的时候会按照 局部的命名空间 -> 全局命名空间 -> 内置命名空间 的顺序去寻找
 
 * **内置名称 built-in names**：Python 语言内置的名称，比如函数名 abs、char 和异常名称 BaseException、Exception 等等
-* **全局名称 global names**：模块中定义的名称，记录了模块的变量，包括函数、类、其它导入的模块、模块级的变量和常量。
+* **全局名称 global names**：模块中定义的名称，记录了模块的变量，包括函数、类、其它导入的模块、模块级的变量和常量
 * **局部名称local names**：函数中定义的名称，记录了函数的变量，包括函数的参数和局部定义的变量。（类中定义的也是）
 
 ### 撰写模块的说明文档
@@ -32,7 +194,7 @@ print(demo.__doc__) #查看文档
 
 ### 导入模块
 
-* 导入整个模块 `import demo`：导入demo模块中的所有内容，但会保留其命名空间，需要用 `demo.成员` 指定模块名的方式来进行调用
+* 推荐的做法：导入整个模块 `import demo`，导入demo模块中的所有内容，但**会保留其命名空间**，需要用 `demo.成员` 指定模块名的方式来进行调用
 * 导入模块中的特定部分
   * `from demo import 成员名`：从demo模块中导入指定的成员，会将该成员从原来的命名空间中**合并**到目前的命名空间中，因此不需要 `demo.` 就可以直接调用
   * 尽量不要使用 `from demo import *`，很容易出现重复定义的情况
@@ -92,20 +254,6 @@ Python包，就是里面装了.py文件的文件夹
 
 参考 [(19条消息) 语法：Python与C++对比_yuyuelongfly的博客-CSDN博客_python c++](https://blog.csdn.net/Cxiazaiyu/article/details/108937936)
 
-## *Python语言特性*
-
-### Python 解释器
-
-* CPython：官方版本的解释器，是用C语言开发的，CPython是使用最广的Python解释器，一般用的都是这个解释器
-* IPython：基于CPython之上的一个交互式解释器
-* PyPy：一个追求执行速度的Python解释器，采用JIT技术，对Python代码进行动态编译
-* Jython：运行在Java平台上的Python解释器，可以直接把Python代码编译成Java字节码执行
-* IronPython：和Jython类似，只不过IronPython是运行在微软.Net平台上的Python解释器，可直接把Python代码编译成.Net的字节码
-
-### Python 运行机制
-
-<img src="python运行机制.png">
-
 ## *命名规范*
 
 ### 标识符 Indentifier
@@ -118,7 +266,7 @@ Python包，就是里面装了.py文件的文件夹
 
 ### Python下划线命名规范
 
-和 C/C++ 中 `_` 只是作为一种非强制的明明规则而已，Python 中的 `_` 是会实际被解释器解释为特定的语法意义的
+和 C/C++ 中 `_` 只是作为一种非强制的明明规则而已，**Python 中的 `_` 是会实际被解释器解释为特定的语法意义的**
 
 * 单前导下划线 `_var`：作为类的私有属性，但不会被强制执行，一般只是作为一种提醒。唯一的影响是 `import` 的时候不会被导入
 * 双前导下划线 `__var`：强制作为类的私有属性，无法在类外被访问，因为通过名称修饰规则修改过了，解释器对该属性的访问会发生变化
@@ -127,6 +275,8 @@ Python包，就是里面装了.py文件的文件夹
 * 单下划线 `_`：临时或者无意义的变量，可以用来接受不需要的返回值
 
 ## *对象、变量和引用*
+
+https://flaggo.github.io/python3-source-code-analysis/
 
 ### 一切皆对象
 
@@ -228,6 +378,10 @@ math.pi = 5
 
 因为种种原因，Python并没有C++的const修饰符来保证常量的不可修改。只能通过一些特殊的操作来确保这件事
 
+### None
+
+空值是Python里一个特殊的值，用`None`表示。`None`不能理解为`0`，因为`0`是有意义的，而`None`是一个特殊的空值
+
 ### 可变对象 & 不可变对象对引用赋值的影响
 
 对不可变类型的变量重新赋值，实际上是重新创建一个不可变类型的对象，并将原来的变量重新指向新创建的对象（如果没有其他变量引用原有对象的话（即引用计数为0），原有对象就会被回收）
@@ -326,7 +480,7 @@ Python 中没有单独的自增(`++`)和自减(`--`)运算符，而是使用 `+=
 ### 其他运算符
 
 * 比较运算符：和C++不一样的是，Python支持连续比较，即 `a>b>c` 是可以的，而C++中只能写成 `a>b && b>c`
-* 逻辑运算符：Python中没有 `$$ || !` 的逻辑运算符，而是用 `and or not` 来表示
+* 逻辑运算符：Python中没有 `$$ || !` 的逻辑运算符，而是用 `and or not` 来表示，短路原理也适用
 * 成员运算符：`in` 和 `not in` 是Python独有的用来判断对象是否属于某个集合的运算符
 * 身份运算符：`is` 和 `is not` 用来判断两个标识符是否引用同一个对象，类似于 `id()`。`==` 只是用来判断值相等
 * 三目运算符：为真时的结果 if 判定条件 else 为假时的结果
@@ -447,20 +601,16 @@ Python的列表是一个可变长度的顺序存储结构
 
 ### 深浅拷贝
 
-深浅拷贝的定义和 C++ 是一样的，Ptyhon中深浅拷贝问题是针对组合对象的，组合对象就是这个`对象中还包含其他对象`，比如list，set，dict等
+深浅拷贝的定义和 C++ 是一样的，**Pyhon中深浅拷贝问题是针对组合对象的**，组合对象就是这个对象中还包含其他对象，比如list，set，dict等
 
-* `浅拷贝`：**创建一个新的组合变量**，但是组合变量中每一个元素指向拷贝的对象内元素地址
-* `深拷贝`：**创建一个新的组合变量**，原对象中的每个元素都会在新对象中重新创建一次
+* 浅拷贝：**创建一个新的组合变量**，但是组合变量中每一个元素指向拷贝的对象内元素地址
+* 深拷贝：**创建一个新的组合变量**，原对象中的每个元素都会在新对象中重新创建一次
 
 组合对象自带 copy 方法是实现浅拷贝的，而深拷贝要使用 copy 模块中的deepcopy
 
 ### 列表操作、内置方法
 
 https://www.liujiangblog.com/course/python/19
-
-### 栈与队列
-
-Python没有实现独立的栈和队列数据结构，而是利用列表的append、pop等操作间接实现的
 
 ## *元组 Tuple*
 
@@ -684,6 +834,8 @@ s = {x for x in 'abracadabra' if x not in 'abc'}
 ## *链表*
 
 ## *栈 & 队列*
+
+Python没有实现独立的栈和队列数据结构，而是利用列表的append、pop等操作间接实现的
 
 ### 栈
 
@@ -2133,6 +2285,20 @@ class MyCustomError(Exception):
 
 # Python编译
 
+### Python 解释器
+
+* CPython：官方版本的解释器，是用C语言开发的，CPython是使用最广的Python解释器，一般用的都是这个解释器
+* IPython：基于CPython之上的一个交互式解释器
+* PyPy：一个追求执行速度的Python解释器，采用JIT技术，对Python代码进行动态编译
+* Jython：运行在Java平台上的Python解释器，可以直接把Python代码编译成Java字节码执行
+* IronPython：和Jython类似，只不过IronPython是运行在微软.Net平台上的Python解释器，可直接把Python代码编译成.Net的字节码
+
+### Python 运行机制
+
+<img src="python运行机制.png">
+
+
+
 ### Python的执行过程
 
 <img src="Python的编译过程.webp" width="60%">
@@ -2171,6 +2337,8 @@ class MyCustomError(Exception):
 ### codeobject
 
 PyCodeObject 就是字节码
+
+## *字节码文件*
 
 # IPython的使用技巧
 
