@@ -73,27 +73,6 @@
 * Goal test：检查是否完成了目标
 * Path cost
 
-### NP-Hardness NP困难
-
-* P问题：存在多项式时间算法的问题。注意：很多问题的复杂度是阶乘级别的，这不属于多项式时间复杂度
-* NP问题
-  * Nondeterministic Polynominal 非确定性多项式问题
-  * 存在多项式时间算法的问题，总能在多项式时间内验证它的一个正确解，因此P问题是NP问题的一个子集
-  * Travelling Salesman Problem TSP问题
-  * 引出了一个问题：是否所有能在多项式时间内验证正确解的NP问题都是P问题，即是否NP问题=P问题？
-
-为了解决上面的问题，科学家提出了很多方法，其中之一就是问题的约化 reduce to。所谓约化就是若可以用问题B的算法来解决问题A，就称问题A可以约化成问题B，比如可以用求解二元一次方程的方法来求解一元一次方程。且约化具有传递性，即A约化为B，B约化为C，则A可约化为C。可以一直约化下去直到最复杂的情况，当解决了这个最复杂情况时，也就可以解决其他的所有问题了。
-
-根据约化思想，对于同一类的所有的NP类问题，若他们都可以在多项式时间内约化成最难的一个NP类问题。当我们针对这个时间复杂度最高的超级NP问题要是能找到他的多项式时间算法的话，那就等于变向的证明了其余所有问题都是存在多项式算法的，即NP问题=P问题
-
-* NP-Complete问题/NP完全问题：存在这样一个的NP问题，所有的NP问题都可以约化为它，那么解决了它的时候所有其他约化成它的NP问题也都解决了。这个超级NP问题有如下两个前提
-  * 它是一个NP问题
-  * 所有的NP问题都可以约化成它
-  * 第一个NPC问题：SAT 命题逻辑的可满足性 Propositional Satisfiability（其实本质上就是是否能快速的找到一个问题的解）
-* NP-hard问题：NP-hard问题不满足NPC的第一个条件，即所有的NP问题可以约化成它，但它不一定是一个NP问题，也就是说它不一定能在多项式时间内验证一个解的正确性。因此即使NPC有多项式时间解（NP=P），NP-hard可能依旧没有多项式解，因此说NP-hard至少与NPC问题一样难
-
-<img src="NP.png" width="50%">
-
 ### 两种主要的搜索算法
 
 * Tree Search 树搜索
@@ -554,7 +533,7 @@ Entailment 和 Logic Inference是相反的过程：比如 $\alpha\models\beta$ �
   * 在模型m中 $\neg P$ 为真 iff $P$ 在m中为假
   * 在模型m中 $P\wedge Q$ 为真 iff $P$ 和 $Q$ 都为真
   * 在模型m中 $P\vee Q$ 为真 iff $P$ 或 $Q$ 为真
-  * 在模型m中 $P\Rightarrow Q$ 为真 ==除非== $P$ 在m中为真且 $Q$ 在m中为假
+  * 在模型m中 $P\Rightarrow Q$ 为真 **除非** $P$ 在m中为真且 $Q$ 在m中为假，也可以用 $\rightarrow$ 来表示
   * 在模型m中 $P\Leftrightarrow Q$ 为真 iff $P$ 和 $Q$ 在m中都为真或都为假 $M\left\{(True,True),(False, False)\right\}$
 
 $\Rightarrow$ 问题

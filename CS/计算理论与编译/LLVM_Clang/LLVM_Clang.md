@@ -1,18 +1,10 @@
-LLVM最初是“Low Level Virtual Machine”的缩写，但随着项目的发展，它已经变成了一个品牌名称，代表整个项目本身而不特指其含义。LLVM是一种编译器基础设施，用于优化在编译时间、链接时间、运行时间和“闲置时间”进行的任何语言的任何架构的程序。LLVM提供了一套中间表示（Intermediate Representation，IR）和丰富的库，支持编译器前端和后端的开发
+# Intro
 
+[The LLVM Compiler Infrastructure Project](https://llvm.org/)
 
+[Getting Started with LLVM Core Libraries（中文版） — Getting Started with LLVM Core Libraries 文档 (getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io)](https://getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io/zh-cn/latest/index.html#)
 
-Clang是LLVM项目的一部分，是一个C、C++、Objective-C和Objective-C++编程语言的编译器前端。Clang使用LLVM作为其后端，能够将源码转换成LLVM IR，然后利用LLVM的优化器和代码生成器产生高效的机器码
-
-
-
-
-
-
-
-
-
-### LLVM Compiler Infrastructure
+## *LLVM Compiler Infrastructure*
 
 LLVM, Low Level Virtual Machine 是一个开源的编译器基础设施项目，旨在为各种编程语言提供优化的编译器和工具，用来开发编译器前端前端和后端。LLVM的设计目标是提供可移植、高效和灵活的编译解决方案
 
@@ -28,6 +20,48 @@ LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下
 4. 工具链和库：LLVM 提供了一整套工具和库，用于构建编译器和开发工具。这些工具包括llvm-as（将汇编代码转换为 LLVM IR）、llvm-dis（将 LLVM IR 转换为可读的汇编代码）、llvm-link（将多个 LLVM 模块链接在一起）
 
 <img src="LLVM程序分析.drawio.png">
+
+## *LLVM工具链*
+
+Clang是LLVM项目的一部分，是一个C、C++、Objective-C和Objective-C++编程语言的编译器前端。Clang使用LLVM作为其后端，能够将源码转换成LLVM IR，然后利用LLVM的优化器和代码生成器产生高效的机器码
+
+* LLVM核心库（LLVM Core libraries）：这些库提供了一个现代的源代码和目标代码无关的优化器，并支持许多流行CPU（以及一些不太常见的CPU）的代码生成。它们围绕着称为LLVM中间表示（"LLVM IR"）的良好定义的代码表示构建。LLVM核心库文档完善，若你想创造自己的语言（或将现有编译器移植）使用LLVM作为优化器和代码生成器非常容易
+* LLDB：LLDB项目基于LLVM和Clang提供的库，提供了一个出色的本地调试器。它使用Clang的AST和表达式解析器、LLVM的即时编译（JIT）、LLVM反汇编器等，从而提供了一个“开箱即用”的体验。它运行速度非常快，并且在加载符号方面比GDB更加高效
+* libc++ 和 libc++ ABI：这两个项目提供了一个符合标准且高性能的C++标准库实现，包括对C++11和C++14的完全支持
+* compiler-rt：compiler-rt项目提供了精调的底层代码生成支持例程的实现，如"`__fixunsdfdi`"等，当目标没有简短的本地指令序列来实现核心IR操作时会生成这些调用。它还提供了动态测试工具（例如AddressSanitizer、ThreadSanitizer、MemorySanitizer和DataFlowSanitizer）的运行时库的实现
+* MLIR：MLIR子项目是构建可复用和可扩展编译器基础设施的新方法。MLIR旨在解决软件碎片化问题，改进异构硬件的编译效率，显著降低构建特定领域编译器的成本，并帮助连接已有的编译器
+* OpenMP：OpenMP子项目提供了一个运行时库，用于支持Clang中实现的OpenMP
+* Polly：Polly项目实现了一系列缓存局部性优化以及使用多面体模型的自动并行化和向量化
+* libclc：libclc项目旨在实现OpenCL标准库
+* klee：klee项目实现了一个“符号虚拟机”，该项目使用定理证明器尝试评估程序中所有动态路径，以便发现bug并证明函数的属性。klee的一个主要特点是，如果检测到bug，它可以产生一个测试用例
+* LLD：LLD项目是一个新的链接器，它可以替换系统链接器，并运行得更快。
+* BOLT：BOLT项目是一个链接后优化器。它通过根据采样分析器收集的执行配置文件优化应用程序的代码布局来实现性能提升
+
+## *安装LLVM*
+
+[LLVM Debian/Ubuntu packages](https://apt.llvm.org/)
+
+# Clang Static Analyzer
+
+[Clang Static Analyzer — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangStaticAnalyzer.html)
+
+Clang Static Analyzer，下面简称CSA，是LLVM提供的静态分析工具
+
+## *Checker*
+
+以alpha开头的checker是实验版本
+
+- DeadStores: 检测未被使用的存储，即赋值给变量但随后未使用的值。
+- MallocChecker: 检测与动态内存分配相关的问题，包括内存泄漏、双重释放等。
+- NullDereference: 检测潜在的空指针解引用。
+- DivideZero: 检测可能导致除零错误的情况。
+- UninitializedObject: 检测可能未初始化的对象使用
+
+## *自定义Checker*
+
+[Checker Developer Manual (llvm.org)](https://clang-analyzer.llvm.org/checker_dev_manual.html)
+
+# Clang工具
 
 ### Clang Analyzer & Clang Tidy
 
@@ -50,11 +84,10 @@ Clang Analyzer和Clang Tidy都是基于LLVM项目的开源静态代码分析工�
 
      。例如，在基于Debian的系统中（比如Ubuntu），可以使用以下命令：
 
-     ```
-     bashCopy code
+     ```cmd
      sudo apt-get install clang-format
      ```
-
+   
 2. **配置clang-format**：
 
    * 为了使用Google的C++风格指南，你需要在项目根目录创建一个`.clang-format`文件，该文件指定了代码格式化的风格。

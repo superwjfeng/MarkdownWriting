@@ -1,5 +1,7 @@
 # 模块和包
 
+[Python最佳实践指南！ — The Hitchhiker's Guide to Python (pythonguidecn.readthedocs.io)](https://pythonguidecn.readthedocs.io/zh/latest/)
+
 ## *模块 Module*
 
 ### 命名空间
@@ -89,24 +91,6 @@ Python包，就是里面装了.py文件的文件夹
 # 对象和基础语法
 
 参考 [(19条消息) 语法：Python与C++对比_yuyuelongfly的博客-CSDN博客_python c++](https://blog.csdn.net/Cxiazaiyu/article/details/108937936)
-
-## *高级语言的类型*
-
-### 动态语言和静态语言
-
-静态语言是指在编译时进行类型检查的编程语言。在静态语言中，每个变量和表达式都必须在编译时被赋予一个明确的数据类型，编译器会检查类型是否匹配。因此，在编译时发现类型不匹配或其他语法错误，可以避免在运行时出现一些常见的错误。静态语言的例子包括C、C++、Java等
-
-动态语言是指在运行时进行类型检查的编程语言。在动态语言中，变量和表达式不需要预先声明数据类型，它们的类型是在运行时被推断出来的。动态语言允许开发人员更加灵活地编写代码，不必在编写代码时考虑过多的类型定义和规范。动态语言的例子包括Python、JavaScript、Ruby等
-
-静态语言和动态语言各有优缺点。静态语言可以在编译时捕获许多错误，帮助开发人员更早地发现和解决问题，也可以提高代码的性能。动态语言则更具灵活性，开发效率更高，可以更快地迭代和测试代码。选择使用哪种类型的编程语言，通常取决于项目的特定需求和开发人员的个人偏好
-
-### 标记语言、脚本语言和编译语言
-
-标记语言、脚本语言和编译语言是三种不同的编程语言类型，它们的主要区别在于它们的功能、用途和编译方式。
-
-1. 标记语言（Markup Language）：标记语言是一种用于文档编写和呈现的语言，常见的标记语言包括HTML、XML和Markdown等。标记语言主要用于描述文本文档的结构和呈现方式，它们通常不被认为是一种编程语言，因为它们不具备计算机程序的逻辑控制能力，不能定义变量、引用等
-2. 脚本语言（Scripting Language）：脚本语言是一种用于编写脚本程序的语言，通常是解释性的，而不是编译性的。脚本语言被设计用于在其他应用程序或环境中进行自动化和扩展，比如Shell脚本、Python、Perl和JavaScript等。脚本语言通常用于快速开发、原型开发和小型项目，但是对于大型项目和高性能应用程序来说可能不够高效。脚本语言通过解释器 Interpreter 逐语句翻译，比如Python解释器只是一个用C写的大型工程软件，用来对我们编写的Python代码进行自动化分析
-3. 编译语言（Compiled Language）：编译语言是一种需要先将源代码编译成机器语言的语言，然后才能运行的语言。常见的编译语言包括C、C++、Java和Go等。编译语言的编译过程需要花费一定的时间和计算资源，但是生成的可执行文件通常具有很高的性能和执行速度。编译语言通常用于开发大型和高性能的应用程序，如操作系统、编译器、数据库管理系统等。编译语言通过编译器（包含了预处理等四个步骤）生成可执行文件
 
 ## *Python语言特性*
 
@@ -398,12 +382,20 @@ else:
 
 # 数据类型
 
+## *Intro*
+
+### Python数据类型分类
+
 * 根据内置和自定义分
   * 内置：数字、字符串、布尔、列表、元组、字典、Bytes、集合
   * 自定义：类
 * 根据可变和不可变分
   * 可变 mutable：列表 list、字典 dict、集合 set
   * 不可变 immutable：数字 number、字符串 string、布尔 bool、元组 tuple
+
+### 打印数据类型
+
+内建的 `type()` 函数来查看任何变量的数据类型
 
 ## *数字类型*
 
@@ -468,7 +460,7 @@ https://www.liujiangblog.com/course/python/19
 
 ### 栈与队列
 
-python没有实现独立的栈和队列数据结构，而是利用列表的append、pop等操作间接实现的
+Python没有实现独立的栈和队列数据结构，而是利用列表的append、pop等操作间接实现的
 
 ## *元组 Tuple*
 
@@ -687,6 +679,79 @@ s = {x for x in 'abracadabra' if x not in 'abc'}
 <generator object <genexpr> at 0x7fbaea0dcac0>
 ```
 
+# 数据结构
+
+## *链表*
+
+## *栈 & 队列*
+
+### 栈
+
+### 队列
+
+Python中可以使用 `collections.deque` 来高效地实现队列
+
+### 优先级队列
+
+## *树*
+
+## *图*
+
+[18_图与图的遍历 - Python 数据结构与算法视频教程 (python-data-structures-and-algorithms.readthedocs.io)](https://python-data-structures-and-algorithms.readthedocs.io/zh/latest/18_图与图的遍历/graph/)
+
+[Python中的顺序表 | 数据结构与算法（Python） (jackkuo666.github.io)](https://jackkuo666.github.io/Data_Structure_with_Python_book/chapter2/section4.html)
+
+[数据结构必会｜图的基本概念及实现（Python）-阿里云开发者社区 (aliyun.com)](https://developer.aliyun.com/article/1155600)
+
+## *Networkx图库的使用*
+
+[NetworkX — NetworkX documentation](https://networkx.org/)
+
+[PythonGraphLibraries - Python Wiki](https://wiki.python.org/moin/PythonGraphLibraries)
+
+Python社区提供了一些实现了图结构的库，比如Networkx、graphlib等，下面会介绍Networkx的使用
+
+```cmd
+pip3 install networkx
+```
+
+```python
+import networkx as nx
+```
+
+### 建图
+
+* 创建图数据结构
+
+  ```python
+  G = nx.Graph() # 无向图
+  DG = nx.DiGraph()
+  ```
+
+* 增加节点
+
+  ```python
+  G.add_node(1)            # single node
+  G.add_nodes_from([2, 3]) # nodes from iterable container
+  G.add_nodes_from([(4, {"color": "red"}), (5, {"color": "green"})]) # nodes with attributes
+  ```
+
+* 增加边
+
+* 权重
+
+* 从图中删除元素
+
+### 查看图的性质
+
+
+
+### 图算法
+
+topological_sort
+
+### 画图
+
 # 函数
 
 Python函数最大的特点是可以在函数中再定义函数，因为Python一切皆对象，函数也是一个类，所以是相当于定义了一个内部类
@@ -864,6 +929,16 @@ LEGB 规则：Python以 L-E-G-B 的顺序依次寻找变量
 上面提到了Python3.6 中引入了type hint
 
 Stub file 存根文件，即通过第三方文件`.pyi`文件，定义函数参数类型与返回值类型
+
+### API说明
+
+```python
+ArgumentParser.add_argument(name or flags...[, action][, nargs][, const][, default][, type][, choices][, required][, help][, metavar][, dest])
+```
+
+- `name or flags...`: 这里的省略号（`...`）意味着可以传递一个或多个参数名称（例如 `'foo'` 或 `'--foo'`）。它们可以是位置参数的名称或是可选参数的标志
+- `[argument]`: 方括号通常用于表示参数是可选的，即在调用这个方法时，可以选择是否提供这个参数。如果方括号内部有一系列参数，比如 `[, action][, nargs]`，这表示 `action` 和 `nargs` 都是可选参数
+- `[, action]`: 你可以包含 `action` 参数，也可以不包含。如果选择包含此参数，那么应该为它提供一个值（例如 `store`, `store_true` 等）。如果不包含它，将使用默认行为
 
 # 三器一闭
 
@@ -1477,7 +1552,7 @@ with expression as variable:
 - `as variable` 部分是可选的，如果存在，它将把 `__enter__` 方法的返回值赋予变量，这个变量通常用于`with`块内
 - `with_block` 是需要执行的代码块，在这个块内部可以使用由`as variable`定义的变量
 
-一个常见的常见就是上面的打开文件，相比于C/C++那种用open打开文件，获得一个文件句柄进行操作，用完后还要关闭它，python直接用with-as就行了
+一个常见的常见就是上面的打开文件，相比于C/C++那种用open打开文件，获得一个文件句柄进行操作，用完后还要关闭它，Python直接用with-as就行了
 
 在上面的例子中`open()` 函数返回了一个文件对象，这个对象作为上下文管理器用来保证无论如何都能安全地关闭文件。当进入`with`代码块时，文件会被打开，并且`file`变量会引用这个文件对象。当离开`with`代码块时，无论是正常退出还是因为异常而退出，`__exit__`方法会被调用，此时文件会被自动关闭
 
@@ -2113,6 +2188,8 @@ Python shell不能直接执行shell命令，需要借助sys；IPython通过 `!` 
 
 ## *argparse*
 
+[argparse --- 用于命令行选项、参数和子命令的解析器 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/library/argparse.html)
+
 argparse 是 Python 标准库中的一个模块，用于编写用户友好的命令行界面。程序定义它需要的参数，argparse 将会从 `sys.argv` 中解析出那些参数。argparse 模块还会自动生成帮助和使用手册，并在用户给程序传递无效参数时报错
 
 ### 基本用法
@@ -2128,11 +2205,11 @@ argparse 是 Python 标准库中的一个模块，用于编写用户友好的命
 
    [python之parser.add_argument()用法——命令行选项、参数和子命令解析器-CSDN博客](https://blog.csdn.net/qq_34243930/article/details/106517985)
 
-   * name or flags：选项字符串的名字或者列表,例如foo或者 `-f,--foo`
+   * name or flags：选项字符串的名字或者列表，例如foo或者 `-f,--foo`
    * action：命令行遇到参数时的动作，默认值是store
    * store_const：表示赋值为const
    * append,将遇到的值存储成列表,也就是如果参数重复则会保存多个值;
-   * append_const,将参数规范中定义的一个值保存到一个列表;
+   * append_const：将参数规范中定义的一个值保存到一个列表;
    * count：存储遇到的次数。此外也可以继承 `argparse.Action` 自定义参数解析
    * nargs-应该读取的命令行参数个数,可以是具体的数字,或者是?号,当不指定值时对于Positional argument使用default,对于Optional argument使用const;或者是*号,表示0或多个参数;或者是+号表示1或多个参数
    * const：action和nargs所需要的常量值
@@ -2151,11 +2228,9 @@ argparse 是 Python 标准库中的一个模块，用于编写用户友好的命
 
    - 第一个参数通常是位置参数（如 `'echo'`）
 
-   - `-v` 或 `--verbose` 表示可选参数。
+   - `-v` 或 `--verbose` 表示可选参数
 
 3. 使用 `parse_args()` 解析添加参数的参数对象，获得解析对象
-
-4. 程序其他部分,当需要使用命令行参数时,使用解析对象.参数获取
 
 下面是一段完整的代码示例：
 
@@ -2216,11 +2291,21 @@ arguments 是一个列表，当执行 `+=` 操作时，会将右侧的列表元�
 
 ## *logging*
 
-Python内置的日志模块`logging`是一个非常灵活的系统，它可以帮用户跟踪应用程序中发生的事件。日志消息可以记录到文件、sys.stderr、由Socket传输，或者以其他方式处理。
+[日志指南 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/howto/logging.html)
+
+[logging --- Python 的日志记录工具 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/library/logging.html#)
+
+Python内置的日志模块`logging`是一个非常灵活的系统，它可以帮用户跟踪应用程序中发生的事件。日志消息可以记录到文件、sys.stderr、由Socket传输，或者以其他方式处理
+
+<img src="logging.webp">
 
 ### 基本配置
 
-在开始记录之前，需要进行一些基本配置。这可以通过调用`logging.basicConfig()`来完成：
+在开始记录之前，需要进行一些基本配置。这可以通过调用`logging.basicConfig()`来完成
+
+ 
+
+此函数应当在其他线程启动之前从主线程被调用
 
 ```python
 import logging
@@ -2230,11 +2315,13 @@ def basicConfig(*, filename: Optional[StrPath]=..., filemode: str=..., format: s
 logging.basicConfig(filename='example.log'， format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 ```
 
-日志级别按照严重性递增的顺序分为：DEBUG, INFO, WARNING, ERROR, 和 CRITICAL。设置了特定的日志级别后，该级别及以上的日志消息才会被输出。
 
-### 日志等级
 
-可以使用不同的方法来记录不同级别的日志，例如：
+
+
+
+
+日志级别按照严重性递增的顺序分为：DEBUG, INFO, WARNING, ERROR, 和 CRITICAL。**设置了特定的日志级别后，该级别及以上的日志消息才会被输出**
 
 ```python
 logging.debug('This is a debug message')
@@ -2243,6 +2330,17 @@ logging.warning('This is a warning message')
 logging.error('This is an error message')
 logging.critical('This is a critical message')
 ```
+
+### File Handler
+
+logging 模块提供了多种类型的处理器（handlers），这些处理器确定日志消息的最终输出方式。可以将一个或多个处理器与日志器（logger）关联，以便以不同的方式记录同一条日志信息。以下是一些常见的handler类
+
+* StreamHandler 将日志消息发送到指定的流，如果没有指定，则默认为 `sys.stderr`。用于将日志输出到控制台
+* FileHandler 把日志消息写入到一个文件中。它需要文件名作为参数
+* RotatingFileHandler 类似于 FileHandler，但可以管理文件大小。当文件达到一定大小后，它会自动“滚动”，即关闭当前文件，并打开一个新文件继续记录
+* TimedRotatingFileHandler 根据时间自动滚动日志文件，例如每天或每小时创建一个新的日志文件
+* HTTPHandler 发送日志消息到一个HTTP服务器，使用GET或POST方法
+* NullHandler 不执行任何操作。它通常用于库的开发者，以避免在用户没有配置日志时抛出错误
 
 ### 日志重定向
 
@@ -2276,6 +2374,138 @@ logger.debug('This is a debug message')
 ```
 
 在上面的代码中，我们创建了一个日志记录器对象，并给它添加了两个处理程序：一个将日志消息写入文件，另一个将它们发送到标准输出。每个处理程序都可以有自己的日志级别和格式
+
+### Formatter
+
+Formatter 格式器对象负责将一个 LogRecord 转换为可供人类或外部系统解读的输出字符串
+
+## *JSON & Pickle*
+
+Python 的 `json` 模块提供了一种简单的方式来编码和解码JSON数据
+
+```Python
+import json
+```
+
+### Python数据类型 & JSON数据类型的对应关系
+
+Python `<-->` JSON
+
+- dict `<-->` object
+- list, tuple `<-->` array
+- str `<-->` string
+- int, float, int- & float-derived Enums `<-->` number
+- True `<-->` true
+- False `<-->` false
+- None `<-->` null
+
+### 将 Python 对象编码成 JSON 字符串（序列化）
+
+- `json.dumps()`: 将 Python 对象转换成 JSON 格式的字符串
+
+  ```python
+  data = {
+      'name': 'John Doe',
+      'age': 30,
+      'is_employee': True,
+      'titles': ['Developer', 'Engineer']
+  }
+  
+  json_string = json.dumps(data)
+  print(json_string)  # 输出 JSON 格式的字符串
+  ```
+
+- `json.dump()`: 将 Python 对象转换成 JSON 格式的字符串，并将其写入到一个文件中
+
+  ```python
+  with open('data.json', 'w') as outfile:
+      json.dump(data, outfile)
+  # 这会创建 data.json 文件，并写入 JSON 数据
+  ```
+
+### 将 JSON 字符串解码成 Python 对象（反序列化）
+
+- `json.loads()`: 将 JSON 格式的字符串解码成 Python 对象
+
+  ```python
+  json_string = '{"name": "John Doe", "age": 30, "is_employee": true, "titles": ["Developer", "Engineer"]}'
+  
+  data = json.loads(json_string)
+  print(data)  # 输出解码后的 Python 字典
+  ```
+
+- `json.load()`: 读取一个文件，并将其中的 JSON 字符串解码成 Python 对象
+
+  ```python
+  with open('data.json', 'r') as infile:
+      data = json.load(infile)
+  # 从 data.json 读取内容，并转换成 Python 对象
+  ```
+
+### 高级选项
+
+`json.dumps()` 和 `json.dump()` 方法接受多个可选参数，以定制编码过程：
+
+- `indent`: 指定缩进级别，用于美化输出。例如，`indent=4` 会用四个空格缩进。
+- `separators`: 指定分隔符，默认是 `(', ', ': ')`。如果你想让输出更紧凑，可以使用 `(',', ':')`。
+- `sort_keys`: 当设置为 `True` 时，字典的键将被排序。
+
+```python
+json_string = json.dumps(data, indent=4, sort_keys=True)
+print(json_string)
+```
+
+同样，`json.loads()` 和 `json.load()` 也有参数来处理特定情况，比如解析不符合 JSON 规范的数据
+
+### Pickle 包
+
+Python的pickle和json一样，两者都有dumps、dump、loads、load四个API
+
+* json包用于字符串和Python数据类型间进行转换
+* pickle用于Python特有的类型和Python的数据类型间进行转换
+
+json是可以在不同语言之间交换数据的，而pickle只在Python之间下使用
+
+json只能序列化最基本的数据类型，而pickle可以序列化所有的数据类型，包括类、函数都可以序列化
+
+https://blog.csdn.net/ITBigGod/article/details/86477083
+
+>The [`pickle`](https://docs.python.org/3/library/pickle.html#module-pickle) module implements binary protocols for serializing and de-serializing a Python object structure. *“Pickling”* is the process whereby a Python object hierarchy is converted into a byte stream, and *“unpickling”* is the inverse operation, whereby a byte stream (from a [binary file](https://docs.python.org/3/glossary.html#term-binary-file) or [bytes-like object](https://docs.python.org/3/glossary.html#term-bytes-like-object)) is converted back into an object hierarchy. Pickling (and unpickling) is alternatively known as “serialization”, “marshalling,” [1](https://docs.python.org/3/library/pickle.html#id7) or “flattening”; however, to avoid confusion, the terms used here are “pickling” and “unpickling”.
+
+用 `pickle.load()` 进行序列化 serializing or pickling 和 `pickle.dump()` 进行反序列化 de-serializing or unpickling
+
+下面的例子是i2dl中的MemoryImageFolderDataset类，用于将不大的Dataset放到内存中，来加快IO速度
+
+```python
+with open(os.path.join(self.root_path, 'cifar10.pckl'), 'rb') as f:
+    save_dict = pickle.load(f)
+```
+
+## *PyYaml*
+
+[pyyaml.org/wiki/PyYAMLDocumentation](https://pyyaml.org/wiki/PyYAMLDocumentation)
+
+[PyYAML 使用技巧 | Reorx’s Forge](https://reorx.com/blog/python-yaml-tips-zh/)
+
+```cmd
+pip install pyyaml
+pip install yaml   # py2
+```
+
+### load
+
+PyYaml 的 load 可以构造任意 Python 对象（Pickle 协议），这意味着一次 load 可能导致任意 Python 函数被执行
+
+**为了确保应用程序的安全性，尽量在任何情况下使用 yaml.safe_load 和 yaml.safe_dump**
+
+* safe_load 返回一个dict
+* safe_load_all函数用于加载多个yaml文档，并返回一个可选代的生成器，可以逐个获取每个文档的数据
+
+### dump
+
+
+
+### 遍历
 
 ## *tqdm 进度条*
 
