@@ -527,12 +527,34 @@ else:
 
 * for循环
   * for循环通常用来遍历可迭代的对象，如一个列表或者一个字典，语法 `for <variable> in <sequence>:`
-  * `range() `
-    * 自动生成一个序列区间给for，生成的序列区间是坐闭右开的，即 `range(0,100` 生成的是0-99，间隔为1的序列
-    * 可以指定步长 `range(0, 2, 100)`
-  * 使用 `enumerate()` 来进行循环计数：`for count, value in enumerate(values):`
+  
+  * 使用range自动生成，见下
+  
+  * 使用内置的 `enumerate()` 来进行循环计数或者C++/Java风格的迭代索引：`for count, value in enumerate(values):`
+  
+  * Python循环中可以同时引用多个变量
+  
+    ```python
+    for i, value in enumerate(['A', 'B', 'C']):
+        print(i, value)
+    ```
+  
 * while循环：和C++不同，while可以增加else
+
 * 循环控制：用break跳出当前层的循环，continue跳过本次循环的剩余部分，return跳出所有循环
+
+### range
+
+`range(start, stop[, step])`
+
+* 自动生成一个序列区间给for，生成的序列区间是坐闭右开的，即 `range(0,100)` 生成的是0-99，间隔为1的序列
+* 可以指定步长 `range(0, 2, 100)`
+
+注意点
+
+- `range()` 返回的是一个 "range object"，而不是实际的列表类型。使用 `list()` 函数可以将其转换为列表。
+- 在 Python 3.x 中，`range()` 生成的是一个惰性序列，意味着它会在你遍历它时才生成每一个数字，这在处理大范围的数字时更加高效。
+- `range()` 不支持浮点数做为参数，如果需要步长为浮点数的范围，可以考虑使用 `numpy` 库的 `arange()` 函数或者自定义一个生成器
 
 # 数据类型
 
@@ -612,6 +634,8 @@ Python的列表是一个可变长度的顺序存储结构
 
 https://www.liujiangblog.com/course/python/19
 
+<img src="list方法.png" width="80%">
+
 ## *元组 Tuple*
 
 用方括号 `[]` 扩起来的是列表，用圆括号 `()` 括起来的元组。元组就是不可变的列表
@@ -641,6 +665,10 @@ https://www.liujiangblog.com/course/python/19
 ```
 
 ## *字符串 String & bytes*
+
+
+
+**Python3在运行时全部使用Unicode编码**，所以不会有Python2中的编码问题，可以放心使用中文
 
 ### 字符串
 
@@ -753,9 +781,33 @@ Python的字典数据类型是和 `std::unordered_map` 一样是基于hash算法
 
 **从Python3.6开始，字典变成有序的，它将保持元素插入时的先后顺序**
 
-### 字典操作
+### 字典
 
-https://www.liujiangblog.com/course/python/22
+* 字典核心API
+
+  <img src="字典方法.png" width="80%">
+
+* 字典的遍历
+
+  ```python
+  dic = {'Name': 'Jack', 'Age': 7, 'Class': 'First'}
+  
+  # 1  直接遍历字典获取键，根据键取值
+  for key in dic:
+      print(key, dic[key])
+  
+  # 2  利用items方法获取键值，速度很慢，少用！
+  for key,value in dic.items():
+      print(key,value)
+  
+  #3  利用keys方法获取键
+  for key in dic.keys():
+      print(key, dic[key])
+  
+  #4  利用values方法获取值，但无法获取对应的键。
+  for value in dic.values():
+      print(value)
+  ```
 
 ### 集合
 
@@ -855,7 +907,7 @@ Python中可以使用 `collections.deque` 来高效地实现队列
 
 [数据结构必会｜图的基本概念及实现（Python）-阿里云开发者社区 (aliyun.com)](https://developer.aliyun.com/article/1155600)
 
-## *Networkx图库的使用*
+## *Networkx图库*
 
 [NetworkX — NetworkX documentation](https://networkx.org/)
 
@@ -902,7 +954,15 @@ import networkx as nx
 
 topological_sort
 
-### 画图
+### 绘图
+
+networkx的绘图功能是利用matplotlib来实现的
+
+* 绘图方程：`draw()` 提供了比较简单的绘图，`draw_networkx()` 则提供了更多的特性
+
+* 图布局算法
+
+  <img src="graph_layout.png" width="70%">
 
 # 函数
 
@@ -1126,12 +1186,26 @@ StopIteration
 <img src="iterable_iterator.png" width="65%">
 
 * **凡是可作用于for循环的对象就是可迭代类型**，因为for关键字会直接调用可迭代对象的 `__iter__()` 得到一个迭代器对象
+
+  * 可以通过`collections.abc`模块的`Iterable`类型判断是否是可迭代类型
+
+    ```python
+    >>> from collections.abc import Iterable
+    >>> isinstance('abc', Iterable) # str是否可迭代
+    True
+    >>> isinstance([1,2,3], Iterable) # list是否可迭代
+    True
+    >>> isinstance(123, Iterable) # 整数是否可迭代
+    False
+    ```
+
 * **凡是可作用于 `next()` 函数的对象都是迭代器类型**，因为 `next()` 会调用迭代器对象的 `__next__()` 函数
+
 * Python的数据结构对象 list、dict、str 等都是可迭代类型，而不是迭代器，因为它们可以用于for关键字迭代而不能作为 next 函数的对象
 
 ### 对不可迭代对象进行迭代的两种错误
 
-让自定义类称为一个迭代器，需要在类中实现魔法函数 `__iter__()` 和 `__next__()`
+让自定义类成为一个迭代器，需要在类中实现魔法函数 `__iter__()` 和 `__next__()`
 
 * 当对不可迭代对象（或者说没有实现上面两个魔法函数的对象）运用for迭代的时候会报错
 

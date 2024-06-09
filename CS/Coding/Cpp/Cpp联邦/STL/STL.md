@@ -696,7 +696,27 @@ STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 
 
   > Returns an iterator to the first element in the range [first,last) that compares equal to val. If no such element is found, the function returns last.
 
-* `find_if`：和find相比多了一个用于判断的仿函数
+* `find_if`：和find相比多了一个用于判断的一元谓词仿函数
+
+  ```C++
+  template <class InputIterator, class UnaryPredicate>
+  InputIterator find_if (InputIterator first, InputIterator last, UnaryPredicate pred);
+  ```
+
+  find_if 在指定的范围内搜索第一个使给定谓词返回 true 的元素。它不会改变容器中的元素，只用来查找符合特定条件的元素
+
+  它的行为等价于
+
+  ```C++
+  template<class InputIterator, class UnaryPredicate>
+  InputIterator find_if (InputIterator first, InputIterator last, UnaryPredicate pred) {
+    while (first!=last) {
+      if (pred(*first)) return first;
+      ++first;
+    }
+    return last;
+  }
+  ```
 
 * `adjacent_find`：查找相邻的重复元素。返回**第一个**相邻重复的位置的迭代器
 
@@ -865,6 +885,18 @@ OutputIterator copy (InputIterator first, InputIterator last, OutputIterator res
 * `copy`
 
 ## *运算*
+
+```C++
+template <class InputIterator, class Function>
+UnaryFunction for_each (InputIterator first, InputIterator last, UnaryFunction fn);
+```
+
+`std::for_each` 是一个非修改性算法，它对指定范围内的每个元素执行一个给定的函数或函数对象
+
+- `first`, `last` - 输入迭代器定义了要处理的元素范围 `[first, last)`
+- `f` - 一个函数或者函数对象，被应用于范围内的每个元素
+
+`for_each` 通常用于执行某些操作，比如打印所有元素或对每个元素进行某种变换。需要注意的是，虽然 `for_each` 通常不修改传递给它的函数或函数对象，但是可以通过引用捕获局部变量来改变外部状态
 
 ### 求和
 
