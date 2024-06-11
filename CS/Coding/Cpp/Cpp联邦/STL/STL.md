@@ -2521,7 +2521,93 @@ e.discard(u)         // 将引擎推进u步：u的类型为 unsigned long long
 
 https://zhuanlan.zhihu.com/p/86809598
 
+[ | Microsoft Learn](https://learn.microsoft.com/zh-cn/cpp/standard-library/ranges?view=msvc-170)
+
 C++20引入的ranges库是对STL算法库的扩展，使得算法和迭代器可以通过组合变得更加强大。Ranges库的核心概念是**视图 view**，它是间接表示可迭代序列**范围 range**的轻量级对象
+
+
+
+
+
+
+
+C++中的`ranges`库提供了一种新的方式来操作和遍历序列。这个库是基于Range-v3库，并在C++20标准中正式引入。Ranges提供了更为现代、函数式编程风格的工具，使得对容器和序列的操作更加灵活和表达性强。
+
+### 基础概念
+
+- **Range**：一个可以迭代的对象，它拥有`begin()`和`end()`成员函数或可被发现的自由函数（ADL, Argument-dependent name lookup）。
+- **View**：一种特殊类型的Range，它是延迟计算的，不拥有数据，通常用于表示经过过滤或转换的Range视图。
+- **Algorithm**：用于操作Range的函数，例如查找、排序、复制等。
+- **Pipeline**：通过`|`运算符链接多个range/view/algorithm，实现链式调用，类似Unix管道。
+
+### 如何使用Ranges
+
+以下是C++ ranges库的一些基本用例。
+
+#### 1. 范围循环 (Range-based loop)
+
+使用C++11引进的范围循环已经可以简化对集合的遍历，而C++20的ranges进一步增强了这种方式。
+
+```
+cpp复制代码#include <vector>
+#include <iostream>
+#include <ranges>
+
+int main() {
+    std::vector<int> nums = {0, 1, 2, 3, 4, 5};
+
+    for (int val : nums | std::views::filter([](int n) { return n % 2 == 0; })
+                        | std::views::transform([](int n) { return n * 2; })) {
+        std::cout << val << ' '; // 输出: 0 4 8
+    }
+
+    return 0;
+}
+```
+
+#### 2. Views
+
+Views是对范围的轻量级、非拥有参考。他们使得变换数据序列变得非常高效，因为他们是惰性评估的。
+
+```
+cpp复制代码#include <vector>
+#include <ranges>
+#include <iostream>
+
+int main() {
+    std::vector<int> vec{1, 2, 3, 4, 5, 6};
+
+    auto even_numbers = vec | std::views::filter([](int n){ return n % 2 == 0; });
+    // even_numbers现在是一个view，包含vec中所有的偶数
+
+    for (int n : even_numbers) {
+        std::cout << n << " "; // 输出: 2 4 6
+    }
+}
+```
+
+#### 3. 算法
+
+C++20 ranges库也提供了与传统STL算法相对应的ranges兼容版本。
+
+```
+cpp复制代码#include <vector>
+#include <ranges>
+#include <iostream>
+#include <algorithm>
+
+int main() {
+    std::vector<int> vec{1, 2, 3, 4, 5, 6};
+
+    // 使用ranges版本的find算法
+    auto it = std::ranges::find(vec, 3);
+    if (it != vec.end()) {
+        std::cout << *it << '\n'; // 输出: 3
+    }
+}
+```
+
+使用ranges，你可以创建更加声明性的代码，减少模板噪声，以及利用管道操作来创建复杂的数据处理流水线。此外，由于views的延迟求值特性，它们可以提高性能并减少内存占用，尤其是在处理大型数据集时
 
 # 疑惑
 
