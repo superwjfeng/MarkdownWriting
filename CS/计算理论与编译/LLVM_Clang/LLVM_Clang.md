@@ -33,7 +33,7 @@ LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下
 
 <img src="LLVM程序分析.drawio.png">
 
-## *LLVM工具链*
+## *LLVM项目的组成*
 
 * LLVM核心库（LLVM Core libraries）：这些库提供了一个现代的源代码和目标代码无关的优化器，并支持许多流行CPU（以及一些不太常见的CPU）的代码生成。它们围绕着称为LLVM中间表示（"LLVM IR"）的良好定义的代码表示构建。LLVM核心库文档完善，若你想创造自己的语言（或将现有编译器移植）使用LLVM作为优化器和代码生成器非常容易
 * Clang是LLVM原生的C/C++/Objective-C编译器前端。Clang使用LLVM作为其后端，能够将源码转换成LLVM IR，然后利用LLVM的优化器和代码生成器产生高效的机器码，Clang作为编译器前端，围绕它形成了丰富的工具生态，其中包括：
@@ -52,47 +52,7 @@ LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下
 * LLD：LLD项目是一个新的链接器，它可以替换系统链接器，并运行得更快。
 * BOLT：BOLT项目是一个链接后优化器。它通过根据采样分析器收集的执行配置文件优化应用程序的代码布局来实现性能提升
 
-## *安装LLVM*
 
-截止到2024.6.11，LLVM的最新版本为18.1.6
-
-[Getting Started with the LLVM System — LLVM 19.0.0git documentation](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-
-### 从官网上下载预编译的包
-
-[LLVM Debian/Ubuntu packages](https://apt.llvm.org/)
-
-### 自行编译源码
-
-[llvm/llvm-project: The LLVM Project is a collection of modular and reusable compiler and toolchain technologies. (github.com)](https://github.com/llvm/llvm-project)
-
-
-
-Stand-alone Builds通常指的是软件构建过程中不依赖于外部库、组件或者系统特定环境的构建方式。在这种构建方式下，软件可以单独编译和运行，不需要任何额外的软件支持。这样做的好处包括提高了软件的兼容性和移植性，因为所有必要的组件都已经包含在内，不再依赖外部环境。
-
-
-
-### 依赖
-
-* CMake >= 3.20.0,  Makefile/workspace generator
-
-* python >= 3.8, Automated test suite
-
-  Only needed if you want to run the automated test suite in the `llvm/test` directory, or if you plan to utilize any Python libraries, utilities, or bindings.
-
-* zlib >= 1.2.3.4, Compression library
-
-  Optional, adds compression / uncompression capabilities to selected LLVM tools.
-
-* GNU Make 3.79, 3.79.1, Makefile/build processor
-
-  Optional, you can use any other build tool supported by CMake.
-
-# Example
-
-Kaleidoscope 万花筒
-
-# 源代码
 
 ### 源代码结构
 
@@ -104,7 +64,339 @@ Kaleidoscope 万花筒
 
 原文链接：https://blog.csdn.net/m0_72827793/article/details/135371852
 
+# 安装 & 编译LLVM
 
+截止到2024.6.11，LLVM的最新版本为18.1.6
+
+[Getting Started with the LLVM System — LLVM 19.0.0git documentation](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
+
+## *准备工作*
+
+### 依赖
+
+* **CMake >= 3.20.0**,  Makefile/workspace generator
+
+* **python >= 3.8**, Automated test suite
+
+  Only needed if you want to run the automated test suite in the `llvm/test` directory, or if you plan to utilize any Python libraries, utilities, or bindings.
+
+* **zlib >= 1.2.3.4**, Compression library
+
+  Optional, adds compression / uncompression capabilities to selected LLVM tools.
+
+* **GNU Make 3.79, 3.79.1**, Makefile/build processor
+
+  Optional, you can use any other build tool supported by CMake.
+
+```C++
+$ sudo apt install -y gcc g++ git cmake ninja-build
+```
+
+zlib 是一个库，没有命令行的命令
+
+
+
+## *使用预编译二进制包*
+
+该方法适用于系统配置不足以完成编译的计算机体验LLVM，但如果未来要进行LLVM的自定义和实验，不建议使用该方法
+
+### 从LLVM官网下载
+
+[Download LLVM releases](https://releases.llvm.org/)
+
+### Linux使用发行版的包管理器
+
+* Ubuntu
+
+  ```cmd
+   $ sudo apt-get install llvm clang
+  ```
+
+* Fedora
+
+  ```cmd
+  $ sudo yum install llvm clang
+  ```
+
+Debian和Ubuntu Linux（i386和amd64）仓库可用于下载从LLVM subversion仓库编译得到的快照。[LLVM Debian/Ubuntu packages](https://apt.llvm.org/)
+
+## *使用CMake进行编译*
+
+### 拉取LLVM 
+
+拉取LLVM source code [llvm/llvm-project: The LLVM Project is a collection of modular and reusable compiler and toolchain technologies. (github.com)](https://github.com/llvm/llvm-project)
+
+github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销很大，以下是减少代码拉取量的设置
+
+* shallow-clone
+
+  ```cmd
+  $ git clone --depth 1 https://github.com/llvm/llvm-project.git
+  ```
+
+* 不拉取 user branch
+
+  ```cmd
+  $ git config --add remote.origin.fetch '^refs/heads/users/*'
+  $ git config --add remote.origin.fetch '^refs/heads/revert-*'
+  ```
+
+### 编译
+
+[Getting Started with the LLVM System — LLVM 19.0.0git documentation](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
+
+```cmd
+$ cd llvm-project
+# cmake configure
+$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb"
+# $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
+$ cmake --build build # cmake build
+$ sudo cmake --build build --target install # cmake install
+```
+
+注意安装时文件可能不全，/usr/local/include/llvm/Config/config.h不会被安装进去，需要手动从build文件夹内复制出来。在运行编译时可以根据缺少头文件自行`sudo cp`
+
+### CMake Cache
+
+### Stand-alone Builds
+
+Stand-alone Builds 独立构建允许针对系统中已有的预编译版clang或LLVM库来构建子项目
+
+You can use the source code from a standard checkout of the llvm-project (as described above) to do stand-alone builds, but you may also build from a sparse checkout or from the tarballs available on the releases page. 
+
+对于独立构建，必须拥有一个配置正确、能够被其他项目的独立构建所使用的LLVM安装版本。这可以是发行版提供的LLVM安装，或者可以自己构建，像这样：
+
+```cmake
+cmake -G Ninja -S path/to/llvm-project/llvm -B $builddir \
+      -DLLVM_INSTALL_UTILS=ON \
+      -DCMAKE_INSTALL_PREFIX=/path/to/llvm/install/prefix \
+      < other options >
+
+ninja -C $builddir install
+```
+
+## *Options & Variables for CMake*
+
+### 常用的CMake变量
+
+`cmake --help-variable VARIABLE_NAME` 查看CMake变量的帮助
+
+* **CMAKE_BUILD_TYPE**:STRING
+
+  设置 make 或 ninja 的优化等级
+
+  | Build Type         | Optimizations | Debug Info | Assertions | Best suited for            |
+  | ------------------ | ------------- | ---------- | ---------- | -------------------------- |
+  | **Release**        | For Speed     | No         | No         | Users of LLVM and Clang    |
+  | **Debug**          | None          | Yes        | Yes        | Developers of LLVM         |
+  | **RelWithDebInfo** | For Speed     | Yes        | No         | Users that also need Debug |
+  | **MinSizeRel**     | For Size      | No         | No         | When disk space matters    |
+
+  - Optimizations make LLVM/Clang run faster, but can be an impediment for step-by-step debugging.
+  - Builds with debug information can use a lot of RAM and disk space and is usually slower to run. You can improve RAM usage by using `lld`, see the [LLVM_USE_LINKER](https://llvm.org/docs/CMake.html#llvm-use-linker) option.
+  - Assertions are internal checks to help you find bugs. They typically slow down LLVM and Clang when enabled, but can be useful during development. You can manually set [LLVM_ENABLE_ASSERTIONS](https://llvm.org/docs/CMake.html#llvm-enable-assertions) to override the default from CMAKE_BUILD_TYPE.
+
+* **CMAKE_INSTALL_PREFIX**:PATH
+
+  Path where LLVM will be installed when the “install” target is built. 默认路径是/usr/local
+
+* **CMAKE_{C,CXX}_FLAGS**:STRING
+
+  Extra flags to use when compiling C and C++ source files respectively.
+
+* **CMAKE_{C,CXX}_COMPILER**:STRING
+
+  Specify the C and C++ compilers to use. If you have multiple compilers installed, CMake might not default to the one you wish to use.
+
+### 常用的LLVM相关变量
+
+- **LLVM_ENABLE_PROJECTS:STRING** 这个变量控制哪些项目被启用。如果你只想要构建特定的LLVM子项目，比如Clang或者LLDB，你可以使用这个变量来指定。例如，如果你想同时构建Clang和LLDB，可以在CMake命令中加入 `-DLLVM_ENABLE_PROJECTS="clang;lldb"`
+- **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让你能够控制哪些运行时库被启用。如果你想要构建libc++或者libc++abi这样的库，你可以使用这个变量。例如，为了同时构建libc++和libc++abi，你应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`
+- **LLVM_LIBDIR_SUFFIX:STRING** 这个变量用于附加额外的后缀到库文件的安装目录。在64位架构上，你可能希望库文件被安装在`/usr/lib64`而非`/usr/lib`，那么可以设置 `-DLLVM_LIBDIR_SUFFIX=64`
+- **LLVM_PARALLEL_{COMPILE,LINK}_JOBS:STRING** 构建LLVM工具链可能会消耗大量资源，尤其是链接时。使用这些选项，当你使用Ninja生成器时，可以限制并行性。例如，为了避免内存溢出（OOM）或使用交换空间(swap)，在一台32GB内存的机器上，如果你想要限制同时只有2个链接作业，可以指定 `-G Ninja -DLLVM_PARALLEL_LINK_JOBS=2`
+- **LLVM_TARGETS_TO_BUILD:STRING** 这个变量控制哪些目标架构被启用。例如，如果你只需要为你的本地目标架构（比如x86）构建LLVM，你可以使用 `-DLLVM_TARGETS_TO_BUILD=X86` 来实现
+- **LLVM_USE_LINKER:STRING** 这个变量允许你覆盖系统默认的链接器。例如，如果你想使用LLD作为链接器，可以设置 `-DLLVM_USE_LINKER=lld`
+
+## *Docker*
+
+## *Cross-compile*
+
+LLVM的cross-compile（交叉编译）是指在一种架构或操作系统上使用LLVM工具链来编译为在不同的目标架构或操作系统上运行的代码。简而言之，交叉编译涉及生成可在与构建环境（即你正在编译代码的机器）不同的目标环境（即代码将要运行的机器）上执行的程序。
+
+例如，你可能在一台x86架构的Linux电脑上开发软件，但是需要为ARM架构的嵌入式设备编译这个软件。使用交叉编译，你可以创建一个专门针对ARM架构的可执行文件，尽管你的开发机器是基于x86架构的。
+
+LLVM作为一个编译器框架支持交叉编译的特性使得它非常适合开发需要在多平台上运行的软件。提供了目标三元组（target triple）的概念——一种标识目标系统的格式，包括CPU类型、制造商和操作系统等信息，以便于交叉编译器生成正确的代码。
+
+```
+<arch><sub>-<vendor>-<sys>-<abi>
+```
+
+```cmd
+❯ clang --version | grep Target
+Target: x86_64-unknown-linux-gnu
+```
+
+
+
+交叉编译通常用于以下情况：
+
+1. 编写嵌入式系统或移动设备应用程序，因为这些设备通常没有足够的资源来编译复杂的代码。
+2. 构建为特定操作系统或硬件优化的软件，尤其是当开发环境与目标环境不同时。
+3. 创建操作系统镜像，通常在主机系统上为其他架构的设备构建系统镜像。
+
+
+
+# Example: Kaleidoscope Language
+
+[My First Language Frontend with LLVM Tutorial — LLVM 19.0.0git documentation](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html)
+
+[基于 LLVM 自制编译器——序 | 楚权的世界 (chuquan.me)](https://chuquan.me/2022/07/17/compiler-for-kaleidoscope-00/)
+
+官方给出了一个 Kaleidoscope Language 万花筒语言的构建过程来展示LLVM的使用，这门语言采用手写前端（Lexer + Parser）+ LLVM IR + LLVM 后端的结构
+
+1. [Chapter #1: Kaleidoscope language and Lexer](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl01.html) - 这展示了我们的目标和我们想要构建的基本功能。Lexer 也是为语言构建 parser的第一部分，我们使用一个简单的C++ lexer，它易于理解
+2. [Chapter #2: Implementing a Parser and AST](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl02.html)- 有了lexer，我们可以讨论解析技术和基础的AST构建。本教程描述了递归下降解析和运算符优先级解析
+3. [Chapter #3: Code generation to LLVM IR](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl03.html) - AST准备好后，我们将展示生成LLVM IR有多么容易，并展示如何简单地将LLVM集成到你的项目中
+4. [Chapter #4: Adding JIT and Optimizer Support](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl04.html) - LLVM的一个优点是其对JIT编译的支持，因此我们将直接深入研究，并向您展示添加JIT支持只需3行代码。后续章节将展示如何生成 `.o` 文件
+5. [Chapter #5: Extending the Language: Control Flow](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl05.html) - 有了基础语言的支持，我们展示了如何用控制流操作（'if'语句和'for'循环）来扩展它。这给了我们一个讨论SSA构建和控制流的机会
+6. [Chapter #6: Extending the Language: User-defined Operators](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl06.html) - 本章扩展了语言，允许用户自定义任意一元和二元操作符——并且可以分配优先级！这使我们能够将“语言”的重要部分作为库例程来构建
+7. [Chapter #7: Extending the Language: Mutable Variables](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl07.html) - 本章讨论如何添加用户自定义的局部变量以及赋值操作符。这展示了在LLVM中构建SSA形式有多简单：LLVM不要求您的前端构建SSA形式就可以使用它
+8. [Chapter #8: Compiling to Object Files](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl08.html) - 本章解释了如何将LLVM IR编译成对象文件，就像静态编译器所做的那样
+9. [Chapter #9: Debug Information](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl09.html) - 一个真正的语言需要支持试器，因此我们添加了调试信息，允许在万花筒函数中设置断点，打印出参数变量，并调用函数
+10. [Chapter #10: Conclusion and other tidbits](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl10.html) - 本章通过讨论扩展语言的方法来结束整个系列，并包括指向关于“特殊主题”的信息的指针，比如添加垃圾回收支持、异常处理、调试、对“spaghetti stacks”等的支持
+
+
+
+## *在项目中通过CMake使用LLVM*
+
+```cmake
+cmake_minimum_required(VERSION 3.20.0)
+project(SimpleProject)
+
+find_package(LLVM REQUIRED CONFIG)
+
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+# Set your project compile flags.
+# E.g. if using the C++ header files
+# you will need to enable C++11 support
+# for your compiler.
+
+include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
+
+# Now build our tools
+add_executable(simple-tool tool.cpp)
+
+# Find the libraries that correspond to the LLVM components
+# that we wish to use
+llvm_map_components_to_libnames(llvm_libs support core irreader)
+
+# Link against LLVM libraries
+target_link_libraries(simple-tool ${llvm_libs})
+```
+
+# Clang Lexer & Parser
+
+[Clang C Language Family Frontend for LLVM](https://clang.llvm.org/)
+
+[Welcome to Clang's documentation! — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/)
+
+[Clang Compiler User’s Manual — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/UsersManual.html)
+
+设计手册：[“Clang” CFE Internals Manual — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/InternalsManual.html)
+
+Doxygen: [clang: clang (llvm.org)](https://clang.llvm.org/doxygen/)
+
+> The Clang project provides a language front-end and tooling infrastructure for languages in the C language family (C, C++, Objective C/C++, OpenCL, CUDA, and RenderScript) for the [LLVM](https://www.llvm.org/) project. Both a GCC-compatible compiler driver (`clang`) and an MSVC-compatible compiler driver (`clang-cl.exe`) are provided. You can [get and build](https://clang.llvm.org/get_started.html) the source today.
+
+下图是以Clang为前端的，LLVM为后端的编译器的整体架构
+
+<img src="Clang-LLVM-compiler-architecture.png">
+
+## *Lexer*
+
+## *Parser*
+
+# Clang AST
+
+[LLVM 编译器前端 Clang AST & API 学习笔记 | jywhy6's blog](https://blog.jywhy6.zone/2020/11/27/clang-notes/).
+
+
+
+
+
+```cmd
+$ clang -Xclang -ast-dump -fsyntax-only test.cc
+```
+
+- `-Xclang`: 这个选项后面跟随的参数会直接传递给 Clang 的前端而不是驱动程序。Clang 驱动程序负责处理用户级别的编译选项，并将它们转化为针对各种工（例如前端、汇编器和链接器）的实际命令行参数。使用 `-Xclang` 可以直接向 Clang 前端发送指令
+- `-ast-dump`: 这是传递给 Clang 前端的参数，告诉它输出 AST 的结构信息。AST 是源代码的树形表示，其中每个节点都代表了源代码中的构造（如表达式、声明等）
+- `-fsyntax-only`: 这个选项告诉 Clang 仅执行语法检查，而不进行代码生成或其他后续步骤。因此，它只会解析源代码，检查语法错误，并在完成后停止。这通常用于快速检查代码是否正确，或者像在这个命令中一样，与 `-ast-dump` 结合来查看源代码的 AST
+
+
+
+
+
+
+
+一个翻译单元 (Translation Unit) 的顶层节点是 `TranslationUnitDecl` 
+
+
+
+## *AST 架构*
+
+### 核心基本类型
+
+* Decl 声明
+  * FunctionDecl 函数声明
+  * VarDecl 变量声明
+* Stmt 语句
+  * CompoundStmt 复合语句
+  * BinaryOperator 二元运算符
+  * Expr 表达式
+    * CallExpr 函数调用表达式
+    * CastExpr 类型转换表达式
+* Type 类型
+  * PointerType 指针类型
+
+### ASTContext
+
+在一个翻译单元中，所有有关 AST 的信息都在类 `ASTContext` ，包括：
+
+- 符号表
+- `SourceManager`
+- AST 的入口节点: `TranslationUnitDecl* getTranslationUnitDecl()`
+
+### Glue Classes
+
+* DeclContext：包含其他 `Decl` 的 `Decl` 需要继承此类
+* TemplateArgument：模板参数的访问器
+* NestedNameSpecifier
+* QualType：Qual 是 qualifier 的意思，将 C++ 类型中的 `const` 等拆分出来，避免类型的组合爆炸问题
+
+## *Traversing through AST*
+
+Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` 和 `ASTMatcher`
+
+### RecursiveASTVisitor
+
+[How to write RecursiveASTVisitor based ASTFrontendActions. — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/RAVFrontendAction.html)
+
+### ASTMatcher
+
+[Tutorial for building tools using LibTooling and LibASTMatchers — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersTutorial.html)
+
+## *AST可视化*
+
+[FraMuCoder/PyClASVi: Python Clang AST Viewer (github.com)](https://github.com/FraMuCoder/PyClASVi)
+
+[CAST-projects/Clang-ast-viewer: Clang AST viewer (github.com)](https://github.com/CAST-projects/Clang-ast-viewer)
+
+1. **Clang AST Viewer (Web Based)** 这是一个基于 Web 的工具，可以将 Clang 的 `-ast-dump` 输出转换为易于浏览的树形结构。用户可以在浏览器中直接查看以及交互式地探索 AST。
+2. **Clang AST Explorer (Online Tool)** Clang AST Explorer 是一个在线工具，允许用户在网页上写代码，并实时看到对应的 AST。这个资源非常适合教学和演示目的。
 
 # Clang Static Analyzer
 
@@ -409,7 +701,33 @@ fout << out.c_str();
 
 完成以上步骤之后，你将能够从C++源文件中提取出所需的信息，并将其以YAML的格式保存到文件中。注意，实际情况可能更加复杂，你可能需要处理C++的高级特性，比如模板、宏、命名空间、重载函数等
 
+# LLVM IR
 
+IR是LLVM的核心所在
+
+# 代码优化 Pass
+
+## *Polly*
+
+Polly 是 LLVM 项目的一个子项目，它提供了自动并行化和循环优化的功能。Polly 使用高级多维数组索引（Affine Expressions）来理解、表示和优化循环嵌套，特别是那些对于性能至关重要的计算密集型循环
+
+Polly 基于一种叫做多面体模型的数学表示，使用这种方法，可以进行复杂的优化
+
+Polly 主要应用于需要大规模数值计算的科学和工程领域，例如物理模拟、矩阵运算和图像处理。在这些领域，循环结构往往占据了程序的绝大部分计算时间，并且有明确的数据依赖模式可供分析和优化
+
+# JIT Compiler
+
+JIT Compiler（Just-In-Time Compiler）即时编译器，它在运行时（即程序执行期间）将程序的源代码或字节码动态地编译成机器码，然后立即执行。这与传统的AOT（Ahead-Of-Time Compilation）编译方式不同，后者在程序运行前就已经将源代码完全编译成机器码。
+
+JIT编译器的优势在于能够结合解释执行和静态编译的好处：它可以在运行时进行优化，根据程序的实际执行情况来生成更高效的机器码。同时，由于JIT编译器只编译程序中实际要执行的部分，因此可以减少初次启动时间，并避免编译那些在运行过程中从未使用到的代码。
+
+Java虚拟机（JVM）是使用JIT编译技术的一个著名例子。在JVM中，Java程序首先被编译成平台无关的字节码，随后在运行时，JIT编译器会将热点代码（经常执行的代码）编译成针对具体硬件平台优化的机器码，以提升性能。
+
+[其他支持JIT编译的语言和运行环境包括.NET](http://xn--jit-5q9d13js0cgyd9wllkz2fa19u3w4ciyhuj5aw42ajyf2ripoa232d.net/) Framework的CLR（Common Language Runtime），JavaScript的各种现代引擎（如V8引擎）等。通过JIT编译，这些环境能够提供既快速又灵活的执行策略。
+
+
+
+# 指令选择
 
 # LLD - The LLVM Linker
 

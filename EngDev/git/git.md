@@ -756,13 +756,15 @@ rebase有以下优势
 
 [git cherry-pick 教程 - 阮一峰的网络日志 (ruanyifeng.com)](https://www.ruanyifeng.com/blog/2020/04/git-cherry-pick.html)
 
+### 使用情景
+
 cherry-pick 就如其名字所述，将某个分支的某几个需要的commit pick到目标分支中，这往往是因为要merge的src分支和dest分支的差距过大，不可能直接merge过去，因此就挑几个我们需要的（往往就是基于src分支新增的几个commit）merge到dest分支
 
 比如说有这么一个场景：分支feature2是基于分支feature1在很久前拉出来的，feature1已经先合入了dev，此时如果想要把feature2也合入dev就可能会有很多冲突（也需要很多审阅者lol），此时可以从dev单独拉一条分支出来，然后把需要的commit全部cherry-pick进新拉的分支
 
 <img src="cherry-pick.drawio.png">
 
-### 如何使用
+### 使用方法
 
 基础命令格式如下：
 
@@ -771,8 +773,6 @@ git cherry-pick <commit-hash>
 ```
 
 其中 `<commit-hash>` 是想要pick并应用到当前分支的那个提交的哈希值
-
-### 选项
 
 `git cherry-pick` 提供了一些有用的选项，以下是其中的几个：
 
@@ -784,26 +784,26 @@ git cherry-pick <commit-hash>
 
 ### 示例
 
-假设有两个分支，`main` 和 `feature`，你想将 `feature` 分支上的一个提交应用到 `main` 分支。可以按照以下步骤操作：
+假设有两个分支，`main` 和 `feature`，想将 `feature` 分支上的一个提交应用到 `main` 分支。可以按照以下步骤操作：
 
-1. 首先检出到 `main` 分支：
+1. 首先checkout到 `main` 分支：
 
-   ```
-   shell复制代码git checkout main
+   ```cmd
+   git checkout main
    ```
 
 2. 执行 `cherry-pick` 操作，将特定的提交从 `feature` 分支应用到 `main`：
 
-   ```
-   shell复制代码git cherry-pick <commit-hash-from-feature-branch>
+   ```cmd
+   git cherry-pick <commit-hash-from-feature-branch>
    ```
 
-如果成功，那么 `feature` 分支上的那个特定提交就被引入了 `main` 分支，并且会创建一个新的提交。
+如果成功，那么 `feature` 分支上的那个特定提交就被引入了 `main` 分支，并且会创建一个新的提交
 
 ### 注意事项
 
-- 当你执行 `cherry-pick` 时，可能会遇到冲突。此时，像处理普通合并冲突一样解决它们，然后继续完成 `cherry-pick` 操作。
-- `cherry-pick` 不是用来替代合并（`merge`）或变基（`rebase`）的。在选择使用它之前，请考虑你的版本控制策略是否真的需要这种类型的操作，因为它可以导致历史记录变得复杂
+- 当执行 `cherry-pick` 时，可能会遇到冲突。此时，像处理普通合并冲突一样解决它们，然后继续完成 `cherry-pick` 操作。
+- `cherry-pick` 不是用来替代合并（`merge`）或变基（`rebase`）的。在选择使用它之前，请考虑版本控制策略是否真的需要这种类型的操作，因为它可以导致历史记录变得复杂
 
 ## *远程库*
 
@@ -996,3 +996,55 @@ Git Hooks 的实现其实非常简单，就是在 `.git/hooks`文件下保存了
 ### Husky
 
 Husky 是一个让配置 Git Hooks 变得更简单的工具
+
+## *减少clone的代码量*
+
+大型项目往往代码量都很大，如果是频繁地拉取完整的项目的消耗是很大的，比如说LLVM。下面介绍一些只拉取部分项目的方法
+
+###  shallow-clone
+
+shallow clone（浅克隆）是一个只包含历史记录中最近几次提交的仓库副本。这通常用于减少克隆大型仓库所需的时间和磁盘空间，因为它不会下载整个版本历史。要进行浅克隆，可以使用`git cloen --depth`参数后跟想要克隆的历史深度，这意味着我们指定了希望获取的提交数
+
+```cmd
+$ git clone --depth 1 <repository-url>
+```
+
+`--depth 1`告诉Git只克隆最近的一个提交及其相关的文件改动。如果你设置了一个更大的数字，比如 `--depth 10`，那么Git将克隆最新的10个提交及其相关的文件改动
+
+这将克隆远程仓库的最新提交，并且只包含这单次提交的历史
+
+如果想克隆特定分支的浅副本，可以添加`--branch`参数，如下所示：
+
+```cmd
+$ git clone --depth 1 --branch <branch-name> <repository-url>
+```
+
+注意，浅克隆有一些限制，比如不能看到完整的提交历史，某些操作可能不被允许，例如合并或拉取最新更改可能需要其他选项来处理。此外，因为没有完整的历史，所以确定两个分支之间的 diff 也可能受限
+
+如果在之后需要更多的历史记录，可以使用`git fetch --deepen`来增加克隆的深度，或者使用`git fetch --unshallow`将其转换为完整的克隆
+
+### Standard checkout vs. sparse checkout
+
+* **Standard Checkout（标准检出）** 这是最常见的Git仓库克隆方式，它会获取远程仓库的所有文件和历史记录。当执行`git clone <repository-url>`命令时，默认进行的就是标准检出，这意味着整个项目的所有分支、标签、文件和完整提交历史都被克隆到本地
+* **Sparse Checkout（稀疏检出）** 这是一种更先进的Git功能，它允许用户只检出仓库中感兴趣的特定文件或目录，而不是整个仓库内容。这对于大型仓库来说非常有用，尤其是当不需要全部的文件，只关心其中的一部分时。稀疏检出可以显著减少本地副本所占用的磁盘空间和下载时间
+
+要使用稀疏检出，需要先克隆仓库并开启稀疏检出模式，然后配置一个“稀疏路径集”，指定想要检出的文件或文件夹。以下是一个简单的示例流程：
+
+```
+# 克隆仓库但不立即检出文件
+git clone --no-checkout <repository-url>
+
+# 进入仓库目录
+cd <repository-name>
+
+# 开启稀疏检出模式
+git sparse-checkout init
+
+# 设置你想检出的具体路径
+git sparse-checkout set <path1> <path2> ...
+
+# 完成检出过程
+git checkout
+```
+
+在这里，`<repository-url>`是要克隆的仓库URL，`<repository-name>`是仓库名称，而`<path1> <path2> ...`是在仓库中感兴趣的路径。使用稀疏检出后，只有设置的路径会被检出到工作目录中
