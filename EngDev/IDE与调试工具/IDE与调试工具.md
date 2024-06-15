@@ -114,7 +114,7 @@ Samba 是一个开源的**局域网络协议套件**，允许不同操作系统�
   $ sudo service smbd stop # 关闭Samba服务器
   ```
 
-# gdb调试器
+# GDB
 
 通常在程序开始运行之前，可以使用一种特殊的方法来启动和运行这个程序，这种方法就是通过一个称为 调试器 Debugger 的工具。调试器是一种专门的软件，它允许程序员以一种特殊的方式运行程序，这样就可以更仔细地观察和检查程序的行为
 
@@ -356,6 +356,14 @@ info register eax
    ```
 
    这将允许 GDB 自动加载任何路径下的 `.gdbinit` 文件，但请注意，这可能会引入一些安全风险
+
+# LLDB
+
+[🐛 LLDB (llvm.org)](https://lldb.llvm.org/)
+
+
+
+[GDB to LLDB command map - 🐛 LLDB (llvm.org)](https://lldb.llvm.org/use/map.html)
 
 # 核心转储文件调试分析
 

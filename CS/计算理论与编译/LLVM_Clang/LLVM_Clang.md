@@ -148,13 +148,37 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
 ```cmd
 $ cd llvm-project
 # cmake configure
-$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb"
+$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_PROJECTS="clang;lldb"
 # $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 $ cmake --build build # cmake build
 $ sudo cmake --build build --target install # cmake install
 ```
 
 注意安装时文件可能不全，/usr/local/include/llvm/Config/config.h不会被安装进去，需要手动从build文件夹内复制出来。在运行编译时可以根据缺少头文件自行`sudo cp`
+
+### Shell Script
+
+```shell
+# Download:
+git clone https://github.com/llvm/llvm-project.git
+cd llvm-project/llvm
+
+# Configure
+mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
+
+# build:
+cmake --build . -j $(nproc)
+
+# install:
+cmake -DCMAKE_INSTALL_PREFIX=${HOME}/.local/ -P cmake_install.cmake
+
+# uninstall
+xargs rm -rf < install_manifest.txt
+```
+
+### 同时安装多个版本的LLVM
+
+
 
 ### CMake Cache
 
@@ -210,8 +234,8 @@ ninja -C $builddir install
 
 ### 常用的LLVM相关变量
 
-- **LLVM_ENABLE_PROJECTS:STRING** 这个变量控制哪些项目被启用。如果你只想要构建特定的LLVM子项目，比如Clang或者LLDB，你可以使用这个变量来指定。例如，如果你想同时构建Clang和LLDB，可以在CMake命令中加入 `-DLLVM_ENABLE_PROJECTS="clang;lldb"`
-- **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让你能够控制哪些运行时库被启用。如果你想要构建libc++或者libc++abi这样的库，你可以使用这个变量。例如，为了同时构建libc++和libc++abi，你应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`
+- **LLVM_ENABLE_PROJECTS:STRING** 这个变量控制哪些项目被启用。如果只想要构建特定的LLVM子项目，比如Clang或者LLDB，可以使用这个变量来指定。例如，如果想同时构建Clang和LLDB，可以在CMake命令中加入 `-DLLVM_ENABLE_PROJECTS="clang;lldb"`
+- **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让能够控制哪些运行时库被启用。如果想要构建libc++或者libc++abi这样的库，可以使用这个变量。例如，为了同时构建libc++和libc++abi，应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`
 - **LLVM_LIBDIR_SUFFIX:STRING** 这个变量用于附加额外的后缀到库文件的安装目录。在64位架构上，你可能希望库文件被安装在`/usr/lib64`而非`/usr/lib`，那么可以设置 `-DLLVM_LIBDIR_SUFFIX=64`
 - **LLVM_PARALLEL_{COMPILE,LINK}_JOBS:STRING** 构建LLVM工具链可能会消耗大量资源，尤其是链接时。使用这些选项，当你使用Ninja生成器时，可以限制并行性。例如，为了避免内存溢出（OOM）或使用交换空间(swap)，在一台32GB内存的机器上，如果你想要限制同时只有2个链接作业，可以指定 `-G Ninja -DLLVM_PARALLEL_LINK_JOBS=2`
 - **LLVM_TARGETS_TO_BUILD:STRING** 这个变量控制哪些目标架构被启用。例如，如果你只需要为你的本地目标架构（比如x86）构建LLVM，你可以使用 `-DLLVM_TARGETS_TO_BUILD=X86` 来实现
@@ -244,7 +268,19 @@ Target: x86_64-unknown-linux-gnu
 2. 构建为特定操作系统或硬件优化的软件，尤其是当开发环境与目标环境不同时。
 3. 创建操作系统镜像，通常在主机系统上为其他架构的设备构建系统镜像。
 
+## *卸载LLVM*
 
+# 预定义宏
+
+## *`__attribute__`*
+
+和GCC一样，Clang同样支持用 `__attribute__` 来显式地控制编译器的行为，而且还添加了一些自己的扩展。为了检查一个特殊属性的可用性，可以使用`__has_attribute`指令
+
+这里介绍一下Clang独有的 `__attribute__` 指令
+
+### availability
+
+[__attribute__详解及应用 | roy's blog (woshiccm.github.io)](https://woshiccm.github.io/posts/__attribute__详解及应用/)
 
 # Example: Kaleidoscope Language
 
@@ -298,7 +334,7 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 target_link_libraries(simple-tool ${llvm_libs})
 ```
 
-# Clang Lexer & Parser
+# Clang 架构
 
 [Clang C Language Family Frontend for LLVM](https://clang.llvm.org/)
 
@@ -312,13 +348,211 @@ Doxygen: [clang: clang (llvm.org)](https://clang.llvm.org/doxygen/)
 
 > The Clang project provides a language front-end and tooling infrastructure for languages in the C language family (C, C++, Objective C/C++, OpenCL, CUDA, and RenderScript) for the [LLVM](https://www.llvm.org/) project. Both a GCC-compatible compiler driver (`clang`) and an MSVC-compatible compiler driver (`clang-cl.exe`) are provided. You can [get and build](https://clang.llvm.org/get_started.html) the source today.
 
+## *Clang Driver*
+
+平常使用的可执行文件 `clang.exe` 只是一个Driver，即一个命令解析器，**用于接收gcc兼容的参数**（`clang++.exe`/`clang-cl.exe`同理，用于g++/msvc兼容的参数），然后传递给真正的clang编译器前端，也就是CC1。CC1作为前端，负责解析C++源码为语法树，转换到LLVM IR。比如选项A在gcc中默认开启，但是clang规则中是默认不开启的，那么为了兼容gcc，clang.exe的Driver就要手动开启选项A，也就是添加命令行参数，将它传递给CC1
+
+可以把Driver理解为以Clang为前端的LLVM整个软件的main函数，在这个main函数中依次调用整个编译流程中的各个阶段
+
+### Procedure
+
+[Driver Design & Internals — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/DriverInternals.html)
+
+<img src="DriverArchitecture.png">
+
+上图中橙色的代表数据，绿色代表操作这些数据的阶段，蓝色的代表辅助组件
+
+1. Input Strings
+
+   调用Clang的时候后面命令行传入的命令
+
+2. Parse: Option Parsing
+
+   将传入的String类型输入解析成具体的参数对象，如果要查看完整的解析过程，可以使用 `-###`，下面有说明
+
+3. Pipeline: Compilation Action Construction
+
+   一旦解析了参数，就会构造出后续编译所需要的子任务。这涉及到确定输入文件及其类型，要对它们做哪些工作（预处理、编译、组装、链接等），以及为每个任务构造一个Action实例列表。其结果是一个由一个或多个顶层Action组成的列表，每个Action通常对应一个单一的输出（例如，一个对象或链接的可执行文件）。可以使用 `-ccc-print-phases` 可以打印出这个阶段的内容
+
+4. Bind: Tool & Filename Selection：
+
+   这个阶段和后面的Trasnlate一起将将Actions转化成真正的进程。Driver自上而下匹配，将Actioins分配给分配给Tools，ToolChain负责为每个Action选择合适的Tool，一旦选择了Tool，Driver就会与Tool交互，看它是否能够匹配更多的Action
+
+   一旦所有的Action都选择了Tool，Driver就会决定如何连接工具（例如，使用进程内模块、管道、临时文件或用户提供的文件名）
+
+   Driver驱动程序与ToolChain交互，以执行Tool的绑定。ToolChain包含了特定架构、平台和操作系统编译所需的所有工具的信息，一次编译过程中，单个Driver调用可能会查询多个ToolChain，以便与不同架构的工具进行交互
+
+   可以通过`-ccc-print-bindings` 可以查看Bind的大致情况，以下展示了在i386和ppc上编译t0.c文件Bing过程
+
+5. Translate: Tool Specific Argument Translation
+
+   一旦选择了一个Tool来执行一个特定的Action，该Tool必须构建具体的Commands，并在编译过程中执行。该阶段主要的工作是将gcc风格的命令行选项翻译成子进程所期望的任何选项
+
+   这个阶段的结果是一些列将要执行Commands（包含执行路径和参数字符）
+
+6. Execute
+
+   执行阶段，Clang Driver 会创建两个子线程来分别之前上一阶段输出的编译和链接任务，并且产出结果
+
+### `-###` option
+
+```cmd
+$ clang -### test.cc
+clang version 19.0.0git (git@github.com:llvm/llvm-project.git 424188abe4956d51c852668d206dfc9919290fbf)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /usr/local/bin
+ "/usr/local/bin/clang-19" "-cc1" "-triple" "x86_64-unknown-linux-gnu" "-emit-obj" "-dumpdir" "a-" "-disable-free" "-clear-ast-before-backend" "-disable-llvm-verifier" "-discard-value-names" "-main-file-name" "test.cc" "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie" "-mframe-pointer=all" "-fmath-errno" "-ffp-contract=on" "-fno-rounding-math" "-mconstructor-aliases" "-funwind-tables=2" "-target-cpu" "x86-64" "-tune-cpu" "generic" "-debugger-tuning=gdb" "-fdebug-compilation-dir=/home/wjfeng/clang_learn" "-fcoverage-compilation-dir=/home/wjfeng/clang_learn" "-resource-dir" "/usr/local/lib/clang/19" "-internal-isystem" "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11" "-internal-isystem" "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/x86_64-linux-gnu/c++/11" "-internal-isystem" "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/backward" "-internal-isystem" "/usr/local/lib/clang/19/include" "-internal-isystem" "/usr/local/include" "-internal-isystem" "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../x86_64-linux-gnu/include" "-internal-externc-isystem" "/usr/include/x86_64-linux-gnu" "-internal-externc-isystem" "/include" "-internal-externc-isystem" "/usr/include" "-fdeprecated-macro" "-ferror-limit" "19" "-fgnuc-version=4.2.1" "-fskip-odr-check-in-gmf" "-fcxx-exceptions" "-fexceptions" "-fcolor-diagnostics" "-faddrsig" "-D__GCC_HAVE_DWARF2_CFI_ASM=1" "-o" "/tmp/test-0f12cd.o" "-x" "c++" "test.cc"
+ "/usr/bin/ld" "-z" "relro" "--hash-style=gnu" "--eh-frame-hdr" "-m" "elf_x86_64" "-pie" "-dynamic-linker" "/lib64/ld-linux-x86-64.so.2" "-o" "a.out" "/lib/x86_64-linux-gnu/Scrt1.o" "/lib/x86_64-linux-gnu/crti.o" "/usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o" "-L/usr/lib/gcc/x86_64-linux-gnu/11" "-L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib64" "-L/lib/x86_64-linux-gnu" "-L/lib/../lib64" "-L/usr/lib/x86_64-linux-gnu" "-L/usr/lib/../lib64" "-L/lib" "-L/usr/lib" "/tmp/test-0f12cd.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "/usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o" "/lib/x86_64-linux-gnu/crtn.o"
+```
+
+`clang -### test.cc` 实际上并没有编译文件，而是告诉 Clang 输出它将会执行的命令来编译 `test.cc` 源文件。**`-###` 选项使得 Clang 打印出详细的命令行调用信息，但不真正运行这些命令**。这非常有用于调试和理解 Clang 内部的工作机制
+
+输出显示了 Clang Driver 组装出的将要执行的两个主要步骤：
+
+1. 使用 cc1 编译器生成目标文件
+
+   ```cmd
+   "/usr/local/bin/clang-19" "-cc1" [一系列参数] "-o" "/tmp/test-0f12cd.o" "-x" "c++" "test.cc"
+   ```
+
+   这个命令调用了 Clang 的内部前端 (`-cc1`) 来编译 C++ 源文件 `test.cc` 并生成中间对象文件 `/tmp/test-0f12cd.o`。在这个过程中，Clang 处理了包括预处理、编译和生成 LLVM IR 等任务，并最终将其转换为目标代码
+
+   参数包括指定目标三元组 `-triple` ("x86_64-unknown-linux-gnu")、优化设置、调试信息选项、警告级别等。这里也配置了编译路径、资源目录以及系统库的包含路径等信息
+
+2. 使用ld链接器，链接生成可执行文件
+
+   ```cmd
+   "/usr/bin/ld" [一系列参数] "/tmp/test-0f12cd.o" "-o" "a.out"
+   ```
+
+   在第二步中，调用系统的链接器 `ld` 来将之前生成的目标文件 `/tmp/test-0f12cd.o` 链接成最终的可执行文件，默认输出为 `a.out`。链接器还会链接其他启动和结束例程需要的目标文件（如 `crt1.o`, `crti.o`, `crtbeginS.o`, `crtendS.o`）和库文件（如 `-lgcc`, `-lgcc_s`, `-lc`）。这些文件和库提供了程序初始化、标准库支持和正确关闭程序所需的代码
+
+   链接器的参数还设定了一些链接选项，比如 PIE（Position Independent Executable，位置无关可执行文件），选择动态链接器以及库和搜索路径等
+
+## *Driver 代码*
+
+[LLVM-Driver笔记 | 香克斯 (shanks.pro)](https://shanks.pro/2020/07/14/llvm-driver/)
+
+[clang 01. clang driver流程分析-CSDN博客](https://blog.csdn.net/qq_43566431/article/details/130689146)
+
+在`clang/tools/driver/driver.cpp` 我们可以找到Driver的入口，其中入口逻辑都集中在clang_main之中
+
+
+
+<img src="AST_Action.png">
+
+注：上图的虚线框内为回调方法，表头黑体为类名
+
+构建AST树的核心类是ParseAST(Parse the entire filespecified,notifyingthe ASTConsumer as the file is parsed),为了方便用户加入自己的actions，Clang提供了众
+多的hooks
+
+### Frontend Action
+
+llvm-project/clang/include/clang/Frontend/FrontendOptions.h 中的 ActionKind 枚举类
+
+## *实操：编译Pipeline*
+
 下图是以Clang为前端的，LLVM为后端的编译器的整体架构
 
 <img src="Clang-LLVM-compiler-architecture.png">
 
+以下面这份代码为例
+
+```C++
+//Example.c
+#include <stdio.h>
+int global;
+void myPrint(int param) {
+    if (param == 1)
+        printf("param is 1");
+    for (int i = 0 ; i < 10 ; i++ ) {
+        global += i;
+    }
+}
+int main(int argc, char *argv[]) {
+    int param = 1;
+    myPrint(param);
+    return 0;
+}
+```
+
+### 编译传参
+
+由于Clang Driver的架构设计，需要分别用 `-Xclang` 和 `-mllvm` 分别将参数传递给Clang前端和LLVM中后段
+
+* -Xclang参数是将参数传递给Clang的CC1前端
+
+  比如想要禁用所有LLVM Pass的运行，也就是生成无任何优化的IR，那么就要使用-disable-llvm-passes参数传递给CC1。但是这个参数并没有Clang Driver的表示形式（也就是不使用-Xclang传递给CC1），那么就需要写-Xclang -disable-llvm-passes把参数透过Clang Driver把参数传递给CC1
+
+* -mllvm参数的作用是将参数传递给作为中后端的LLVM
+
+  如果参数是在LLVM中后端定义的，那么直接把参数给Clang的Driver或者CC1都是不行的，需要使用-mllvm将参数跳过Clang的Driver和CC1传递到LLVM。比如想要在Pass运行完成后输出IR，那么就需要使用-mllvm --print-after-all把参数传给LLVM
+
+### clang & clang++
+
+和gcc & g++的不同分工一样，clang & clang++同样分别适用于编译C和C++
+
+clang++会自动链接C++标准库，而clang则不会
+
+```cmd
+$ clang -lstdc++ main.cpp
+$ clang++ main.cpp
+```
+
+### 分别编译不同的阶段
+
+我们可以看下有下面这些阶段
+
+```cmd
+$ clang -ccc-print-phases main.cc
+            +- 0: input, "main.cc", c++
+         +- 1: preprocessor, {0}, c++-cpp-output
+      +- 2: compiler, {1}, ir
+   +- 3: backend, {2}, assembler
++- 4: assembler, {3}, object
+5: linker, {4}, image
+```
+
+1. 预处理
+
+   ```cmd
+   $ clang -E source.c -o preprocessed.i
+   ```
+
+2. 编译
+
+   ```cmd
+   $ clang -S -emit-llvm source.c -o intermediate.ll
+   ```
+
+3. 生成目标代码
+
+   ```cmd
+   $ clang -S source.c -o assembly.s
+   ```
+
+4. 汇编
+
+   ```cmd
+   $ clang -c source.c -o object.o
+   ```
+
+5. 编译
+
+   ```cmd
+   $ clang object.o -o executable
+   ```
+
+# Clang Lexer & Parser
+
+本章介绍Clang的lexer & parser的实现
+
 ## *Lexer*
 
 ## *Parser*
+
+Clang使用的Parser是基于递归下降分析 recursive descent parser 的
 
 # Clang AST
 
@@ -327,14 +561,6 @@ Doxygen: [clang: clang (llvm.org)](https://clang.llvm.org/doxygen/)
 
 
 
-
-```cmd
-$ clang -Xclang -ast-dump -fsyntax-only test.cc
-```
-
-- `-Xclang`: 这个选项后面跟随的参数会直接传递给 Clang 的前端而不是驱动程序。Clang 驱动程序负责处理用户级别的编译选项，并将它们转化为针对各种工（例如前端、汇编器和链接器）的实际命令行参数。使用 `-Xclang` 可以直接向 Clang 前端发送指令
-- `-ast-dump`: 这是传递给 Clang 前端的参数，告诉它输出 AST 的结构信息。AST 是源代码的树形表示，其中每个节点都代表了源代码中的构造（如表达式、声明等）
-- `-fsyntax-only`: 这个选项告诉 Clang 仅执行语法检查，而不进行代码生成或其他后续步骤。因此，它只会解析源代码，检查语法错误，并在完成后停止。这通常用于快速检查代码是否正确，或者像在这个命令中一样，与 `-ast-dump` 结合来查看源代码的 AST
 
 
 
@@ -346,19 +572,63 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
 
 
 
+
+
 ## *AST 架构*
 
-### 核心基本类型
+### Reminder: Expression & Statement
 
-* Decl 声明
-  * FunctionDecl 函数声明
-  * VarDecl 变量声明
-* Stmt 语句
-  * CompoundStmt 复合语句
-  * BinaryOperator 二元运算符
-  * Expr 表达式
-    * CallExpr 函数调用表达式
-    * CastExpr 类型转换表达式
+* Expression 表达式
+
+  表达式是计算机程序中的一个单元，**它会计算并返回一个值**。表达式由操作数（常量、变量、函数调用等）和操作符（比如加减乘除）组成。表达式总是产生或返回一个结果值，并且可以出现在任何需要值的地方
+
+  ```C
+  3 * 7      // 返回 21 的表达式
+  x          // 如果 x 是一个变量，这是一个返回 x 值的表达式
+  foo()      // foo 函数调用是一个表达式；假设 foo 返回一个值
+  x + y * 2  // 返回 x 与 y 乘以 2 之和的表达式
+  ```
+
+* Statement 语句
+
+  **语句是执行特定操作的最小独立单元**，它表示要做的一项动作或命令。**语句不像表达式那样返回值**，但它可以改变程序的状态。一个程序通常由一系列顺序执行的语句构成
+
+  ```C
+  int x = 10;   // 赋值语句
+  if (x > 0) {  // 条件语句
+      x = -x;   
+  }
+  return x;     // 返回语句
+  ```
+
+  每一个语句都可以改变程序的状态，比如通过赋值语句改变变量的值，或通过条件语句来控制程序流程的走向
+
+Expression & Statement 的主要区别在于，表达式是有返回值的，而语句可能没有。在很多语言里，语句不能作为表达式的一部分出现，因为它不返回值，而表达式可以作为更大的表达式的一部分出现，也可以独立作为表达式语句。在某些语言中（如Python），表达式可以作为语句使用，而在其他语言中（如C, C++），则必须显式使用一个表达式语句（例如，一个以分号结束的表达式）
+
+还有一些语言（如Scala和Ruby）模糊了表达式和语句的界限，因为在这些语言中几乎所有东西都是表达式（即都有返回值）
+
+### 核心基本类型（AST Nodes）
+
+Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共祖先的独立类
+
+* Decl 表示各种声明
+  * FunctionDecl 函数声明。注意：在AST层级中，**不区分函数声明和函数定义，统一用FunctionDecl来标识**，两个区分主要看是否有函数体 function body，可以使用 `bool hasBody()` 来进行判断
+  * VarDecl 变量声明，如果有初始化，可以通过 `getInit()` 获取到对应的初始化Expr
+* Stmt 表示各种语句（代码块）
+  * CompoundStmt 复合语句：代表大括号，函数实现、struct、enum、for的body等一般用此包起来
+  * DeclStmt 定义语句，里边可能有VarDecl等类型的定义
+  * ForStmt For语句对应，包括Init/Cond/Inc 对应 `(int a=0;a<mm;a++)` 这三部分，还有一部分是body，可以分别使用 `getInit()`，`getCond()`，`getInc()`，`getBody()` 来分别进行获取
+  * IfStmt If语句：包括三部分Cond、TrueBody、FalseBody三部分，分别可以通过 `getCond()`，`getThen()`, `getElse()` 三部分获取，Cond和Then是必须要有的，Else可能为空
+  * ReturnStmt 可选的return语句
+  * ValueStmt 可能含有 Value & Type 的语句
+    * Expr 表达式，clang中expression也是statement的一种
+      * BinaryOperator 二元运算符
+      * CallExpr 函数调用表达式，子节点有调用的参数列表
+      * CastExpr 类型转换表达式
+        * ImplicitCastExpr 隐形转换表达式，在左右值转换和函数调用等各个方面都会用到
+      * IntegerLiteral 定点Integer值
+      * ParenExpr 括号表达式
+      * UnartOperator 一元操作符
 * Type 类型
   * PointerType 指针类型
 
@@ -377,17 +647,139 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
 * NestedNameSpecifier
 * QualType：Qual 是 qualifier 的意思，将 C++ 类型中的 `const` 等拆分出来，避免类型的组合爆炸问题
 
+## *实例*
+
+[PowerPoint 프레젠테이션 (kaist.ac.kr)](https://swtv.kaist.ac.kr/courses/cs492-fall18/part1-coverage/lec7-Clang-tutorial.pdf)
+
+```C++
+//Example.c
+#include <stdio.h>
+int global;
+void myPrint(int param) {
+    if (param == 1)
+    printf("param is 1");
+    for (int i = 0 ; i < 10 ; i++ ) {
+        global += i;
+    }
+}
+int main(int argc, char *argv[]) {
+    int param = 1;
+    myPrint(param);
+    return 0;
+}
+```
+
+```cmd
+$ clang -Xclang -ast-dump -fsyntax-only test.cc
+```
+
+- `-Xclang`：这个选项后面跟随的参数会直接传递给 Clang 的前端而不是驱动程序。Clang 驱动程序负责处理用户级别的编译选项，并将它们转化为针对各种工具（例如前端、汇编器和链接器）的实际命令行参数。使用 `-Xclang` 可以直接向 Clang 前端发送指令
+- `-ast-dump`：这是传递给 Clang 前端的参数，告诉它输出 AST 的结构信息。AST 是源代码的树形表示，其中每个节点都代表了源代码中的构造（如表达式、声明等）
+- `-fsyntax-only`：这个选项告诉 Clang 仅执行语法检查，而不进行代码生成或其他后续步骤。因此，它只会解析源代码，检查语法错误，并在完成后停止。这通常用于快速检查代码是否正确，或者像在这个命令中一样，与 `-ast-dump` 结合来查看源代码的 AST
+-  `-fmodules` 选项启用了 Clang 的模块功能。模块是一种用于替代传统的 `#include` 预处理器指令和头文件的编译单元，它旨在改进 C 和 C++ 程序的编译时间和封装性
+
+
+
+## *libclang*
+
+[Libclang tutorial — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibClang.html)
+
+llibclang是Clang的C语言接口库，它提供了一个相对较小的API，暴露了用于解析源代码成为AST、加载已经解析的AST、遍历AST、将物理源位置和AST中的元素关联起来以及其他支持基于Clang的开发工具的功能。这个Clang的C语言接口永远不会提供存储在Clang的C++ AST中的所有信息表示，也不应该提供：其意图是保持一个从一个版本到下一个版本相对稳定的API，只提供支持开发工具所需的基本功能
+
+libclang的整个C语言接口可以在llvm-project/clang/include/clang-cIndex.h文件中找到
+
+### libclang核心数据结构
+
+**libclang中所有类型都以 `CX` 开头**
+
+* CXIndex：一个Index包含了一系列会被链接到一起形成一个可执行文件或库的translation unit
+
+* CXTranslationUnit：
+
+* CXCursor：一个cursor代表了一个指向某个translation unit的AST中的某些元素
+
+  ```C++
+  typedef struct {
+    enum CXCursorKind kind;
+    int xdata;
+    const void *data[3];	
+  } CXCursor;
+
+
+
+
+
+前序遍历
+
+```C++
+clang_visitChildren (CXCursor parent, CXCursorVisitor visitor, CXClientData client_data);
+```
+
+
+
+
+
+### Embed libclang with CMake
+
+```cmd
+$ clang++ -lcang main.cpp
+```
+
+
+
+### Python API
+
+[libclang · PyPI](https://pypi.org/project/libclang/)
+
+
+
 ## *Traversing through AST*
 
 Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` 和 `ASTMatcher`
+
+
+
+
+
+```C++
+void clang::ParseAST (Preprocessor &pp, ASTConsumer *C, ASTContext &Ctx, bool PrintStats=false,
+                      TranslationUnitKind TUKind=TU_Complete,
+                      CodeCompleteConsumer *CompletionConsumer=nullptr,
+                      bool SkipFunctionBodies=false);
+```
+
+
+
+
+
+
+
+
+
+
 
 ### RecursiveASTVisitor
 
 [How to write RecursiveASTVisitor based ASTFrontendActions. — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/RAVFrontendAction.html)
 
+
+
+
+
+继承RecursiveASTVisitor，并且实现其中的 VisitCXXRecordDecl，那么这个方法就会在访问 CXXRecordDecl类型的节点上触发
+
 ### ASTMatcher
 
 [Tutorial for building tools using LibTooling and LibASTMatchers — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersTutorial.html)
+
+
+
+
+
+```C++
+```
+
+
 
 ## *AST可视化*
 
@@ -403,6 +795,23 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 [Clang Static Analyzer — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangStaticAnalyzer.html)
 
 Clang Static Analyzer，下面简称CSA，是LLVM提供的静态分析工具
+
+[Clang Static Analyzer 介绍 | jywhy6's blog](https://blog.jywhy6.zone/2021/05/31/clang-static-analyzer-intro/)
+
+## *CSA中用到的数据结构*
+
+### CSA流程
+
+<img src="CSA流程.drawio.png">
+
+1. CSA以源代码为起点，将源代码转换为AST
+2. 将AST转换为控制流图 CFG
+3. 随着程序的模拟执行，Clang 的符号执行引擎会生成 Exploded Graph 扩展图，详细记录程序的执行位置和程序当前状态信息
+4. 最后，在各个 Checker（CSA中可自定义的漏洞检查器）回调函数检测到漏洞产生时，将基于 Exploded Graph 中的数据生成带漏洞触发路径的漏洞报告
+
+### Exploded Graph
+
+### CSA的符号执行
 
 ## *Checker*
 
@@ -705,6 +1114,24 @@ fout << out.c_str();
 
 IR是LLVM的核心所在
 
+
+
+- `@` 全局标识
+- `%` 局部标识
+- `alloca` 开辟空间
+- `align` 内存对齐
+- `i32` 32个bit, 4个字节
+- `store` 写入内存
+- `load` 读取数据
+- `call` 调用函数
+- `ret` 返回
+
+
+
+LLVM的优化级别分别是-O0 -O1 -O2 -O3 -Os（第一个是大写英文字母O）
+
+Debug情况下默认是不优化，Release情况下默认Fastest、Smallest
+
 # 代码优化 Pass
 
 ## *Polly*
@@ -743,5 +1170,48 @@ Java虚拟机（JVM）是使用JIT编译技术的一个著名例子。在JVM中�
 
 
 
+# 其他LLVM工具
 
+## *LLDB*
 
+LLDB的使用可以看 *IDE与调试工具.md*
+
+## *TableGen*
+
+ableGen是LLVM项目用来定义和生成各种数据表和程序结构的一种工具。这些`.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
+
+### TableGen工具
+
+LLVM的TableGen工具可以从这些定义文件中生成C++代码、文档或其他格式的数据。例如，它可以被用来自动化以下任务：
+
+- **生成寄存器描述**：TableGen可用于定义处理器的寄存器类、寄存器别名以及其他与寄存器相关的属性。
+- **指令编码解码**：可以定义指令的二进制编码格式，并由此生成编码和解码指令所需的代码。
+- **指令选择规则**：后端编译器的负责将中间表示转换为目标机器代码的指令选择阶段可以通过`.td`文件中的模式来定义。
+- **调度信息**：给出CPU的管线模型和指令的延迟，调度算法需要此信息来进行指令重排序以提高性能。
+
+### DSL: TableGen语言
+
+[StormQ's Blog (csstormq.github.io)](https://csstormq.github.io/blog/LLVM 之后端篇（1）：零基础快速入门 TableGen)
+
+### `.td` 文件内容
+
+一个`.td`文件会包含一个或多个通过TableGen语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值，然后被TableGen工具处理和转换。下面是一个简单的例子：
+
+```llvm
+// InstrInfo.td - Example instruction definitions for an imaginary target.
+
+def MyTargetInst : Instruction {
+  let Namespace = "MyTarget";
+  bit<5> Opcode;
+}
+
+def ADD : MyTargetInst<"add", "Add two values">,
+          InOperandList<[GPR, GPR]>, OutOperandList<[GPR]> {
+  let Inst{31-27} = Opcode;
+  let ParserMatchClass = AddRegReg;
+}
+```
+
+上面的例子中，我们首先定义了一个指令类`MyTargetInst`，它有一个5位的操作码字段`Opcode`。接着我们使用该类来定义了一个加法指令`ADD`，并且指定了其输入和输出操作数列表，以及如何在解析器中匹配该指令。
+
+最终，TableGen工具会读取`.td`文件并根据其中的定义来生成相应的代码或数据，这样开发者就不再需要手动编写大量重复而容易出错的代码了。在LLVM中，这种自动化的方法使得支持新的指令集架构或修改现有的指令集变得更加灵活和简单。

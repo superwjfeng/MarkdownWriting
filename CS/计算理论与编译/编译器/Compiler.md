@@ -1,3 +1,5 @@
+[分类: Compile Principle | Liuye Notebook (liuyehcf.github.io)](https://liuyehcf.github.io/categories/Compile-Principle/)
+
 # Introduction
 
 ## *编译器构造*
@@ -827,7 +829,20 @@ Vaughan Pratt 提出的 Pratt Parsing 算法（也称为 operator precedence par
 
 
 
+
+
+
+
+### 移入-规约分析中的冲突
+
+* 移入/规约冲突
+* 规约/规约冲突
+
+## *自底向上（LR分析）概述*
+
 ### 移入-规约分析
+
+<img src="移入规约分析.jpg" width="70%">
 
 移入-规约分析 shift-reduce parsing 可以采取的动作有
 
@@ -842,24 +857,7 @@ Vaughan Pratt 提出的 Pratt Parsing 算法（也称为 operator precedence par
 2. 然后，它将𝛽**归约**为某个产生式的左部
 3. 语法分析器不断地重复这个循环，直到它检测到一个**语法错误**，或者**栈中包含了开始符号且输入缓冲区为空**（当进入这样的格局时，语法分析器停止运行，并宣称**成功**完成了语法分析）为止
 
-### 句柄剪枝
-
-每次归约的符号串称为句柄 handle，即句柄是和某个产生式体匹配（且需要进行规约）的子串，对它的规约代表了相应的最右推导中的一个反向步骤
-
-
-
-### 移入-规约分析中的冲突
-
-* 移入/规约冲突
-* 规约/规约冲突
-
-## *自底向上（LR分析）*
-
-### intro
-
-
-
-从左到右称为一个替换或推导，把从右到左的过程称为一个规约 reduction
+**从左到右称为一个替换或推导，把从右到左的过程称为一个规约 reduction**
 
 ```
 0: S -> E
@@ -890,6 +888,16 @@ S         // 规则0：E规约为S
   * 对产生式 `A->β1 … βn`，如果 βn … β1 在栈顶上，则弹出 βn … β1
   * 压入 A
 
+### 句柄剪枝
+
+**每次归约的符号串称为句柄 handle**，即句柄是和某个产生式体匹配（且需要进行规约）的子串，对它的规约代表了相应的最右推导中的一个反向步骤
+
+
+
+### intro
+
+
+
 
 
 ```
@@ -909,9 +917,7 @@ S         // 规则0：E规约为S
 
 
 
-项目集规范族是一个DFA
 
-LR(0)分析表是对这个DFA完全等价的描述，实际编码的时候这个DFA是被编码成这个LR(0)分析表的
 
 
 
@@ -921,11 +927,15 @@ LR(0)分析表是对这个DFA完全等价的描述，实际编码的时候这个
 
 从圈内到圈外能力越强，从圈内到圈外逐渐改进，主要的区别就在于进行移位和规约操作的时机。改进的进度如下：
 
-* 首先一条大思路是见到First集就移进，见到Follow集就归约
-* 从LR(0)开始：见到First集就移进，见到终态就归约
-* SLR(1)：见到First集就移进，到终态后，**先不要动，先看Follow集**，与Follow集对应的项目归约，其它报错。，因为含有一些“展望信息”——利用了Follow(A)信息，所以可以减少表规模并且可以精确报错。可以解决“归约－归约”冲突；但是没有包含足够的展望信息，缺点是**不能完成解决“移进－归约”冲突**，需要改进
+* 首先一条大思路是见到FIRST集就移进，见到FOLLOW集就归约
+* 从LR(0)开始：见到FIRST集就移进，见到终态就归约
+* SLR(1)：见到FIRST集就移进，到终态后，**先不要动，先看FOLLOW集**，与FOLLOW集对应的项目归约，其它报错。，因为含有一些“展望信息”——利用了FOLLOW(A)信息，所以可以减少表规模并且可以精确报错。可以解决归约－归约冲突；但是没有包含足够的展望信息，缺点是**不能完成解决移进－归约冲突**，需要改进
 * LR(1)：基于LR(0)，是对LR(0)的另一种改进，通过进一步判断一个向前看符号来决定是否执行规约动作
-* LALR：把相似的项目集合并，改写action和goto表
+* LALR：把相似的项目集合并，改写ACTION和GOTO表
+
+
+
+<img src="LR分析器的结构.jpg" width="70%">
 
 ## *LR(0) 分析*
 
@@ -947,7 +957,7 @@ LR(0)分析表是对这个DFA完全等价的描述，实际编码的时候这个
 
 
 
-
+LR(0)分析表是对这个DFA完全等价的描述，实际编码的时候这个DFA是被编码成这个LR(0)分析表的
 
 
 
@@ -999,38 +1009,83 @@ YACC，Bison采用的都是LALR(1)文法分析方法
 
 语法分析树/推导树 Parse Tree, PT
 
+### 两个重要概念
 
+* An attribute is any quantity associated with a programming construct. Examples of attributes are data types of expressions, the number of instructions in the generated code, or the location of the rst instruction in the generated code for a construct, among many other possibilities. Since we use grammar symbols (nonterminals and terminals) to represent programming constructs, we extend the notion of attributes from constructs to the symbols that represent them. 
 
-An attribute is any quantity associated with a programming construct. Examples of attributes are data types of expressions, the number of instructions in the generated code, or the location of the rst instruction in the generated code for a construct, among many other possibilities. Since we use grammar symbols (nonterminals and terminals) to represent programming constructs, we extend the notion of attributes from constructs to the symbols that represent them. 
+  属性是与编程结构相关联的任何量。属性的类型很多，比如表达式的数据类型、生成代码中的指令数量，或者某个结构生成代码的第一条指令的位置，都是属性的例子。由于我们使用语法符号（即非终结符和终结符）来表示编程结构，因此我们将属性的概念从结构扩展到代表它们的符号。
 
-属性是与编程结构相关联的任何量。属性的类型很多，比如表达式的数据类型、生成代码中的指令数量，或者某个结构生成代码的第一条指令的位置，都是属性的例子。由于我们使用语法符号（即非终结符和终结符）来表示编程结构，因此我们将属性的概念从结构扩展到代表它们的符号。
+* (Syntax-directed) translation scheme: A translation scheme is a notation for attaching program fragments to the productions of a grammar. The program fragments are executed when the production is used during syntax analysis. The combined result of all these fragment executions, in the order induced by the syntax analysis, produces the translation of the program to which this analysis/synthesis process is applied.
 
-(Syntax-directed) translation scheme: A translation scheme is a notation for attaching program fragments to the productions of a grammar. The program fragments are executed when the production is used during syntax analysis. The combined result of all these fragment executions, in the order induced by the syntax analysis, produces the translation of the program to which this analysis/synthesis process is applied.
-
-（语法制导的）翻译方案是一种符号记法，用于将程序片段附加到语法的产生式上。当在语法分析期间使用产生式时，执行程序片段。将所有这些片段执行的综合结果，按照语法分析引导的顺序组合起来，就是应用了此分析/合成过程的程序的翻译的结果。
+  （语法制导的）翻译方案是一种符号记法，用于将程序片段附加到语法的产生式上。当在语法分析期间使用产生式时，执行程序片段。将所有这些片段执行的综合结果，按照语法分析引导的顺序组合起来，就是应用了此分析/合成过程的程序的翻译的结果。
 
 
 
 ## *语法制导定义 SDD*
 
-语法制导定义 Syntax-Directed Definition, SDD
+语法制导定义 Syntax-Directed Definition, SDD 是对CFG的推广
 
+- 将每个**文法符号**和一个**语义属性**集合相关联
+- 将每个**产生式**和一组**语义规则**相关联，用来计算该产生式中各文法符号的属性值
 
+### 文法符号的属性
+
+文法符号的属性分为两种
 
 * 综合属性 synthesized attribute：在PT的结点N上的非终结符号A的综合属性是由N上的产生式所关联的语义规则来定义的。注意：这个产生式的头一定是A。节点N上的综合属性只能通过N的子节点或N本身的属性值来定义
 
   综合属性有一个优良的性质：只需要对PT进行一次自底向上的遍历，就可以计算出属性的值
 
-* 继承属性 inherited attribute：在PT结点上的非终结符号B的继承属性是由N的父节点上的产生式所关联的语义规则来定义的。注意：这个产生式的体中必然包含符号B。节点N上的继承属性只能通过N的父节点、N本身和N的兄弟节点上的属性来定义
+  <img src="综合属性.jpg" width="70%">
 
+* 继承属性 inherited attribute：在PT结点上的**非终结符号**B的继承属性是由N的父节点上的产生式所关联的语义规则来定义的。注意：这个产生式的体中必然包含符号B。节点N上的继承属性只能通过N的父节点、N本身和N的兄弟节点上的属性来定义
+
+  * **终结符是没有继承属性的**。终结符从词法分析器处获得的属性值被归为综合属性值
   * 继承属性还有另一种定义方式
   * 如果有继承属性的话求值顺序就会变得复杂，需要借助依赖图来解决
+  
+  <img src="继承属性.jpg" width="70%">
+
+### 属性文法
+
+一个没有副作用的SDD有时也称为属性文法 attribute grammer。属性文法的规则仅仅通过其它属性值和常量来定义一个属性值
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## *SDD的求值顺序*
 
-### S属性
+### 依赖图
 
-### L属性
+依赖图 dependency graph 是一个描述了分析树中结点属性间依赖关系的有向图
+
+一个可行的求值顺序就是依赖图的一个拓扑排序 topological sort
+
+
+
+给定一个SDD，很难确定是否存在某棵语法分析树，使得SDD的属性之间存在循环依赖关系。幸运的是，存在一个SDD的有用子类，它们能够保证对每棵语法分析树都存在一个求值顺序，因为它们不允许产生带有环的依赖图。不仅如此，接下来介绍的两类SDD可以和自顶向下及自底向上的语法分析过程一起高效地实现
+
+### S-SDD
+
+S-属性定义 S-Attributed Definitions, S-SDD 是仅使用综合属性的SDD
+
+- 如果一个SDD是S属性的，可以按照语法分析树节点的任何**自底向上**顺序来计算它的各个属性值
+- S-属性定义可以在**自底向上的语法分析过程**中实现
+
+### L-SDD
+
+L-属性定义 L-Attributed Definitions, L-SDD 是指在一个产生式所关联的各属性之间，**依赖图的边可以从左到右，但不能从右到左**。因此称为L属性的，L是Left的首字母
 
 ## *语法制导翻译 SDT*
 
@@ -1066,7 +1121,7 @@ https://www.zhihu.com/question/583091880/answer/2885484239
 * 语法分析树 Parse Tree 是用上下文无关文法G到终结符串的推导过程的表示形式，用于表示对该终结符串进行推导的时候应用了哪些产生式。即语法分析树是理论上用于完整地描述推导过程的，实际上并不需要真正地实现它，只是一种分析工具
 * 而AST是在写编译器的文法分析阶段，根据前一阶段的词法分析产生的一堆Token所构建出来的。也就是说，AST是要用代码实实在在地写出来的，之后的语义分析是建立在这棵AST上的
 
-AST是源代码的一种树状结构表示，它表示了源代码的文法结构，但忽略了不影响语义的细节，如空格、注释等。每个节点代表程序的一部分，例如声明、表达式、控制流结构等
+AST是源代码的一种树状结构表示，它表示了源代码的文法结构，但忽略了不影响语义的细节，如空格、注 释等。每个节点代表程序的一部分，例如声明、表达式、控制流结构等
 
 之所以说文法是抽象的，是因为这里的树并不会表示出真实语法中出现的每个细节，只需要保存之后语义分析阶段和中间代码生成阶段所需要的结点即可。具体的语义信息需要在语义分析阶段进行实现补充
 
