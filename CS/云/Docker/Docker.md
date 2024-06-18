@@ -1442,22 +1442,26 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
 * `WORKDIR <directory>`：对任何后续的RUN、CMD、ENTRYPOINT、ADD或COP指令设置工作目录，该命令可以多次使用
 
-* SHELL：Docker 使用 `/bin/sh -c` 作为默认的 shell。但是可以通过 `SHELL` 指令来指定使用其他的 shell。`-c` 表示把后面的字符串当作命令来执行，而是当作一个脚本文件来执行
+  [WORKDIR 指定工作目录 | Docker — 从入门到实践 (gitbook.io)](https://yeasy.gitbook.io/docker_practice/image/dockerfile/workdir)
+
+  在初学的时候犯过的错误：把 Dockerfile 当成 Shell Script 来写用了cd，实际上对于跨文件层（即Dockerfile中的两条指令）来说cd没有意义。Docker采用分层存储来构建，所以不同行的命令是不同的容器，因此想要持久地更改目录，应该要用 `WORKDIR`
+
+* `SHELL`：Docker 使用 `/bin/sh -c` 作为默认的 shell。但是可以通过 `SHELL` 指令来指定使用其他的 shell。`-c` 表示把后面的字符串当作命令来执行，而是当作一个脚本文件来执行
 
 * `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
 
 * `RUN <command>`：在容器内执行指定的指令，并把结果保存下来
 
-* EXPOSE：暴露容器的端口，使得可以从主机访问容器内的服务
+* `EXPOSE`：暴露容器的端口，使得可以从主机访问容器内的服务
 
 * `CMD <command>`
 
   * 用来定义当启动基于某个镜像的容器时的默认程序
   * 每一个Dockerfile只能有一个CMD
 
-* LABEL：以键值对的形式为镜像添加元数据
+* `LABEL`：以键值对的形式为镜像添加元数据
 
-* ARG：用于定义构建时的参数。这些参数也可以在构建 Docker 镜像时通过 `--build-arg` 标志进行传递
+* `ARG`：用于定义构建时的参数。这些参数也可以在构建 Docker 镜像时通过 `--build-arg` 标志进行传递
 
 ### Build 命令
 

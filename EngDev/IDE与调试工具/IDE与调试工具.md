@@ -285,6 +285,8 @@ info register eax
 
 ## *.gdbinit*
 
+[cyrus-and/gdb-dashboard: Modular visual interface for GDB in Python (github.com)](https://github.com/cyrus-and/gdb-dashboard)
+
 `.gdbinit` 是 GDB 的初始化文件，它是一个用于配置 GDB 行为的用户自定义文件。当启动 GDB 时，它会自动在用户的 home 目录下查找并加载 `.gdbinit` 文件，执行其中的命令。这使得用户可以在 GDB 启动时自动执行一系列的设置和命令，以方便调试
 
 以下是一些在 `.gdbinit` 文件中常见的用法：
@@ -361,9 +363,76 @@ info register eax
 
 [🐛 LLDB (llvm.org)](https://lldb.llvm.org/)
 
-
-
 [GDB to LLDB command map - 🐛 LLDB (llvm.org)](https://lldb.llvm.org/use/map.html)
+
+LLDB 是 LLVM 工具链中的debugger
+
+> LLDB is a next generation, high-performance debugger. It is built as a set of reusable components which highly leverage existing libraries in the larger [LLVM Project](https://llvm.org/), such as the Clang expression parser and LLVM disassembler.
+>
+> LLDB is the default debugger in Xcode on macOS and supports debugging C, Objective-C and C++ on the desktop and iOS devices and simulator.
+
+## *调试执行*
+
+和gdb一样，LLVM 编译出来的二进制程序默认是release模式，编译的时候一定要 `-g` 才会把程序的debug信息放进去，从而才能使用debugger调试
+
+* 两种加载调试文件的方式
+
+  * 直接 `lldb file_name` 来加载调试文件
+  * 如果是先打开了gdb，可以通过 `file file_name` 来加载调试文件 
+
+* 调试需要参数的程序退出GDB
+
+  * gdb打开程序后，使用 `run` 命令并附带程序需要的参数
+
+    ```
+    run arg1 arg2 arg3
+    ```
+
+  * 使用 `settings set` 命令设置参数后再run
+
+    ```
+    (lldb) settings set target.run-args 1 2 3
+    (lldb) run
+    ...
+    (lldb) run
+    ...
+    ```
+
+* 当完成调试时，可以使用 `q` 或者 `quit` 命令退出GDB
+
+### 启动调试
+
+## *断点管理*
+
+### 断点操作
+
+* 设置断点：在程序中设置断点，以在特定位置停止程序的执行。使用 `breakpoint` or `br` or `b` 命令，后面跟上文件名和行号或函数名
+* 查看断点：`breakpoint list` or `br l`
+* 启用和禁用断点：使用 `breakpoint enable` or `br en` 和 `breakpoint disable` or `br dis` 命令可以分别启用和禁用一个或多个断点
+* 删除断点
+  * `breakpoint delete` or `br del` 删除所有断点；`delete 断点编号` 删除指定编号的断点；`delete 范围` 删除编号范围内的断点
+  * `clear 函数名` 删除函数断点；`clear 行号` 删除指定行号的断点
+* 临时断点：可以设置一个临时断点，它会在首次触发后自动删除。使用 `tbreak` 命令来设置临时断点，例如，`tbreak function_name`
+
+### 断点的重复操作
+
+1. **忽略计数**：
+   * 可以使用 `ignore` 命令来设置一个断点的忽略计数，以指定触发断点的次数。例如，`ignore 3 1` 表示在第3次触发后停止。
+2. **条件断点修改**：
+   * 使用 `condition` 命令可以更改条件断点的条件。例如，`condition breakpoint_number new_condition`。
+
+## *程序执行*
+
+c/continue，继续执行
+n/next，单步调试
+s/step，进入一个函数
+finsh，执行完当前函数
+
+## *Python API*
+
+### 自定义断点类型
+
+### 自定义LLDB命令
 
 # 核心转储文件调试分析
 

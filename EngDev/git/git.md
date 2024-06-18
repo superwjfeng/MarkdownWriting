@@ -841,6 +841,24 @@ git cherry-pick <commit-hash>
 
 但是若没有使用 `git checkout -b <local-branch> origin/<remote-branch>`，或者说忘记打后半部分了导致没有建立连接关系也不用紧，还可以使用`git branch --set-upstream-to=<remote>/<remote branch>` 来创建本地和远端分支的关联关系
 
+### 补充：upstream
+
+upstream 通常指维护主要开发和最新变化的仓库。当我们对某个项目进行分支或者复制（fork）时，原始的源仓库就被称为 upstream repository，而我们自己的分支版本则是一个 downstream 或 forked 仓库
+
+举例来说，如果我们从GitHub上克隆了一个开源项目以贡献代码或者定制自己的版本，那么这个项目的官方仓库就是我们的 upstream 仓库。当项目维护者更新了该仓库后，我们可以从 upstream 拉取最新的变化到本地副本或者我们在GitHub上的分支仓库中
+
+在Git中，upstream 概念经常与远程跟踪分支一起使用。当克隆一个仓库时，默认的远程仓库名字是 `origin`。但是如果是从别的地方fork了一个仓库，并希望追踪原仓库的变化，可能需要添加一个额外的远程引用，命名为 `upstream`，如下
+
+```cmd
+$ git remote add upstream https://github.com/original_owner/original_repo.git
+```
+
+然后，可以通过以下命令从upstream仓库获取更新：
+
+```cmd
+$ git fetch upstream
+```
+
 ### Detached HEAD
 
 当用户在 Git 中切换到一个特定的commit，而不是分支时， HEAD 引用会进入 detached HEAD 状态。这种状态下的提交可能会更加容易丢失，因此在进行任何修改之前，应谨慎考虑并理解当前所处的状态

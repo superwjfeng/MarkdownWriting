@@ -64,7 +64,7 @@ LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下
 
 原文链接：https://blog.csdn.net/m0_72827793/article/details/135371852
 
-# 安装 & 编译LLVM
+# 安装 & 编译 & 测试 LLVM
 
 截止到2024.6.11，LLVM的最新版本为18.1.6
 
@@ -131,7 +131,8 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
 * shallow-clone
 
   ```cmd
-  $ git clone --depth 1 https://github.com/llvm/llvm-project.git
+  $ git clone --depth 1 https://github.com/llvm/llvm-project.git # https
+  $ git clone --depth 1 git@github.com:llvm/llvm-project.git
   ```
 
 * 不拉取 user branch
@@ -178,9 +179,19 @@ xargs rm -rf < install_manifest.txt
 
 ### 同时安装多个版本的LLVM
 
+TBD
 
+建议采用Docker的方式来安装
 
 ### CMake Cache
+
+许多在本文档页面中提到的构建配置可以通过使用CMake缓存来实现。CMake缓存本质上是一个配置文件，用于设置特定构建配置所需的标志。Clang的缓存位于单一仓库的 `/clang/cmake/caches` 目录下。在下面的示例中展示了如何结合额外的配置标志，使用 `-C` 标志将它们传递给CMake
+
+### 执行测试
+
+```cmd
+$ make check-all
+```
 
 ### Stand-alone Builds
 
@@ -237,17 +248,104 @@ ninja -C $builddir install
 - **LLVM_ENABLE_PROJECTS:STRING** 这个变量控制哪些项目被启用。如果只想要构建特定的LLVM子项目，比如Clang或者LLDB，可以使用这个变量来指定。例如，如果想同时构建Clang和LLDB，可以在CMake命令中加入 `-DLLVM_ENABLE_PROJECTS="clang;lldb"`
 - **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让能够控制哪些运行时库被启用。如果想要构建libc++或者libc++abi这样的库，可以使用这个变量。例如，为了同时构建libc++和libc++abi，应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`
 - **LLVM_LIBDIR_SUFFIX:STRING** 这个变量用于附加额外的后缀到库文件的安装目录。在64位架构上，你可能希望库文件被安装在`/usr/lib64`而非`/usr/lib`，那么可以设置 `-DLLVM_LIBDIR_SUFFIX=64`
-- **LLVM_PARALLEL_{COMPILE,LINK}_JOBS:STRING** 构建LLVM工具链可能会消耗大量资源，尤其是链接时。使用这些选项，当你使用Ninja生成器时，可以限制并行性。例如，为了避免内存溢出（OOM）或使用交换空间(swap)，在一台32GB内存的机器上，如果你想要限制同时只有2个链接作业，可以指定 `-G Ninja -DLLVM_PARALLEL_LINK_JOBS=2`
+- **LLVM_PARALLEL_{COMPILE,LINK}_JOBS:STRING** 构建LLVM工具链可能会消耗大量资源，尤其是Debug的链接。使用这些选项，当使用Ninja生成器时，可以限制并行性。例如，为了避免内存溢出（OOM）或使用交换空间(swap)，每15GB DRAM 可以给一个link job
 - **LLVM_TARGETS_TO_BUILD:STRING** 这个变量控制哪些目标架构被启用。例如，如果你只需要为你的本地目标架构（比如x86）构建LLVM，你可以使用 `-DLLVM_TARGETS_TO_BUILD=X86` 来实现
 - **LLVM_USE_LINKER:STRING** 这个变量允许你覆盖系统默认的链接器。例如，如果你想使用LLD作为链接器，可以设置 `-DLLVM_USE_LINKER=lld`
 
+## *高级编译设置*
+
+[Advanced Build Configurations — LLVM 19.0.0git documentation](https://llvm.org/docs/AdvancedBuilds.html)
+
+### Multi-Stage Build
+
+Multi-Stage Build 也称为 bootstrap build 自举编译，即将LLVM的编译过程分为多个阶段
+
+为什么需要这么设计？因为会有这样的需求：当开发者想要移植LLVM到一个新的平台或支持一个新的处理器架构时，他们可能会遇到先有鸡还是先有蛋的问题，即需要一个已经存在的编译器来构建新的编译器。多阶段编译解决了这个问题，让开发者能够逐步地生成能够自举的LLVM工具链
+
+* Stage 1
+
+  使用现有编译器（例如系统提供的GCC或Clang）构建LLVM和Clang的基本可执行版本。这个阶段的输出是 bootstrap 编译器，它包含了基本的核心LLVM工具链，足以进行进一步的编译
+
+* Stage 2
+
+  使用第一步构建出的 bootstrap 编译器来编译完整的LLVM。这是为了确保新编译器能够编译自己的代码库，并且可以在特定的优化和代码生成方面自我验证与改进。产生一个由自身编译的更优化和精简的LLVM工具链
+
+* Stage 3 and even more stages (optional)
+
+  理论上，第三阶段的构建输出应该和第二阶段完全一致，这可以作为一个测试来确保编译器的生成自洽性（也就是说，它可以可靠地复制自己的输出）
+
+LLVM的多阶段编译可以通过 `-DCLANG_ENABLE_BOOTSTRAP=On` 来开启
+
+```cmd
+$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DCLANG_ENABLE_BOOTSTRAP=On \
+    -DLLVM_ENABLE_PROJECTS="clang" \
+    <path to source>/llvm
+$ ninja stage2
+```
+
+
+
+```cmd
+$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DCLANG_ENABLE_BOOTSTRAP=On \
+    -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" \
+    -DLLVM_ENABLE_PROJECTS="clang" \
+    <path to source>/llvm
+$ ninja stage2
+```
+
+
+
+### Multi-Stage PGO
+
+Profile-Guided Optimizations, PGO
+
+### BOLT
+
+Binary Optimization and Layout Tool, BOLT
+
+### 3-Stage Non-Determinism
+
+
+
 ## *Docker*
+
+`llvm/utils/docker` 文件夹下存放着将LLVM docker化的相关文件
+
+LLVM Project提供了以 `debian10` and `nvidia-cuda` 分别作为基准镜像的两个dockerfile，还有一个example供用户自己填充关键选项
+
+### Shell Script for Generating Dockerfile
+
+LLVM Project 另外提供了一个用来生成可定制化的LLVM的Dockerfile的Shell script `llvm/utils/build_docker_image.sh`
+
+```cmd
+$ cd llvm/utils/docker
+$ ./build_docker_image.sh \
+    --source ubuntu2204 \
+    --docker-repository clang-ubuntu --docker-tag "staging" \
+    -p clang -p lldb -i install-clang -i install-clang-resource-headers \
+    -- \
+    -DCMAKE_BUILD_TYPE=Debug
+```
+
+docker-repository 就是一个名字，取什么无所谓
 
 ## *Cross-compile*
 
-LLVM的cross-compile（交叉编译）是指在一种架构或操作系统上使用LLVM工具链来编译为在不同的目标架构或操作系统上运行的代码。简而言之，交叉编译涉及生成可在与构建环境（即你正在编译代码的机器）不同的目标环境（即代码将要运行的机器）上执行的程序。
+### 交叉编译的需求 
 
-例如，你可能在一台x86架构的Linux电脑上开发软件，但是需要为ARM架构的嵌入式设备编译这个软件。使用交叉编译，你可以创建一个专门针对ARM架构的可执行文件，尽管你的开发机器是基于x86架构的。
+LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LLVM工具链来编译为在不同的目标架构或操作系统上运行的代码。简而言之，交叉编译涉及生成可在与构建环境（即我们正在编译代码的机器）不同的目标环境（即代码将要运行的机器）上执行的程序
+
+比如说我们可能在一台x86架构的Linux电脑上开发软件，但是需要为ARM架构的嵌入式设备编译这个软件。使用交叉编译，我们可以创建一个专门针对ARM架构的可执行文件，尽管我们的开发机器是基于x86架构的
+
+交叉编译通常用于以下情况：
+
+1. 编写嵌入式系统或移动设备应用程序，因为这些设备通常没有足够的资源来编译复杂的代码
+2. 构建为特定操作系统或硬件优化的软件，尤其是当开发环境与目标环境不同时
+3. 创建操作系统镜像，通常在主机系统上为其他架构的设备构建系统镜像
+
+### `llvm::Triple`
 
 LLVM作为一个编译器框架支持交叉编译的特性使得它非常适合开发需要在多平台上运行的软件。提供了目标三元组（target triple）的概念——一种标识目标系统的格式，包括CPU类型、制造商和操作系统等信息，以便于交叉编译器生成正确的代码。
 
@@ -256,19 +354,40 @@ LLVM作为一个编译器框架支持交叉编译的特性使得它非常适合�
 ```
 
 ```cmd
-❯ clang --version | grep Target
+$ clang --version | grep Target
 Target: x86_64-unknown-linux-gnu
 ```
 
-
-
-交叉编译通常用于以下情况：
-
-1. 编写嵌入式系统或移动设备应用程序，因为这些设备通常没有足够的资源来编译复杂的代码。
-2. 构建为特定操作系统或硬件优化的软件，尤其是当开发环境与目标环境不同时。
-3. 创建操作系统镜像，通常在主机系统上为其他架构的设备构建系统镜像。
+```C++
+// llvm-project/llvm/include/llvm/TargetParser/Triple.h
+class Triple {
+public:
+  enum ArchType { };
+  enum SubArchType { };
+  enum VendorType { };
+  enum OSType { };
+  enum EnvironmentType { };
+  enum ObjectFormatType { };
+public:
+  explicit Triple(const Twine &Str);
+  Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr);
+  Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr,
+         const Twine &EnvironmentStr);
+};
+```
 
 ## *卸载LLVM*
+
+## *测试*
+
+[Llvm 源码结构及测试基础 - 吴建明wujianming - 博客园 (cnblogs.com)](https://www.cnblogs.com/wujianming-110117/p/17128814.html)
+
+LLVM 测试基础设施包含三大类测试：单元测试 unit test、回归测试 regression test 和整个程序。单元测试和回归测试分别包含在 LLVM 存储在 LLVM/unittest 和 LLVM/test 之下，并且应该始终通过，一般情况作为check-in，即它们应该在每次提交之前运行
+
+* 单元测试是使用 Google Test 和 Google Mock 编写的，位于 llvm/unittest 目录中。在一般情况下，单元测试用于针对支持库和其他通用数据结构，我们倾向于依赖回归测试来测试 IR 上的转换和分析
+* 回归测试是测试 LLVM 特定特性或在 LLVM 中触发特定 bug 的小段代码。它们使用的语言取决于测试的 LLVM 部分。这些测试由 Lit 测试工具(LLVM 的一部分)驱动，位于 LLVM/test 目录中
+
+通常，当在 LLVM 中发现 bug 时，应该编写一个回归测试，其中包含足够的代码来重现问题，并将该测试放置在这个目录的某个位置。例如，它可以是从实际应用程序或基准中提取的一小段 LLVM IR
 
 # 预定义宏
 
@@ -334,7 +453,7 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 target_link_libraries(simple-tool ${llvm_libs})
 ```
 
-# Clang 架构
+# Clang Driver
 
 [Clang C Language Family Frontend for LLVM](https://clang.llvm.org/)
 
@@ -348,7 +467,134 @@ Doxygen: [clang: clang (llvm.org)](https://clang.llvm.org/doxygen/)
 
 > The Clang project provides a language front-end and tooling infrastructure for languages in the C language family (C, C++, Objective C/C++, OpenCL, CUDA, and RenderScript) for the [LLVM](https://www.llvm.org/) project. Both a GCC-compatible compiler driver (`clang`) and an MSVC-compatible compiler driver (`clang-cl.exe`) are provided. You can [get and build](https://clang.llvm.org/get_started.html) the source today.
 
-## *Clang Driver*
+[clang 源码导读（1）: clang 入门-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1803207)
+
+[clang 源码导读（2）: clang driver 流程简介-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1803206)
+
+[clang 源码导读（3）: clang driver 参数解析-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1803211)
+
+[clang 源码导读（4）: clang driver 构建 Actions-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1803208)
+
+[clang 源码导读（5）: clang driver 构建 Jobs (qq.com)](https://mp.weixin.qq.com/s/abhUVoXqr52yXj-HJEjd8Q)
+
+[clang 源码导读（6）: clang driver 执行命令 (qq.com)](https://mp.weixin.qq.com/s/7khfjSesUdeJUXi-NT5zZA)
+
+[clang 源码导读（7）：编译器前端流程简介-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1810976)
+
+[clang 源码导读（8）：词法分析和预处理指令-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1811032)
+
+## *实操：编译Pipeline*
+
+下图是以Clang为前端的，LLVM为后端的编译器的整体架构
+
+<img src="Clang-LLVM-compiler-architecture.png">
+
+以下面这份代码为例
+
+```C++
+//Example.c
+#include <stdio.h>
+int global;
+void myPrint(int param) {
+    if (param == 1)
+        printf("param is 1");
+    for (int i = 0 ; i < 10 ; i++ ) {
+        global += i;
+    }
+}
+int main(int argc, char *argv[]) {
+    int param = 1;
+    myPrint(param);
+    return 0;
+}
+```
+
+### 编译传参
+
+由于Clang Driver的架构设计，需要分别用 `-Xclang` 和 `-mllvm` 分别将参数传递给Clang前端和LLVM中后段
+
+* -Xclang参数是将参数传递给Clang的CC1前端
+
+  比如想要禁用所有LLVM Pass的运行，也就是生成无任何优化的IR，那么就要使用-disable-llvm-passes参数传递给CC1。但是这个参数并没有Clang Driver的表示形式（也就是不使用-Xclang传递给CC1），那么就需要写-Xclang -disable-llvm-passes把参数透过Clang Driver把参数传递给CC1
+
+* -mllvm参数的作用是将参数传递给作为中后端的LLVM
+
+  如果参数是在LLVM中后端定义的，那么直接把参数给Clang的Driver或者CC1都是不行的，需要使用-mllvm将参数跳过Clang的Driver和CC1传递到LLVM。比如想要在Pass运行完成后输出IR，那么就需要使用-mllvm --print-after-all把参数传给LLVM
+
+### clang & clang++
+
+和gcc & g++的不同分工一样，clang & clang++同样分别适用于编译C和C++
+
+clang++会自动链接C++标准库，而clang则不会
+
+```C++
+int half(int x) {
+  int result = (x / 2);
+  return result;
+}
+
+int main() {
+  half(2);
+  return 0;
+}
+```
+
+```cmd
+$ clang -### test.cc &> clang_output.txt
+$ clang++ -### test.cc &> clangpp_output.txt
+$ diff -u clang_output.txt clangpp_output.txt
+```
+
+编译器的参数是一样的，都是调用的cc1。差异在于链接器 ld的调用参数：
+
+- 当使用 `clang` 时，链接器没有被告知链接 C++ 标准库 `libstdc++` 或数学库 `libm`
+- 当使用 `clang++` 时，链接器的调用包含了 `-lstdc++` 和 `-lm` 参数，这表明它需要链接 C++ 标准库和数学库。这是因为 `clang++` 被当作 C++ 编译器使用，自动假设需要这些库
+
+### 分别编译不同的阶段
+
+我们可以看下有下面这些阶段
+
+```cmd
+$ clang -ccc-print-phases main.cc
+            +- 0: input, "main.cc", c++
+         +- 1: preprocessor, {0}, c++-cpp-output
+      +- 2: compiler, {1}, ir
+   +- 3: backend, {2}, assembler
++- 4: assembler, {3}, object
+5: linker, {4}, image
+```
+
+1. 预处理
+
+   ```cmd
+   $ clang -E source.c -o preprocessed.i
+   ```
+
+2. 编译
+
+   ```cmd
+   $ clang -S -emit-llvm source.c -o intermediate.ll
+   ```
+
+3. 生成目标代码
+
+   ```cmd
+   $ clang -S source.c -o assembly.s
+   ```
+
+4. 汇编
+
+   ```cmd
+   $ clang -c source.c -o object.o
+   ```
+
+5. 编译
+
+   ```cmd
+   $ clang object.o -o executable
+   ```
+
+## *Overview*
 
 平常使用的可执行文件 `clang.exe` 只是一个Driver，即一个命令解析器，**用于接收gcc兼容的参数**（`clang++.exe`/`clang-cl.exe`同理，用于g++/msvc兼容的参数），然后传递给真正的clang编译器前端，也就是CC1。CC1作为前端，负责解析C++源码为语法树，转换到LLVM IR。比如选项A在gcc中默认开启，但是clang规则中是默认不开启的，那么为了兼容gcc，clang.exe的Driver就要手动开启选项A，也就是添加命令行参数，将它传递给CC1
 
@@ -374,7 +620,7 @@ Doxygen: [clang: clang (llvm.org)](https://clang.llvm.org/doxygen/)
 
    一旦解析了参数，就会构造出后续编译所需要的子任务。这涉及到确定输入文件及其类型，要对它们做哪些工作（预处理、编译、组装、链接等），以及为每个任务构造一个Action实例列表。其结果是一个由一个或多个顶层Action组成的列表，每个Action通常对应一个单一的输出（例如，一个对象或链接的可执行文件）。可以使用 `-ccc-print-phases` 可以打印出这个阶段的内容
 
-4. Bind: Tool & Filename Selection：
+4. Bind: Tool & Filename Selection
 
    这个阶段和后面的Trasnlate一起将将Actions转化成真正的进程。Driver自上而下匹配，将Actioins分配给分配给Tools，ToolChain负责为每个Action选择合适的Tool，一旦选择了Tool，Driver就会与Tool交互，看它是否能够匹配更多的Action
 
@@ -430,119 +676,169 @@ InstalledDir: /usr/local/bin
 
    链接器的参数还设定了一些链接选项，比如 PIE（Position Independent Executable，位置无关可执行文件），选择动态链接器以及库和搜索路径等
 
-## *Driver 代码*
+### Walkthrough of `clang_main`
 
 [LLVM-Driver笔记 | 香克斯 (shanks.pro)](https://shanks.pro/2020/07/14/llvm-driver/)
 
 [clang 01. clang driver流程分析-CSDN博客](https://blog.csdn.net/qq_43566431/article/details/130689146)
 
-在`clang/tools/driver/driver.cpp` 我们可以找到Driver的入口，其中入口逻辑都集中在clang_main之中
+在`clang/tools/driver/driver.cpp` 我们可以找到Driver的入口，其中入口逻辑都集中在**clang_main**之中
 
+1. **创建诊断**：clang_main 会先创建诊断实例 DiagnosticsEngine，诊断是编译器与开发者进行交互的重要部分。编译器通过诊断可以提供错误、警告或建议
 
+   ```C++
+   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+   ```
 
-<img src="AST_Action.png">
+2. **创建Driver实例**：创建 `clang::driver::Driver` 的实例 TheDriver，它会负责后续的所有任务
 
-注：上图的虚线框内为回调方法，表头黑体为类名
+3. **创建Compilation**：通过 Driver 的 `BuildCompilation()` 生成需要执行的命令，下面的都是`BuildCompilation()` 所调用的方法
 
-构建AST树的核心类是ParseAST(Parse the entire filespecified,notifyingthe ASTConsumer as the file is parsed),为了方便用户加入自己的actions，Clang提供了众
-多的hooks
+   1. `ParseArgStrings()` 参数解析 
+   2. 获取ToolChain：通过 `computeTargetTriple()` 获取 triple 并通过 `getToolChain()` 获取对应的 ToolChain
+   3. 创建Compilation持有参数
+   4. 通过 `BuildInputs()` 获取输入文件
+   5. 构建 Action：通过 `BuildUniversalActions()` 构建 Action
+   6. 构建 Jobs：通过 `BuildJobs()` 构建 Jobs
 
-### Frontend Action
+4. **执行Compilation**：当 Driver 构造完 Jobs 后，会通过 Driver 的 ExecuteCompilation 方法执行命令
 
-llvm-project/clang/include/clang/Frontend/FrontendOptions.h 中的 ActionKind 枚举类
+下面会对一些重要环节进行详细说明
 
-## *实操：编译Pipeline*
+### main 函数
 
-下图是以Clang为前端的，LLVM为后端的编译器的整体架构
+用Debug模式编译后用lldb调试，断点打到 Driver.cpp:4151，得到如下的栈帧
 
-<img src="Clang-LLVM-compiler-architecture.png">
-
-以下面这份代码为例
-
-```C++
-//Example.c
-#include <stdio.h>
-int global;
-void myPrint(int param) {
-    if (param == 1)
-        printf("param is 1");
-    for (int i = 0 ; i < 10 ; i++ ) {
-        global += i;
-    }
-}
-int main(int argc, char *argv[]) {
-    int param = 1;
-    myPrint(param);
-    return 0;
-}
+```
+(lldb) r
+Process 2900 launched: '/usr/local/bin/clang++' (x86_64)
+Process 2900 stopped
+* thread #1, name = 'clang++', stop reason = breakpoint 3.1
+    frame #0: 0x000055555b9f897e clang++`clang::driver::Driver::BuildActions(this=0x00007fffffffd250, C=0x000055556cba09c0, Args=0x000055556cb9f040, Inputs=0x00007fffffffcde0, Actions=0x000055556cba0a30) const at Driver.cpp:4154:7
+   4151
+   4152   // Builder to be used to build offloading actions.
+   4153   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
+-> 4154       !UseNewOffloadingDriver
+   4155           ? std::make_unique<OffloadingActionBuilder>(C, Args, Inputs)
+   4156           : nullptr;
+   4157
+(lldb) bt
+* thread #1, name = 'clang++', stop reason = breakpoint 3.1
+  * frame #0: 0x000055555b9f897e clang++`clang::driver::Driver::BuildActions(this=0x00007fffffffd250, C=0x000055556cba09c0, Args=0x000055556cb9f040, Inputs=0x00007fffffffcde0, Actions=0x000055556cba0a30) const at Driver.cpp:4154:7
+    frame #1: 0x000055555b9eae01 clang++`clang::driver::Driver::BuildCompilation(this=0x00007fffffffd250, ArgList=ArrayRef<char const*> @ 0x00007fffffffc9b0) at Driver.cpp:1543:17
+    frame #2: 0x00005555569fe03a clang++`clang_main(Argc=2, Argv=0x00007fffffffe668, ToolContext=0x00007fffffffe480) at driver.cpp:361:66
+    frame #3: 0x0000555556a3921c clang++`main(argc=2, argv=0x00007fffffffe668) at clang-driver.cpp:17:20
+    frame #4: 0x00007ffff7a66d90 libc.so.6`___lldb_unnamed_symbol3139 + 128
+    frame #5: 0x00007ffff7a66e40 libc.so.6`__libc_start_main + 128
+    frame #6: 0x00005555569fc3e5 clang++`_start + 37
 ```
 
-### 编译传参
 
-由于Clang Driver的架构设计，需要分别用 `-Xclang` 和 `-mllvm` 分别将参数传递给Clang前端和LLVM中后段
 
-* -Xclang参数是将参数传递给Clang的CC1前端
+## *Diagnostics*
 
-  比如想要禁用所有LLVM Pass的运行，也就是生成无任何优化的IR，那么就要使用-disable-llvm-passes参数传递给CC1。但是这个参数并没有Clang Driver的表示形式（也就是不使用-Xclang传递给CC1），那么就需要写-Xclang -disable-llvm-passes把参数透过Clang Driver把参数传递给CC1
+## *参数解析*
 
-* -mllvm参数的作用是将参数传递给作为中后端的LLVM
 
-  如果参数是在LLVM中后端定义的，那么直接把参数给Clang的Driver或者CC1都是不行的，需要使用-mllvm将参数跳过Clang的Driver和CC1传递到LLVM。比如想要在Pass运行完成后输出IR，那么就需要使用-mllvm --print-after-all把参数传给LLVM
 
-### clang & clang++
+### DriverOptTable
 
-和gcc & g++的不同分工一样，clang & clang++同样分别适用于编译C和C++
+OptTable 最小的单位是 `struct Info`，里面存放了一个 `ArrayRef<Info> OptionInfos`
 
-clang++会自动链接C++标准库，而clang则不会
+/llvm-project/clang/lib/Driver/DriverOptions.cpp
 
-```cmd
-$ clang -lstdc++ main.cpp
-$ clang++ main.cpp
-```
 
-### 分别编译不同的阶段
 
-我们可以看下有下面这些阶段
 
-```cmd
-$ clang -ccc-print-phases main.cc
-            +- 0: input, "main.cc", c++
-         +- 1: preprocessor, {0}, c++-cpp-output
-      +- 2: compiler, {1}, ir
-   +- 3: backend, {2}, assembler
-+- 4: assembler, {3}, object
-5: linker, {4}, image
-```
 
-1. 预处理
+### `Driver::ParseArgStrings()`
 
-   ```cmd
-   $ clang -E source.c -o preprocessed.i
-   ```
+`Driver::ParseArgStrings()` 的作用是将字符串数组解析为 ArgList，并做相关的校验
 
-2. 编译
+如何区分不支持或者不认识的参数？clang driver **不支持** 的参数，都可以通过 `Options.td` 文件查到。以 -pass-exit-codes 为例，gcc 支持该参数，但是 clang **不支持** 此参数
 
-   ```cmd
-   $ clang -S -emit-llvm source.c -o intermediate.ll
-   ```
+### ParseArgs
 
-3. 生成目标代码
 
-   ```cmd
-   $ clang -S source.c -o assembly.s
-   ```
 
-4. 汇编
+### ParseOneArg
 
-   ```cmd
-   $ clang -c source.c -o object.o
-   ```
+`OptTable::ParseOneArg()` 负责解析单个参数
 
-5. 编译
+## *构建Actions*
 
-   ```cmd
-   $ clang object.o -o executable
-   ```
+### Action Class
+
+[clang: clang::driver::Action Class Reference (llvm.org)](https://clang.llvm.org/doxygen/classclang_1_1driver_1_1Action.html)
+
+Action 是代表一个编译步骤的抽象基类，可以理解为将某种输入转为输出文件的操作步骤
+
+* BindArchAction 将 `.o` 文件与特定的架构做绑定
+* InputAction 只代表原始的输入文件/参数
+* **JobAction 可以理解能够通过单独的程序执行的过程**
+  * PreprocessJobAction 是将源码进行预处理的过程
+  * CompileJobAction 是将上一步的结果转为 `bitcode` 的过程
+  * BackendJobAction 是将 `bitcode` 转为 `.s` 文件的过程
+  * AssembleJobAction 是将`.s` 文件转为 `.o` 二进制文件的过程
+  * LinkJobAction 是将 `.o` 文件合并为静态库/动态库/可执行文件的过程
+  * LipoJobAction 是用于将多个 `BindArchAction` 输入合并为单一的 `fat mach-o` 文件
+* OffloadAction GPU的offload过程
+
+### `BuildUniversalActions()`
+
+通过 `BuildUniversalActions()` 构建 Actions
+
+1. 若没有传入 `-arch` 参数，可以通过 `ToolChain::getDefaultUniversalArchName()` 获取 triple 对应的架构
+
+2. 调用 `BuildActions()` 计算每个输入文件对应的 `SingleActions` (可能包含预处理、编译、后端、汇编等)
+
+   1. 调用 `Driver::handleArguments()` 对参数进行一些处理
+
+   2. 遍历输入源码文件`Inputs`，并通过下面的 `getCompilationPhases()` 获取需要对输入文件进行处理的 `phase` 数组，其内部会根据传入的参数通过 `getFinalPhase()` 来获取需要执行的最后一个 phase
+
+      ```llvm
+      // llvm-project/clang/include/clang/Driver/Types.def
+      
+      TYPE("c",                        C,            PP_C,            "c",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+      
+      TYPE("c++",                      CXX,          PP_CXX,          "cpp",    phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+      ```
+
+      ```C++
+      // llvm-project/clang/lib/Driver/Types.cpp
+      llvm::SmallVector< phases::ID, phases::MaxNumberOfPhases > clang::driver::types::getCompilationPhases(const clang::driver::Driver &Driver,
+                                                 lvm::opt::DerivedArgList &DAL, ID Id);	
+      ```
+
+      1. 先组装一个 `InputAction`，相当于输入文件的占位符
+      2. 依次遍历 phase，并根据 phase 创建 Acti	on（通过调用 `ConstructPhaseAction()` 实现） **注意，每个 NewCurrent 都会持有 Current**
+
+### Action流程
+
+1. Preprocess
+2. Compile
+3. Backend
+4. Assemble
+5. Link
+6. Bind & Lipo
+
+## *构建Jobs*
+
+### 为什么需要Jobs
+
+如前所述，上一步构建Actions中的每个JobAction可以理解为都可以通过单独的程序完成。但是这种方案会浪费很多时间进行 **生成中间文件** 和 **解析中间文件** 的操作。因此 clang driver 会尝试合并多个 JobAction ，以避免反复的硬盘读写操作和文件生成/解析操作
+
+构建 Jobs 包含两个步骤：
+
+1. Bind：将 Actions 转变要运行的实际 Jobs
+2. Translate：将 clang driver 接收的参数转为对应 Tools 可以理解的参数
+
+## *执行命令*
+
+jobs 构建完成后，会先调用 `Driver::ExecuteCompilation()`，它会依次完成以下任务：
+
+1. 通过 `Compilation::ExecuteJobs()` 执行命令
+2. 如果某些命令存在报错，将结果文件移除，并打印相关信息
 
 # Clang Lexer & Parser
 
@@ -558,23 +854,358 @@ Clang使用的Parser是基于递归下降分析 recursive descent parser 的
 
 [LLVM 编译器前端 Clang AST & API 学习笔记 | jywhy6's blog](https://blog.jywhy6.zone/2020/11/27/clang-notes/).
 
+## *Clang Frontend*
+
+本节介绍一下Clang Frontend的流程，同样是从clang_main开始
+
+通过 `ExecuteCC1Tool()` 分发不同的 `cc1`类型
+1. `-cc1` : LLVM 'Clang' Compiler
+2. `-cc1as` : Clang Integrated Assembler
+3. `-cc1gen-reproducer`: **Generate Libclang invocation reproducers**
+
+### `cc1_main()`
+
+llvm-project/clang/tools/driver/cc1_main.cpp
+
+`cc1_main()` 负责初始化 CompilerInstance、DiagnosticIDs，并调用 `CreateFromArgs()` 构建 CompilerInvocation
+
+1. `CreateFromArgs()` 内部会非常多的函数对参数进行解析，比如 -emit-obj
+
+2. 调用 `clangFrontendTool` 模块的 `ExecuteCompilerInvocation()` 执行编译任务。clangFrontendTool 模块很简单，其中只有一个 ExecuteCompilerInvocation.cpp 文件
+
+   1. 会先判断是否存在 `-h` `-v` 等参数，若存在，则会执行对应的任务。值得注意的是，这里会尝试加载 plugin
+
+   2. 经过一系列的判断后，才会通过 `CreateFrontendAction()` 创建需要执行的**编译器前端**任务
+
+      1. 先调用 `CreateFrontendBaseAction()` 创建 FrontendAction 的子类，并且会根据 `EmitObj` 参数创建 `EmitObjAction` 的实例
+
+      2. 任务创建完成后，会调用 clang/Frontend 模块的 `ExecuteAction()` 执行编译任务，其会通过 Inputs 获取输入文件，并依次调用以下方法
+
+         1. `Act.BeginSourceFile()` 通过懒加载方式创建 FileManager（负责和文件系统交互，文件缓存、目录查找等任务）和 SourceManager（负责查找并将文件缓存到内存）
+
+            1. `createPreprocessor()` 创建预处理器
+            2. `createASTContext()` 创建 ASTContext
+            3. `CreateWrappedASTConsumer()` 创建ASTConsumer
+
+         2. `Act.Execute()` 实际上是执行 EmitObjAction 继承自 FrontendAction 的 `Execute()`
+
+            1. 创建 Sema
+
+               ```
+               Act.Execute() -> FrontendAction:Execute() -> CodeGenAction::ExecuteAction()
+               -> ASTFrontendAction::ExecuteAction() -> CompilerInstance::createSema()
+               ```
+
+            2. `clang::ParseAST()` 构建 AST
+
+         3. `Act.EndSourceFile()`
+
+### CompilerInstance
+
+clang/Frontend 模块包含了很多重要的功能。 比如 `cc1_main()` 函数创建的CompilerInstance就是来自clang/Frontend
+
+CompilerInstance 是非常重要的一个类，因为它持有了诸如`preprocessor`、`Target`、`AST` 等属性
+
+### FrontendAction
+
+llvm-project/clang/include/clang/Frontend/FrontendOptions.h 中的 ActionKind 枚举类
+
+```C++
+enum ActionKind {
+  /// Parse ASTs and list Decl nodes.
+  ASTDeclList,
+  /// Parse ASTs and dump them.
+  ASTDump,
+  /// Parse ASTs and print them.
+  ASTPrint,
+  /// Parse ASTs and view them in Graphviz.
+  ASTView,
+  /// Dump the compiler configuration.
+  DumpCompilerOptions,
+  /// Dump out raw tokens.
+  DumpRawTokens,
+  /// Dump out preprocessed tokens.
+  DumpTokens,
+  /// Emit a .s file.
+  EmitAssembly,
+  /// Emit a .bc file.
+  EmitBC,
+  /// Translate input source into HTML.
+  EmitHTML,
+  /// Emit a .cir file
+  EmitCIR,
+  /// Emit a .ll file.
+  EmitLLVM,
+  // ...
+};  
+```
+
+## *AST核心API*
+
+### `clang::ParseAST()`
+
+<img src="AST_Action.png">
+
+注：上图的虚线框内为回调方法，表头黑体为类名
+
+构建AST树的核心类是`clang::ParseAST()`
+
+> Parse the entire file specified, notifying the ASTConsumer as the file is parsed.  This inserts the parsed decls into the translation unit held by Ctx.
+
+```C++
+void clang::ParseAST (Sema &S, bool PrintStats=false, bool SkipFunctionBodies=false);
+void clang::ParseAST (Preprocessor &pp, ASTConsumer *C, ASTContext &Ctx, bool PrintStats=false,
+                      TranslationUnitKind TUKind=TU_Complete,
+                      CodeCompleteConsumer *CompletionConsumer=nullptr,
+                      bool SkipFunctionBodies=false); // 复用第一个ParseAST
+```
+
+```C++
+// llvm-project/clang/lib/Parse/ParseAST.cpp
+void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
+  // Collect global stats on Decls/Stmts (until we have a module streamer).
+  if (PrintStats) {
+    Decl::EnableStatistics();
+    Stmt::EnableStatistics();
+  }
+
+  // Also turn on collection of stats inside of the Sema object.
+  bool OldCollectStats = PrintStats;
+  std::swap(OldCollectStats, S.CollectStats);
+
+  // Initialize the template instantiation observer chain.
+  // FIXME: See note on "finalize" below.
+  initialize(S.TemplateInstCallbacks, S);
+
+  ASTConsumer *Consumer = &S.getASTConsumer();
+
+  std::unique_ptr<Parser> ParseOP(
+      new Parser(S.getPreprocessor(), S, SkipFunctionBodies));
+  Parser &P = *ParseOP.get();
+
+  llvm::CrashRecoveryContextCleanupRegistrar<const void, ResetStackCleanup>
+      CleanupPrettyStack(llvm::SavePrettyStackState());
+  PrettyStackTraceParserEntry CrashInfo(P);
+
+  // Recover resources if we crash before exiting this method.
+  llvm::CrashRecoveryContextCleanupRegistrar<Parser>
+    CleanupParser(ParseOP.get());
+
+  S.getPreprocessor().EnterMainSourceFile();
+  ExternalASTSource *External = S.getASTContext().getExternalSource();
+  if (External)
+    External->StartTranslationUnit(Consumer);
+
+  // If a PCH through header is specified that does not have an include in
+  // the source, or a PCH is being created with #pragma hdrstop with nothing
+  // after the pragma, there won't be any tokens or a Lexer.
+  bool HaveLexer = S.getPreprocessor().getCurrentLexer();
+
+  if (HaveLexer) {
+    llvm::TimeTraceScope TimeScope("Frontend");
+    P.Initialize();
+    Parser::DeclGroupPtrTy ADecl;
+    Sema::ModuleImportState ImportState;
+    EnterExpressionEvaluationContext PotentiallyEvaluated(
+        S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
+    for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
+         AtEOF = P.ParseTopLevelDecl(ADecl, ImportState)) {
+      // If we got a null return and something *was* parsed, ignore it.  This
+      // is due to a top-level semicolon, an action override, or a parse error
+      // skipping something.
+      if (ADecl && !Consumer->HandleTopLevelDecl(ADecl.get()))
+        return;
+    }
+  }
+
+  // Process any TopLevelDecls generated by #pragma weak.
+  for (Decl *D : S.WeakTopLevelDecls())
+    Consumer->HandleTopLevelDecl(DeclGroupRef(D));
+
+  Consumer->HandleTranslationUnit(S.getASTContext());
+
+  // Finalize the template instantiation observer chain.
+  // FIXME: This (and init.) should be done in the Sema class, but because
+  // Sema does not have a reliable "Finalize" function (it has a
+  // destructor, but it is not guaranteed to be called ("-disable-free")).
+  // So, do the initialization above and do the finalization here:
+  finalize(S.TemplateInstCallbacks, S);
+
+  std::swap(OldCollectStats, S.CollectStats);
+  if (PrintStats) {
+    llvm::errs() << "\nSTATISTICS:\n";
+    if (HaveLexer) P.getActions().PrintStats();
+    S.getASTContext().PrintStats();
+    Decl::PrintStats();
+    Stmt::PrintStats();
+    Consumer->PrintStats();
+  }
+}
+```
+
+1. 启用统计信息（如果需要）：如果`PrintStats`为真，则启用用于声明（`Decl`）和语句（`Stmt`）的统计信息收集。交换`Sema`对象中的`CollectStats`标志，以便在解析期间收集统计数据
+2. 初始化模板实例化观察者链：在`Sema`对象`S`中，初始化模板实例化时要使用的回调函数链
+3. 设置解析器和错误恢复上下文：创建一个`Parser`对象来处理解析任务，并设置崩溃恢复上下文以确保在发生异常时能够进行适当的资源清理。`PrettyStackTraceParserEntry`用于提供在发生崩溃时更好的错误消息
+4. 开始解析：让预处理器进入主源文件，并且如果有外部AST源，通知它开始翻译单元的工作
+5. 检查是否存在词法分析器：检查预处理器是否当前拥有一个词法分析器，这在某些情况下可能不存在，例如，源文件中没有任何包含指令或正在生成预编译头（PCH）
+6. 解析顶层声明：只要存在词法分析器，就循环解析顶层声明。对每个解析出来的顶层声明，通过`Consumer`来处理它。如果处理失败，则提前返回
+7. 处理由`#pragma weak`生成的顶层声明：遍历所有弱引用的顶层声明并处理它们
+8. 完成翻译单元的处理：通知消费者已经完成了整个翻译单元的解析工作，允许它执行必要的最终处理
+9. 完成模板实例化观察者链的初始化和清理：将在`Sema`对象中初始化的模板实例化观察者链进行最终的清理工作
+10. 打印统计信息：如果开启了统计信息功能，则在解析结束后打印相关的统计结果
 
 
 
 
 
+为了方便用户加入自己的actions，Clang提供了众多的hooks
+
+### ASTConsumer
+
+> This is an abstract interface that should be implemented by clients that read ASTs.
+>
+> This abstraction layer allows the client to be independent of the AST producer (e.g. parser vs AST dump file reader, etc).
+
+ASTConsumer 是一个抽象基类，它定义了一个接口供各种不同的组件使用，用来使用生成的AST
+
+```C++
+// llvm-project/clang/include/clang/AST/ASTConsumer.h
+// llvm-project/clang/lib/AST/ASTConsumer.cpp
+```
+
+以下是ASTConsumer提供的接口虚函数
+
+* Initialize
+
+  This is called to initialize the consumer, providing the ASTContext.
+
+  ```C++
+  virtual void Initialize(ASTContext &Context) {}
+  ```
+
+* HandleTopLevelDecl
+
+  当解析器完成一个顶层声明的解析时调用此方法。例如，当解析到一个全局变量、函数或类时，这个方法就会被执行
+
+  返回true就继续parsing，返回false就终止
+
+  ```C++
+  virtual bool HandleTopLevelDecl(DeclGroupRef D);
+  ```
+
+* HandleTranslationUnit
+
+  **一个翻译单元 (Translation Unit) 的顶层节点是 `TranslationUnitDecl`**
+
+  在整个翻译单元（通常是一个源文件）的解析和语义分析结束时调用，这时候整个AST已经构建完成。这个方法适合做一些整体性的操作，比如输出整个翻译单元的代码
+
+  ```C++
+  virtual void HandleTranslationUnit(ASTContext &Ctx) {}
+  ```
+
+  
+
+```C++
 
 
 
+// 该回调函数在每次有inline函数或友元调用完成的时候被调用
+virtual void HandleInlineFunctionDefinition(FunctionDecl *D) {}
 
+/// HandleInterestingDecl - Handle the specified interesting declaration. This
+/// is called by the AST reader when deserializing things that might interest
+/// the consumer. The default implementation forwards to HandleTopLevelDecl.
+virtual void HandleInterestingDecl(DeclGroupRef D);
 
-一个翻译单元 (Translation Unit) 的顶层节点是 `TranslationUnitDecl` 
+// 在整个翻译单元（通常是一个源文件）的解析和语义分析结束时调用，这时候整个AST已经构建完成。这个方法适合做一些整体性的操作，比如输出整个翻译单元的代码
+virtual void HandleTranslationUnit(ASTContext &Ctx) {}
 
+// 当一个标签声明（例如一个结构体或类）被完整定义时调用
+virtual void HandleTagDeclDefinition(TagDecl *D) {}
 
+/// This callback is invoked the first time each TagDecl is required to
+/// be complete.
+virtual void HandleTagDeclRequiredDefinition(const TagDecl *D) {}
 
+/// Invoked when a function is implicitly instantiated.
+/// Note that at this point it does not have a body, its body is
+/// instantiated at the end of the translation unit and passed to
+/// HandleTopLevelDecl.
+virtual void HandleCXXImplicitFunctionInstantiation(FunctionDecl *D) {}
 
+/// Handle the specified top-level declaration that occurred inside
+/// and ObjC container.
+/// The default implementation ignored them.
+virtual void HandleTopLevelDeclInObjCContainer(DeclGroupRef D);
 
-## *AST 架构*
+// 这个函数是处理隐式导入声明的回调。在语言如Objective-C中，可能存在模块的隐式导入，这个函数会在这样的导入声明被解析时被调用
+virtual void HandleImplicitImportDecl(ImportDecl *D);
+
+/// CompleteTentativeDefinition - Callback invoked at the end of a translation
+/// unit to notify the consumer that the given tentative definition should be
+/// completed.
+///
+/// The variable declaration itself will be a tentative
+/// definition. If it had an incomplete array type, its type will
+/// have already been changed to an array of size 1. However, the
+/// declaration remains a tentative definition and has not been
+/// modified by the introduction of an implicit zero initializer.
+virtual void CompleteTentativeDefinition(VarDecl *D) {}
+
+/// CompleteExternalDeclaration - Callback invoked at the end of a translation
+/// unit to notify the consumer that the given external declaration should be
+/// completed.
+virtual void CompleteExternalDeclaration(VarDecl *D) {}
+
+/// Callback invoked when an MSInheritanceAttr has been attached to a
+/// CXXRecordDecl.
+virtual void AssignInheritanceModel(CXXRecordDecl *RD) {}
+
+/// HandleCXXStaticMemberVarInstantiation - Tell the consumer that this
+// variable has been instantiated.
+virtual void HandleCXXStaticMemberVarInstantiation(VarDecl *D) {}
+
+// 特定于C++的，用于处理虚函数表
+virtual void HandleVTable(CXXRecordDecl *RD) {}
+
+/// If the consumer is interested in entities getting modified after
+/// their initial creation, it should return a pointer to
+/// an ASTMutationListener here.
+virtual ASTMutationListener *GetASTMutationListener() { return nullptr; }
+
+/// If the consumer is interested in entities being deserialized from
+/// AST files, it should return a pointer to a ASTDeserializationListener here
+virtual ASTDeserializationListener *GetASTDeserializationListener() { return nullptr; }
+
+// 打印统计信息
+virtual void PrintStats() {}
+
+/// This callback is called for each function if the Parser was
+/// initialized with \c SkipFunctionBodies set to \c true.
+///
+/// \return \c true if the function's body should be skipped. The function
+/// body may be parsed anyway if it is needed (for instance, if it contains
+/// the code completion point or is constexpr).
+virtual bool shouldSkipFunctionBody(Decl *D) { return true; }
+```
+
+### ASTContext
+
+> Holds long-lived AST nodes (such as types and decls) that can be referred to throughout the semantic analysis of a file.
+
+```
+llvm-project/clang/include/clang/AST/ASTContext.h
+llvm-project/clang/lib/AST/ASTContext.cpp
+```
+
+在一个翻译单元中，所有有关 AST 的信息都在类 `ASTContext` ，包括：
+
+- 符号表
+- `SourceManager`
+- AST 的入口节点: `TranslationUnitDecl* getTranslationUnitDecl()`
+
+## *AST结构*
 
 ### Reminder: Expression & Statement
 
@@ -607,7 +1238,7 @@ Expression & Statement 的主要区别在于，表达式是有返回值的，而
 
 还有一些语言（如Scala和Ruby）模糊了表达式和语句的界限，因为在这些语言中几乎所有东西都是表达式（即都有返回值）
 
-### 核心基本类型（AST Nodes）
+### AST Nodes
 
 Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共祖先的独立类
 
@@ -632,14 +1263,6 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
 * Type 类型
   * PointerType 指针类型
 
-### ASTContext
-
-在一个翻译单元中，所有有关 AST 的信息都在类 `ASTContext` ，包括：
-
-- 符号表
-- `SourceManager`
-- AST 的入口节点: `TranslationUnitDecl* getTranslationUnitDecl()`
-
 ### Glue Classes
 
 * DeclContext：包含其他 `Decl` 的 `Decl` 需要继承此类
@@ -647,9 +1270,9 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
 * NestedNameSpecifier
 * QualType：Qual 是 qualifier 的意思，将 C++ 类型中的 `const` 等拆分出来，避免类型的组合爆炸问题
 
-## *实例*
+### 实例
 
-[PowerPoint 프레젠테이션 (kaist.ac.kr)](https://swtv.kaist.ac.kr/courses/cs492-fall18/part1-coverage/lec7-Clang-tutorial.pdf)
+实例可以参考这个slide：[PowerPoint 프레젠테이션 (kaist.ac.kr)](https://swtv.kaist.ac.kr/courses/cs492-fall18/part1-coverage/lec7-Clang-tutorial.pdf)
 
 ```C++
 //Example.c
@@ -678,9 +1301,53 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
 - `-fsyntax-only`：这个选项告诉 Clang 仅执行语法检查，而不进行代码生成或其他后续步骤。因此，它只会解析源代码，检查语法错误，并在完成后停止。这通常用于快速检查代码是否正确，或者像在这个命令中一样，与 `-ast-dump` 结合来查看源代码的 AST
 -  `-fmodules` 选项启用了 Clang 的模块功能。模块是一种用于替代传统的 `#include` 预处理器指令和头文件的编译单元，它旨在改进 C 和 C++ 程序的编译时间和封装性
 
+## *Traversing through AST*
+
+Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` 和 `ASTMatcher`
+
+### RecursiveASTVisitor
+
+[How to write RecursiveASTVisitor based ASTFrontendActions. — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/RAVFrontendAction.html)
 
 
-## *libclang*
+
+
+
+继承RecursiveASTVisitor，并且实现其中的 VisitCXXRecordDecl，那么这个方法就会在访问 CXXRecordDecl类型的节点上触发
+
+### ASTMatcher
+
+[Tutorial for building tools using LibTooling and LibASTMatchers — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersTutorial.html)
+
+
+
+
+
+
+
+## *AST可视化*
+
+[FraMuCoder/PyClASVi: Python Clang AST Viewer (github.com)](https://github.com/FraMuCoder/PyClASVi)
+
+[CAST-projects/Clang-ast-viewer: Clang AST viewer (github.com)](https://github.com/CAST-projects/Clang-ast-viewer)
+
+1. ###### **Clang AST Viewer (Web Based)** 这是一个基于 Web 的工具，可以将 Clang 的 `-ast-dump` 输出转换为易于浏览的树形结构。用户可以在浏览器中直接查看以及交互式地探索 AST。
+2. **Clang AST Explorer (Online Tool)** Clang AST Explorer 是一个在线工具，允许用户在网页上写代码，并实时看到对应的 AST。这个资源非常适合教学和演示目的。
+
+# 编程接口
+
+## *三个库的区别*
+
+Clang 提供了用于编写需要有关程序的语法和语义信息的工具的基础设施
+
+[Choosing the Right Interface for Your Application — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/Tooling.html)
+
+* LibClang
+* LibTooling
+* Clang Plugin
+  * 使用例子
+
+## *LibClang*
 
 [Libclang tutorial — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibClang.html)
 
@@ -704,6 +1371,7 @@ libclang的整个C语言接口可以在llvm-project/clang/include/clang-cIndex.h
     int xdata;
     const void *data[3];	
   } CXCursor;
+  ```
 
 
 
@@ -731,64 +1399,41 @@ $ clang++ -lcang main.cpp
 
 [libclang · PyPI](https://pypi.org/project/libclang/)
 
-
-
-## *Traversing through AST*
-
-Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` 和 `ASTMatcher`
+## *LibTooling*
 
 
 
+libTooling 是用来构建可以单独进行 standalone build 的clang工具的库
 
+## *Clang Plugin*
 
-```C++
-void clang::ParseAST (Preprocessor &pp, ASTConsumer *C, ASTContext &Ctx, bool PrintStats=false,
-                      TranslationUnitKind TUKind=TU_Complete,
-                      CodeCompleteConsumer *CompletionConsumer=nullptr,
-                      bool SkipFunctionBodies=false);
+[Clang Plugins — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangPlugins.html)
+
+Plugin 插件 是一种软件组件，可以添加到一个已经存在的计算机程序中以提供特定的功能。它们通常用来扩展程序的功能或允许第三方开发者为软件创建新的特性，而无需改变原有软件的核心编码。插件的好处在于它们增强了软件的可定制性和灵活性
+
+插件通常通过软件应用程序的预定义的接口与主程序连接。这样，即使在主程序的代码没有改动的情况下，用户也可以根据需要安装或卸载插件
+
+**Clang plugin即指那些能够与Clang编译器集成，提供额外功能的插件**。例如，这些插件可以用来进行：
+
+- 源码分析：扫描代码，寻找可能的错误或执行静态代码分析
+- 代码转换：如自动重构代码或实现某些自定义的代码转换规则
+- 新语言特性的原型实现：尝试在不修改编译器源码的情况下实验新的语法或语义
+
+通过加载插件，Clang可以在编译过程中的不同阶段执行这些插件提供的附加操作
+
+### 如何使用Clang Plugin
+
+要使用Clang插件，首先需要一个支持插件API的Clang版本。随后你需要编写一个插件，遵循Clang插件API编写相关的类和方法，并且编译这个插件成为共享库（如 `.so` 文件在Linux上，或 `.dylib` 在macOS上）。
+
+加载插件时，可以在调用Clang时使用 `-Xclang` 参数，后跟 `-load` 和插件文件的路径。例如：
+
+```
+sh复制代码clang -Xclang -load -Xclang /path/to/plugin.so your_source_file.c
 ```
 
+这会导致Clang在处理你的源文件时加载并运行该插件。
 
-
-
-
-
-
-
-
-
-
-### RecursiveASTVisitor
-
-[How to write RecursiveASTVisitor based ASTFrontendActions. — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/RAVFrontendAction.html)
-
-
-
-
-
-继承RecursiveASTVisitor，并且实现其中的 VisitCXXRecordDecl，那么这个方法就会在访问 CXXRecordDecl类型的节点上触发
-
-### ASTMatcher
-
-[Tutorial for building tools using LibTooling and LibASTMatchers — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersTutorial.html)
-
-
-
-
-
-```C++
-```
-
-
-
-## *AST可视化*
-
-[FraMuCoder/PyClASVi: Python Clang AST Viewer (github.com)](https://github.com/FraMuCoder/PyClASVi)
-
-[CAST-projects/Clang-ast-viewer: Clang AST viewer (github.com)](https://github.com/CAST-projects/Clang-ast-viewer)
-
-1. **Clang AST Viewer (Web Based)** 这是一个基于 Web 的工具，可以将 Clang 的 `-ast-dump` 输出转换为易于浏览的树形结构。用户可以在浏览器中直接查看以及交互式地探索 AST。
-2. **Clang AST Explorer (Online Tool)** Clang AST Explorer 是一个在线工具，允许用户在网页上写代码，并实时看到对应的 AST。这个资源非常适合教学和演示目的。
+由于Clang插件直接与编译器的内部结构打交道，因此需要对Clang的内部API有深入的了解。同时，这也意味着插件可能需要针对不同版本的Clang进行更新，因为编译器的内部API可能会随着时间变化。
 
 # Clang Static Analyzer
 
@@ -797,6 +1442,8 @@ void clang::ParseAST (Preprocessor &pp, ASTConsumer *C, ASTContext &Ctx, bool Pr
 Clang Static Analyzer，下面简称CSA，是LLVM提供的静态分析工具
 
 [Clang Static Analyzer 介绍 | jywhy6's blog](https://blog.jywhy6.zone/2021/05/31/clang-static-analyzer-intro/)
+
+CSA 是基于libclang实现的
 
 ## *CSA中用到的数据结构*
 
@@ -827,14 +1474,17 @@ Clang Static Analyzer，下面简称CSA，是LLVM提供的静态分析工具
 
 [Checker Developer Manual (llvm.org)](https://clang-analyzer.llvm.org/checker_dev_manual.html)
 
-# Clang工具
+# Clang Tools & Clang Plugin
 
-### Clang Analyzer & Clang Tidy
+[Overview — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangTools.html)
 
-Clang Analyzer和Clang Tidy都是基于LLVM项目的开源静态代码分析工具，用于帮助开发人员发现和修复C、C++和Objective-C代码中的潜在问题和错误。它们可以作为Clang编译器的附加组件使用
+Clang Tools 是基于libTooling开发的Clang工具链，主要包括
 
-* Clang Static Analyzer是基于LLVM静态分析框架的一部分，旨在检测代码中的常见编程错误、内存管理问题、并发问题等。它通过对源代码进行符号执行和路径敏感分析，构建程序的控制流图，并使用各种静态分析技术来检测可能的错误和缺陷。Clang Analyzer能够识别空指针引用、内存泄漏、使用未初始化的变量、并发问题等问题，并提供相关的警告和报告
-* Clang Tidy，用于进行静态代码分析和提供代码改进建议。它使用一系列可配置的检查器来检查代码，并提供建议和修复建议来改进代码质量和可读性。Clang Tidy可以检测和修复代码规范违规、不必要的复杂性、潜在的错误使用等问题。它还支持自定义规则和插件，以满足特定项目的需求
+* 语法检查工具 clang-check
+* 自动修复编译错误工具 clang-fixit
+* 自动代码格式工具 clang-format
+* 新语言和新功能的迁移工具
+* 重构工具
 
 ## *clang-format*
 
@@ -1112,6 +1762,8 @@ fout << out.c_str();
 
 # LLVM IR
 
+[StormQ's Blog (csstormq.github.io)](https://csstormq.github.io/blog/LLVM 之 IR 篇（1）：零基础快速入门 LLVM IR)
+
 IR是LLVM的核心所在
 
 
@@ -1131,6 +1783,36 @@ IR是LLVM的核心所在
 LLVM的优化级别分别是-O0 -O1 -O2 -O3 -Os（第一个是大写英文字母O）
 
 Debug情况下默认是不优化，Release情况下默认Fastest、Smallest
+
+
+
+## *bitcode*
+
+[blog/articles/llvm/2020_11_23_bc.md at main · zxh0/blog (github.com)](https://github.com/zxh0/blog/blob/main/articles/llvm/2020_11_23_bc.md)
+
+bitcode 是 LLVM IR 的二进制形式
+
+```cmd
+$ clang -emit-llvm -c test.cc -o test.bc
+$ file test.bc
+test.bc: LLVM IR bitcode
+```
+
+### `-fembed-bitcode`
+
+`-fembed-bitcode` 是 Clang 编译器的一个选项，它用于生成包含 LLVM bitcode 的二进制文件。当你在编译阶段使用这个选项时，编译器会在生成的目标文件（通常是 `.o` 文件）中嵌入一个 LLVM bitcode 的副本。这样，目标文件既包含了原生的机器码，也包含了可以进行进一步优化的 LLVM bitcode。
+
+这个特性主要有两个应用场景：
+
+1. **App Store 提交**：对于 iOS 和 macOS 应用开发者来说，当向 App Store 提交应用程序时，苹果公司要求所有的代码都包含 bitcode。这使得苹果可以重新优化应用程序而无需开发者提交新的二进制版本。例如，如果苹果发布了一个新的处理器或为现有的处理器引入了新的优化技术，他们可以自己对已经上传的 bitcode 进行重编译和优化，以便利用这些新特性
+2. **后期优化和分析**：在其他环境，嵌入 bitcode 使得开发者能够在不访问源代码的情况下对程序进行后期的优化和分析。这可以用于产品支持、性能优化、安全分析等方面
+
+还有几个相关的选项：
+
+- `-fembed-bitcode-marker`：这个选项会在目标文件中插入一个占位符，代表 bitcode，但实际上并不包含真正的 bitcode 数据。这对确保工具链在其余部分支持 bitcode，但不需要完整的 bitcode 数据时非常有用。
+- `-fembed-bitcode=all`：确保所有生成的文件（包括链接后的最终二进制文件）都包含 bitcode。
+
+应当注意的是，嵌入 bitcode 会增加生成的二进制文件的大小，因为它既包含了可直接运行的机器码，也包含了用于可能的未来优化的 bitcode
 
 # 代码优化 Pass
 
@@ -1152,23 +1834,17 @@ Java虚拟机（JVM）是使用JIT编译技术的一个著名例子。在JVM中�
 
 [其他支持JIT编译的语言和运行环境包括.NET](http://xn--jit-5q9d13js0cgyd9wllkz2fa19u3w4ciyhuj5aw42ajyf2ripoa232d.net/) Framework的CLR（Common Language Runtime），JavaScript的各种现代引擎（如V8引擎）等。通过JIT编译，这些环境能够提供既快速又灵活的执行策略。
 
+# Backend
 
+## *指令选择*
 
-# 指令选择
+# LLVM的汇编器 & 链接器
 
-# LLD - The LLVM Linker
+## *llvm-as*
 
-
-
-
-
-
-
-
+## *LLD - The LLVM Linker*
 
 [LLD - The LLVM Linker — lld 19.0.0git documentation](https://lld.llvm.org/)
-
-
 
 # 其他LLVM工具
 
