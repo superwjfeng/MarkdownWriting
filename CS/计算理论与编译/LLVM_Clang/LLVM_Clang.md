@@ -149,7 +149,7 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
 ```cmd
 $ cd llvm-project
 # cmake configure
-$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_PROJECTS="clang;lldb"
+$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_PROJECTS="clang;lldb;clang-tools-extra"
 # $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 $ cmake --build build # cmake build
 $ sudo cmake --build build --target install # cmake install
@@ -246,10 +246,17 @@ ninja -C $builddir install
 ### 常用的LLVM相关变量
 
 - **LLVM_ENABLE_PROJECTS:STRING** 这个变量控制哪些项目被启用。如果只想要构建特定的LLVM子项目，比如Clang或者LLDB，可以使用这个变量来指定。例如，如果想同时构建Clang和LLDB，可以在CMake命令中加入 `-DLLVM_ENABLE_PROJECTS="clang;lldb"`
+
+  所谓的Project就是llvm-project下面的那些目录，完整的Project Lists为 `clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl`
+
 - **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让能够控制哪些运行时库被启用。如果想要构建libc++或者libc++abi这样的库，可以使用这个变量。例如，为了同时构建libc++和libc++abi，应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`
+
 - **LLVM_LIBDIR_SUFFIX:STRING** 这个变量用于附加额外的后缀到库文件的安装目录。在64位架构上，你可能希望库文件被安装在`/usr/lib64`而非`/usr/lib`，那么可以设置 `-DLLVM_LIBDIR_SUFFIX=64`
+
 - **LLVM_PARALLEL_{COMPILE,LINK}_JOBS:STRING** 构建LLVM工具链可能会消耗大量资源，尤其是Debug的链接。使用这些选项，当使用Ninja生成器时，可以限制并行性。例如，为了避免内存溢出（OOM）或使用交换空间(swap)，每15GB DRAM 可以给一个link job
+
 - **LLVM_TARGETS_TO_BUILD:STRING** 这个变量控制哪些目标架构被启用。例如，如果你只需要为你的本地目标架构（比如x86）构建LLVM，你可以使用 `-DLLVM_TARGETS_TO_BUILD=X86` 来实现
+
 - **LLVM_USE_LINKER:STRING** 这个变量允许你覆盖系统默认的链接器。例如，如果你想使用LLD作为链接器，可以设置 `-DLLVM_USE_LINKER=lld`
 
 ## *高级编译设置*
@@ -381,6 +388,8 @@ public:
 ## *测试*
 
 [Llvm 源码结构及测试基础 - 吴建明wujianming - 博客园 (cnblogs.com)](https://www.cnblogs.com/wujianming-110117/p/17128814.html)
+
+[LLVM测试框架_llvm-lit-CSDN博客](https://zhikunhuo.blog.csdn.net/article/details/125173869)
 
 LLVM 测试基础设施包含三大类测试：单元测试 unit test、回归测试 regression test 和整个程序。单元测试和回归测试分别包含在 LLVM 存储在 LLVM/unittest 和 LLVM/test 之下，并且应该始终通过，一般情况作为check-in，即它们应该在每次提交之前运行
 
@@ -856,6 +865,8 @@ Clang使用的Parser是基于递归下降分析 recursive descent parser 的
 
 ## *Clang Frontend*
 
+<img src="ClangFrontend.png">
+
 本节介绍一下Clang Frontend的流程，同样是从clang_main开始
 
 通过 `ExecuteCC1Tool()` 分发不同的 `cc1`类型
@@ -908,9 +919,14 @@ CompilerInstance 是非常重要的一个类，因为它持有了诸如`preproce
 
 ### FrontendAction
 
-llvm-project/clang/include/clang/Frontend/FrontendOptions.h 中的 ActionKind 枚举类
+FrontendAction 是Clang前端执行的action的抽象基类
+
+
+
+ ActionKind 枚举类高速了我们有哪些前端任务
 
 ```C++
+// llvm-project/clang/include/clang/Frontend/FrontendOptions.h
 enum ActionKind {
   /// Parse ASTs and list Decl nodes.
   ASTDeclList,
@@ -1297,8 +1313,13 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
 ```
 
 - `-Xclang`：这个选项后面跟随的参数会直接传递给 Clang 的前端而不是驱动程序。Clang 驱动程序负责处理用户级别的编译选项，并将它们转化为针对各种工具（例如前端、汇编器和链接器）的实际命令行参数。使用 `-Xclang` 可以直接向 Clang 前端发送指令
+
 - `-ast-dump`：这是传递给 Clang 前端的参数，告诉它输出 AST 的结构信息。AST 是源代码的树形表示，其中每个节点都代表了源代码中的构造（如表达式、声明等）
+
 - `-fsyntax-only`：这个选项告诉 Clang 仅执行语法检查，而不进行代码生成或其他后续步骤。因此，它只会解析源代码，检查语法错误，并在完成后停止。这通常用于快速检查代码是否正确，或者像在这个命令中一样，与 `-ast-dump` 结合来查看源代码的 AST
+
+  如果不使用它的话，clang driver的compile部分就会expect一个输入，会输出一个 `clang: error: linker command failed with exit code 1136` 的错误
+
 -  `-fmodules` 选项启用了 Clang 的模块功能。模块是一种用于替代传统的 `#include` 预处理器指令和头文件的编译单元，它旨在改进 C 和 C++ 程序的编译时间和封装性
 
 ## *Traversing through AST*
@@ -1334,6 +1355,230 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 1. ###### **Clang AST Viewer (Web Based)** 这是一个基于 Web 的工具，可以将 Clang 的 `-ast-dump` 输出转换为易于浏览的树形结构。用户可以在浏览器中直接查看以及交互式地探索 AST。
 2. **Clang AST Explorer (Online Tool)** Clang AST Explorer 是一个在线工具，允许用户在网页上写代码，并实时看到对应的 AST。这个资源非常适合教学和演示目的。
 
+# LLVM 中的数据结构
+
+[LLVM Programmer’s Manual — LLVM 19.0.0git documentation](https://llvm.org/docs/ProgrammersManual.html)
+
+## *LLVM String*
+
+### StringRef
+
+`StringRef` 是 LLVM 库中的一个类，用于提供对字符数组（通常是字符串）的非拥有的、不可变的视图。与标准库中的 `std::string` 类相比，`StringRef` 不会复制字符串数据，它只是引用已经存在的字符串。这使得 `StringRef` 能够在不涉及内存分配和复制的情况下高效地操作字符串
+
+以下是一些 `StringRef` 的关键特性：
+
+1. **非拥有**: `StringRef` 仅保存了指向实际数据（如 C 风格字符串）的指针和长度信息，但并不管理该数据的生命周期。因此，使用 `StringRef` 时必须确保它引用的数据在 `StringRef` 对象的生命周期内保持有效。
+2. **轻量级**: `StringRef` 只包含两个成员：一个指针和一个长度。这使得它非常适合用作函数参数或返回值，无需担心性能开销。
+3. **不可变**: `StringRef` 实例本身是不可更改的。虽然可以改变它所指向的字符串数据（如果数据是可变的），但不能通过 `StringRef` 接口修改它。
+4. **字符串操作**: `StringRef` 提供了大量用于检查和处理字符串的方法，如 `equals()`, `startswith()`, `endswith()`, `substr()`, `find()`, `trim()` 等。
+5. **与标准字符串类型互操作**: 你可以从 `const char*` 或 `std::string` 创建 `StringRef` 对象。同样，也可以将 `StringRef` 转换为 `std::string`。
+6. **效率**: 因为不需要复制字符串数据，所以 `StringRef` 在许多场景下（例如解析、分词等）都非常高效。
+
+`StringRef` 的典型用法示例：
+
+```C++
+#include "llvm/ADT/StringRef.h"
+#include <iostream>
+
+using namespace llvm;
+
+int main() {
+    const char *cstr = "Hello, world!";
+    StringRef strRef(cstr);
+
+    // 使用 StringRef 进行子串操作
+    StringRef hello = strRef.substr(0, 5); // 截取前5个字符
+    bool startsWithHello = strRef.startswith("Hello"); // 检查是否以 Hello 开头
+
+    std::cout << "Substring: " << hello.str() << "\n";
+    std::cout << "Starts with 'Hello': " << (startsWithHello ? "Yes" : "No") << "\n";
+
+    // 遍历 StringRef 中的每个字符
+    for (char c : strRef) {
+        // ...
+    }
+
+    return 0;
+}
+```
+
+在这个例子中，我们创建了一个 `StringRef` 来引用一个 C 风格字符串，并演示了如何使用其中的一些方法。
+
+重要的一点是 `StringRef` 的设计意图主要是用作临时对象，在函数调用过程中传递字符串，而不是长期存储字符串数据。所以使用 `StringRef` 时，需要小心保证它引用的字符串在 `StringRef` 被使用的整个时间里都是有效的。
+
+### Twine
+
+Twine 是一个用于高效地进行字符串连接和操作的实用工具类，它被设计为延迟求值的方式以避免不必要的内存分配。Twine 不拥有其引用的字符串数据，而是保持对这些字符串片段（可以是字面量、字符串对象等）的引用，并在最后需要实际的字符串结果时才将它们组合起来
+
+Twine 最常见的使用场景是构建错误消息或其他复杂的字符串，特别是在性能敏感的上下文中，因为它可以避免许多小型的临时字符串分配和复制
+
+
+
+使用二叉树结构来描述字符串临时的拼接，避免 string 的堆开销。如 `auto c = Twine(std::string(a), "b")`，此时 c 的左子树保存 a 的常引用，右子树保存 “b” 的指针，再 `auto e = Twine(c, "d")` 则 e 的左子树保存 c 的常引用；此时调用 `e.str()` 则会从保存的二叉结构构造完整字符串
+
+这个类**不会延长**保存的元素的**生命周期**，特别是临时变量用完就扔在其中是完全不能存在的，必须在确定作用域的情况下使用，多少有点为性能的受虐狂情结
+
+
+
+下面是关于 Twine 的一些关键特性：
+
+1. **延迟求值**：Twine 会保留对所涉及的各个字符串片段的引用，只在最终需要时（例如输出到流或转换为 `std::string` 时）才进行实际的字符串拼接
+2. **非拥有性质**：因为 Twine 对象不拥有其引用的字符串数据，它应该只用作临时对象，在创建后尽快用于字符串操作，以确保引用的数据在使用时仍然有效
+3. **不修改原始字符串**：Twine 只是引用原始字符串，并不修改它们。所有的拼接和组合操作都是在最终转换为另一个字符串表示时发生的。
+4. **不用于长期存储**：由于其非拥有的特性和对原始数据的引用，Twine 并不适合用于长期存储字符串数据。
+5. **与其他 LLVM 数据结构相互作用**：`Twine` 能够处理 LLVM 的 `StringRef`、基本 C 字符串 (`const char*`) 以及 C++ 标准库的 `std::string` 对象
+
+Twine 的使用示例：
+
+```C++
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/StringRef.h"
+#include <iostream>
+
+using namespace llvm;
+
+int main() {
+    StringRef part1 = "Hello, ";
+    std::string part2 = "world";
+    const char *part3 = "!";
+
+    // 创建 Twine 实例表示整个字符串，但没有立即执行连接。
+    Twine fullMessage = Twine(part1) + part2 + part3;
+
+    // 现在我们需要实际的字符串表示，这会构造一个新的 std::string 对象。
+    std::string finalString = fullMessage.str();
+
+    std::cout << finalString << std::endl; // 输出: Hello, world!
+
+    return 0;
+}
+```
+
+在上述代码中，我们创建了几个不同类型的字符串片段，并使用 `Twine` 将它们连接成一个完整的信息。请注意，只有在调用 `.str()` 方法时，`Twine` 才会生成一个新的 `std::string` 对象。在此之前，所有的操作都没有产生临时字符串对象或执行任何连接操作
+
+总之，`Twine` 是一个高效的工具，用于在需要动态构建字符串但又想避免频繁内存分配时使用。然而，正因为它的这种设计，开发者需要谨慎使用，并确保 `Twine` 使用的上下文适合其设计意图
+
+### SmallString
+
+## *Sequential Containers*
+
+### SmallVector
+
+`llvm::SmallVector` 是一个针对小数组进行优化的结构。优化为当数组元素较少时不执行堆分配，只在栈上分配。若添加的元素数量超过了使用自动存储分配的元素数量，它将转回 `std::vector` 的行为并分配越来越大的数组。当明确始终拥有少量元素时，`llvm::SmallVector` 可以带来性能优势
+
+
+### PagedVector
+
+### ilist_node
+
+和Linux内核中的双向链表一样，LLVM中实现的是侵入式的双向链表，ilist_node 则是它的基础节点。如 `ClassA : public ilist_node<ClassA, Tag1>` 这种类声明，即在 `ClassA` 内部放置了对应 Tag1 的双向链表指针，使用 `simple_ilist<ClassA, Tag1> list` 即可往 `list` 中插入 `ClassA` 对象，当一个对象需要插入至不同链表中时，多重继承不同的 Tag 的 `ilist_node` 模板，同上链表也使用对应的 Tag。需要**注意**元素对象的**生命周期**问题，`simple_ilist` 不负责管理容器中元素的生命周期，要实现比较复杂的生命周期管理需要在链表插入/删除元素等操作时使用 `iplist_impl` 包装类指定回调函数来实现
+
+### Sentinels
+
+对于熟悉STL的程序员而言，Sentinel 哨兵位的概念再熟悉不过了，它用来帮助在容器的头尾实现标准的迭代器行为
+
+迭代器标准行为的约束为 ilist 如何分配和存储哨兵位提供了一些实现自由度。相应的策略由 `ilist_traits<T>` 决定。默认情况下，每当需要哨兵时，就会在堆上分配一个 T 类型的对象
+
+尽管默认策略在大多数情况下是足够的，但当 T 没有提供默认构造函数时，可能会出现问题。此外，在许多 ilist 实例的情况下，与哨兵位关联的内存开销是浪费的。为了缓解众多且体积庞大的 T-哨兵的情况，有时会采用一种技巧，导致出现ghostly sentinels
+
+ghostly sentinels 是通过特别设计的 `ilist_traits<T>` 获得的，它们在内存中与 ilist 实例重叠。使用指针运算来获取相对于 ilist 的 this 指针的哨兵。ilist 增加了一个额外的指针，作为哨兵位的反向链接。这是唯一可以合法访问的ghostly sentinels字段
+
+
+
+## *Set-like Containers*
+
+## *Map-like Containers*
+
+* StringMap
+
+  StringMap 使用字符串作为键。它通常比标准库中的 `std::map<std::string, ValueType>` 或 `std::unordered_map<std::string, ValueType>` 提供更好的性能，特别是对于编译器这样频繁进行字符串操作的应用场景。字符串键存储在 StringMap 中，并且通常与 StringMapEntry 结合使用，后者保存了键和值
+
+  StringMap 的效率之一来源于它对键的内存管理方式：它将键存储在与值相邻的内存中，以减少指针跳转并提升缓存一致性
+
+* IndexdMap
+
+  IndexedMap 是一个数组风格的映射，通过整数索引访问元素。它提供快速的随机访问性能，其行为类似于直接使用一个数组或 `std::vector`，但是具有额外的功能，如按需自动调整大小
+
+  此数据结构非常适用于情况是有密集的整数键集合，并且需要一个数组的性能而不是一般映射的开销
+
+* ValueMap
+
+  ValueMap 可以持有 LLVM IR 中的值（例如指令、全局变量等）作为键。这个数据结构通过增加一些针对 LLVM 值系统定制的附加逻辑来处理键的内部表示形式和生命周期问题。这意味着当使用 LLVM IR 中的值作为键时，`ValueMap` 可以确保在值被改变或删除时映射也会更新
+
+  `ValueMap` 在做数据流分析或者其他 IR 级别的转换时非常有用，因为经常需要将值映射到某些分析结果或者新创建的值上
+
+  ```C++
+  llvm::ValueMap<llvm::Value*, int> Map;
+  llvm::Value* Val; // 假设 Val 已初始化为有效的 LLVM IR Value
+  Map[Val] = 42;
+  ```
+
+### DenseMap
+
+[llvm中的数据结构及内存分配策略 - DenseMap_llvm::densemap-CSDN博客](https://blog.csdn.net/dashuniuniu/article/details/80043852)
+
+DenseMap 的实现是一个基于 quadratic probing 二次探测的散列表，键值对本身是 `std::pair<KeyT, ValueT>`
+
+`DenseMap<>` 的构造函数和赋值运算符的定义如下
+
+```C++
+// llvm-project/llvm/include/llvm/ADT/DenseMap.h
+template <typename KeyT, typename ValueT,
+          typename KeyInfoT = DenseMapInfo<KeyT>,
+          typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
+class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
+                                     KeyT, ValueT, KeyInfoT, BucketT> {
+  friend class DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+
+  // Lift some types from the dependent base class into this class for
+  // simplicity of referring to them.
+  using BaseT = DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+
+  BucketT *Buckets;
+  unsigned NumEntries;
+  unsigned NumTombstones;
+  unsigned NumBuckets;
+
+public:
+  /// Create a DenseMap with an optional \p InitialReserve that guarantee that
+  /// this number of elements can be inserted in the map without grow()
+  explicit DenseMap(unsigned InitialReserve = 0) { init(InitialReserve); }
+
+  DenseMap(const DenseMap &other) : BaseT() {
+    init(0);
+    copyFrom(other);
+  }
+
+  DenseMap(DenseMap &&other) : BaseT() {
+    init(0);
+    swap(other);
+  }
+
+  template<typename InputIt>
+  DenseMap(const InputIt &I, const InputIt &E) {
+    init(std::distance(I, E));
+    this->insert(I, E);
+  }
+
+  DenseMap(std::initializer_list<typename BaseT::value_type> Vals) {
+    init(Vals.size());
+    this->insert(Vals.begin(), Vals.end());
+  }
+  // ...
+};
+```
+
+`DenseMap<>` 有四个数据成员
+
+* Buckets 散列桶的首地址（一块连续的内存）
+* NumEntries 存储的数据个数
+* NumTombstones Tombstone个数（二次探测法删除数据时需要设置deleted标识）
+* NumBuckets 桶的个数
+
+
+
+## *Bit Storage Containers*
+
 # 编程接口
 
 ## *三个库的区别*
@@ -1342,10 +1587,21 @@ Clang 提供了用于编写需要有关程序的语法和语义信息的工具�
 
 [Choosing the Right Interface for Your Application — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/Tooling.html)
 
-* LibClang
-* LibTooling
+[[转载\] AST 获取和分析：Clang And Tree-sitter | 微言 | wyanassert 个人工作总结](https://blog.wyan.vip/2023/07/AST_And_Clang_And_Tree_Sitter.html)
+
+<img src="编程库对比.jpg">
+
+* LibClang：基于 LibClang 分析 AST 的优点是 LibClang 提供的 API 很稳定，Clang 版本更新对工具影响不大；缺点是 LibClang 无法访问和利用 Clang AST 的全部信息
+
 * Clang Plugin
+
+  Clang Plugin 是动态库，不能独立使用，需要在编译过程中动态加载执行，是编译流程的一部分
+
   * 使用例子
+
+* LibTooling
+
+  Clang Tools 是一个可独立运行的工具，不依赖编译流程
 
 ## *LibClang*
 
@@ -1401,9 +1657,221 @@ $ clang++ -lcang main.cpp
 
 ## *LibTooling*
 
+### Compilation Database
+
+Clang Tooling 需要 Compilation Database 来制导每一个文件的build command
+
+[JSON Compilation Database Format Specification — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/JSONCompilationDatabase.html)
+
+[Compilation database | CLion Documentation (jetbrains.com)](https://www.jetbrains.com/help/clion/compilation-database.html#compdb_clion)
+
+`compile_commands.json` 是一个 JSON 格式的文件，它在构建系统中用于记录项目编译时每个文件的确切编译命令。这个文件通常由现代构建系统（如 CMake）自动生成，并被各种工具用来理解项目的编译过程，包括：
+
+- 静态分析工具（如 `clang-tidy` 和 `clang-check`）
+- 代码编辑器和IDE，用于提供代码补全、智能跳转等功能（如 Visual Studio Code, vim, emacs 等）
+- 其他开发辅助工具，如文档生成器或代码格式化工具
+
+`compile_commands.json` 的字段有
+
+```json
+[
+  { "directory": "/home/user/llvm/build",
+    "arguments": ["/usr/bin/clang++", "-Irelative", "-DSOMEDEF=With spaces, quotes and \\-es.", "-c", "-o", "file.o", "file.cc"],
+    "file": "file.cc" },
+
+  { "directory": "/home/user/llvm/build",
+    "command": "/usr/bin/clang++ -Irelative -DSOMEDEF=\"With spaces, quotes and \\-es.\" -c -o file.o file.cc",
+    "file": "file2.cc" },
+
+  ...
+]
+```
+
+* directory：编译的工作目录。命令或文件字段中指定的所有路径必须是绝对路径，或相对于此目录的相对路径
+
+* file：该编译步骤处理的主要 translation unit 文件。这被工具用作进入编译数据库的关键。对于同一个文件可能存在多个命令对象，比如说如果相同的源文件以不同的配置进行多次编译
+
+* arguments：编译命令参数 argv 作为字符串列表。这应该执行翻译单元文件的编译步骤。`arguments[0]` 应该是可执行程序的名称，比如 clang++。参数不应该被转义，但应该准备好传递给 `execvp()`
+
+* command：编译命令作为一个单一的 shell-escaped 字符串。参数可能按平台惯例被 shell 引用和转义，其中 ‘"’ 和 ‘\’ 是唯一的特殊字符。不支持 Shell 扩展
+
+  arguments 或 command 是必需的。首选 arguments，因为 shell 的转义与非转义是可能出现错误的来源
+
+* output：由此编译步骤创建的输出名称。此字段是可选的。它可以用来区分同一输入文件的不同处理模式
+
+生成 `compile_commands.json`（只有Makefile和Ninja两个generator实现了，其他的会忽略）
+
+* 命令行开启
+
+  ```cmd
+  $ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
+  ```
+
+* CMake文件中set
+
+  ```cmake
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+  ```
+
+### 构建一个ClangTool
+
+[LibTooling — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibTooling.html)
+
+LibTooling 是用来构建可以单独进行 standalone build 的clang工具的库，它由 /llvm-project/clang/include/clang/Tooling/ 中的头文件和 llvm-project/clang/lib/Tooling 中的cpp文件组成
+
+本质上LibTooling和Plugin都是对代码执行FrontendActions
 
 
-libTooling 是用来构建可以单独进行 standalone build 的clang工具的库
+
+ast-dump 这个FrontendAction本质就是对编译一个 translation unit，在前端遍历AST的时候把AST的信息打印出来
+
+
+
+### 步骤
+
+```C++
+// Declares clang::SyntaxOnlyAction.
+#include "clang/Frontend/FrontendActions.h"
+#include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/Tooling.h"
+// Declares llvm::cl::extrahelp.
+#include "llvm/Support/CommandLine.h"
+
+using namespace clang::tooling;
+using namespace llvm;
+
+// Apply a custom category to all command-line options so that they are the
+// only ones displayed.
+static cl::OptionCategory MyToolCategory("my-tool options");
+
+// CommonOptionsParser declares HelpMessage with a description of the common
+// command-line options related to the compilation database and input files.
+// It's nice to have this help message in all tools.
+static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
+
+// A help message for this specific tool can be added afterwards.
+static cl::extrahelp MoreHelp("\nMore help text...\n");
+
+int main(int argc, const char **argv) {
+  auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  CommonOptionsParser& OptionsParser = ExpectedParser.get();
+  ClangTool Tool(OptionsParser.getCompilations(),
+                 OptionsParser.getSourcePathList());
+  return Tool.run(newFrontendActionFactory<clang::SyntaxOnlyAction>().get());
+}
+```
+
+1. Parse options
+
+   CommonOptionsParser
+
+
+
+### ClangTool
+
+Run 方法主动触发FrontedAction 的执行
+
+
+
+
+
+
+
+
+
+
+
+### `runToolOnCode()` 快速测试
+
+```C
+// llvm-project/clang/lib/Tooling/Tooling.cpp
+bool clang::tooling::runToolOnCode(std::unique_ptr< FrontendAction > ToolAction,
+                                   const Twine &Code, const Twine &FileName = "input.cc",
+                                   std::shared_ptr< PCHContainerOperations > PCHContainerOps =
+                                       std::make_shared<PCHContainerOperations());
+// 内部调用了runToolOnCodeWithArgs
+```
+
+`runToolOnCode()` 允许开发者在内存中的代码字符串上运行 Clang 工具，而不需要提供实际的物理源文件。这个函数特别有用于单元测试和快速原型设计，因为我们可以直接传递一个代码片段作为字符串，并检查工具的输出
+
+* ToolAction：要对Code执行的Action
+* Code：要执行的内存中的代码片段
+* FileName 输入的源代码会在本地被映射的文件名
+* PCHContainerOps 初始化PCH
+* 正常执行返回true，否则返回false
+
+
+
+
+
+### CommonOptionsParser
+
+CommonOptionsParser 类是所有Clang Tools命令行选项的parser，特别是它支持对 Compilation Database 的定位和加载。其内部复用了 CommandLine
+
+```C++
+// llvm-project/clang/include/clang/Tooling/CommonOptionsParser.h
+class clang::tooling::CommonOptionsParser {
+protected:
+  CommonOptionsParser(
+      int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+      llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
+      const char *Overview = nullptr);
+
+public:
+  static llvm::Expected<CommonOptionsParser>
+  create(int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+         llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
+         const char *Overview = nullptr);
+
+  CompilationDatabase &getCompilations() { return *Compilations; }
+    
+  const std::vector<std::string> &getSourcePathList() const { return SourcePathList; }
+    
+  ArgumentsAdjuster getArgumentsAdjuster() { return Adjuster; }
+
+  static const char *const HelpMessage;
+private:
+  CommonOptionsParser() = default;
+
+  llvm::Error init(int &argc, const char **argv,
+                   llvm::cl::OptionCategory &Category,
+                   llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+                   const char *Overview);
+
+  std::unique_ptr<CompilationDatabase> Compilations;
+  std::vector<std::string> SourcePathList;
+  ArgumentsAdjuster Adjuster;
+};
+```
+
+```
+CommonOptionsParser() / create() -> init() -> loadFromCommandLine()
+                                           -> cl::ParseCommandLineOptions()
+```
+
+
+
+
+
+```C++
+llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
+    int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+    llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview);
+```
+
+
+
+
+
+### Setup Clang Tooling
+
+[How To Setup Clang Tooling For LLVM — Clang 19.0.0git documentation](https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html)
+
+
 
 ## *Clang Plugin*
 
@@ -1433,46 +1901,439 @@ sh复制代码clang -Xclang -load -Xclang /path/to/plugin.so your_source_file.c
 
 这会导致Clang在处理你的源文件时加载并运行该插件。
 
-由于Clang插件直接与编译器的内部结构打交道，因此需要对Clang的内部API有深入的了解。同时，这也意味着插件可能需要针对不同版本的Clang进行更新，因为编译器的内部API可能会随着时间变化。
+由于Clang插件直接与编译器的内部结构打交道，因此需要对Clang的内部API有深入的了解。同时，这也意味着插件可能需要针对不同版本的Clang进行更新，因为编译器的内部API可能会随着时间变化
 
-# Clang Static Analyzer
+## *Clang Transformer*
 
-[Clang Static Analyzer — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangStaticAnalyzer.html)
+Clang Transformer 是一个用于编写 C++ 诊断和程序转换的框架。它建立在 clang 工具链和 LibTooling 库之上，旨在隐藏 clang 原生、底层库的许多复杂性
 
-Clang Static Analyzer，下面简称CSA，是LLVM提供的静态分析工具
+Transformer 的核心抽象是 **rewrite rule，它指定了如何将给定的程序模式更改为新形式**。以下是一些可以通过 Transformer 实现的任务示例：
 
-[Clang Static Analyzer 介绍 | jywhy6's blog](https://blog.jywhy6.zone/2021/05/31/clang-static-analyzer-intro/)
+* 对于声明的函数使用名字 MkX 发出警告
+* 将声明的函数名字 MkX 更改为 MakeX
+* 将 `s.size()` 更改为 `Size(s)`，其中 s 是一个 string
+* 将 `e.child().m()` 折叠为 `e.m()`，对于任何表达式 e 和名为 m 的方法
 
-CSA 是基于libclang实现的
+所有这些例子都有一个共同的形式：它们识别作为转换目标的模式，它们指定了如何转换由该模式识别的代码，并且他们的模式和编辑引用了通用变量，比如 s、e 和 m，这些变量涵盖了代码片段。我们的第一和第二个例子还指定了模式的约束条件，这些约束条件仅从语法本身并不明显，例如“s 是一个字符串”。即使是第一个例子（“发出警告 ...”）也共享这种形式，尽管它没有改变任何代码——它的“编辑”仅仅是一个空操作
 
-## *CSA中用到的数据结构*
+Transformer 帮助用户简洁地指定此类规则，并轻松地在本地文件集合上执行它们，将它们应用到代码库的选定部分，甚至将它们打包为 clang-tidy 检查以便持续应用
 
-### CSA流程
 
-<img src="CSA流程.drawio.png">
 
-1. CSA以源代码为起点，将源代码转换为AST
-2. 将AST转换为控制流图 CFG
-3. 随着程序的模拟执行，Clang 的符号执行引擎会生成 Exploded Graph 扩展图，详细记录程序的执行位置和程序当前状态信息
-4. 最后，在各个 Checker（CSA中可自定义的漏洞检查器）回调函数检测到漏洞产生时，将基于 Exploded Graph 中的数据生成带漏洞触发路径的漏洞报告
+## *Support*
 
-### Exploded Graph
+### Design of Support Library
 
-### CSA的符号执行
+[Support Library — LLVM 19.0.0git documentation](https://llvm.org/docs/SupportLibrary.html)
 
-## *Checker*
+> This document provides some details on LLVM’s Support Library, located in the source at lib/Support and include/llvm/Support. The library’s purpose is to shield LLVM from the differences between operating systems for the few services LLVM needs from the operating system. Much of LLVM is written using portability features of standard C++. However, in a few areas, system dependent facilities are needed and the Support Library is the wrapper around those system calls.
+>
+> 这个库的目的是为了当LLVM需要从OS获取一些服务的时候，用来屏蔽OS之间的差异的。LLVM大部分是使用标准 C++ 的可移植性特性编写的。然而，在一些领域，需要依赖于OS的服务，Support Library 就是围绕这些系统调用的封装。
+>
+> By centralizing LLVM’s use of operating system interfaces, we make it possible for the LLVM tool chain and runtime libraries to be more easily ported to new platforms since (theoretically) only lib/Support needs to be ported. This library also unclutters the rest of LLVM from #ifdef use and special cases for specific operating systems. Such uses are replaced with simple calls to the interfaces provided in include/llvm/Support.
+>
+> 通过封装 LLVM 对OS系统调用接口的使用，我们使得 LLVM 工具链和运行时库能够更容易地移植到新平台，**因为（理论上）只有 `lib/Support` 需要被移植**。这个库还减少了 LLVM 其他部分对于 `#ifdef` 使用和特定操作系统的特殊情况的混乱。这样的使用被替换成对 `include/llvm/Support` 提供的接口的简单调用。
+>
+> Note that the Support Library is not intended to be a complete operating system wrapper (such as the Adaptive Communications Environment (ACE) or Apache Portable Runtime (APR)), but only provides the functionality necessary to support LLVM.
+>
+> 注意：Support Library 并不打算作为一个完整的OS Wrapper（例如ACE或APR），它仅提供支持 LLVM 所必需的功能
+>
+> The Support Library was originally referred to as the System Library, written by Reid Spencer who formulated the design based on similar work originating from the eXtensible Programming System (XPS). Several people helped with the effort; especially, Jeff Cohen and Henrik Bach on the Win32 port.
+>
+> Support Library 最初被称为 System Library，由 Reid Spencer 编写并制定设计，该设计基于起源于 eXtensible Programming System (XPS) 的类似工作。很多人帮助了这项工作；特别是 Jeff Cohen 和 Henrik Bach 在 Win32 端口上的努力
 
-以alpha开头的checker是实验版本
+## *命令行选项解析*
 
-- DeadStores: 检测未被使用的存储，即赋值给变量但随后未使用的值。
-- MallocChecker: 检测与动态内存分配相关的问题，包括内存泄漏、双重释放等。
-- NullDereference: 检测潜在的空指针解引用。
-- DivideZero: 检测可能导致除零错误的情况。
-- UninitializedObject: 检测可能未初始化的对象使用
+[CommandLine 2.0 Library Manual — LLVM 19.0.0git documentation](https://llvm.org/docs/CommandLine.html)
 
-## *自定义Checker*
+[LLVM核心库之CommandLine 2.0 Library_如何使用llvm的库-CSDN博客](https://blog.csdn.net/qq_42909352/article/details/128331571)
 
-[Checker Developer Manual (llvm.org)](https://clang-analyzer.llvm.org/checker_dev_manual.html)
+CommandLine库用于定制命令行选项。它可以使用声明性的方法来指定程序采用的命令行选项
+
+CommandLine 的类和方法都在 `llvm/Support/CommandLine.h` 中，这些接口在命名空间`llvm::cl` (This namespace contains all of the command line option processing machinery) 里面
+
+```C++
+#include "llvm/Support/CommandLine.h"
+
+using namespace llvm;
+
+int main(int argc, char **argv) {
+  cl::ParseCommandLineOptions(argc, argv);
+}
+```
+
+<img src="cl_Option.png">
+
+下面介绍一下CommandLine常用的类和方法
+
+* `cl::getRegisteredOptions()`
+
+  ```C++
+  StringMap< Option * > & getRegisteredOptions (SubCommand &Sub=SubCommand::getTopLevel());
+  ```
+
+* `cl::ParseCommandLineOptions()`
+
+  ```C++
+  bool ParseCommandLineOptions(int argc, const char *const *argv,
+                               StringRef Overview = "",
+                               raw_ostream *Errs = nullptr,
+                               const char *EnvVar = nullptr,
+                               bool LongOptionsUseDoubleDash = false);
+  ```
+
+  如果需要给help增加一个命令的说明，就像man page一样的话，只需要传第三个参数就可以了
+
+* `cl::opt` 是用来表示标量命令行选项的模板类
+
+  ```C++
+  namespace cl {
+    template <class DataType, bool ExternalStorage = false,
+              class ParserClass = parser<DataType> >
+    class opt;
+  }
+  ```
+
+  * DataType 用于指定命令行参数的基础数据类型，并用于选择默认的解析器实现
+  * ExternalStorage 用于指定选项是否应包含选项的存储（默认值）或是否应使用外部存储来包含为选项解析的值
+  * parser 用于指定要使用的解析器。parser默认值根据选项的基础数据类型选择类的实例化。通常，此默认值适用于大多数应用程序，因此此选项仅在使用自定义解析器时使用。第三个模板参数指定要使用的解析器。parser默认值根据选项的基础数据类型选择类的实例化。通常，此默认值适用于大多数应用程序，因此此选项仅在使用自定义解析器时使用
+
+* `cl::list` 是用于表示命令行选项列表的模板类
+
+  ```C++
+  namespace cl {
+    template <class DataType, class Storage = bool,
+              class ParserClass = parser<DataType> >
+    class list;
+  }
+  ```
+
+* `cl::bits`是用于以位向量的形式表示命令行选项列表的模板类
+
+* `cl::alias`是一个非模板类，用于为其他参数形成别名
+
+* `cl::extrahelp`是一个非模板化类，它允许为该选项打印出额外的帮助文本`-help`
+
+  ```C++
+  struct extrahelp {
+    StringRef morehelp;
+  
+    explicit extrahelp(StringRef help);
+  };
+  ```
+
+  使用的时候只需要给它传递一个 `const char*` 类型（或者可以转换为 `const char*` 的其他字符串类型）的help就可以了，比如
+
+  ```C++
+  static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
+  static cl::extrahelp MoreHelp("\nMore help text...\n");
+  ```
+
+* `cl::OptionCategory`是一个用于声明选项类别的简单类
+
+
+
+
+
+### Options
+
+* Positional Arguments
+
+`cl::opt<>` 需要是一个全局变量
+
+```C++
+cl::opt<string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
+
+int main(int argc, char **argv) {
+  cl::ParseCommandLineOptions(argc, argv);
+  // ...
+}
+```
+
+
+
+Positional Arguments 是不需要通过 hyphen 指定的选项，这些选项的意义由指定选项的位置所决定
+
+Positional Arguments 的顺序由它们被构造的顺序所确定（即它们在 `.cpp` 文件中存放的顺序）
+
+
+
+`cl::desc` 是对选项的说明
+
+
+
+### Option Attributes
+
+
+
+`cl::Hidden`：`-help` 的时候不会被展示
+
+
+
+
+
+### Internal vs. External Storage
+
+
+
+### Parser
+
+
+
+CommandLine Library 为不同数据类型的参数适配了不同的Parser
+
+
+
+
+
+## *raw_ostream & debug logger*
+
+### raw_ostream
+
+<img src="raw_ostream.png">
+
+在 LLVM 中，`raw_ostream` 是一个输出流的抽象基类，它提供了一种类型安全且高效的方式来生成输出。与 C++ 标准库中的 `std::ostream` 类似，`raw_ostream` 允许开发者将不同类型的数据格式化后写入到各种输出介质中，例如内存缓冲区、文件或终端
+
+`raw_ostream` 被设计为比标准 C++ 流更高效，特别是在生成大量文本输出时。LLVM 很多地方使用 `raw_ostream` 来报告错误信息、生成调试输出以及实现其他与日志相关的功能
+
+LLVM提供的raw_ostream形式支持
+
+* `outs() `用于写入标准输出
+
+* `errs()` 用于写入标准错误
+
+* `nulls()` 丢弃输出（如写入/dev/null）
+
+* `raw_fd_ostream(StringRef, std::error_code)` 用于写入文件描述符
+
+* `raw_string_ostream(std::string)` 用于写入 `std::string`
+
+  raw_string_ostream 一共有6种构造方式
+
+  ```C++
+  //打开指定的文件（Filename）进行写入。如果发生错误，则将有关错误的信息输入EC，并应立即销毁这个stream。作为一种特殊情况，如果文件名是“-”，那么这个stream将使用STDOUT_FILENO而不是打开文件。这将不会关闭stdout描述符。
+  raw_fd_ostream::raw_fd_ostream (StringRef Filename, std::error_code & EC);
+  //CreationDisposition是枚举类型，共有4种：
+  //(1) CD_CreateAlways（打开文件时，如果它已经存在，截断它；如果它还不存在，创建一个新文件）截断文件的意思是打开文件的时候先将文件的内容清空，再进行写入；并不是删除文件。
+  //(2) CD_CreateNew（打开文件时，如果它已经存在，fail；如果它还不存在，创建一个新文件）
+  //(3) CD_OpenExisting（打开文件时，如果它已经存在，则打开文件，并将偏移量设置为0；如果它还不存在，fail）
+  //(4) CD_OpenAlways （打开文件时，如果它已经存在，则打开文件，并将偏移量设置为0；如果它还不存在，创建一个新文件）
+  raw_fd_ostream::raw_fd_ostream (StringRef Filename, std::error_code & EC, sys::fs::CreationDisposition Disp);
+  //FileAccess枚举类型：FA_Read和FA_Write。
+   
+  raw_fd_ostream::raw_fd_ostream (StringRef Filename, std::error_code & EC, sys::fs::FileAccess Access)
+   
+  raw_fd_ostream::raw_fd_ostream (StringRef Filename, std::error_code & EC, sys::fs::OpenFlags Flags)
+  /*Flags允许可选flags来控制文件将如何打开。枚举类型，共有9种：
+  OF_None、F_None、OF_Text(以文本模式打开)、
+  F_Text、OF_Append   (以追加模式打开)、
+  F_Append、OF_Delete (关闭时删除文件，只对windows有影响)、
+  OF_ChildInherit    (启动子进程时，此文件应在子进程中保持打开状态)、
+  OF_UpdateAtime     (强制文件在访问时更新，只对windows有影响)。
+  */
+   
+  raw_fd_ostream::raw_fd_ostream (StringRef Filename, std::error_code & EC, sys::fs::CreationDisposition Disp, sys::fs::FileAccess Access, sys::fs::OpenFlags Flags)
+   
+  raw_fd_ostream::raw_fd_ostream (int fd, bool shouldClose, bool unbuffered = false)
+  // FD是它要写入的文件描述符。如果ShouldClose为true，则在stream销毁时关闭文件。但是如果FD是stdout或stderr，它将不会关闭。
+  ```
+
+一个使用的demo
+
+```C++
+#include "llvm/Support/raw_ostream.h"
+
+int main() {
+    // 输出到标准输出
+    llvm::outs() << "Hello, world!\n";
+
+    // 输出到标准错误
+    llvm::errs() << "Error message\n";
+
+    // 输出到内存缓冲区
+    std::string str;
+    llvm::raw_string_ostream sstream(str);
+    sstream << "Output to a string buffer";
+    sstream.flush(); // 不要忘记刷新流以确保所有内容都被写入到字符串中
+
+    // 输出到文件
+    std::error_code EC;
+    llvm::raw_fd_ostream filestream("output.txt", EC, llvm::sys::fs::OF_None);
+    if (!EC) {
+        filestream << "Writing to a file\n";
+        filestream.close();
+    }
+
+    return 0;
+}
+```
+
+### debug logger
+
+和很多C++工程中专门用于log的logger不同，LLVM并没有一个专门的logger，因为编译器并不像其他软件一样需要长时间运行，不需要频繁的记录日志。LLVM只是提供了一些工具用于打印debug信息
+
+改变 `LLVM_DEBUG` 的值来选择性地打开特定组件的调试输出。例如，设置 `LLVM_DEBUG=Transforms` 将启用所有 Transformations 相关的调试信息
+
+## *Error*
+
+Error 类是一个轻量级的封装了错误处理的类，它带有错误上下文和强制检查，以防止潜在的错误被忽略
+
+Error类封装了一个指向 ErrorInfoBase 的指针。失败状态通过将该指针设置为包含描述失败信息的 ErrorInfoBase 子类实例来表示。成功则通过一个空指针值来表示
+
+Error 的实例还包含一个 Checked flag，在调用析构函数之前必须设置此标志，否则析构函数将触发运行时错误。这在运行时强制要求所有 Error 实例被检查或返回给调用者
+
+根据 Error 实例所处的状态，有两种方法可以设置检查标志
+
+
+
+```C++
+Error mayFail();
+
+Error foo() {
+  if (auto Err = mayFail())
+    return Err;
+  // Success! We can proceed.
+  ...
+```
+
+
+
+
+
+### Idiom of Usage
+
+LLVM 的 `Error` 类是一种用于错误处理的轻量级机制，它要求开发者显式地处理错误。以下是如何使用 LLVM 的 `Error` 类的基本步骤：
+
+1. **创建错误实例**： 错误类通常通过返回一个 `Error` 对象来表示操作可能失败的函数的结果。如果操作成功，则返回一个 `Error::success()`，表示没有错误
+
+   ```C++
+   llvm::Error functionThatMightFail() {
+       if (/* 检测到错误 */) {
+           return llvm::make_error<llvm::StringError>(
+               "error message", llvm::inconvertibleErrorCode());
+       }
+       // 操作成功
+       return llvm::Error::success();
+   }
+   ```
+
+2. **检查并处理错误**： 当你调用可能返回 `Error` 的函数时，必须检查并处理返回的错误
+
+   使用 `consumeError` 处理不需要进一步动作的错误：
+
+   ```C++
+   llvm::Error Err = functionThatMightFail();
+   if (Err) {
+       llvm::errs() << "Operation failed: " << Err << "\n";
+       llvm::consumeError(std::move(Err));
+   }
+   ```
+
+   或者，使用 `Expected<T>` 传递可能失败的操作结果和潜在的错误，并使用 `handleErrors` 或 `checkError` 对错误进行处理：
+
+   ```C++
+   llvm::Expected<int> Result = functionThatMightReturnExpected();
+   if (!Result) {
+       llvm::Error Err = Result.takeError();
+       // 处理错误
+       llvm::handleAllErrors(std::move(Err), [](const llvm::StringError &SE) {
+           llvm::errs() << "StringError happened: " << SE.getMessage() << "\n";
+       });
+   } else {
+       // 使用 Result.get() 中的成功结果
+       int SuccessValue = *Result;
+   }
+   ```
+
+3. **设置已检查标志**： 在 `Error` 对象的生命周期内，在析构之前，必须将其标记为已检查。这可以通过消费错误（比如使用 `consumeError`）或者传递错误使其成为另一个 `Error` 对象的一部分来完成。
+
+如果在析构一个 `Error` 对象时，该对象包含一个未被检查的错误状态，运行时会触发一个错误，并且程序会中止执行。这个设计确保了所有的错误都得到了适当的处理。
+
+`Error` 类的这种用法促使开发者养成良好的错误检查习惯，因为忽视错误的结果很明显——程序会立即终止。这迫使开发者对每个可能出现的错误给予注意，从而避免潜在的问题在软件开发过程中被忽视。
+
+
+
+
+
+### Expected
+
+若一个函数可能会失败，但是需要返回非Error的值时，可以使用Expected
+
+```C++
+Expected<FormattedFile> openFormattedFile(StringRef Path) {
+  // If badly formatted, return an error.
+  if (auto Err = checkFormat(Path))
+    return std::move(Err);
+  // Otherwise return a FormattedFile instance.
+  return FormattedFile(Path);
+}
+
+Error processFormattedFile(StringRef Path) {
+  // Try to open a formatted file
+  if (auto FileOrErr = openFormattedFile(Path)) {
+    // On success, grab a reference to the file and continue.
+    auto &File = *FileOrErr;
+    ...
+  } else
+    // On error, extract the Error value and return it.
+    return FileOrErr.takeError();
+}
+```
+
+
+
+### 定义Error
+
+<img src="Error类.png">
+
+```C++
+template <typename ThisErrT, typename ParentErrT = ErrorInfoBase>
+class ErrorInfo : public ParentErrT {};
+```
+
+ErrorInfoBase 类似于 Exception，是所有Error类型的基类，但是**在自定义Error类型的时候不要直接继承 ErrorInfoBase，而是继承ErrorInfo这个模板子类**，比如说上面的StringError
+
+```C++
+class StringError : public ErrorInfo<StringError> {}
+```
+
+下面给出一个自定义的Error类型
+
+```C++
+#include "llvm/Support/Error.h"
+
+// 自定义错误类
+class MyCustomError : public llvm::ErrorInfo<MyCustomError> {
+public:
+    static char ID; // 必须提供这个静态成员来唯一标识你的错误类别。
+    
+    MyCustomError(std::string Msg) : Message(std::move(Msg)) {}
+
+    // 重写 ErrorInfo 的虚函数以返回错误消息。
+    std::string message() const override {
+        return Message;
+    }
+
+    // 返回该错误类的唯一标识符。
+    const void* dynamicClassID() const override {
+        return &ID;
+    }
+
+private:
+    std::string Message;
+};
+
+// 定义静态 ID 成员。
+char MyCustomError::ID = 0;
+```
+
+
+
+### `ExitOnError()` on tool code
+
+
+
+## *log*
 
 # Clang Tools & Clang Plugin
 
@@ -1486,95 +2347,57 @@ Clang Tools 是基于libTooling开发的Clang工具链，主要包括
 * 新语言和新功能的迁移工具
 * 重构工具
 
+## *clang-check*
+
+### 源代码
+
+llvm-project/clang/tools/clang-check/ClangCheck.cpp
+
+## *clang-diff*
+
 ## *clang-format*
 
-以下是如何在Linux上安装和使用 clang-format 的步骤：
+### 安装 & 使用
 
-1. **安装clang-format**：
+1. 安装clang-format：可以直接编译LLVM源代码或者也可以用包管理器安装
 
-   * 在大多数Linux发行版中，你可以通过包管理器来安装
+   ```cmd
+   $ sudo apt-get install clang-format
+   ```
 
-     ```
-     clang-format
-     ```
+2. 配置clang-format
 
-     。例如，在基于Debian的系统中（比如Ubuntu），可以使用以下命令：
+   为了使用Google的C++风格指南，需要在项目根目录创建一个`.clang-format`文件，该文件指定了代码格式化的风格。运行以下命令生成一个基于Google风格的配置文件。这会创建一个`.clang-format`文件，里面包含了Google C++风格指南的配置
 
-     ```cmd
-     sudo apt-get install clang-format
-     ```
-   
-2. **配置clang-format**：
+   ```cmd
+   $ clang-format -style=google -dump-config > .clang-format
+   ```
 
-   * 为了使用Google的C++风格指南，你需要在项目根目录创建一个`.clang-format`文件，该文件指定了代码格式化的风格。
+3. 使用clang-format格式化代码，这会根据`.clang-format`文件中的规则格式化`your_file.cpp`
 
-   * 你可以通过运行以下命令生成一个基于Google风格的配置文件：
+   ```cmd
+   $ clang-format -i your_file.cpp
+   ```
 
-     ```
-     bashCopy code
-     clang-format -style=google -dump-config > .clang-format
-     ```
+   也可以对整个项目中的所有C++文件进行格式化
 
-   * 这会创建一个`.clang-format`文件，里面包含了Google C++风格指南的配置。
+4. 许多IDE和编辑器支持`clang-format`，可以集成进去以便自动格式化代码
 
-3. **使用clang-format格式化代码**：
+5. 还可以编写脚本，来自动化格式化整个项目中的文件
 
-   * 使用
+### 源代码
 
-     ```
-     clang-format
-     ```
 
-     格式化单个文件：
-
-     ```
-     bashCopy code
-     clang-format -i your_file.cpp
-     ```
-
-   * 这会根据`.clang-format`文件中的规则格式化`your_file.cpp`。
-
-   * 也可以对整个项目中的所有C++文件进行格式化。
-
-4. **集成到IDE或编辑器**：
-
-   * 许多IDE和编辑器支持`clang-format`，可以集成进去以便自动格式化代码。
-
-5. **命令行自动化**：
-
-   * 你还可以编写脚本，来自动化格式化整个项目中的文件。
 
 ## *clang-tidy*
 
-`Clang-Tidy` 是一个非常强大的C/C++语言的静态代码分析工具，它可以帮助发现代码中的错误、执行风格和质量检查，以及提供一些自动修复功能。这些特性使其成为C/C++开发中提高代码质量的重要工具。下面是使用`Clang-Tidy`的基本介绍：
-
-### 安装
-
-`Clang-Tidy`是Clang工具集的一部分。在许多系统上，你可以通过包管理器安装它：
-
-* 在基于Debian的系统（如Ubuntu）上，使用：
-
-  ```
-  bashCopy code
-  sudo apt-get install clang-tidy
-  ```
-
-* 在macOS上，使用Homebrew：
-
-  ```
-  bashCopy code
-  brew install llvm
-  ```
-
 ### 基本用法
 
-一旦安装了`Clang-Tidy`，你可以在命令行中使用它来分析你的源代码文件。基本的命令行语法是：
+命令行中使用它来分析源代码文件。基本的命令行语法是：
 
 ```cmd
 $ clang-tidy [options] file [-- compile_options...]
 ```
-
-其中`file`是你想要分析的源文件，`compile_options`是传递给编译器的任何额外选项。
 
 ### 检查控制
 
@@ -1616,149 +2439,13 @@ $ clang-tidy -checks=... -fix my_file.cpp --
 * 有些检查可能会产生误报，所以在应用任何自动修复之前，务必仔细检查。
 * `Clang-Tidy`的某些功能可能依赖于你的Clang版本。
 
-`Clang-Tidy`是一个强大的工具，可以大大提高代码质量。然而，它最好与其他工具和实践（如代码审查、单元测试等）结合使用，以形成一个全面的代码质量保证策略。
+`Clang-Tidy`是一个强大的工具，可以大大提高代码质量。然而，它最好与其他工具和实践（如代码审查、单元测试等）结合使用，以形成一个全面的代码质量保证策略
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-使用现成的代码解析库，例如`libclang`，可以让你深入分析C++代码并提取出各种复杂的信息。以下是如何使用`libclang`来提取C++源文件信息以生成YAML配置文件的大致步骤：
-
-### 步骤 1: 安装`libclang`
-
-首先，你需要在你的系统上安装`libclang`。这通常可以通过包管理器（如`apt`，`brew`等）或从[LLVM官方网站](http://releases.llvm.org/download.html)下载预编译的二进制文件。
-
-例如，在Ubuntu上，可以使用：
-
-```cmd
-sudo apt-get install libclang-dev
-```
-
-### 步骤 2: 创建解析程序
-
-创建一个C++程序或脚本，用于调用`libclang`的API并遍历AST（抽象语法树）。你可能会使用`libclang`的`CXCursor`类型和相关函数来访问代码的不同部分。
-
-### 步骤 3: 遍历AST并提取数据
-
-使用`clang_visitChildren`函数来遍历AST中的每个节点，并通过判断节点类型来决定是否提取信息。以下是一段简化的伪代码示例：
-
-```C++
-#include <clang-c/Index.h>
-#include <iostream>
-#include <string>
-
-// 递归遍历AST并打印信息
-CXChildVisitResult visitor(CXCursor cursor, CXCursor parent, CXClientData client_data) {
-    // 获取当前节点的类型
-    CXCursorKind kind = clang_getCursorKind(cursor);
-
-    // 过滤感兴趣的节点类型，例如类、方法等
-    if (kind == CXCursor_ClassDecl) {
-        // 获取类名
-        CXString className = clang_getCursorSpelling(cursor);
-        std::cout << "Class: " << clang_getCString(className) << std::endl;
-        clang_disposeString(className);
-        // 继续向下遍历
-        clang_visitChildren(cursor, visitor, nullptr);
-    } else if (kind == CXCursor_CXXMethod && clang_Cursor_isPublic(cursor)) {
-        // 获取函数名
-        CXString methodName = clang_getCursorSpelling(cursor);
-        std::cout << "Method: " << clang_getCString(methodName) << std::endl;
-        clang_disposeString(methodName);
-    }
-    
-    return CXChildVisit_Recurse;
-}
-
-int main(int argc, char **argv) {
-    CXIndex index = clang_createIndex(0, 0);
-    // 假设 argv[1] 是要解析的C++源文件的路径
-    CXTranslationUnit unit = clang_parseTranslationUnit(index, argv[1], nullptr, 0, nullptr, 0, CXTranslationUnit_None);
-
-    if (unit == nullptr) {
-        std::cerr << "Unable to parse translation unit." << std::endl;
-        exit(-1);
-    }
-
-    CXCursor rootCursor = clang_getTranslationUnitCursor(unit);
-    clang_visitChildren(rootCursor, visitor, nullptr);
-
-    clang_disposeTranslationUnit(unit);
-    clang_disposeIndex(index);
-
-    return 0;
-}
-```
-
-上面的代码展示了如何使用`libclang`遍历AST并打印出类名和公有方法名。实际应用中，你需要将这些信息存储起来，以便最后输出到YAML文件中。
-
-### 步骤 4: 输出YAML格式数据
-
-为了将提取的信息输出为YAML格式，你可以使用`yaml-cpp`库，或者简单地手动构建YAML字符串。如果使用库，则需要先安装`yaml-cpp`，然后引入到你的项目中。
-
-创建YAML结构并填充数据，最后写入文件：
-
-```C++
-#include <yaml-cpp/yaml.h>
-// ...
-
-// 假设已经有了一个用于存储类和方法信息的结构
-std::map<std::string, std::vector<std::string>> classes;
-
-// ...
-
-// 在visitor函数中填充classes map
-// ...
-
-// 然后使用yaml-cpp生成YAML文件
-YAML::Emitter out;
-out << YAML::BeginMap;
-
-for (const auto& pair : classes) {
-    out << YAML::Key << pair.first; // 类名作为key
-    out << YAML::Value << YAML::BeginSeq;
-    for (const auto& method : pair.second) {
-        out << method; // 方法列表
-    }
-    out << YAML::EndSeq;
-}
-
-out << YAML::EndMap;
-
-// 写入文件或标准输出
-std::ofstream fout("output.yaml");
-fout << out.c_str();
-```
-
-完成以上步骤之后，你将能够从C++源文件中提取出所需的信息，并将其以YAML的格式保存到文件中。注意，实际情况可能更加复杂，你可能需要处理C++的高级特性，比如模板、宏、命名空间、重载函数等
 
 # LLVM IR
 
@@ -1785,6 +2472,10 @@ LLVM的优化级别分别是-O0 -O1 -O2 -O3 -Os（第一个是大写英文字母
 Debug情况下默认是不优化，Release情况下默认Fastest、Smallest
 
 
+
+## *IR的数据结构*
+
+[看看 LLVM 的码（一）基础数据结构、IR (glass-panel.info)](https://blog.glass-panel.info/post/read-llvm-code-1/)
 
 ## *bitcode*
 
@@ -1824,6 +2515,49 @@ Polly 基于一种叫做多面体模型的数学表示，使用这种方法，�
 
 Polly 主要应用于需要大规模数值计算的科学和工程领域，例如物理模拟、矩阵运算和图像处理。在这些领域，循环结构往往占据了程序的绝大部分计算时间，并且有明确的数据依赖模式可供分析和优化
 
+# Clang Static Analyzer
+
+[Clang Static Analyzer — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangStaticAnalyzer.html)
+
+Clang Static Analyzer，下面简称CSA，是LLVM提供的静态分析工具
+
+[Clang Static Analyzer 介绍 | jywhy6's blog](https://blog.jywhy6.zone/2021/05/31/clang-static-analyzer-intro/)
+
+CSA 是基于libclang实现的
+
+## *Exploded Graph*
+
+### CSA流程
+
+<img src="CSA流程.drawio.png">
+
+1. CSA以源代码为起点，将源代码转换为AST
+2. 将AST转换为控制流图 CFG
+3. 随着程序的模拟执行，Clang 的符号执行引擎会生成 Exploded Graph 扩展图，详细记录程序的执行位置和程序当前状态信息
+4. 最后，在各个 Checker（CSA中可自定义的漏洞检查器）回调函数检测到漏洞产生时，将基于 Exploded Graph 中的数据生成带漏洞触发路径的漏洞报告
+
+### Exploded Graph
+
+[clang static analyzer源码分析（一）_clang源码分析-CSDN博客](https://blog.csdn.net/dashuniuniu/article/details/50773316)
+
+[clang static analyzer源码分析（二）_clang源码分析-CSDN博客](https://blog.csdn.net/dashuniuniu/article/details/52434781)
+
+### CSA的符号执行
+
+## *Checker*
+
+以alpha开头的checker是实验版本
+
+- DeadStores: 检测未被使用的存储，即赋值给变量但随后未使用的值。
+- MallocChecker: 检测与动态内存分配相关的问题，包括内存泄漏、双重释放等。
+- NullDereference: 检测潜在的空指针解引用。
+- DivideZero: 检测可能导致除零错误的情况。
+- UninitializedObject: 检测可能未初始化的对象使用
+
+## *自定义Checker*
+
+[Checker Developer Manual (llvm.org)](https://clang-analyzer.llvm.org/checker_dev_manual.html)
+
 # JIT Compiler
 
 JIT Compiler（Just-In-Time Compiler）即时编译器，它在运行时（即程序执行期间）将程序的源代码或字节码动态地编译成机器码，然后立即执行。这与传统的AOT（Ahead-Of-Time Compilation）编译方式不同，后者在程序运行前就已经将源代码完全编译成机器码。
@@ -1854,7 +2588,9 @@ LLDB的使用可以看 *IDE与调试工具.md*
 
 ## *TableGen*
 
-ableGen是LLVM项目用来定义和生成各种数据表和程序结构的一种工具。这些`.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
+[TableGen Overview — LLVM 19.0.0git documentation](https://llvm.org/docs/TableGen/index.html)
+
+TableGen是LLVM项目用来定义和生成各种数据表和程序结构的一种工具。这些`.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
 
 ### TableGen工具
 
