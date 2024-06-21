@@ -88,3 +88,7 @@ custom_tag: !mytype { name: John Doe, age: 30 }
 ## *过程*
 
 <img src="YAML_Overview.png">
+
+## *yaml-cpp*
+
+[jbeder/yaml-cpp: A YAML parser and emitter in C++ (github.com)](https://github.com/jbeder/yaml-cpp?tab=readme-ov-file)

@@ -142,6 +142,12 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
   $ git config --add remote.origin.fetch '^refs/heads/revert-*'
   ```
 
+* 只拉取某个版本的LLVM
+
+  ```cmd
+  $ git clone --branch llvmorg-12.0.1 --depth 1 https://github.com/llvm/llvm-project.git
+  ```
+
 ### 编译
 
 [Getting Started with the LLVM System — LLVM 19.0.0git documentation](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
@@ -149,7 +155,7 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
 ```cmd
 $ cd llvm-project
 # cmake configure
-$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_PROJECTS="clang;lldb;clang-tools-extra"
+$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra"
 # $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 $ cmake --build build # cmake build
 $ sudo cmake --build build --target install # cmake install
@@ -318,11 +324,11 @@ Binary Optimization and Layout Tool, BOLT
 
 ## *Docker*
 
+### Shell Script for Generating Dockerfile
+
 `llvm/utils/docker` 文件夹下存放着将LLVM docker化的相关文件
 
 LLVM Project提供了以 `debian10` and `nvidia-cuda` 分别作为基准镜像的两个dockerfile，还有一个example供用户自己填充关键选项
-
-### Shell Script for Generating Dockerfile
 
 LLVM Project 另外提供了一个用来生成可定制化的LLVM的Dockerfile的Shell script `llvm/utils/build_docker_image.sh`
 
@@ -337,6 +343,59 @@ $ ./build_docker_image.sh \
 ```
 
 docker-repository 就是一个名字，取什么无所谓
+
+### 自定义的Dockerfile
+
+```dockerfile
+FROM ubuntu22.04
+
+ENV TZ=Asia/Shanghai
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get clean && \
+    apt-get autoclean
+
+# default cmake version 3.10.2
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y \
+    htop \
+    tree \
+    apt-utils \
+    curl \
+    wget \
+    cmake \ 
+    git \
+    openssh-server \
+    build-essential \
+    libboost-all-dev \
+    net-tools \
+    vim \
+    stress \
+    python3 \
+    ninja-build \
+    zlib1g
+
+# default gcc verison 7.5.0
+RUN apt-get install -y libc-ares-dev libssl-dev gcc g++ make
+
+RUN git clone --depth 1 --progress https://github.com/llvm/llvm-project.git
+
+WORKDIR /llvm-project
+
+# RUN git config --add remote.origin.fetch '^refs/heads/users/*' && git config --add remote.origin.fetch '^refs/heads/revert-*'
+
+# cmake config
+RUN cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_PARALLEL_LINK_JOBS=1 -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_PROJECTS="clang;lldb"
+
+# cmake build
+RUN cmake --build build
+
+# cmake install
+RUN cmake --build build --target install
+
+# LLVM non-relevant install if needed
+```
 
 ## *Cross-compile*
 
@@ -1581,7 +1640,11 @@ public:
 
 # 编程接口
 
-## *三个库的区别*
+## *Out-of-Tree Development with CMake*
+
+Out-of-Tree Development 就是不直接在 LLVM 源码目录里面开发，而是新建一个项目，通过链接 LLVM 库和头文件来开发基于 LLVM 的程序。LLVM 提供 llvm-config 工具或者 cmake 文件来定位 LLVM 库和头文件
+
+## *三个API库的区别*
 
 Clang 提供了用于编写需要有关程序的语法和语义信息的工具的基础设施
 
@@ -1637,16 +1700,6 @@ libclang的整个C语言接口可以在llvm-project/clang/include/clang-cIndex.h
 
 ```C++
 clang_visitChildren (CXCursor parent, CXCursorVisitor visitor, CXClientData client_data);
-```
-
-
-
-
-
-### Embed libclang with CMake
-
-```cmd
-$ clang++ -lcang main.cpp
 ```
 
 

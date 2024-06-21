@@ -769,7 +769,7 @@ UnionFS 的一些主要实现包括：
 
 * **AUFS（Advanced Multi-Layered Unification Filesystem）**：AUFS 是最早流行的UnionFS实现之一。它支持将多个目录挂载到同一个目录，使其内容看起来像是一个目录。但是 AUFS 并没有被 Linux 官方内核接受，因此需要额外的内核模块
 * **OverlayFS**：OverlayFS 是 Linux 内核的一部分，从 Linux 3.18 版本开始成为官方支持的UnionFS实现。它能够将多个文件系统层以只读或读写的方式进行合并。OverlayFS 较为简单，并且成为容器技术中 Docker 镜像层的默认选择
-* **Overlay2**：Overlay2 是 OverlayFS 的第二个版本，它在 OverlayFS 的基础上进行了改进和优化。Overlay2 通常作为 Docker 默认的存储驱动
+* **Overlay2**：Overlay2 是 OverlayFS 的第二个版本，它在 OverlayFS 的基础上进行了改进和优化。Overlay2 通常作为 Docker 默认的存储驱动 Storage Driver
 
 注意：不同Linux发型版用的UnionFS实现是不同的，比如CentOS和Ubuntu用的是Overlay2，Debian用的是AUFS
 
@@ -779,16 +779,21 @@ $ docker info | grep "Storage Driver"
 
 在容器中，UnionFS的使用使得容器可以更加轻量、快速，因为它允许共享相同的文件系统层，避免了不必要的复制。这对于容器的启动时间和磁盘占用都有着显著的影响
 
+另外，容器文件层的管理是由 graphDriver 这个组件实现的
+
 ### 使用UnionFS的例子
 
 https://juejin.cn/post/7068912318028972040
 
+[对 Docker 容器镜像的一点理解 · Issue #135 · dushaoshuai/dushaoshuai.github.io](https://github.com/dushaoshuai/dushaoshuai.github.io/issues/135)
+
 一个简单的例子是，假设有一个基础的只读文件系统（例如，CD-ROM或网络共享），但也希望有一个可写的文件系统来保存一些个人数据。使用UnionFS可以将这两个文件系统合并，使其看起来像一个单一的文件系统，同时保留只读和可写的特性
 
-overlay实现会将文件路径分为三类:
+docker pull的内容会默认存储在 /var/lib/docker/overlay2 目录下，overlay实现会将文件路径分为四类：
 
-* lowerdir：lowerdir作为最底层，lowerdir里面的文件是**只读文件**，lowerdir可以由多个路径组成（一个路径表示一层）；
+* lowerdir：lowerdir作为最底层，lowerdir里面的文件是**只读文件**，lowerdir可以由多个路径组成（一个路径表示一层）
 * upperdir：upperdir在lowerdir之上，upperdir里面的文件可以**读写**
+* workdir：由 OverlayFS 内部使用，是用于管理文件系统的内部工作目录
 * merged：merged为lower和upper合并之后暴露给用户的逻辑视图，在merged层的修改内容最终会反馈到upperdir
 
 以下是一个使用OverlayFS（Overlay文件系统）的简单例子，从中可以总结一些规律
@@ -847,7 +852,7 @@ overlay实现会将文件路径分为三类:
     └── work
 ```
 
-同时因为在moutn的时候顺序是 `ImageLayer:ImageBaseLayer`，所以 `ImageLayer/1.txt` 文件会覆盖 `ImageBaseLayer/1.txt` 因为 OverlayFS 会以上层的内容优先显示
+同时因为在mount的时候顺序是 `ImageLayer:ImageBaseLayer`，所以 `ImageLayer/1.txt` 文件会覆盖 `ImageBaseLayer/1.txt` 因为 OverlayFS 会以上层的内容优先显示
 
 <img src="UnionFS.drawio.png" width="70%">
 
@@ -1118,7 +1123,7 @@ Docker客户端和守护进程使用REST API通过UNIX套接字或网络接口�
 
   Docker registry是存储Docker镜像的地方。Docker Hub是一个公共的registry，任何人都可以使用，而且Docker默认会在Docker Hub上寻找镜像。用甚至可以运行自己的私有registry
 
-  当使用 `docker pull` 或 `docker run` 命令时，需要的镜像会从配置的registry中拉取。当你使用 `docker push` 命令时，用户的镜像会被推送到配置的registry中
+  当使用 `docker pull` 或 `docker run` 命令时，需要的镜像会从配置的registry中拉取。当使用 `docker push` 命令时，用户的镜像会被推送到配置的registry中
 
 ### Docker 对象
 
@@ -1544,17 +1549,21 @@ https://juejin.cn/post/7130934881554530334
 
 # Docker Volume
 
-Docker volume 存储卷 是 Docker 中用于持久化数据的一种机制，它允许在容器之间或容器与主机之间共享和存储数据。实际上**在宿主机上的这个与容器形成绑定关系的目录被称作存储卷**。卷的本质是文件或者目录，它可以绕过默认的联合文件系统，直接以文件或目录的形式存在于宿主机上
+Docker volume 存储卷 是 Docker 中用于持久化数据的一种机制，它允许在容器之间或容器与主机之间共享和存储数据。实际上**在宿主机上的这个与容器形成绑定关系的目录被称作存储卷 volume**。卷的本质是文件或者目录，它可以绕过默认的联合文件系统，直接以文件或目录的形式存在于宿主机上
 
 使用 Docker volume 可以解决容器中数据持久性的问题，因为容器本身是临时的，一旦容器停止或删除，其文件系统中的数据也会丢失。而 Docker volume 允许将数据存储在宿主机上的持久化存储卷中，使得数据可以在容器之间进行共享，同时保留在宿主机上。**容器和宿主机的数据读写是同步的**
 
 ## *存储卷类型*
 
+[volume详解 · Docker -- 从入门到实战 (baoshu.red)](http://docker.baoshu.red/data_management/volume.html)
+
 <img src="types-of-mounts-volume.webp" width="60%">
+
+Docker 提供了三种不同的方式将数据从 Docker Host 挂载到 Docker 容器，并实现数据的读取和存储：volumes、bind mounts 和 tmpfs 
 
 ### Volume
 
-volume：管理卷，默认映射到宿主机的/var/lib/docker/volumes 目录下，只需要在容器内指定容器的挂载点是什么，而被绑定宿主机下的那个目录，是由容器引擎 daemon 自行创建的一个空的目录，或者使用一个已经存在的目录，与存储卷建立存储关系
+volume 管理卷：默认映射到宿主机的 /var/lib/docker/volumes 目录下，该目录是由 Docker 管理的，非 Docker 的进程不能去修改这个路径下面的文件。只需要在容器内指定容器的挂载点是什么，而被绑定宿主机下的那个目录，是由容器引擎 daemon 自行创建的一个空的目录，或者使用一个已经存在的目录，与存储卷建立存储关系
 
 这种方式极大解脱用户在使用卷时的耦合关系，缺陷是用户无法指定那些使用目录，灵活性较低，因此临时存储比较适合
 
@@ -1564,9 +1573,11 @@ volume：管理卷，默认映射到宿主机的/var/lib/docker/volumes 目录�
 
 bind mount 绑定数据卷：映射到宿主机指定路径下，在宿主机上的路径要**人工的指定一个特定的路径**，在容器中也需要指定一个特定的路径，两个已知的路径建立关联关系
 
+非 Docker 的进程或者 Docker 容器可能随时对其进行修改，存在潜在的安全风险
+
 ### tmpfs mount
 
-tmpfs mount 临时数据卷：**映射到宿主机内存中**，一旦容器停止运行，tmpfs mounts会被移除，数据就会丢失。用于**高性能的临时数据存储**
+tmpfs mount 临时数据卷：**映射到宿主机内存中**，一旦容器停止运行，tmpfs mounts会被移除，数据就会丢失。用于**高性能或者有安全性需求的临时数据存储**
 
 ## *实操：MySQL灾难恢复*
 

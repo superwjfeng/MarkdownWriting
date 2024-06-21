@@ -705,26 +705,46 @@ multi-line string.'''
 
 * `strip()`：去除字符串两端的空白字符
 
-* `split()`：将字符串拆分为子字符串列表
+* `split()`：将字符串拆分为子字符串列表，这个方法会根据指定的分隔符对原始字符串进行切割，并返回一个包含这些子字符串的列表
+
+  ```python
+  str.split(sep=None, maxsplit=-1)
+  ```
+
+  - `sep`：指定用作分隔符的字符串。如果未提供或指定为 `None`，则按空白字符（空格、换行 `\n`、制表符 `\t` 等）进行分割
+  - `maxsplit`：可选参数，指定分割的次数。默认情况下（即当其值为 `-1` 时），分割动作会执行尽可能多的次数。如果指定了 `maxsplit`，则只会分割为 `maxsplit+1` 个子字符串
+
+  ```python
+  >>> s = "apple,banana,cherry"
+  >>> print(s.split(','))
+  ['apple', 'banana', 'cherry']
+  >>> print(s.split())
+  ['apple,banana,cherry' # 没有成功split
+  ```
 
 * `join()`：将序列中的元素连接为一个字符串
+
+  ```python
+  separator.join(iterable)
+  ```
+
+  - `separator` 是希望在每个元素之间插入的字符串（可以为空）
+  - `iterable` 是包含要连接的字符串的可迭代对象
+
+  ```python
+  >>> ''.join(['hello','world'])
+  'helloworld'
+  >>> ' '.join(['hello','world'])
+  'hello world'
+  >>> '-'.join(['hello','world'])
+  'hello-world'
+  ```
 
 * `replace()`：替换字符串中的指定子字符串
 
 * `find()`：查找字符串中是否包含指定子字符串，返回子字符串的第一个索引值
 
 * `count()`：计算指定子字符串在字符串中出现的次数
-
-```python
-my_string = " Python Programming is fun! "
-print(my_string.upper())                 # 输出： PYTHON PROGRAMMING IS FUN! 
-print(my_string.strip())                 # 输出：Python Programming is fun!
-print(my_string.split())                 # 输出：['Python', 'Programming', 'is', 'fun!']
-print("-".join(['a', 'b', 'c']))         # 输出：a-b-c
-print(my_string.replace('fun', 'cool'))  # 输出： Python Programming is cool! 
-print(my_string.find('is'))              # 输出：9
-print(my_string.count('o'))              # 输出：2
-```
 
 ### 字符串格式化
 
@@ -1151,6 +1171,12 @@ ArgumentParser.add_argument(name or flags...[, action][, nargs][, const][, defau
 - `name or flags...`: 这里的省略号（`...`）意味着可以传递一个或多个参数名称（例如 `'foo'` 或 `'--foo'`）。它们可以是位置参数的名称或是可选参数的标志
 - `[argument]`: 方括号通常用于表示参数是可选的，即在调用这个方法时，可以选择是否提供这个参数。如果方括号内部有一系列参数，比如 `[, action][, nargs]`，这表示 `action` 和 `nargs` 都是可选参数
 - `[, action]`: 你可以包含 `action` 参数，也可以不包含。如果选择包含此参数，那么应该为它提供一个值（例如 `store`, `store_true` 等）。如果不包含它，将使用默认行为
+
+## *built_in functions*
+
+[Built-in Functions — Python 3.12.4 documentation](https://docs.python.org/3/library/functions.html)
+
+<img src="Python_builtin_functions.png">
 
 # 三器一闭
 
@@ -1902,6 +1928,7 @@ for key, value in os.environ.items():
 ### 与系统相关的其他方法
 
 * `os.times()`：返回当前的全局进程时间，五个属性
+* `os.sep`：不同OS的分隔符是不同的，Win文件的路径分隔符是 `'\'`，在Linux上是 `'/'`，可以用 `os.sep` 来代替
 
 ## *sys库*
 

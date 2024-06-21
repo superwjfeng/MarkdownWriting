@@ -540,14 +540,31 @@ endif()
 if (变量1 EQUAL 变量2)
     # 在变量1等于变量2时执行的指令
 endif()
+
+if(<condition>)  
+    <commands>
+elseif(<condition>) # optional block, can be repeated  
+    <commands>
+else()              # optional block  
+    <commands>
+endif()
 ```
+
+Compound conditions [are]() evaluated in the following order of precedence:
+
+1. Parentheses.
+2. Unary tests such as [EXISTS](https://cmake.org/cmake/help/latest/command/if.html?highlight=#exists), [COMMAND](https://cmake.org/cmake/help/latest/command/if.html?highlight=#command), and [DEFINED](https://cmake.org/cmake/help/latest/command/if.html?highlight=#defined).
+3. Binary tests such as [EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#equal), [LESS](https://cmake.org/cmake/help/latest/command/if.html?highlight=#less), [LESS_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#less-equal), [GREATER](https://cmake.org/cmake/help/latest/command/if.html?highlight=#greater), [GREATER_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#greater-equal), [STREQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#strequal), [STRLESS](https://cmake.org/cmake/help/latest/command/if.html?highlight=#strless), [STRLESS_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#strless-equal), [STRGREATER](https://cmake.org/cmake/help/latest/command/if.html?highlight=#strgreater), [STRGREATER_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#strgreater-equal), [VERSION_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#version-equal), [VERSION_LESS](https://cmake.org/cmake/help/latest/command/if.html?highlight=#version-less), [VERSION_LESS_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#version-less-equal), [VERSION_GREATER](https://cmake.org/cmake/help/latest/command/if.html?highlight=#version-greater), [VERSION_GREATER_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#version-greater-equal), [PATH_EQUAL](https://cmake.org/cmake/help/latest/command/if.html?highlight=#path-equal), and [MATCHES](https://cmake.org/cmake/help/latest/command/if.html?highlight=#matches).
+4. Unary logical operator [NOT](https://cmake.org/cmake/help/latest/command/if.html?highlight=#not).
+5. Binary logical operators [AND](https://cmake.org/cmake/help/latest/command/if.html?highlight=#and) and [OR](https://cmake.org/cmake/help/latest/command/if.html?highlight=#or), from left to right, without any short-circuit.
 
 ### foreach
 
 foreach 语句可以用于遍历列表，并在每次迭代时执行一组指令
 
 ```cmake
-foreach(item IN LISTS 列表)
+foreach(<loop_var> <items>)  
+    <commands>
     # 在每次迭代时执行的指令，可以使用 ${item} 获取当前元素的值
 endforeach()
 ```
@@ -661,6 +678,12 @@ set_target_properties(my_target PROPERTIES
 3. 全局变量和局部变量： CMake 中有全局变量和局部变量的概念。通过 `set` 命令定义的变量默认情况下是全局变量，可以在整个项目中使用。在函数或代码块中使用 `set` 命令定义的变量是局部变量，只在该代码块范围内有效
 
 这些只是一些常见的CMake变量用法示例。CMake提供了更多高级用法，如列表变量、环境变量、缓存变量
+
+### option
+
+CMake 对 BOOL 类型缓存的 set 指令提供了一个简写：option
+
+`option(变量名 "描述" 变量值)` 等价于 `set(变量名 CACHE BOOL 变量值 "描述")`
 
 ### CMake常用内置变量
 
@@ -783,12 +806,6 @@ message("myvar is: ${myvar}")
   ```cmake
   set(myvar "helLo" CACHE STRING "this is another the docstring." FORCE)
   ```
-
-### option
-
-CMake 对 BOOL 类型缓存的 set 指令提供了一个简写：option
-
-`option(变量名 "描述" 变量值)` 等价于 `set(变量名 CACHE BOOL 变量值 "描述")`
 
 ## *作用域*
 
@@ -1393,6 +1410,18 @@ Config模式下是要查找名为`<PackageName>Config.cmake`或`<lower-case-pack
 ## *封装软件包*
 
 为了让我们自己开发的软件包能够让使用者通过 find_package 来找到，同理我们也需要提供 `<PackageName>Config.cmake`或`Find<PackageName>.cmake` 配置文件
+
+
+
+## *获取软件包*
+
+### build时下载
+
+直到 CMake 3.11， 主流的下载包的方法都在构建时进行。这（在构建时下载）会造成几个问题；其中最主要问题的是 **`add_subdirectory` 不能对一个尚不存在的文件夹使用**。因此，我们导入的外部项目内置的工具必须自己构建自己（这个外部项目）来解决这个问题
+
+### configure时下载：FetchContent (3.11+)
+
+
 
 # 构建库
 
