@@ -457,6 +457,79 @@ LLVM 测试基础设施包含三大类测试：单元测试 unit test、回归�
 
 通常，当在 LLVM 中发现 bug 时，应该编写一个回归测试，其中包含足够的代码来重现问题，并将该测试放置在这个目录的某个位置。例如，它可以是从实际应用程序或基准中提取的一小段 LLVM IR
 
+## *Components & Libraries*
+
+组件 components 是构成LLVM框架各个功能部分的模块，它们对应于LLVM中的不同库。`llvm-config --components` 可以用来列出所有可用的组件。每个组件通常对应于LLVM的一组特定功能，比如代码生成、目标文件处理、汇编解析等
+
+```cmd
+$ llvm-config --components
+aarch64 aarch64asmparser aarch64codegen aarch64desc aarch64disassembler aarch64info aarch64utils aggressiveinstcombine all all-targets amdgpu amdgpuasmparser amdgpucodegen amdgpudesc amdgpudisassembler amdgpuinfo amdgputargetmca amdgpuutils analysis arm armasmparser armcodegen armdesc armdisassembler arminfo armutils asmparser asmprinter avr avrasmparser avrcodegen avrdesc avrdisassembler avrinfo binaryformat bitreader bitstreamreader bitwriter bpf bpfasmparser bpfcodegen bpfdesc bpfdisassembler bpfinfo cfguard codegen codegentypes core coroutines coverage debuginfobtf debuginfocodeview debuginfodwarf debuginfogsym debuginfologicalview debuginfomsf debuginfopdb demangle dlltooldriver dwarflinker dwarflinkerclassic dwarflinkerparallel dwp engine executionengine extensions filecheck frontenddriver frontendhlsl frontendoffloading frontendopenacc frontendopenmp fuzzercli fuzzmutate globalisel hexagon hexagonasmparser hexagoncodegen hexagondesc hexagondisassembler hexagoninfo hipstdpar instcombine instrumentation interfacestub interpreter ipo irprinter irreader jitlink lanai lanaiasmparser lanaicodegen lanaidesc lanaidisassembler lanaiinfo libdriver lineeditor linker loongarch loongarchasmparser loongarchcodegen loongarchdesc loongarchdisassembler loongarchinfo lto mc mca mcdisassembler mcjit mcparser mips mipsasmparser mipscodegen mipsdesc mipsdisassembler mipsinfo mirparser msp430 msp430asmparser msp430codegen msp430desc msp430disassembler msp430info native nativecodegen nvptx nvptxcodegen nvptxdesc nvptxinfo objcarcopts objcopy object objectyaml option orcdebugging orcjit orcshared orctargetprocess passes powerpc powerpcasmparser powerpccodegen powerpcdesc powerpcdisassembler powerpcinfo profiledata remarks riscv riscvasmparser riscvcodegen riscvdesc riscvdisassembler riscvinfo riscvtargetmca runtimedyld scalaropts selectiondag sparc sparcasmparser sparccodegen sparcdesc sparcdisassembler sparcinfo support symbolize systemz systemzasmparser systemzcodegen systemzdesc systemzdisassembler systemzinfo tablegen target targetparser textapi textapibinaryreader transformutils ve veasmparser vecodegen vectorize vedesc vedisassembler veinfo webassembly webassemblyasmparser webassemblycodegen webassemblydesc webassemblydisassembler webassemblyinfo webassemblyutils windowsdriver windowsmanifest x86 x86asmparser x86codegen x86desc x86disassembler x86info x86targetmca xcore xcorecodegen xcoredesc xcoredisassembler xcoreinfo xray
+```
+
+- aarch64, aarch64asmparser, aarch64codegen, aarch64desc, aarch64disassembler, aarch64info, aarch64utils：这些组件与 ARM 的 AArch64 架构相关，包括代码生成、汇编解析、描述符管理、反汇编以及其他针对该架构的实用工具
+- aggressiveinstcombine：提供激进的指令合并优化
+- amdgpu, amdgpuasmparser, amdgpucodegen, amdgpudesc, amdgpudisassembler, amdgpuinfo, amdgputargetmca, amdgpuutils：与 AMD GPU 相关的组件集合，涵盖了从代码生成到反汇编等多方面功能
+- analysis：提供 IR 层面上的分析功能
+- arm, armasmparser, armcodegen, armdesc, armdisassembler, arminfo, armutils：与 ARM 架构（32位）相关的组件，包括代码生成、汇编语法解析、描述符管理等
+- asmparser：提供通用的汇编语法解析器
+- asmprinter：提供通用的汇编打印功能，即将 IR 转换为目标汇编语言
+- binaryformat：提供对二进制文件格式的处理能力
+- bitreader, bitstreamreader：提供读取 LLVM bitcode 文件的功能
+- bitwriter：提供将 LLVM IR 写入成 bitcode 文件的功能
+- bpf, bpfasmparser, bpfcodegen, bpfdesc, bpfdisassembler, bpfinfo：针对 BPF (Berkeley Packet Filter) 架构的代码生成、汇编解析等功能
+- codegen, codegentypes：与 LLVM 的通用代码生成层相关的组件
+- **core：LLVM 的核心组件，提供基本的 LLVM IR 操作和转换能力**
+- coroutines：提供协程支持
+- coverage：提供代码覆盖率工具的支持
+- debuginfoxxx：与调试信息的不同方面和不同格式相关的组件，例如 DWARF，CodeView，GSYM 等
+- demangle：提供名称重整（demangling）的功能，即将编译器生成的装饰过的名称还原为源代码中的名称
+- dwarflinker：提供 DWARF 链接器功能
+- **engine：提供JIT编译和执行引擎**
+- executionengine：执行引擎的基础设施
+- globalisel：提供全局指令选择的功能
+- hexagon: 与 Hexagon DSP 架构相关的代码生成、汇编解析等功能
+- ipo：提供链接时优化（Interprocedural Optimization）的功能
+- irreader：提供从文本形式读取 LLVM IR 的功能
+- jitlink：提供 JIT 编译时的链接功能
+- lto：提供链接时优化的库
+- mc, mcparser, mcdisassembler：提供低级别机器代码表示，汇编语句的解析和反汇编
+- mirparser：提供机器 IR 的解析功能
+- msp430：与 MSP430 微控制器架构相关的代码生成和工具
+- native：提供本地（当前运行环境）目标的支持
+- nvptx：与 NVIDIA PTX 架构相关的代码生成和工具
+- objcarcopts：提供 Objective-C 自动引用计数（Automatic Reference Counting, ARC）的优化
+- objcopy：提供 objcopy 工具的功能，可以复制和转换对象文件
+- object：提供对对象文件（.o 文件）的操作支持
+- option：提供命令行选项处理的支持
+- orcxxx：与 ORC JIT 编译器相关的组件
+- passes：提供 LLVM 优化和变换的 Passes
+- powerpc：与 PowerPC 架构相关的代码生成和工具
+- profiledata：提供对性能数据（如性能分析结果）的支持
+- riscv：与 RISC-V 架构相关的代码生成和工具
+- scalaropts：提供标量优化技术
+- selectiondag：提供 SelectionDAG 基础设施，这是 LLVM 中表示和转换指令的一个系统
+- **support：提供跨平台支持和底层实用程序**
+- symbolize：提供符号反向查找（将地址映射回源代码符号）的功能
+- target：提供对特定目标处理器架构的支持
+- transformsxxx：提供各种 IR 变换的支持
+- vectorize：提供向量化技术
+- webassembly：与 WebAssembly 相关的代码生成和工具
+- windowsmanifest：提供 Windows Manifest 文件的处理
+- x86, x86asmparser, x86codegen, x86desc, x86disassembler, x86info：与 x86 和 x86-64 架构相关的代码生成、汇编解析等功能
+- xray：提供 XRay 功能追踪工具的支持
+- xcore：与 XMOS xCORE 架构相关的代码生成和工具
+
+### 控制库行为的cmake变量
+
+* **BUILD_SHARED_LIBS**:BOOL
+* **LLVM_BUILD_LLVM_DYLIB**:BOOL
+
+
+
+
+
+`llvm_map_components_to_libraries()` (LLVM < 3.5, otherwise deprecated)
+
 # 预定义宏
 
 ## *`__attribute__`*
@@ -1644,6 +1717,18 @@ public:
 
 Out-of-Tree Development 就是不直接在 LLVM 源码目录里面开发，而是新建一个项目，通过链接 LLVM 库和头文件来开发基于 LLVM 的程序。LLVM 提供 llvm-config 工具或者 cmake 文件来定位 LLVM 库和头文件
 
+### llvm-config
+
+[llvm-config - Print LLVM compilation options — LLVM 19.0.0git documentation](https://llvm.org/docs/CommandGuide/llvm-config.html)
+
+llvm-config可以获取系统中LLVM的所有相关信息，这些信息可以方便的用于构建基于LLVM的项目。下面省略 `--`
+
+* components：列举出LLVM所有的components
+* cmakedir：打印LLVM CMake模块的安装地址
+* bindir
+* includedir
+* libdir
+
 ## *三个API库的区别*
 
 Clang 提供了用于编写需要有关程序的语法和语义信息的工具的基础设施
@@ -2387,6 +2472,21 @@ char MyCustomError::ID = 0;
 
 
 ## *log*
+
+## *LLVM-style RTTI*
+
+LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
+
+### Challenge for linker
+
+[Undefined reference to `typeinfo for llvm::cl::GenericOptionValue' - Beginners - LLVM Discussion Forums](https://discourse.llvm.org/t/undefined-reference-to-typeinfo-for-llvm-genericoptionvalue/71526)
+
+```cmake
+set(NO_RTTI "-fno-rtti")
+add_definitions(${NO_RTTI})
+```
+
+
 
 # Clang Tools & Clang Plugin
 
