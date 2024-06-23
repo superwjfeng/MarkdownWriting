@@ -475,9 +475,11 @@ printf(a % b); // 1 取模
 (3, 1)
 ```
 
-Python 中没有单独的自增(`++`)和自减(`--`)运算符，而是使用 `+= 1` 和 `-=` 1 来实现
-
 ### 其他运算符
+
+* 算术运算符
+  * `**` 求幂
+  * Python 中没有单独的自增 `++` 和自减 `--` 运算符，而是使用 `+= 1` 和 `-=` 1 来实现
 
 * 比较运算符：和C++不一样的是，Python支持连续比较，即 `a>b>c` 是可以的，而C++中只能写成 `a>b && b>c`
 * 逻辑运算符：Python中没有 `$$ || !` 的逻辑运算符，而是用 `and or not` 来表示，短路原理也适用
@@ -635,6 +637,33 @@ Python的列表是一个可变长度的顺序存储结构
 https://www.liujiangblog.com/course/python/19
 
 <img src="list方法.png" width="80%">
+
+* 构造
+
+  * `a=[]` 或者 `a=list()`空列表
+  * 从构造器
+  * 列表推导式
+
+* 插入
+
+  * append
+  * insert
+
+* 删除
+
+  * `list.remove(obj)` 用于移除列表中某个值的第一个匹配项
+
+    ```python
+    aList = [123, 'xyz', 'zara', 'abc', 'xyz'];
+    aList.remove('xyz');
+    ```
+
+  * `list.pop([index=-1])` 移除列表中的一个元素（默认最后一个元素），并且返回该元素的值
+
+* 排序：`list.sort( key=None, reverse=False)`
+
+  * key -- 主要是用来进行比较的元素，只有一个参数，具体的函数的参数就是取自于可迭代对象中，指定可迭代对象中的一个元素来进行排序。
+  * reverse -- 排序规则，**reverse = True** 降序， **reverse = False** 升序（默认）
 
 ## *元组 Tuple*
 
