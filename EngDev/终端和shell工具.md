@@ -36,7 +36,7 @@ iTerm2 是 Terminal 的替代品，也是 iTerm 的继任者。它适用于装�
 
 ### Powershell配置
 
-Powershell的配置工具在 `C:\Users\Weijian Feng\Documents\PowerShell\Microsoft.PowerShell_profile.ps1.`
+Powershell的配置工具在 `C:\Users\Weijian Feng\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
 
 可以用 `vim $PROFILE` 打开
 
@@ -68,24 +68,24 @@ PowerShell 默认可能会禁止执行未签名的脚本，以提供额外的安
 - **Restricted**：不允许任何脚本运行。
 - **AllSigned**：只运行由可信发行者签名的脚本。
 - **RemoteSigned**：运行本地脚本和由可信发行者签名的远程脚本。
-- **Unrestricted**：运行所有脚本（这是最不安全的选项）。
+- **Unrestricted**：运行所有脚本（这是最不安全的选项）
 
 要查看当前的执行策略，可以使用：
 
 ```
-powershell复制代码Get-ExecutionPolicy
+Get-ExecutionPolicy
 ```
 
 若要将执行策略更改为 RemoteSigned（通常是推荐选项），允许本地脚本执行和已签名的远程脚本执行，可以使用以下命令：
 
 ```
-powershell复制代码Set-ExecutionPolicy RemoteSigned
+Set-ExecutionPolicy RemoteSigned
 ```
 
 执行上述命令时，你需要以管理员身份运行 PowerShell。如果你不是管理员或者希望只对当前用户更改执行策略，可以使用 `-Scope` 参数指定：
 
 ```
-powershell复制代码Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 ### oh-my-posh
