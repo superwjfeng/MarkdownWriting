@@ -373,13 +373,11 @@ make是如何知道目标已经是最新的呢？根据文件的最近修改时�
 
 <img src="PHONY_comparison.png">
 
-# CMake基础
+# CMake语法
 
 ## *基本语法*
 
 现代 CMake 指的是 CMake 3.x；古代 CMake 指的是 CMake 2.x
-
-### 基本语法格式
 
 ```CMake
 #CMakeLists.txt
@@ -402,115 +400,6 @@ add_executable(hello ${SRC_LIST})
 CMake的指令笔者不会在这里统一给出，而是在下面用到了之后再给出
 
 `CMAKE_MINIMUM_REQUIRED(VERSION versionNumber [FATAL_ERROR])` 指定CMake的最小版本要求
-
-### project指令
-
-project可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有语⾔
-
-* `project (HELLO)`：指定了⼯程的名字，并且⽀持所有语⾔，**建议这么写**
-* `project (HELLO CXX)` 指定了⼯程的名字，并且⽀持语⾔是C++
-* `project (HELLO C CXX)` 指定了⼯程的名字，并且⽀持语⾔是C和C++
-* 也可以支持JAVA
-
-## *CMake项目构建命令*
-
-### 现代编译命令
-
-```cmd
-# cmake 配置
-$ cmake -B build -G <Generator> -S <Souce_Path> -DCMAKE_BUILD_TYPE=Release
-# cmake 编译
-$ cmake --build build --parallel 4
-# cmake 安装
-$ sudo cmake --build build --target install
-```
-
-* 配置阶段：`cmake -B build`：B 代表 build
-
-  ```
-  -B <path-to-build>           = Explicitly specify a build directory.
-  ```
-
-  这个命令用于配置CMake的配置 configure 过程，并将生成的构建系統文件（如Makefile或Visual Studio项目文件 .sln）放置在一个指定的目录中（在此示例中是build目录）。-B选项后面指定的参数表示生成构建文件的目录。**如果不存在build目录，那么它会自动创建build目录**
-
-  例如，运行命令 cmake -B build 会根据CMakellists.txt文件中的配置生成构建系统文件（如Makefile或Visual Studio项目文件 .sln）并将其放置在名为build的目录中。这个命令通常用于在构建系统文件和源代码文件分离的情况下，以保持源代码目录的干净和可维护性
-
-  * 在配置阶段还可以使用 -D（Define） 选项来设置缓存变量。第二次配置时，之前的 -D 添加仍然会被保留
-
-    ```
-    -D <var>[:<type>]=<value>    = Create or update a cmake cache entry.
-    ```
-
-    下面是构建时最常用的几个缓存变量
-    
-    * `-DCMAKE_BUILD_TYPE=Release`：指定构建的类型为 Release
-    * `-DCMAKE_INSTALL_PREFIX=/usr/lib`：指定安装路径为 /usr/lib
-    * `-DCMAKE_CXX_COMPILER='/usr/bin/clang++'：指定编译器
-
-* 编译阶段：`cmake --build build`
-
-  ```
-  --build <dir>                = Build a CMake-generated project binary tree.
-  ```
-
-  这个命令用于执行构建 build 过程，根据配置好的构建系統文件（例如Makefile） 在指定的构建目录中进行实际的编译和链接
-
-  例如，在运行 `cmake -B build` 之后，可以使用 `cmake--build build` 命令在build 目录中执行构建过程。这将根据所生成的构建系统文件执行编译器和链接器，并生成可执行文件或库文件
-
-  这个命令会使用构建系统的默认构建规则，但也可以通过在cmake --build命令后面添加选项来修改构建过程的行为。例如，您可以使用--target 选项指定要构建的特定目标，或使用其他选项来控制并行编译、生成的输出等
-
-  该命今是跨平台的，可以在不同平台使用该命令编译构建cmake项目
-
-* 安装阶段
-
-  `sudo cmake --build build --target install` 这条命令实质上是指示CMake去调用构建系统（在 `build` 目录中生成的）以执行 `install` 目标。它不会同时触发整个项目的构建，只有当之前没有构建过或者有文件自上次构建以来被修改了，才会导致重新编译
-
-  没有直接通过CMake命令只执行安装操作的选项。`--target install` 依赖于构建系统知道哪些目标已经是最新的，以及哪些目标需要安装
-
-### 补充：古代编译命令
-
-在Linux平台下使用CMake构建C/C++工程的流程如下
-
-1. 手动编写CMakeLists.txt
-2. 执行命令 `cmake PATH` 生成Makefile，PATH是顶层CMakeLists.txt所在的目录。注意，在哪里执行cmake命令生成的内容就在哪里，一般选择在build文件夹中执行 `cmake ..`，因为build中是所有编译产生的内容
-3. 使用 `cmake --build .` 进行跨平台build，Linux上也可以使用 `make`
-
-可以通过 `cmake .. -DCMAKE_VERBOSE_MAKEFILE=on` 将之后在make的时候具体的编译命令展示出来
-
-* 内部构建 in-source build
-
-  在内部构建中，构建过程发生在源代码目录中，**也就是在与源代码相同的目录中进行构建**。这意味着生成的构建文件、中间文件和可执行文件与源代码混合在一起。这种构建方式简单，适用于小型项目或测试目的，但不推荐用于生产环境
-
-  ```cmd
-  $ cd /path/to/project
-  $ cmake .
-  $ make -j4
-  $ make install
-  ```
-
-* 外部构建 out-of-source build
-
-  在外部构建中，构建过程发生在与源代码目录分离的单独的build目录中。这意味着生成的构建文件、中间文件和可执行文件不会污染源代码目录，使得项目结构更加清晰和可维护。这种构建方式通常用于实际项目的生产环境
-
-  ```cmd
-  $ cd /path/to/project
-  $ mkdir build
-  $ cd build
-  $ cmake ..
-  $ make -j4
-  ```
-
-  在上述示例中，构建命令在与源代码目录分离的 build 目录中执行，这样可以确保生成的构建文件和输出文件不会与源代码混在一起
-
-  外部构建具有以下优点，通常建议在实际项目中使用外部构建。当然现代编译命令直接就是外部构建
-
-  * 避免污染源代码目录，使得源代码目录保持干净和可重复使用
-
-  * 方便进行多个配置和平台的构建，而无需重复克隆源代码
-
-  * 更好地支持并行构建，加快构建过程
-
-  * 支持更简洁和可靠的清理过程
 
 ## *CMake控制流*
 
@@ -618,262 +507,117 @@ set_target_properties(my_target PROPERTIES
 
  RPATH可以使用相对路径，这使得程序更加可移植
 
-# 变量 & 缓存
+# CMake构建
 
-## *CMake变量*
+## *CMake项目构建命令*
 
-###  变量分类
+### 现代编译命令
 
-* 普通变量：定义在CMakeLists.txt中的变量
-* 缓存变量 Cache Variable：这些变量存储在`CMakeCache.txt`文件中，包含了项目配置和构建系统的相关信息。通过`set()`和`get()`等命令可以读取和修改这些变量
-* 环境变量 Environment Variable：CMake可以读取环境变量，并将其用作配置选项。例如，通过`$ENV{VAR_NAME}`可以获取环境变量的值
+```cmd
+# cmake 配置
+$ cmake -B build -G <Generator> -S <Souce_Path> -DCMAKE_BUILD_TYPE=Release
+# cmake 编译
+$ cmake --build build --parallel 4
+# cmake 安装
+$ sudo cmake --build build --target install
+```
 
-### 变量类型
+* 配置阶段：`cmake -B build`：B 代表 build
 
-* 字符串变量 String：字符串是CMake中最基本的数据类型，字符串变量可以包含文本、数字等信息。通过`set()`命令可以创建字符串变量，例如：
+  ```
+  -B <path-to-build>           = Explicitly specify a build directory.
+  ```
 
-     ```cmake
-     set(MY_STRING "Hello, World!")
-     ```
+  这个命令用于配置CMake的配置 configure 过程，并将生成的构建系統文件（如Makefile或Visual Studio项目文件 .sln）放置在一个指定的目录中（在此示例中是build目录）。-B选项后面指定的参数表示生成构建文件的目录。**如果不存在build目录，那么它会自动创建build目录**
 
-* 列表变量 List：列表是由分号分隔的一系列字符串的集合
+  例如，运行命令 cmake -B build 会根据CMakellists.txt文件中的配置生成构建系统文件（如Makefile或Visual Studio项目文件 .sln）并将其放置在名为build的目录中。这个命令通常用于在构建系统文件和源代码文件分离的情况下，以保持源代码目录的干净和可维护性
 
-   * 通过`set()`命令和`LIST`操作命令（如`list(APPEND)`、`list(REMOVE_ITEM)`等）可以创建和修改列表变量
+  * 在配置阶段还可以使用 -D（Define） 选项来设置缓存变量。第二次配置时，之前的 -D 添加仍然会被保留
 
-   * 列表中的元素可以使用索引来访问，也可以使用`foreach`等循环结构进行遍历。例如：
-
-     ```cmake
-     set(MY_LIST "Item1;Item2;Item3")
-     list(APPEND MY_LIST "Item4")
-     ```
-
-* FILEPATH 文件路径，例如 "C: /path/to/project//my_proj.cmake”
-* PATH 目录路径，例如 “C:/path/to/project/cmake/”
-* BOOL布尔值：通常来说 BOOL 类型的变量只有 ON/OFF 两种取值。但是由于历史原因，TRUE/FALSE 和 YES/NO 也可以表示 BOOL 类型。**建议始终使用 ON/OFF 避免混淆**
-
-### 自定义变量
-
-在CMake中，可以使用变量来存储和传递值。这些变量可用于设置构建选项、路径、编译器选项等。下面是一些常见的CMake变量用法
-
-1. SET定义变量
-
-   ```cmake
-   set(variable_name value)
-   ```
-
-   **`set`  指令用于创建一个名为 `variable_name` 的变量，并将其设置为 `value`**
-
-   demo中 `SET(SRC_LIST main.cpp)` 就是创建一个 `SRC_LIST` 变量，并将其值设置为 main.cpp
-
-   如果源⽂件名中含有空格，就必须要加双引号，比如 `m ain.cpp`
-
-2. 引用变量
-
-   ```cmake
-   ${variable_name}
-   ```
-
-   在CMake中，使用 `${}` 来引用变量的值。例如，`${variable_name}` 将被替换为变量 `variable_name` 的实际值
-
-3. 全局变量和局部变量： CMake 中有全局变量和局部变量的概念。通过 `set` 命令定义的变量默认情况下是全局变量，可以在整个项目中使用。在函数或代码块中使用 `set` 命令定义的变量是局部变量，只在该代码块范围内有效
-
-这些只是一些常见的CMake变量用法示例。CMake提供了更多高级用法，如列表变量、环境变量、缓存变量
-
-### option
-
-CMake 对 BOOL 类型缓存的 set 指令提供了一个简写：option
-
-`option(变量名 "描述" 变量值)` 等价于 `set(变量名 CACHE BOOL 变量值 "描述")`
-
-### CMake常用内置变量
-
-* 编译器相关
-
-  * CMAKE_C_FLAGS：gcc编译选项
-
-  * CMAKE_CXX_FLAGS：g++编译选项
-
-  * CMAKE_BUILD_TYPE：编译类型（Debug or Release），详情见构建部分的生成目标内容
-
-  * CMAKE_C_COMPILER：指定C编译器
-
-  * CMAKE_CXX_COMPILER：指定C++编译器
-
-  * CMAKE_CXX_STANDARD（默认值为11） & CMAKE_CXX_STANDARD_REQUIRED
-
-    ```cmake
-    set(CMAKE_CXX_STANDARD 17)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-    set(CMAKE_CXX_EXTENSIONS ON)
+    ```
+    -D <var>[:<type>]=<value>    = Create or update a cmake cache entry.
     ```
 
-    注意：**不要使用下面这种方法，因为没有跨平台性质。选择CMake为我们准备好的CMAKE_CXX_STANDARD**
+    下面是构建时最常用的几个缓存变量
 
-    ```cmake
-    # 缺乏夸平台性的做法：在CMAKE_CXX_FLAGS编译选项后追加-std=c++11
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    ```
+    * `-DCMAKE_BUILD_TYPE=Release`：指定构建的类型为 Release
+    * `-DCMAKE_INSTALL_PREFIX=/usr/lib`：指定安装路径为 /usr/lib
+    * `-DCMAKE_CXX_COMPILER='/usr/bin/clang++'：指定编译器
 
-  * CMAKE_CXX_EXTENSIONS 也是 BOOL 类型，默认为 ON。设为 ON 表示启用 GCC 特 有的一些扩展功能;OFF 则关闭 GCC 的扩展功能，只使用标准的 C++
+* 编译阶段：`cmake --build build`
 
-* 目录相关
+  ```
+  --build <dir>                = Build a CMake-generated project binary tree.
+  ```
 
-  * CMAKE_BINARY_DIR、project_BINARY_DIR、BINARY_DIR：这三个变量指代的内容是一致的
-    * 若是 in source build，指的就是工程顶层目录
-    * 若是 out-of-source 编译，指的是工程编译发生的目录
-  * CMAKE_SOURCE_DIR、PROJECT_SOURCE_DIR、SOURCE_DIR
-    * CMAKE_SOURCE_DIR 定义了顶级 CMakeLists.txt 所在的文件夹，这个变量的值是不会变的
+  这个命令用于执行构建 build 过程，根据配置好的构建系統文件（例如Makefile） 在指定的构建目录中进行实际的编译和链接
 
-    * PROJECT_SOURCE_DIR 定义了包含最近的 `project()` 命令的CMakeLists.txt所在的文件夹。如果最近的project是作为子模块，CMake会额外做一些初始化，其构建目录也会在build下面单独开一个文件夹
+  例如，在运行 `cmake -B build` 之后，可以使用 `cmake--build build` 命令在build 目录中执行构建过程。这将根据所生成的构建系统文件执行编译器和链接器，并生成可执行文件或库文件
 
-  * EXECUTABLE_OUTPUT_PATH：可执行文件输出的存放路径
-  * LIBRARY_OUTPUT_PATH：库文件输出的存放路径
+  这个命令会使用构建系统的默认构建规则，但也可以通过在cmake --build命令后面添加选项来修改构建过程的行为。例如，您可以使用--target 选项指定要构建的特定目标，或使用其他选项来控制并行编译、生成的输出等
 
-## *MESSAGE*
+  该命今是跨平台的，可以在不同平台使用该命令编译构建cmake项目
 
-```cmake
-message([<mode>] "message text" ...)
-```
+* 安装阶段
 
-**`message` 指令可以用于向终端打印变量的值**。里面的mode为
+  `sudo cmake --build build --target install` 这条命令实质上是指示CMake去调用构建系统（在 `build` 目录中生成的）以执行 `install` 目标。它不会同时触发整个项目的构建，只有当之前没有构建过或者有文件自上次构建以来被修改了，才会导致重新编译
 
-* 提醒
-  * SATUS：输出前缀为 `—` 或 `--` 的信息
-  * WARNING：以警告的形式显示，用于输出一些警告信息
-  * AUTHOR_WARNING：显示作者警告，用于向用户发出需要注意但不是错误的信息。可以通过 -Wno-dev关闭
-  * DEPRECATION：显示过时警告，表示某些使用已过时的特性
-* 错误
-  * SEND_ERROR：产⽣错误，⽣成过程被跳过
-  * FATAL_ERROR：⽴即终⽌所有 cmake 过程
-* 调试
-  * VERBOSE：详细的信息，供项目用户使用。这些消息应提供额外的细节，大多数情况下可能不感兴趣，但对于构建项目时希望深入了解正在发生的事情的人可能会很有用
-  * DEBUG：详细的信息消息，供项目开发人员使用，而不是仅希望构建项目的用户。这些消息通常不会引起其他构建项目的用户的兴趣，通常与内部实现细节密切相关
-  * TRACE：具有非常低级别实现细节的细粒度消息。使用此日志级别的消息通常只是临时的，预计在发布项目、打包文件等之前会被删除
+  没有直接通过CMake命令只执行安装操作的选项。`--target install` 依赖于构建系统知道哪些目标已经是最新的，以及哪些目标需要安装
 
-下面示例将输出变量 `variable_name` 的值到 CMake 构建过程的输出
+### 补充：古代编译命令
 
-```cmake
-message(STATUS "Variable value: ${variable_name}")
-```
+在Linux平台下使用CMake构建C/C++工程的流程如下
 
-## *缓存*
+1. 手动编写CMakeLists.txt
+2. 执行命令 `cmake PATH` 生成Makefile，PATH是顶层CMakeLists.txt所在的目录。注意，在哪里执行cmake命令生成的内容就在哪里，一般选择在build文件夹中执行 `cmake ..`，因为build中是所有编译产生的内容
+3. 使用 `cmake --build .` 进行跨平台build，Linux上也可以使用 `make`
 
-CMake在配置过程中生成一个位于项目构建目录中的文件 `CMakeCache.txt`，用于存储构建系统和项目配置的各种设置
+可以通过 `cmake .. -DCMAKE_VERBOSE_MAKEFILE=on` 将之后在make的时候具体的编译命令展示出来
 
-在第一次运行CMake时，它会根据CMakeLists.txt文件中的信息生成缓存文件。然后，这个缓存文件被用于存储各种配置选项、变量、路径、库位置等与项目构建相关的信息。当重新运行CMake时，它将使用缓存文件中的信息而不是重新扫描整个项目
+* 内部构建 in-source build
 
-
-
-### 删build法
-
-缓存是造成CMake中大部分奇怪现象的原因，外部更新了，单这时候 CMakeCache.txt 中存的却是旧的值，会导致一系列问题。 这时我们需要清除缓存，最简单的办法就是删除 build 文件夹，然后重新运行 `cmake -B build`
-
-不过删build虽然很有效，也会导致编译的中间结果（.o文件）都没了，而重新编译要花费很长时间。
-
-如果只想清除缓存，不想从头重新编译，**可以只删除 build/CMakeCache.txt 这个文件**。这文件里面装的就是缓存的变量，删了它就可以让 CMake 强制重新检测一遍所有库和编译器后生成缓存
-
-### 设置 & 更新缓存变量
-
-```cmake
-set(变量名 “变量值” CACHE 变量类型 “注释”)
-```
-
-举一个例子，完成后myvar就会出现在build/CMakeCache.txt了
-
-```cmake
-set(myvar "helLo" CACHE STRING "this is the docstring.")
-message("myvar is: ${myvar}")
-```
-
-更新缓存变量的时候有坑：在完成第一次 `cmake -B build` 后再去修改 CMakeLists.txt 中 `set CACHE` 的值已经没有意义了，因为此时缓存变量已经存在，不会更新缓存的值
-
-* **如果想要更新缓存变量必须要通过命令行 -D参数**
+  在内部构建中，构建过程发生在源代码目录中，**也就是在与源代码相同的目录中进行构建**。这意味着生成的构建文件、中间文件和可执行文件与源代码混合在一起。这种构建方式简单，适用于小型项目或测试目的，但不推荐用于生产环境
 
   ```cmd
-  $ cmake -B build -Dmyvar=world
+  $ cd /path/to/project
+  $ cmake .
+  $ make -j4
+  $ make install
   ```
 
-  在Linux中可以借助 ccmake，在Win中可以借助 cmake-gui 这些可视化工具来管理这些缓存变量
+* 外部构建 out-of-source build
+
+  在外部构建中，构建过程发生在与源代码目录分离的单独的build目录中。这意味着生成的构建文件、中间文件和可执行文件不会污染源代码目录，使得项目结构更加清晰和可维护。这种构建方式通常用于实际项目的生产环境
 
   ```cmd
-  $ sudo apt install cmake-curses-gui
+  $ cd /path/to/project
+  $ mkdir build
+  $ cd build
+  $ cmake ..
+  $ make -j4
   ```
 
-  需要在build中打开
+  在上述示例中，构建命令在与源代码目录分离的 build 目录中执行，这样可以确保生成的构建文件和输出文件不会与源代码混在一起
 
-* 也可以通过指定FORCE来强制set更新缓存
+  外部构建具有以下优点，通常建议在实际项目中使用外部构建。当然现代编译命令直接就是外部构建
 
-  ```cmake
-  set(myvar "helLo" CACHE STRING "this is another the docstring." FORCE)
-  ```
+  * 避免污染源代码目录，使得源代码目录保持干净和可重复使用
 
-## *作用域*
+  * 方便进行多个配置和平台的构建，而无需重复克隆源代码
 
-### 变量的传播规则
+  * 更好地支持并行构建，加快构建过程
 
-* 父会传给子：父模块里定义的变量，会传递给子模块
-* 子不会传给父
-  * 子模块里定义的变量，不会传递给父模块
-  * 若父模块里本来就定义了同名变量，则离开子模块后仍保持父模块原来设置的值
+  * 支持更简洁和可靠的清理过程
 
+## *CMake的构建过程*
 
-### 手动子传父
+<img src="cmake流程.png" width="60%">
 
-可以用 set 的 PARENT_SCOPE 选项，把一个变量传递到上一层作用域
-
-### 其他独立作用域
-
-* include 的 XXX.cmake 没有独立作用域
-* add_subdirectory 的 CMakeLists.txt 有独立作用域
-* macro 没有独立作用域
-* function 有独立作用域
-
-## *跨平台*
-
-### 生成器表达式
-
-生成器表达式 Generator Expression 是一种特殊的语法，用于在生成构建系统配置文件时动态地生成和处理信息。这些表达式允许在不同的上下文中提供不同的信息，例如根据构建类型、目标平台或其他条件来生成不同的编译选项
-
-生成器表达式可以在CMake的各个命令中使用，如`target_compile_options()`、`target_link_libraries()`、`add_definitions()`等。它们通常包含在`$<`和`>`之间
-
-```cmake
-$<$<类型:值>:为真时的表达式>
-```
-
-### 构建类型
-
-```cmake
-target_compile_options(my_target PRIVATE
-    $<$<CONFIG:Debug>:-DDEBUG_FLAG>
-    $<$<CONFIG:Release>:-DRELEASE_FLAG>
-)
-```
-
-### 操作系统
-
-```cmake
-target_compile_definitions(main PUBLIC
-	$<$<PLATFORM_ID:Windows>:MY_NAME="DOS-Like">
-	$<$<PLATFORM_ID:Linux,Darwin,FreeBSD>:MY_NAME="Unix-Like">
-)
-```
-
-一些变量
-
-* WIN32，实际上对 32 位 Windows 和 64 位 Windows 都适用
-* APPLE 对于所有苹果产品（MacOS 或 iOS）都为真
-* UNIX 对于所有 Unix 类系统（FreeBSD, Linux, Android, MacOS, iOS）都为真
-
-### 编译器
-
-```cmake
-targe_compile_definitions(main PUBLIC
-	$<$<CXX_COMPILER_ID:GNU, CLang>:MY_NAME="Open-source">
-	$<$<CXX_COMPILER_ID:MSVC, NVIDIA>:MY_NAME="Commercial">
-)
-```
-
-# 构建
+1. 配置 configuration
+   1. 配置阶段是CMake解析CMakeLists.txt文件的过程。在这个阶段，CMake会读取CMakeLists.txt文件，并执行其中的命令。这些命令主要用于检查系统环境（例如编译器、库等），设置构建选项，以及定义构建目标（例如库、可执行文件等）。CMake会从顶层目录的CMakeLists.txt文件开始，递归地处理每个子目录中的CMakeLists.txt文件
+   2. CMake将配置过程中确定的所有变量和设置保存在`CMakeCache.txt`文件中，这样在下次运行CMake时，如果没有发生变化，CMake可以快速载入这些设置而不必重新检测
+2. 生成 generation：生成阶段是CMake根据配置阶段的结果，生成实际的构建文件的过程。这些构建文件通常是Makefile文件，但也可以是其他类型的构建文件，例如Ninja构建文件，或者Visual Studio项目文件，这取决于我们选择的生成器 generator
+3. 构建 build：使用构建工具（例如Make、Ninja或Visual Studio）根据生成的构建文件，编译源代码并链接生成目标文件的过程
 
 ## *CMake Generator*
 
@@ -1018,6 +762,20 @@ GNU项目一般都会遵守 Filesystem Hierarchy Standard, FHS <https://zh.wikip
 当使用 CMake 来构建项目并且通过 add_subdirectory 或 include 来组织层次时，CMake 会递归地遍历项目目录结构，并根据每个目录下的 `CMakeLists.txt` 文件来生成相应的构建脚本（如 Makefile、Visual Studio 解决方案等），最终用于编译和构建整个项目
 
 因此，为了使 CMake 能够正确地解析和处理项目，每个目录下都需要一个 `CMakeLists.txt` 文件来描述该目录的构建规则和相关配置
+
+### Build文件中有什么
+
+build也称为build tree，而-S则是 source tree
+
+* CMakeFiles目录：这个目录中存放的是CMake在构建过程中生成的临时文件，包括编译器检查的结果、Find模块（Find Modules）查找的结果等。这些文件主要用于CMake自身的需求，一般情况下，我们不需要关注这个目录的内容
+  * project.dir目录：这个目录中包含了项目构建过程中的临时文件，如 `.o` 文件和 `.d` 文件。这些文件是编译器在编译源代码时生成的
+  * CMakeOutput.log文件：这个文件记录了CMake在配置过程中的输出信息，包括编译器检查的结果、Find模块查找的结果等
+  * CMakeError.log文件：这个文件记录了CMake在配置过程中遇到的错误信息
+* Testing目录：如果项目中包含了CTest测试，那么这个目录将会被生成。它包含了所有CTest测试的结果
+* bin目录：这个目录中包含了所有的可执行文件。如果CMake项目中包含了多个可执行文件，那么它们都会被放在这个目录中
+* lib目录：这个目录中包含了所有的库文件。无论是静态库还是动态库，都会被放在这个目录中
+
+
 
 ## *子模块*
 
@@ -1179,12 +937,12 @@ target_include_directories(my_library
   **建议把头文件也加上**，这样在VS里可以出现在“Header Files”一栏
 
   Demo可以简化的写成
-  
+
   ```cmake
   project(HELLO)
   add_executable(hello main.cpp)
   ```
-  
+
   注意：⼯程名的 HELLO 和⽣成的可执⾏⽂件 hello 是没有任何关系的
 
 ### 先创建目标，稍后再添加源文件
@@ -1257,6 +1015,325 @@ target_add_definitions(myapp PUBLIC -DMY_MACRO=1)
 * 2：严重错误。通常表示 CMake 在执行配置或生成期间遇到了致命错误，无法继续
 * 3：没有匹配的 CMakeLists.txt 文件。这表示 CMake 在当前目录或指定的目录中找不到 CMakeLists.txt 文件
 * 4：配置文件错误。表示 CMake 在配置项目时发生了错误，可能是由于 CMakeLists.txt 文件中的问题导致的
+
+# 变量 & 缓存
+
+## *CMake变量*
+
+###  变量分类
+
+* 普通变量：定义在CMakeLists.txt中的变量，相当于一个局部变量，在同一个CMake工程中使用，会有[作用域](#作用域)限制或区分
+* 缓存变量 Cache Variable：这些变量存储在`CMakeCache.txt`文件中，包含了项目配置和构建系统的相关信息。相当于一个全局变量。在同一个CMake工程中任何地方都可以使用。通过`set()`和`get()`等命令可以读取和修改这些变量
+* 环境变量 Environment Variable：CMake可以读取环境变量，并将其用作配置选项。例如，通过`$ENV{VAR_NAME}`可以获取环境变量的值
+
+### 变量类型
+
+* 字符串变量 String：字符串是CMake中最基本的数据类型，字符串变量可以包含文本、数字等信息。通过`set()`命令可以创建字符串变量，例如：
+
+  ```cmake
+  set(MY_STRING "Hello, World!")
+  ```
+
+* 列表变量 List：列表是由分号分隔的一系列字符串的集合
+
+  * 通过`set()`命令和`LIST`操作命令（如`list(APPEND)`、`list(REMOVE_ITEM)`等）可以创建和修改列表变量
+
+  * 列表中的元素可以使用索引来访问，也可以使用`foreach`等循环结构进行遍历。例如：
+
+    ```cmake
+    set(MY_LIST "Item1;Item2;Item3")
+    list(APPEND MY_LIST "Item4")
+    ```
+
+* FILEPATH 文件路径，例如 "C: /path/to/project//my_proj.cmake”
+
+* PATH 目录路径，例如 “C:/path/to/project/cmake/”
+
+* BOOL布尔值：通常来说 BOOL 类型的变量只有 ON/OFF 两种取值。但是由于历史原因，TRUE/FALSE 和 YES/NO 也可以表示 BOOL 类型。**建议始终使用 ON/OFF 避免混淆**
+
+### option
+
+CMake 对 BOOL 类型缓存的 set 指令提供了一个简写：option
+
+`option(变量名 "描述" 变量值)` 等价于 `set(变量名 CACHE BOOL 变量值 "描述")`
+
+### CMake常用内置变量
+
+* 编译器相关
+
+  * CMAKE_C_FLAGS：gcc编译选项
+
+  * CMAKE_CXX_FLAGS：g++编译选项
+
+  * CMAKE_BUILD_TYPE：编译类型（Debug or Release），详情见构建部分的生成目标内容
+
+  * CMAKE_C_COMPILER：指定C编译器
+
+  * CMAKE_CXX_COMPILER：指定C++编译器
+
+  * CMAKE_CXX_STANDARD（默认值为11） & CMAKE_CXX_STANDARD_REQUIRED
+
+    ```cmake
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS ON)
+    ```
+
+    注意：**不要使用下面这种方法，因为没有跨平台性质。选择CMake为我们准备好的CMAKE_CXX_STANDARD**
+
+    ```cmake
+    # 缺乏夸平台性的做法：在CMAKE_CXX_FLAGS编译选项后追加-std=c++11
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    ```
+
+  * CMAKE_CXX_EXTENSIONS 也是 BOOL 类型，默认为 ON。设为 ON 表示启用 GCC 特 有的一些扩展功能；OFF 则关闭 GCC 的扩展功能，只使用标准的 C++
+
+* 目录相关
+
+  * CMAKE_BINARY_DIR、project_BINARY_DIR、BINARY_DIR：这三个变量指代的内容是一致的
+    * 若是 in source build，指的就是工程顶层目录
+    * 若是 out-of-source 编译，指的是工程编译发生的目录
+  * CMAKE_SOURCE_DIR、PROJECT_SOURCE_DIR、SOURCE_DIR
+    * CMAKE_SOURCE_DIR 定义了顶级 CMakeLists.txt 所在的文件夹，这个变量的值是不会变的
+
+    * PROJECT_SOURCE_DIR 定义了包含最近的 `project()` 命令的CMakeLists.txt所在的文件夹。如果最近的project是作为子模块，CMake会额外做一些初始化，其构建目录也会在build下面单独开一个文件夹
+
+  * EXECUTABLE_OUTPUT_PATH：可执行文件输出的存放路径
+  * LIBRARY_OUTPUT_PATH：库文件输出的存放路径
+
+## *定义  & 修改变量*
+
+[CMake语法—缓存变量（Cache Variable） - kaizenly - 博客园 (cnblogs.com)](https://www.cnblogs.com/Braveliu/p/15614013.html)
+
+CMake中统一使用set（或者boolean变量的语法糖opt）来定义或修改变量，但是不同类型的变量之间的表现会很不一样
+
+### set
+
+demo中 `SET(SRC_LIST main.cpp)` 就是创建一个 `SRC_LIST` 变量，并将其值设置为 main.cpp
+
+如果源⽂件名中含有空格，就必须要加双引号，比如 `m ain.cpp`
+
+### 普通变量
+
+```cmake
+set(<variable> <value>... [PARENT_SCOPE])
+```
+
+
+
+### 缓存变量
+
+```cmake
+set(<variable> <value>... CACHE <type> <docstring> [FORCE])
+```
+
+- variable：变量名称
+- value：变量值列表
+- CACHE：cache变量的标志
+- type：变量类型，取决于变量的值。类型分为：BOOL、FILEPATH、PATH、STRING、INTERNAL
+- docstring：必须是字符串，作为变量概要说明
+- FORCE：强制选项，强制修改变量值
+
+```cmake
+set(CMAKE_CXX_COMPILER "/usr/local/bin/clang++" CACHE STRING "C++ compiler" FORCE)
+```
+
+### 环境变量
+
+### projcet
+
+project可以⽤来指定⼯程的名字和⽀持的语⾔，默认⽀持所有语⾔
+
+* `project (HELLO)`：指定了⼯程的名字，并且⽀持所有语⾔，**建议这么写**
+* `project (HELLO CXX)` 指定了⼯程的名字，并且⽀持语⾔是C++
+* `project (HELLO C CXX)` 指定了⼯程的名字，并且⽀持语⾔是C和C++
+* 也可以支持JAVA
+
+**实际上 project 命令非常重要，因为它负责初始化很多基础的设置**。比如说确定编译器的信息，当调用 `project()` 时，CMake会尝试找到并使用默认的C和C++编译器，除非已经提前告知CMake使用其他的编译器
+
+
+
+
+
+1. set 同名的普通变量进行覆盖，一定要在project之前，否则普通变量是无法修改缓存变量
+2. set 修改缓存变量，此时放在哪里都行
+
+
+
+如果是在project之后的话，在
+
+### 变量的使用：引用变量
+
+```cmake
+${variable_name}
+```
+
+在CMake中，使用 `${}` 来引用变量的值。例如，`${variable_name}` 将被替换为变量 `variable_name` 的实际值
+
+这些只是一些常见的CMake变量用法示例。CMake提供了更多高级用法，如列表变量、环境变量、缓存变量
+
+## *MESSAGE (log)*
+
+```cmake
+message([<mode>] "message text" ...)
+```
+
+**`message` 指令可以用于向终端打印变量的值**。message相当于是cmake的log，里面的mode就是log的等级。如果没有指定mode的话就是一个普通的string
+
+* 错误
+  
+  * FATAL_ERROR：最高优先级，一个不可恢复的错误。⽴即终⽌所有 cmake 过程
+  * SEND_ERROR：产⽣错误，⽣成过程被跳过
+  
+* 提醒
+  
+  * WARNING：以警告的形式显示，用于输出一些警告信息
+  * AUTHOR_WARNING：显示作者警告，用于向用户发出需要注意但不是错误的信息。可以通过设置 `CMAKE_SUPPRESS_DEVELOPER_WARNINGS` 变量或 -Wno-dev关闭
+  * DEPRECATION：显示过时警告，表示某些使用已过时的特性
+  * NOTICE：正常的消息输出，用于传达用户可能感兴趣的信息，但不像 STATUS 消息那样普遍
+  * SATUS：输出前缀为 `—` 或 `--` 的信息
+  
+* 调试
+  * VERBOSE：详细的信息，供项目用户使用。这些消息应提供额外的细节，大多数情况下可能不感兴趣，但对于构建项目时希望深入了解正在发生的事情的人可能会很有用
+  
+    可以通过命令行参数 `--log-level=VERBOSE` 来显示这些消息
+  
+  * DEBUG：详细的信息消息，供项目开发人员使用，而不是仅希望构建项目的用户。这些消息通常不会引起其他构建项目的用户的兴趣，通常与内部实现细节密切相关
+  
+    需要通过 `CMAKE_MESSAGE_LOG_LEVEL=DEBUG` 配置或者命令行参数 `--log-level=DEBUG` 才能正常输出
+  
+  * TRACE：具有非常低级别实现细节的细粒度消息。使用此日志级别的消息通常只是临时的，预计在发布项目、打包文件等之前会被删除
+
+下面示例将输出变量 `variable_name` 的值到 CMake 构建过程的输出
+
+```cmake
+message(STATUS "Variable value: ${variable_name}")
+```
+
+## *CMakeCache*
+
+CMake在配置过程中生成一个位于项目构建目录中的文件 `CMakeCache.txt`，用于存储构建系统和项目配置的各种设置
+
+在第一次运行CMake时，它会根据CMakeLists.txt文件中的信息生成缓存文件。然后，这个缓存文件被用于存储各种配置选项、变量、路径、库位置等与项目构建相关的信息。当重新运行CMake时，它将使用缓存文件中的信息而不是重新扫描整个项目
+
+### 缓存类型
+
+* EXTERNAL cache entries 外部缓存条目
+  * 是用户或项目的 `CMakeLists.txt` 文件可以查询和修改的配置选项。这些条目通常用于保存编译器设置、找到的库路径、用户选项以及其他项目配置参数
+  * 外部条目通常通过调用 `set()` 命令和 `option()` 命令来创建和更新，也可以通过 CMake GUI 或 `ccmake` 文本界面手动编辑
+  * 用户创建的缓存变量会在 `CMakeCache.txt` 文件中显示，而且通常是用户与构建系统交互的主要方式
+* INTERNAL cache entries 内部缓存条目
+  * 是 CMake 内部使用的，以支持配置和生成过程。用户不应该直接修改这些条目；它们通常包括 CMake 自动生成的平台特定信息和检测结果，如编译器和链接器的特性、测试程序的输出等
+  * 内部条目通常由 CMake 的模块和脚本自动创建，并标记为内部使用，这意味着它们在 `CMakeCache.txt` 文件中存在但不显示在 CMake GUI 或 `ccmake` 界面中
+
+### 删build法
+
+缓存是造成CMake中大部分奇怪现象的原因，外部更新了，但这时候 CMakeCache.txt 中存的却是旧的值，会导致一系列问题。 这时我们需要清除缓存，最简单的办法就是删除 build 文件夹，然后重新运行cmake 配置 `cmake -B build`
+
+不过删build虽然很有效，也会导致编译的中间结果（.o文件）都没了，而重新编译要花费很长时间。
+
+如果只想清除缓存，不想从头重新编译，**可以只删除 build/CMakeCache.txt 这个文件**。这文件里面装的就是缓存的变量，删了它就可以让 CMake 强制重新检测一遍所有库和编译器后生成缓存
+
+### 设置 & 更新缓存变量
+
+```cmake
+set(变量名 “变量值” CACHE 变量类型 “注释”)
+```
+
+举一个例子，完成后myvar就会出现在build/CMakeCache.txt了
+
+```cmake
+set(myvar "helLo" CACHE STRING "this is the docstring.")
+message("myvar is: ${myvar}")
+```
+
+更新缓存变量的时候有坑：在完成第一次 `cmake -B build` 后再去修改 CMakeLists.txt 中 `set CACHE` 的值已经没有意义了，因为此时缓存变量已经存在，不会更新缓存的值
+
+* **如果想要更新缓存变量必须要通过命令行 -D参数**
+
+  ```cmd
+  $ cmake -B build -Dmyvar=world
+  ```
+
+  在Linux中可以借助 ccmake，在Win中可以借助 cmake-gui 这些可视化工具来管理这些缓存变量
+
+  ```cmd
+  $ sudo apt install cmake-curses-gui
+  ```
+
+  需要在build中打开
+
+* 也可以通过指定FORCE来强制set更新缓存
+
+  ```cmake
+  set(myvar "helLo" CACHE STRING "this is another the docstring." FORCE)
+  ```
+
+## *作用域*
+
+### 变量的传播规则
+
+* 父会传给子：父模块里定义的变量，会传递给子模块
+* 子不会传给父
+  * 子模块里定义的变量，不会传递给父模块
+  * 若父模块里本来就定义了同名变量，则离开子模块后仍保持父模块原来设置的值
+
+
+### 手动子传父
+
+可以用 set 的 PARENT_SCOPE 选项，把一个变量传递到上一层作用域
+
+### 其他独立作用域
+
+* include 的 XXX.cmake 没有独立作用域
+* add_subdirectory 的 CMakeLists.txt 有独立作用域
+* macro 没有独立作用域
+* function 有独立作用域
+
+## *跨平台*
+
+### 生成器表达式
+
+生成器表达式 Generator Expression 是一种特殊的语法，用于在生成构建系统配置文件时动态地生成和处理信息。这些表达式允许在不同的上下文中提供不同的信息，例如根据构建类型、目标平台或其他条件来生成不同的编译选项
+
+生成器表达式可以在CMake的各个命令中使用，如`target_compile_options()`、`target_link_libraries()`、`add_definitions()`等。它们通常包含在`$<`和`>`之间
+
+```cmake
+$<$<类型:值>:为真时的表达式>
+```
+
+### 构建类型
+
+```cmake
+target_compile_options(my_target PRIVATE
+    $<$<CONFIG:Debug>:-DDEBUG_FLAG>
+    $<$<CONFIG:Release>:-DRELEASE_FLAG>
+)
+```
+
+### 操作系统
+
+```cmake
+target_compile_definitions(main PUBLIC
+	$<$<PLATFORM_ID:Windows>:MY_NAME="DOS-Like">
+	$<$<PLATFORM_ID:Linux,Darwin,FreeBSD>:MY_NAME="Unix-Like">
+)
+```
+
+一些变量
+
+* WIN32，实际上对 32 位 Windows 和 64 位 Windows 都适用
+* APPLE 对于所有苹果产品（MacOS 或 iOS）都为真
+* UNIX 对于所有 Unix 类系统（FreeBSD, Linux, Android, MacOS, iOS）都为真
+
+### 编译器
+
+```cmake
+targe_compile_definitions(main PUBLIC
+	$<$<CXX_COMPILER_ID:GNU, CLang>:MY_NAME="Open-source">
+	$<$<CXX_COMPILER_ID:MSVC, NVIDIA>:MY_NAME="Commercial">
+)
+```
 
 # find_package
 
@@ -1421,7 +1498,32 @@ Config模式下是要查找名为`<PackageName>Config.cmake`或`<lower-case-pack
 
 ### configure时下载：FetchContent (3.11+)
 
+[获取软件包（FetchContent）(CMake 3.11+) · Modern CMake (modern-cmake-cn.github.io)](https://modern-cmake-cn.github.io/Modern-CMake-zh_CN/chapters/projects/fetch.html)
 
+1. 使用 `FetchContent_Declare(MyName)` 来从 URL、Git 仓库等地方获取数据或者是软件包
+2. 使用 `FetchContent_GetProperties(MyName)` 来获取 `MyName_*` 等变量的值，这里的 `MyName` 是上一步获取的软件包的名字，比如 `MyName_SOURCE_DIR`、`MyName_BINARY_DIR` 等
+3. 检查 `MyName_POPULATED` 是否已经导出（populated的意思是已经下载并设置好），否则使用 `FetchContent_Populate(MyName)` 来导出变量（如果这是一个软件包，则使用 `add_subdirectory("${MyName_SOURCE_DIR}" "${MyName_BINARY_DIR}")` 
+
+比如说yaml-cpp的使用
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+  yaml-cpp
+  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+  GIT_TAG <tag_name> # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
+)
+FetchContent_GetProperties(yaml-cpp)
+
+if(NOT yaml-cpp_POPULATED)
+  message(STATUS "Fetching yaml-cpp...")
+  FetchContent_Populate(yaml-cpp)
+  add_subdirectory(${yaml-cpp_SOURCE_DIR} ${yaml-cpp_BINARY_DIR})
+endif()
+
+target_link_libraries(YOUR_LIBRARY PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
+```
 
 # 构建库
 

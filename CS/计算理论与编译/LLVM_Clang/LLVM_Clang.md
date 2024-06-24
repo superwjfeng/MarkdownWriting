@@ -442,6 +442,12 @@ public:
 };
 ```
 
+### 实操
+
+[Cross-compilation using Clang — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/CrossCompilation.html)
+
+[How To Cross-Compile Clang/LLVM using Clang/LLVM — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToCrossCompileLLVM.html)
+
 ## *卸载LLVM*
 
 ## *测试*
@@ -2383,15 +2389,11 @@ LLVM 的 `Error` 类是一种用于错误处理的轻量级机制，它要求开
    }
    ```
 
-3. **设置已检查标志**： 在 `Error` 对象的生命周期内，在析构之前，必须将其标记为已检查。这可以通过消费错误（比如使用 `consumeError`）或者传递错误使其成为另一个 `Error` 对象的一部分来完成。
+3. **设置已检查标志**： 在 `Error` 对象的生命周期内，在析构之前，必须将其标记为已检查。这可以通过消费错误（比如使用 `consumeError`）或者传递错误使其成为另一个 `Error` 对象的一部分来完成
 
-如果在析构一个 `Error` 对象时，该对象包含一个未被检查的错误状态，运行时会触发一个错误，并且程序会中止执行。这个设计确保了所有的错误都得到了适当的处理。
+如果在析构一个 `Error` 对象时，该对象包含一个未被检查的错误状态，运行时会触发一个错误，并且程序会中止执行。这个设计确保了所有的错误都得到了适当的处理
 
-`Error` 类的这种用法促使开发者养成良好的错误检查习惯，因为忽视错误的结果很明显——程序会立即终止。这迫使开发者对每个可能出现的错误给予注意，从而避免潜在的问题在软件开发过程中被忽视。
-
-
-
-
+`Error` 类的这种用法促使开发者养成良好的错误检查习惯，因为忽视错误的结果很明显——程序会立即终止。这迫使开发者对每个可能出现的错误给予注意，从而避免潜在的问题在软件开发过程中被忽视
 
 ### Expected
 
@@ -2417,8 +2419,6 @@ Error processFormattedFile(StringRef Path) {
     return FileOrErr.takeError();
 }
 ```
-
-
 
 ### 定义Error
 
@@ -2465,28 +2465,53 @@ private:
 char MyCustomError::ID = 0;
 ```
 
-
-
 ### `ExitOnError()` on tool code
-
-
 
 ## *log*
 
-## *LLVM-style RTTI*
+## *LLVM-Style RTTI*
 
-LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
+[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
+
+### 相关的CMake变量
+
+LLVM中默认禁止了C++的RTTI特性（RTTI特性的开关`-fno-rtti`），主要是为了性能考虑（C++默认的RTTI特别冗余，会使得编译生成的文件大小增大）
+
+通过cmake变量 `LLVM_ENABLE_RTTI:BOOL` 来控制C++语言本身的RTTI特性是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-rtti` 来控制
+
+和这个特性类似的还有 `LLVM_ENABLE_EH` 来控制C++的异常处理 Error Handling, EH机制是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-exception` 来控制。但是如果这个开关也打开的话，需要重新编译大量的依赖库，比如最重要的 libstdc++
+
+### 引入的新模板
+
+为了方便在关闭C++默认的RTTI的时候的使用，LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
+
+* `isa<>`
+
+### 改造为 LLVM-Sytle RTTI
+
+[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
+
+[How to set up LLVM-style RTTI for your class hierarchy — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToSetUpLLVMStyleRTTI.html)
+
+### 经验法则
+
+1. The `Kind` enum should have one entry per concrete class, ordered according to a preorder traversal of the inheritance tree.
+2. The argument to `classof` should be a `const Base *`, where `Base` is some ancestor in the inheritance hierarchy. The argument should *never* be a derived class or the class itself: the template machinery for `isa<>` already handles this case and optimizes it.
+3. For each class in the hierarchy that has no children, implement a `classof` that checks only against its `Kind`.
+4. For each class in the hierarchy that has children, implement a `classof` that checks a range of the first child’s `Kind` and the last child’s `Kind`.
 
 ### Challenge for linker
 
 [Undefined reference to `typeinfo for llvm::cl::GenericOptionValue' - Beginners - LLVM Discussion Forums](https://discourse.llvm.org/t/undefined-reference-to-typeinfo-for-llvm-genericoptionvalue/71526)
+
+如果LLVM本身是关闭了RTTI编译的，但是在使用LLVM的库来编程的时候，如果是用gcc来编译的话，就会报 `undefined reference to typeinfo for SomeType` 的链接错误。可以在cmake中加入下面的选项来避免错误
 
 ```cmake
 set(NO_RTTI "-fno-rtti")
 add_definitions(${NO_RTTI})
 ```
 
-
+TODO：如果是用Clang来编译的话可以避免这个问题？
 
 # Clang Tools & Clang Plugin
 
@@ -2657,6 +2682,12 @@ test.bc: LLVM IR bitcode
 - `-fembed-bitcode=all`：确保所有生成的文件（包括链接后的最终二进制文件）都包含 bitcode。
 
 应当注意的是，嵌入 bitcode 会增加生成的二进制文件的大小，因为它既包含了可直接运行的机器码，也包含了用于可能的未来优化的 bitcode
+
+## *MLIR*
+
+[MLIR (llvm.org)](https://mlir.llvm.org/)
+
+MLIR, Multi-Level Intermediate Representation 提供了一个用于构建和表示多个抽象级别计算的通用IR。MLIR 旨在解决高性能计算、机器学习、硬件设计等领域对复杂变换和优化的需求，并通过统一不同编程模型和硬件的表达来克服现有工具链的局限
 
 # 代码优化 Pass
 
