@@ -1852,6 +1852,75 @@ C++20引入了新的 `std::format` 库，推荐使用它或者 fmtlib/fmt 这个
 
 ### 流随机访问
 
+## *filesystem*
+
+[C++17 filesystem 文件系统（详解）-CSDN博客](https://blog.csdn.net/qq_40946921/article/details/91394589)
+
+C++17 中引入的文件系统库库 `<filesystem>` 提供了一系列用于操作文件和目录的标准化方式，它封装了OS的文件操作，类似于Python的os库
+
+```C++
+#include<filesystem>
+namespace fs = std::filesystem;
+```
+
+### 路径
+
+* 路径 & `std:：string` 之间的关系
+* 检查路径是否存在 `exist()`
+* 对路径的操作
+  * concatenation
+
+### 获取绝对路径 & 相对路径
+
+* `current_path()` 获取或设置当前工作目录，当输入一个路径时，就是变更到输入的路径
+
+  ```C++
+  path current_path();
+  path current_path( std::error_code& ec );
+  void current_path( const std::filesystem::path& p );
+  void current_path( const std::filesystem::path& p,
+                     std::error_code& ec ) noexcept;
+  ```
+
+* `absolute()` 获取绝对路径
+
+  ```C++
+  path absolute( const std::filesystem::path& p );
+  path absolute( const std::filesystem::path& p, std::error_code& ec );
+  ```
+
+* 计算相对于 base 的相对路径：`relative()` 和 `proximate()` 都用于计算一个路径相对于另一个路径的表示，但它们在处理无法解析为相对路径时的行为上有所不同
+
+  ```C++
+  path relative( const std::filesystem::path& p,
+                 const std::filesystem::path& base = std::filesystem::current_path() );
+  ```
+
+  * `relateive()` 如果第一个路径可以通过遍历文件系统从参照路径导航到达，那么就会返回一个相对路径。如果无法这样做，函数将抛出一个 `std::filesystem::filesystem_error` 异常
+  * `proximate()` 当无法解析为相对路径时，它不会抛出异常。而是返回一个 `std::filesystem::path` 对象，该对象可能是原始的绝对路径，或者如果可能的话，是一个尽可能接近的相对路径
+
+* `fs::temp_directory_path()`：返回临时文件夹的路径
+
+### 目录操作
+
+* 创建和删除目录
+  * `create_directory()` 创建目录；`create_directories()` 创建递归目录
+  * `remove()` 删除目录
+  * `remove_all()` 递归删除目录及其内容
+* 遍历目录 directory_iterator
+  * 递归遍历子目录 recursive_directory_iterator
+
+### 文件操作
+
+* 复制文件 copy
+* 移动文件 rename
+* 获取和修改文件属性
+  * 文件类型
+    * `fs::is_regular_file(p)` 和 `fs::is_directory(p)`：检查路径是普通文件还是目录
+  * `fs::space(p)`：返回与给定路径相关联的存储设备的信息
+  * 获取文件大小 `file_size()`
+  * 获取最后修改时间 `last_write_time()`
+
 # C++内存管理
 
 ## *C/C++内存分布*

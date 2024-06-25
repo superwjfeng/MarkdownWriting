@@ -1,3 +1,5 @@
+# YAML Specification
+
 [YAML Ain’t Markup Language (YAML™) Version 1.1](https://yaml.org/spec/1.1/#id857168)
 
 ## *数据类型*
@@ -89,6 +91,8 @@ custom_tag: !mytype { name: John Doe, age: 30 }
 
 <img src="YAML_Overview.png">
 
-## *yaml-cpp*
+# yaml-cpp
 
 [jbeder/yaml-cpp: A YAML parser and emitter in C++ (github.com)](https://github.com/jbeder/yaml-cpp?tab=readme-ov-file)
+
+Node是yaml-cpp中的核心概念，是最重要的数据结构，它用于存储解析后的YAML信息。Node一共有以下几种type

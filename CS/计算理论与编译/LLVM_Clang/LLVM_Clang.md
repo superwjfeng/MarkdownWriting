@@ -94,8 +94,6 @@ $ sudo apt install -y gcc g++ git cmake ninja-build
 
 zlib 是一个库，没有命令行的命令
 
-
-
 ## *使用预编译二进制包*
 
 该方法适用于系统配置不足以完成编译的计算机体验LLVM，但如果未来要进行LLVM的自定义和实验，不建议使用该方法
@@ -155,7 +153,7 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
 ```cmd
 $ cd llvm-project
 # cmake configure
-$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra"
+$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra"
 # $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 $ cmake --build build # cmake build
 $ sudo cmake --build build --target install # cmake install
@@ -697,6 +695,12 @@ $ diff -u clang_output.txt clangpp_output.txt
 - 当使用 `clang` 时，链接器没有被告知链接 C++ 标准库 `libstdc++` 或数学库 `libm`
 - 当使用 `clang++` 时，链接器的调用包含了 `-lstdc++` 和 `-lm` 参数，这表明它需要链接 C++ 标准库和数学库。这是因为 `clang++` 被当作 C++ 编译器使用，自动假设需要这些库
 
+### Clang的语言标准实现
+
+[Clang - C++ Programming Language Status (llvm.org)](https://clang.llvm.org/cxx_status.html)
+
+默认Clang 16及之后使用C++17标准编译
+
 ### 分别编译不同的阶段
 
 我们可以看下有下面这些阶段
@@ -831,7 +835,7 @@ InstalledDir: /usr/local/bin
 
 在`clang/tools/driver/driver.cpp` 我们可以找到Driver的入口，其中入口逻辑都集中在**clang_main**之中
 
-1. **创建诊断**：clang_main 会先创建诊断实例 DiagnosticsEngine，诊断是编译器与开发者进行交互的重要部分。编译器通过诊断可以提供错误、警告或建议
+1. **创建诊断**：clang_main 会先创建诊断实例 DiagnosticsEngine。编译器通过诊断可以提供错误、警告或建议
 
    ```C++
    DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
@@ -879,10 +883,6 @@ Process 2900 stopped
     frame #5: 0x00007ffff7a66e40 libc.so.6`__libc_start_main + 128
     frame #6: 0x00005555569fc3e5 clang++`_start + 37
 ```
-
-
-
-## *Diagnostics*
 
 ## *参数解析*
 
@@ -1093,6 +1093,38 @@ enum ActionKind {
   // ...
 };  
 ```
+
+
+
+`clang::FrontendAction`里可以override的一些方法
+
+```C++
+//通过在已经初始化的AST消费者上运行Sema，实现ExecuteAction接口
+void ExecuteAction () override
+
+//准备在给定的CompilerInstance上执行动作
+virtual bool PrepareToExecuteAction (CompilerInstance &CI)
+
+//当MyFrontendAction构建 AST 树后会调用 CreateASTConsumer来使用我们客制化实现的 ASTConsumer，并将相关节点返回给我们
+virtual std::unique_ptr<ASTConsumer> CreateASTConsumer (CompilerInstance &CI, StringRef InFile)=0
+
+// 在开始处理单一输入之前的回调，让人有机会在BeginSourceFileAction被调用之前修改CompilerInvocation或做一些其他动作
+virtual bool BeginInvocation (CompilerInstance &CI)
+
+//在处理单一输入的开始时回调
+virtual bool BeginSourceFileAction (CompilerInstance &CI)
+
+//在处理单个输入结束时的回调
+//比如文档里给出的例子是当处理输入结束时，向控制台输出程序代码
+virtual void EndSourceFileAction ()
+
+//在处理单个输入结束时回调，以确定是否应删除输出文件
+virtual bool shouldEraseOutputFiles ()
+```
+
+
+
+
 
 ## *AST核心API*
 
@@ -1460,11 +1492,9 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
 
 -  `-fmodules` 选项启用了 Clang 的模块功能。模块是一种用于替代传统的 `#include` 预处理器指令和头文件的编译单元，它旨在改进 C 和 C++ 程序的编译时间和封装性
 
-## *Traversing through AST*
+## *RecursiveASTVisitor*
 
 Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` 和 `ASTMatcher`
-
-### RecursiveASTVisitor
 
 [How to write RecursiveASTVisitor based ASTFrontendActions. — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/RAVFrontendAction.html)
 
@@ -1474,15 +1504,31 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 
 继承RecursiveASTVisitor，并且实现其中的 VisitCXXRecordDecl，那么这个方法就会在访问 CXXRecordDecl类型的节点上触发
 
-### ASTMatcher
+## *ASTMatcher*
 
 [Tutorial for building tools using LibTooling and LibASTMatchers — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersTutorial.html)
 
+- 特性
+  - ASTMatcher本质上是一种带有函数式编程风格的DSL
+  - 由表达式 expressions 触发，用户使用表达式规定触发访问的条件
+  - 与AST上下文信息绑定，即用户可以在表达式中利用上下文信息来筛选节点
+  - 无需遍历，能直接匹配到表达式对应的节点
+- 使用方法
+  - 直接组合各种 `ASTMatcher` 来精确表示匹配节点的规则，语义非常清晰，例如 `binaryOperator(hasOperatorName("+"), hasLHS(integerLiteral(equals(0))))` 匹配的是左操作数为字面量 `0` 的加法操作表达式
+  - 可以对任意层级的表示 Clang AST 节点（而非 LHS、RHS、Type、Operand 等节点属性）的 ASTMatcher 使用 `.bind("foo")` 操作，将该节点与字符串绑定
+  - 可以继承回调类 `MatchFinder::MatchCallback` ，覆盖虚函数 `run(const MatchFinder::MatchResult &Result)`，然后使用 `Result.Nodes.getNodeAs<clang::FooType>("foo")` 来访问此前与字符串绑定的 Clang AST 节点
+- 注意事项
+  - 在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
 
 
 
+Matchers are paired with a `MatchCallback` and registered with a `MatchFinder` object, then run from a `ClangTool`
 
+## *Source\**
 
+### SourceLocation & SourceManager
+
+### SourceRange & CharSourceRange
 
 ## *AST可视化*
 
@@ -1501,16 +1547,9 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 
 ### StringRef
 
-`StringRef` 是 LLVM 库中的一个类，用于提供对字符数组（通常是字符串）的非拥有的、不可变的视图。与标准库中的 `std::string` 类相比，`StringRef` 不会复制字符串数据，它只是引用已经存在的字符串。这使得 `StringRef` 能够在不涉及内存分配和复制的情况下高效地操作字符串
+llvm-project/llvm/include/llvm/ADT/StringRef.h
 
-以下是一些 `StringRef` 的关键特性：
-
-1. **非拥有**: `StringRef` 仅保存了指向实际数据（如 C 风格字符串）的指针和长度信息，但并不管理该数据的生命周期。因此，使用 `StringRef` 时必须确保它引用的数据在 `StringRef` 对象的生命周期内保持有效。
-2. **轻量级**: `StringRef` 只包含两个成员：一个指针和一个长度。这使得它非常适合用作函数参数或返回值，无需担心性能开销。
-3. **不可变**: `StringRef` 实例本身是不可更改的。虽然可以改变它所指向的字符串数据（如果数据是可变的），但不能通过 `StringRef` 接口修改它。
-4. **字符串操作**: `StringRef` 提供了大量用于检查和处理字符串的方法，如 `equals()`, `startswith()`, `endswith()`, `substr()`, `find()`, `trim()` 等。
-5. **与标准字符串类型互操作**: 你可以从 `const char*` 或 `std::string` 创建 `StringRef` 对象。同样，也可以将 `StringRef` 转换为 `std::string`。
-6. **效率**: 因为不需要复制字符串数据，所以 `StringRef` 在许多场景下（例如解析、分词等）都非常高效。
+StringRef 用于提供对字符串（通常是字符数组）的const引用。与标准库中的 `std::string` 类相比，StringRef 不会复制字符串数据，它只是引用已经存在的字符串。这使得 StringRef 能够在不涉及内存分配和复制的情况下高效地操作字符串
 
 `StringRef` 的典型用法示例：
 
@@ -1542,7 +1581,7 @@ int main() {
 
 在这个例子中，我们创建了一个 `StringRef` 来引用一个 C 风格字符串，并演示了如何使用其中的一些方法。
 
-重要的一点是 `StringRef` 的设计意图主要是用作临时对象，在函数调用过程中传递字符串，而不是长期存储字符串数据。所以使用 `StringRef` 时，需要小心保证它引用的字符串在 `StringRef` 被使用的整个时间里都是有效的。
+使用 StringRef 的时候要谨慎 ，因为它的设计意图主要是用作临时对象，在函数调用过程中传递字符串，而不是长期存储字符串数据。所以使用 StringRef 时，需要小心保证它引用的字符串在 StringRef 被使用的整个时间里都是有效的
 
 ### Twine
 
@@ -1735,6 +1774,143 @@ llvm-config可以获取系统中LLVM的所有相关信息，这些信息可以�
 * includedir
 * libdir
 
+## *Prelude: Compilation Database*
+
+### Compilation Database 介绍
+
+Clang Tooling 需要 Compilation Database 来制导每一个文件的build command
+
+[JSON Compilation Database Format Specification — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/JSONCompilationDatabase.html)
+
+[Compilation database | CLion Documentation (jetbrains.com)](https://www.jetbrains.com/help/clion/compilation-database.html#compdb_clion)
+
+`compile_commands.json` 是一个 JSON 格式的文件，它在构建系统中用于记录项目编译时每个文件的确切编译命令。这个文件通常由现代构建系统（如 CMake）自动生成，并被各种工具用来理解项目的编译过程，包括：
+
+- 静态分析工具（如 `clang-tidy` 和 `clang-check`）
+- 代码编辑器和IDE，用于提供代码补全、智能跳转等功能（如 Visual Studio Code, vim, emacs 等）
+- 其他开发辅助工具，如文档生成器或代码格式化工具
+
+`compile_commands.json` 的字段有
+
+```json
+[
+  { "directory": "/home/user/llvm/build",
+    "arguments": ["/usr/bin/clang++", "-Irelative", "-DSOMEDEF=With spaces, quotes and \\-es.", "-c", "-o", "file.o", "file.cc"],
+    "file": "file.cc" },
+
+  { "directory": "/home/user/llvm/build",
+    "command": "/usr/bin/clang++ -Irelative -DSOMEDEF=\"With spaces, quotes and \\-es.\" -c -o file.o file.cc",
+    "file": "file2.cc" },
+
+  ...
+]
+```
+
+* directory：编译的工作目录。命令或文件字段中指定的所有路径必须是绝对路径，或相对于此目录的相对路径
+
+* file：该编译步骤处理的主要 translation unit 文件。这被工具用作进入编译数据库的关键。对于同一个文件可能存在多个命令对象，比如说如果相同的源文件以不同的配置进行多次编译
+
+* arguments：编译命令参数 argv 作为字符串列表。这应该执行翻译单元文件的编译步骤。`arguments[0]` 应该是可执行程序的名称，比如 clang++。参数不应该被转义，但应该准备好传递给 `execvp()`
+
+* command：编译命令作为一个单一的 shell-escaped 字符串。参数可能按平台惯例被 shell 引用和转义，其中 ‘"’ 和 ‘\’ 是唯一的特殊字符。不支持 Shell 扩展
+
+  arguments 或 command 是必需的。首选 arguments，因为 shell 的转义与非转义是可能出现错误的来源
+
+* output：由此编译步骤创建的输出名称。此字段是可选的。它可以用来区分同一输入文件的不同处理模式
+
+生成 `compile_commands.json`（只有Makefile和Ninja两个generator实现了，其他的会忽略）
+
+* 命令行开启
+
+  ```cmd
+  $ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
+  ```
+
+* CMake文件中set
+
+  ```cmake
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+  ```
+
+### 实现
+
+<img src="CompilationDatabase.png">
+
+CompileCommand 是封装 `compile_commands.json` 中的某条具体字段的类
+
+```C++
+// llvm-project/clang/include/clang/Tooling/CommonOptionsParser.h
+struct clang::tooling::CompileCommand {
+  CompileCommand() = default;
+  CompileCommand(const Twine &Directory, const Twine &Filename,
+                 std::vector<std::string> CommandLine, const Twine &Output)
+      : Directory(Directory.str()), Filename(Filename.str()),
+        CommandLine(std::move(CommandLine)), Output(Output.str()) {}
+   
+  std::string Directory;                // The working directory the command was executed from.
+  std::string Filename;                 // The source file associated with the command.
+  std::vector<std::string> CommandLine; // The command line that was executed.
+  std::string Output;                   // The output file associated with the command.
+  /* 用来存储一个简短的、人类可读的解释，说明这个编译命令是如何被确定的。特别是在编译命令并非从权威源（比如一个明确定义了编译步骤的 compile_commands.json 文件）中直接读取的情况下，而是通过某种推断逻辑得到的时候 */
+  std::string Heuristic;
+
+  friend bool operator==(const CompileCommand &LHS, const CompileCommand &RHS) {}
+  friend bool operator!=(const CompileCommand &LHS, const CompileCommand &RHS) {}
+};
+```
+
+CompilationDatabase接口类提供了操作接口
+
+* loadFromDirectory 从指定的构建目录加载编译数据库，主要支持 JSON 格式的 `compile_commands.json` ，可以自己扩展这个接口来支持其他形式的文件
+
+  ```C++
+  static std::unique_ptr<CompilationDatabase> 
+      loadFromDirectory(StringRef BuildDirectory, std::string &ErrorMessage);
+  ```
+
+* autoDetectFromSource 尝试从源文件所在的目录开始向上检测，直到找到一个编译数据库为止
+
+  ```C++
+  static std::unique_ptr<CompilationDatabase>
+      autoDetectFromSource(StringRef SourceFile, std::string &ErrorMessage);
+  ```
+
+* autoDetectFromDirectory 尝试从给定的目录开始向上检测，直到找到一个编译数据库为止
+
+  ```C++
+  static std::unique_ptr<CompilationDatabase>
+  	autoDetectFromDirectory(StringRef SourceDir, std::string &ErrorMessage);
+  ```
+
+* getCompileCommands 获取与特定文件路径相关联的所有编译命令
+
+* getAllFiles 获取编译数据库中所有文件的列表。默认实现返回空列表，子类可以重写此方法来提供更具体的实现 
+
+* getAllCompileCommands 获取编译数据库中所有编译命令。默认实现是基于 `getAllFiles()` 和 `getCompileCommands()` 的，但子类可以重写以提高效率
+
+### 派生类
+
+* FixedCompilationDatabase
+
+  提供了一种简单的方法来创建具有固定编译选项的编译数据库，而不是从 `compile_commands.json` 文件中读取
+
+  当已经知道需要应用到所有文件上的编译选项，并且不需要使用真实的项目编译数据库时，`FixedCompilationDatabase` 非常有用。例如，在集成测试或者特定环境下可能会用到
+
+* JSONCompilationDatabase 这是最常用的Compilation Database，它用来处理`compile_commands.json` 文件
+
+* ArgumentsAdjustingCompilations
+
+  ```C++
+  // llvm-project/clang/include/clang/Tooling/CommonOptionsParser.h
+  ```
+
+  `ArgumentsAdjustingCompilations` 是另一个实现 `CompilationDatabase` 接口的类。它用于修改现有编译数据库返回的编译命令。通过给它传递一个原始的编译数据库和一个调整函数，你可以对原始编译命令进行自定义修改
+
+  这在以下几种情况下非常有用：
+
+  - 当希望根据一些特定规则修改 `compile_commands.json` 中的命令（例如添加或删除某些标志）
+  - 当想针对特定工具或分析过程调整编译选项
+
 ## *三个API库的区别*
 
 Clang 提供了用于编写需要有关程序的语法和语义信息的工具的基础设施
@@ -1801,62 +1977,6 @@ clang_visitChildren (CXCursor parent, CXCursorVisitor visitor, CXClientData clie
 
 ## *LibTooling*
 
-### Compilation Database
-
-Clang Tooling 需要 Compilation Database 来制导每一个文件的build command
-
-[JSON Compilation Database Format Specification — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/JSONCompilationDatabase.html)
-
-[Compilation database | CLion Documentation (jetbrains.com)](https://www.jetbrains.com/help/clion/compilation-database.html#compdb_clion)
-
-`compile_commands.json` 是一个 JSON 格式的文件，它在构建系统中用于记录项目编译时每个文件的确切编译命令。这个文件通常由现代构建系统（如 CMake）自动生成，并被各种工具用来理解项目的编译过程，包括：
-
-- 静态分析工具（如 `clang-tidy` 和 `clang-check`）
-- 代码编辑器和IDE，用于提供代码补全、智能跳转等功能（如 Visual Studio Code, vim, emacs 等）
-- 其他开发辅助工具，如文档生成器或代码格式化工具
-
-`compile_commands.json` 的字段有
-
-```json
-[
-  { "directory": "/home/user/llvm/build",
-    "arguments": ["/usr/bin/clang++", "-Irelative", "-DSOMEDEF=With spaces, quotes and \\-es.", "-c", "-o", "file.o", "file.cc"],
-    "file": "file.cc" },
-
-  { "directory": "/home/user/llvm/build",
-    "command": "/usr/bin/clang++ -Irelative -DSOMEDEF=\"With spaces, quotes and \\-es.\" -c -o file.o file.cc",
-    "file": "file2.cc" },
-
-  ...
-]
-```
-
-* directory：编译的工作目录。命令或文件字段中指定的所有路径必须是绝对路径，或相对于此目录的相对路径
-
-* file：该编译步骤处理的主要 translation unit 文件。这被工具用作进入编译数据库的关键。对于同一个文件可能存在多个命令对象，比如说如果相同的源文件以不同的配置进行多次编译
-
-* arguments：编译命令参数 argv 作为字符串列表。这应该执行翻译单元文件的编译步骤。`arguments[0]` 应该是可执行程序的名称，比如 clang++。参数不应该被转义，但应该准备好传递给 `execvp()`
-
-* command：编译命令作为一个单一的 shell-escaped 字符串。参数可能按平台惯例被 shell 引用和转义，其中 ‘"’ 和 ‘\’ 是唯一的特殊字符。不支持 Shell 扩展
-
-  arguments 或 command 是必需的。首选 arguments，因为 shell 的转义与非转义是可能出现错误的来源
-
-* output：由此编译步骤创建的输出名称。此字段是可选的。它可以用来区分同一输入文件的不同处理模式
-
-生成 `compile_commands.json`（只有Makefile和Ninja两个generator实现了，其他的会忽略）
-
-* 命令行开启
-
-  ```cmd
-  $ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .
-  ```
-
-* CMake文件中set
-
-  ```cmake
-  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-  ```
-
 ### 构建一个ClangTool
 
 [LibTooling — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibTooling.html)
@@ -1868,6 +1988,12 @@ LibTooling 是用来构建可以单独进行 standalone build 的clang工具的�
 
 
 ast-dump 这个FrontendAction本质就是对编译一个 translation unit，在前端遍历AST的时候把AST的信息打印出来
+
+
+
+
+
+
 
 
 
@@ -1915,7 +2041,27 @@ int main(int argc, const char **argv) {
 
 
 
-### ClangTool
+### ClangTool & ToolInvocation
+
+
+
+
+
+ClangTool 在多个文件上run FrontendAction，ToolInvocation 则是在一个 run 一个 FrontendAction
+
+```C++
+ClangTool(const CompilationDatabase &Compilations,
+          ArrayRef<std::string> SourcePaths,
+          std::shared_ptr<PCHContainerOperations> PCHContainerOps =                                                                                     std::make_shared<PCHContainerOperations>(),
+          IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
+                                                    llvm::vfs::getRealFileSystem(),                             IntrusiveRefCntPtr<FileManager> Files = nullptr);
+```
+
+必须要提供 CompilationDatabase 和 SoucePaths
+
+
+
+
 
 Run 方法主动触发FrontedAction 的执行
 
@@ -1923,9 +2069,22 @@ Run 方法主动触发FrontedAction 的执行
 
 
 
+```C++
+ToolInvocation(std::vector<std::string> CommandLine,
+             std::unique_ptr<FrontendAction> FAction, FileManager *Files,
+             std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+                 std::make_shared<PCHContainerOperations>());
+```
 
 
 
+### ToolAction & FrontendActionFactory
+
+ToolAction 是处理`clang::CompilerInvocation`的接口
+
+
+
+`clang::CompilerInvocation` 是用于保存调用编译器所需数据的辅助类。这个类被设计用来表示编译器的抽象 “调用”，包括诸如包含路径、代码生成选项、警告标志等数据
 
 
 
@@ -1950,11 +2109,24 @@ bool clang::tooling::runToolOnCode(std::unique_ptr< FrontendAction > ToolAction,
 
 
 
+### ArgumentsAdjuster
 
+```C++
+// llvm-project/clang/include/clang/Tooling/ArgumentsAdjusters.h
+```
+
+ArgumentsAdjuster 是一个用于修改编译命令行参数的回调接口。一个 ArgumentsAdjuster 接受命令行参数的列表，并返回一个可能被修改过的新列表。这样可以动态地调整编译参数，例如添加额外的包含路径、宏定义或其他编译器标志
+
+Clang Tooling 提供了几种预定义的 `ArgumentsAdjuster`，它们可以直接使用，也可以创建自定义的调整器来满足特定需求。这些预定义的 `ArgumentsAdjuster` 包括：
+
+- `getClangSyntaxOnlyAdjuster()`：修改参数以使 Clang 仅进行语法检查，不进行实际的代码生成
+- `getClangStripOutputAdjuster()`：删除输出文件相关的参数，如 `-o <file>`
+- `getInsertArgumentAdjuster()`：插入指定的参数。可以选择插入点是在参数列表的开始还是结束
+- `getStripPluginsAdjuster()`：移除所有插件相关的参数，如 `-load` 和 `-plugin`
 
 ### CommonOptionsParser
 
-CommonOptionsParser 类是所有Clang Tools命令行选项的parser，特别是它支持对 Compilation Database 的定位和加载。其内部复用了 CommandLine
+CommonOptionsParser类是所有Clang Tools命令行选项的parser，特别是它支持对Compilation Database的定位和加载。**其内部复用了CommandLine**
 
 ```C++
 // llvm-project/clang/include/clang/Tooling/CommonOptionsParser.h
@@ -1992,23 +2164,45 @@ private:
 };
 ```
 
-```
-CommonOptionsParser() / create() -> init() -> loadFromCommandLine()
-                                           -> cl::ParseCommandLineOptions()
-```
+下面介绍一下CommonIOptionsParser的API
 
+* 构造函数
 
+  ```C++
+  CommonOptionsParser(int &argc, const char **argv,llvm::cl::OptionCategory &Category,
+                      llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
+                      const char *Overview = nullptr) {
+    llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
+    if (Err) {
+      llvm::report_fatal_error(
+          Twine("CommonOptionsParser: failed to parse command-line arguments. ") +
+          llvm::toString(std::move(Err)));
+    }
+  }
+  ```
 
+  - `int &argc`：引用传递的命令行参数数量，它可能会被减少，因为 `CommonOptionsParser` 解析后会消除已识别的选项
+  - `const char **argv`：命令行参数的数组，会与 `argc` 一起被解析
+  - `llvm::cl::OptionCategory &Category`：应用程序定义的选项分类。这个参数通常是一个自定义的全局对象
+  - `llvm::cl::NumOccurrencesFlag OccurrencesFlag`：指定选项出现的次数
+  - `const char *Overview`：描述程序概述的字符串，这在打印帮助信息时会用到
 
+  构造函数的调用过程如下
 
-```C++
-llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
-    int &argc, const char **argv, llvm::cl::OptionCategory &Category,
-    llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview);
-```
+  ```
+  CommonOptionsParser() / create() -> init() -> loadFromCommandLine()
+                                             -> cl::ParseCommandLineOptions()
+  ```
 
+  Parses command-line, initializes a compilation database.
 
+  This constructor can change argc and argv contents, e.g. consume command-line options used for creating [FixedCompilationDatabase](https://clang.llvm.org/doxygen/classclang_1_1tooling_1_1FixedCompilationDatabase.html).
 
+  All options not belonging to `Category` become hidden.
+
+  It also allows calls to set the required number of positional parameters.
+
+* 方法：3个get函数
 
 
 ### Setup Clang Tooling
@@ -2094,7 +2288,27 @@ Transformer 帮助用户简洁地指定此类规则，并轻松地在本地文�
 
 CommandLine库用于定制命令行选项。它可以使用声明性的方法来指定程序采用的命令行选项
 
-CommandLine 的类和方法都在 `llvm/Support/CommandLine.h` 中，这些接口在命名空间`llvm::cl` (This namespace contains all of the command line option processing machinery) 里面
+CommandLine 的类和方法都在 `llvm/include/llvm/Support/CommandLine.h` 中，这些接口在命名空间`llvm::cl` (This namespace contains all of the command line option processing machinery) 里面
+
+### EntryPoint: ParseCommandLineOptions
+
+`cl::ParseCommandLineOptions()` 是CommandLine的入口
+
+```C++
+bool ParseCommandLineOptions(int argc, const char *const *argv,
+                             StringRef    Overview = "",
+                             raw_ostream *Errs = nullptr,
+                             const char  *EnvVar = nullptr,
+                             bool         LongOptionsUseDoubleDash = false);
+```
+
+- `int argc` & `const char *const *argv`：分别是命令行参数的数量和命令行参数的字符串数组，通常来源于 `main` 函数
+- `StringRef Overview`：提供程序概述的字符串，这在打印帮助信息时非常有用。如果像man page一样需要给help增加一个命令的说明，只需要传入第三个参数就可以了
+- `raw_ostream *Errs`：错误输出流指针。如果提供了该参数，则所有的错误和帮助信息将被输出到这个流（比如 `&llvm::errs()`）。如果不提供，那么默认情况下错误信息将被发送到标准错误输出
+- `const char *EnvVar`：环境变量的名称，如果设置了这个环境变量，它的值将被视为命令行参数之前的附加参数。这对于设置默认或全局的命令行参数很有用
+- `bool LongOptionsUseDoubleDash`：指定是否长选项必须使用双破折号（`--`）作为前缀。默认情况下，长选项可以使用单破折号（`-`）或双破折号，但如果此参数被设置为 `true`，则只有双破折号才是有效的
+
+最常用的用法如下
 
 ```C++
 #include "llvm/Support/CommandLine.h"
@@ -2106,8 +2320,6 @@ int main(int argc, char **argv) {
 }
 ```
 
-<img src="cl_Option.png">
-
 下面介绍一下CommandLine常用的类和方法
 
 * `cl::getRegisteredOptions()`
@@ -2116,17 +2328,41 @@ int main(int argc, char **argv) {
   StringMap< Option * > & getRegisteredOptions (SubCommand &Sub=SubCommand::getTopLevel());
   ```
 
-* `cl::ParseCommandLineOptions()`
+* `cl::SetVersionPrinter()`
 
   ```C++
-  bool ParseCommandLineOptions(int argc, const char *const *argv,
-                               StringRef Overview = "",
-                               raw_ostream *Errs = nullptr,
-                               const char *EnvVar = nullptr,
-                               bool LongOptionsUseDoubleDash = false);
+  // Function pointer type for printing version information.
+  using VersionPrinterTy = std::function<void(raw_ostream &)>;
+  
+  ///===---------------------------------------------------------------------===//
+  /// Override the default (LLVM specific) version printer used to print out the
+  /// version when --version is given on the command line. This allows other
+  /// systems using the CommandLine utilities to print their own version string.
+  void SetVersionPrinter(VersionPrinterTy func);
+  void AddExtraVersionPrinter(VersionPrinterTy func);
+  
+  void PrintOptionValues();
   ```
 
-  如果需要给help增加一个命令的说明，就像man page一样的话，只需要传第三个参数就可以了
+  ```C++
+  void PrintVersion(raw_ostream &OS) {
+      OS << "MyTool version 1.0\n";
+      // 你可以添加更多的版本信息或者其他相关信息
+  }
+  
+  // 主函数
+  int main(int argc, const char **argv) {
+      // 设置自定义的版本信息打印函数
+      cl::SetVersionPrinter(PrintVersion);
+  
+      // 其他的命令行参数解析逻辑
+      cl::ParseCommandLineOptions(argc, argv, "My tool description\n");
+  };
+  ```
+
+### Options
+
+<img src="cl_Option.png">
 
 * `cl::opt` 是用来表示标量命令行选项的模板类
 
@@ -2152,36 +2388,15 @@ int main(int argc, char **argv) {
   }
   ```
 
-* `cl::bits`是用于以位向量的形式表示命令行选项列表的模板类
-
 * `cl::alias`是一个非模板类，用于为其他参数形成别名
 
-* `cl::extrahelp`是一个非模板化类，它允许为该选项打印出额外的帮助文本`-help`
-
-  ```C++
-  struct extrahelp {
-    StringRef morehelp;
-  
-    explicit extrahelp(StringRef help);
-  };
-  ```
-
-  使用的时候只需要给它传递一个 `const char*` 类型（或者可以转换为 `const char*` 的其他字符串类型）的help就可以了，比如
-
-  ```C++
-  static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
-  static cl::extrahelp MoreHelp("\nMore help text...\n");
-  ```
-
-* `cl::OptionCategory`是一个用于声明选项类别的简单类
+* `cl::bits`是用于以 bit vector 的形式表示命令行选项列表的模板类
 
 
 
 
 
-### Options
 
-* Positional Arguments
 
 `cl::opt<>` 需要是一个全局变量
 
@@ -2206,15 +2421,79 @@ Positional Arguments 的顺序由它们被构造的顺序所确定（即它们�
 
 
 
-### Option Attributes
+### Option Modifiers
 
+* 控制 `--help` 是否会展示该选项
 
+  * `cl::NotHidden`
+  * `cl::Hidden`：`-help` 的时候不会被展示
+  * `cl::ReallyHidden`
 
-`cl::Hidden`：`-help` 的时候不会被展示
+* 控制选项的出现次数
 
+  ```C++
+  enum NumOccurrencesFlag { // Flags for the number of occurrences allowed
+    Optional = 0x00,        // Zero or One occurrence
+    ZeroOrMore = 0x01,      // Zero or more occurrences allowed
+    Required = 0x02,        // One occurrence required
+    OneOrMore = 0x03,       // One or more occurrences required
+  
+    // Indicates that this option is fed anything that follows the last positional
+    // argument required by the application (it is an error if there are zero
+    // positional arguments, and a ConsumeAfter option is used).
+    // Thus, for example, all arguments to LLI are processed until a filename is
+    // found.  Once a filename is found, all of the succeeding arguments are
+    // passed, unprocessed, to the ConsumeAfter option.
+    //
+    ConsumeAfter = 0x04
+  };
+  ```
 
+  介绍一下最后一个 `cl::ConsumeAfter`
 
+* 控制是否需要显式给出值
 
+  * `cl::ValueOptional`
+  * `cl::ValueRequired`
+  * `cl::ValueDisallowd`
+
+* 控制其他格式化选项
+
+  * `cl::NormalFormatting`
+  * `cl::Positional`
+  * `cl::Prefix`
+
+* Options Grouping
+
+  * `cl::Grouping`
+  * `cl::OptionCategory`是一个用于声明选项类别的简单类
+
+* Miscellaneous option modifiers
+
+  * `cl::CommandSeparated`
+
+  * `cl::DefaultOption`
+
+  * `cl::PositionalEatArgs`
+
+  * `cl::Sink`
+
+  * `cl::extrahelp`是一个非模板化类，它允许为该选项打印出额外的帮助文本`-help`
+
+    ```C++
+    struct extrahelp {
+      StringRef morehelp;
+    
+      explicit extrahelp(StringRef help);
+    };
+    ```
+
+    使用的时候只需要给它传递一个 `const char*` 类型（或者可以转换为 `const char*` 的其他字符串类型）的help就可以了，比如
+
+    ```C++
+    static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
+    static cl::extrahelp MoreHelp("\nMore help text...\n");
+    ```
 
 ### Internal vs. External Storage
 
@@ -2317,6 +2596,118 @@ int main() {
 和很多C++工程中专门用于log的logger不同，LLVM并没有一个专门的logger，因为编译器并不像其他软件一样需要长时间运行，不需要频繁的记录日志。LLVM只是提供了一些工具用于打印debug信息
 
 改变 `LLVM_DEBUG` 的值来选择性地打开特定组件的调试输出。例如，设置 `LLVM_DEBUG=Transforms` 将启用所有 Transformations 相关的调试信息
+
+## *LLVM-Style RTTI*
+
+[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
+
+### 相关的CMake变量
+
+LLVM中默认禁止了C++的RTTI特性（RTTI特性的开关`-fno-rtti`），主要是为了性能考虑（C++默认的RTTI特别冗余，会使得编译生成的文件大小增大）
+
+通过cmake变量 `LLVM_ENABLE_RTTI:BOOL` 来控制C++语言本身的RTTI特性是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-rtti` 来控制
+
+和这个特性类似的还有 `LLVM_ENABLE_EH` 来控制C++的异常处理 Error Handling, EH机制是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-exception` 来控制。但是如果这个开关也打开的话，需要重新编译大量的依赖库，比如最重要的 libstdc++
+
+### 引入的新模板
+
+为了方便在关闭C++默认的RTTI的时候的使用，LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
+
+* `isa<>`
+
+### 改造为 LLVM-Sytle RTTI
+
+[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
+
+[How to set up LLVM-style RTTI for your class hierarchy — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToSetUpLLVMStyleRTTI.html)
+
+### 经验法则
+
+1. The `Kind` enum should have one entry per concrete class, ordered according to a preorder traversal of the inheritance tree.
+2. The argument to `classof` should be a `const Base *`, where `Base` is some ancestor in the inheritance hierarchy. The argument should *never* be a derived class or the class itself: the template machinery for `isa<>` already handles this case and optimizes it.
+3. For each class in the hierarchy that has no children, implement a `classof` that checks only against its `Kind`.
+4. For each class in the hierarchy that has children, implement a `classof` that checks a range of the first child’s `Kind` and the last child’s `Kind`.
+
+### Challenge for linker
+
+[Undefined reference to `typeinfo for llvm::cl::GenericOptionValue' - Beginners - LLVM Discussion Forums](https://discourse.llvm.org/t/undefined-reference-to-typeinfo-for-llvm-genericoptionvalue/71526)
+
+如果LLVM本身是关闭了RTTI编译的，但是在使用LLVM的库来编程的时候，如果是用gcc来编译的话，就会报 `undefined reference to typeinfo for SomeType` 的链接错误。可以在cmake中加入下面的选项来避免错误
+
+```cmake
+set(NO_RTTI "-fno-rtti")
+add_definitions(${NO_RTTI})
+```
+
+TODO：如果是用Clang来编译的话可以避免这个问题？
+
+# 错误、故障诊断 & 日志
+
+## *Diagnostics*
+
+诊断 diagnostics 是指编译过程中用于报告错误、警告、提示和注释的消息系统，它诊断是编译器与开发者进行交互的重要部分。这些消息会通知用户关于代码中潜在问题的具体信息，包括编译错误、未定义行为、优化信息或其他警示
+
+caret 脱字符（插入记号）`^`
+
+
+
+### 1. Diagnostic Engines
+
+LLVM 提供了一个 `Diagnostic` 类，它是处理所有诊断信息的引擎。这个引擎记录了各种诊断信息，并且可以根据不同的严重性级别（如错误、警告）来分类消息。
+
+### 2. Diagnostic IDs and Categories
+
+每个诊断消息都有一个唯一的标识符（ID），通常与某种特定的问题相关联。诊断还可以归类到不同的类别中，以帮助用户更好地理解消息的上下文。
+
+### 3. Source Locations
+
+诊断系统利用源代码位置信息来指出问题发生的确切位置。这意味着诊断消息能够告诉用户问题出现在源码的哪一行和列。
+
+### 4. Diagnostic Severities
+
+在 LLVM 中，诊断消息有几个严重性级别，包括：
+
+- `Error`: 表明一个严重问题，必须解决才能成功编译。
+- `Warning`: 表示可能的问题，建议用户检查和修复，但不会阻止编译过程。
+- `Note`: 提供额外的信息，通常与错误或警告相关。
+- `Remark`: 用于提供关于优化等特殊情况的详细信息。
+
+### 5. Fix-Its
+
+Clang 和其他基于 LLVM 的工具可以提供修复建议（Fix-Its），这些是具体的代码更改建议，可以直接应用于源文件以解决报告的问题。
+
+### 6. Handling Diagnostics in Tools
+
+当开发基于 LLVM 的工具时，你需要创建一个诊断消费者（Diagnostic Consumer）来接收并处理这些诊断消息。你可以使用默认的诊断消费者，也可以创建自定义的诊断消费者来适应特定的输出格式或日志系统。
+
+例如，如果你正在实现一个新的 LLVM Pass 或 Clang 插件，你可能会生成诊断消息来报告分析结果或潜在的代码问题。
+
+### 7. Customizing Diagnostics Output
+
+开发者可以通过设置诊断引擎的选项来自定义诊断的表现方式，比如控制哪些类型的诊断应该被抑制或者是否应该显示颜色化输出。
+
+### 示例
+
+这是一个简单的例子，展示了如何在 LLVM 中发出一个诊断：
+
+```
+cpp复制代码#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Function.h"
+
+void MyAnalysisPass(llvm::Function &F) {
+    // ...
+    if (/* 检测到某种问题 */) {
+        llvm::DiagnosticInfoOptimizationFailure DI(
+            F, llvm::DebugLoc(), "Description of the issue");
+        F.getContext().diagnose(DI);
+    }
+}
+```
+
+在上面的代码中，假设我们正在进行一个分析 Pass，并且我们发现了一个问题。我们使用 `DiagnosticInfoOptimizationFailure` 类来创建诊断信息，并调用 LLVM 的上下文（`LLVMContext`）的 `diagnose` 方法来报告问题。这将向注册到上下文的任何诊断消费者发出诊断。
+
+LLVM 诊断系统是一个功能强大的工具集，允许开发者在编译器和其他工具中提供详细且有用的反馈给用户。
 
 ## *Error*
 
@@ -2469,50 +2860,6 @@ char MyCustomError::ID = 0;
 
 ## *log*
 
-## *LLVM-Style RTTI*
-
-[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
-
-### 相关的CMake变量
-
-LLVM中默认禁止了C++的RTTI特性（RTTI特性的开关`-fno-rtti`），主要是为了性能考虑（C++默认的RTTI特别冗余，会使得编译生成的文件大小增大）
-
-通过cmake变量 `LLVM_ENABLE_RTTI:BOOL` 来控制C++语言本身的RTTI特性是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-rtti` 来控制
-
-和这个特性类似的还有 `LLVM_ENABLE_EH` 来控制C++的异常处理 Error Handling, EH机制是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-exception` 来控制。但是如果这个开关也打开的话，需要重新编译大量的依赖库，比如最重要的 libstdc++
-
-### 引入的新模板
-
-为了方便在关闭C++默认的RTTI的时候的使用，LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
-
-* `isa<>`
-
-### 改造为 LLVM-Sytle RTTI
-
-[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
-
-[How to set up LLVM-style RTTI for your class hierarchy — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToSetUpLLVMStyleRTTI.html)
-
-### 经验法则
-
-1. The `Kind` enum should have one entry per concrete class, ordered according to a preorder traversal of the inheritance tree.
-2. The argument to `classof` should be a `const Base *`, where `Base` is some ancestor in the inheritance hierarchy. The argument should *never* be a derived class or the class itself: the template machinery for `isa<>` already handles this case and optimizes it.
-3. For each class in the hierarchy that has no children, implement a `classof` that checks only against its `Kind`.
-4. For each class in the hierarchy that has children, implement a `classof` that checks a range of the first child’s `Kind` and the last child’s `Kind`.
-
-### Challenge for linker
-
-[Undefined reference to `typeinfo for llvm::cl::GenericOptionValue' - Beginners - LLVM Discussion Forums](https://discourse.llvm.org/t/undefined-reference-to-typeinfo-for-llvm-genericoptionvalue/71526)
-
-如果LLVM本身是关闭了RTTI编译的，但是在使用LLVM的库来编程的时候，如果是用gcc来编译的话，就会报 `undefined reference to typeinfo for SomeType` 的链接错误。可以在cmake中加入下面的选项来避免错误
-
-```cmake
-set(NO_RTTI "-fno-rtti")
-add_definitions(${NO_RTTI})
-```
-
-TODO：如果是用Clang来编译的话可以避免这个问题？
-
 # Clang Tools & Clang Plugin
 
 [Overview — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangTools.html)
@@ -2656,6 +3003,8 @@ Debug情况下默认是不优化，Release情况下默认Fastest、Smallest
 [看看 LLVM 的码（一）基础数据结构、IR (glass-panel.info)](https://blog.glass-panel.info/post/read-llvm-code-1/)
 
 ## *bitcode*
+
+[LLVM Bitcode File Format — LLVM 19.0.0git documentation](https://llvm.org/docs/BitCodeFormat.html)
 
 [blog/articles/llvm/2020_11_23_bc.md at main · zxh0/blog (github.com)](https://github.com/zxh0/blog/blob/main/articles/llvm/2020_11_23_bc.md)
 
