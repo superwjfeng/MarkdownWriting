@@ -96,3 +96,16 @@ custom_tag: !mytype { name: John Doe, age: 30 }
 [jbeder/yaml-cpp: A YAML parser and emitter in C++ (github.com)](https://github.com/jbeder/yaml-cpp?tab=readme-ov-file)
 
 Node是yaml-cpp中的核心概念，是最重要的数据结构，它用于存储解析后的YAML信息。Node一共有以下几种type
+
+- Null 空节点
+- Sequence 序列，类似于一个 `std::vector`，对应YAML格式中的数组
+- Map，类似标准库中的 `std::Map`，对应YAML格式中的对象
+- Scalar 标量，对应YAML格式中的常量
+
+
+
+**YAML::Node** 类提供了三个方法用于判断当前Node的类型：`IsScalar()`、`IsSequence()`、`IsMap()`
+
+## *Parse*
+
+## *Emitt*

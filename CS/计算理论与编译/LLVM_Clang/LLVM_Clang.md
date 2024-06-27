@@ -52,18 +52,6 @@ LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下
 * LLD：LLD项目是一个新的链接器，它可以替换系统链接器，并运行得更快。
 * BOLT：BOLT项目是一个链接后优化器。它通过根据采样分析器收集的执行配置文件优化应用程序的代码布局来实现性能提升
 
-
-
-### 源代码结构
-
-根目录下，最重要的就是include和lib这两个文件夹。include文件夹包含了其它项目在使用LLVM核心库时需要包含的头文件，而lib文件夹里放的就是LLVM核心库的实现。分别打开lib和include，可以看到很多文件与子文件夹。有经验的读者应该能从名字大概猜到其实现的东西。比如，lib/IR子文件夹肯定是存放了与IR相关的代码，lib/Target子文件夹肯定与生成目标平台机器码有关。又比如，include/llvm/Pass.h文件里面声明了Pass类用来给你继承去遍历、修改LLVM IR。 当然，我们现在不必知道每个模块是干什么的。 等有需要再去查看官方文档吧。
-根目录下还有一个tools文件夹，这里面就存放了我上面所说的周边工具。 打开这个目录，就可以看到类似llvm-as这样的子目录。显然这就是llvm-as的实现。
-————————————————
-
-                            版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
-
-原文链接：https://blog.csdn.net/m0_72827793/article/details/135371852
-
 # 安装 & 编译 & 测试 LLVM
 
 截止到2024.6.11，LLVM的最新版本为18.1.6
@@ -146,6 +134,8 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
   $ git clone --branch llvmorg-12.0.1 --depth 1 https://github.com/llvm/llvm-project.git
   ```
 
+补充一个概念：Clang trunk 指的是Clang编译器项目的开发主分支。在版本控制系统中，trunk一词通常用来描述项目的主开发线或主分支
+
 ### 编译
 
 [Getting Started with the LLVM System — LLVM 19.0.0git documentation](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
@@ -153,7 +143,7 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
 ```cmd
 $ cd llvm-project
 # cmake configure
-$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra"
+$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra" -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
 # $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 $ cmake --build build # cmake build
 $ sudo cmake --build build --target install # cmake install
@@ -253,7 +243,21 @@ ninja -C $builddir install
 
   所谓的Project就是llvm-project下面的那些目录，完整的Project Lists为 `clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl`
 
-- **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让能够控制哪些运行时库被启用。如果想要构建libc++或者libc++abi这样的库，可以使用这个变量。例如，为了同时构建libc++和libc++abi，应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"`
+- **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让能够控制哪些运行时库被启用。如果想要构建libc++或者libc++abi这样的库，可以使用这个变量。例如，为了同时构建libc++和libc++abi，应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"`
+
+  这通常是为了确保LLVM能够使用与之兼容的C++标准库，尤其是在那些不希望依赖系统默认C++库，或者想要利用`libc++`提供的特性和性能优势的场景下
+
+  注意如果要添加libcxxabi的话，要把libunwind加上，否则会报下面的错误
+
+  ```
+  CMake Error at /mnt/data/llvm-project/libcxxabi/CMakeLists.txt:52 (message):
+    LIBCXXABI_USE_LLVM_UNWINDER is set to ON, but libunwind is not specified in
+    LLVM_ENABLE_RUNTIMES.
+  ```
+
+  补充：libunwind 是**一个可移植且高效的C 语言库，用于确定程序的调用链（backtrace）**。 它特别适用于帮助实现程序的错误报告功能，和需要对程序崩溃进行后处理的情况
+
+  [⚙ D113253 [runtimes\] Fix building initial libunwind+libcxxabi+libcxx with compiler implied -lunwind (llvm.org)](https://reviews.llvm.org/D113253?id=387614)
 
 - **LLVM_LIBDIR_SUFFIX:STRING** 这个变量用于附加额外的后缀到库文件的安装目录。在64位架构上，你可能希望库文件被安装在`/usr/lib64`而非`/usr/lib`，那么可以设置 `-DLLVM_LIBDIR_SUFFIX=64`
 
@@ -695,12 +699,6 @@ $ diff -u clang_output.txt clangpp_output.txt
 - 当使用 `clang` 时，链接器没有被告知链接 C++ 标准库 `libstdc++` 或数学库 `libm`
 - 当使用 `clang++` 时，链接器的调用包含了 `-lstdc++` 和 `-lm` 参数，这表明它需要链接 C++ 标准库和数学库。这是因为 `clang++` 被当作 C++ 编译器使用，自动假设需要这些库
 
-### Clang的语言标准实现
-
-[Clang - C++ Programming Language Status (llvm.org)](https://clang.llvm.org/cxx_status.html)
-
-默认Clang 16及之后使用C++17标准编译
-
 ### 分别编译不同的阶段
 
 我们可以看下有下面这些阶段
@@ -744,6 +742,33 @@ $ clang -ccc-print-phases main.cc
    ```cmd
    $ clang object.o -o executable
    ```
+
+## *libc++*
+
+* libc++是由LLVM项目开发和维护的
+* libstdc++是GNU项目的一部分，由GCC团队开发和维护
+
+### Clang的语言标准实现
+
+[Clang - C++ Programming Language Status (llvm.org)](https://clang.llvm.org/cxx_status.html)
+
+[C++ compiler support - cppreference.com](https://en.cppreference.com/w/cpp/compiler_support)
+
+默认Clang 16及之后使用C++17标准编译
+
+在Linux clang会默认使用 libstdc++，这里有个坑点，不要自己去显式地使用 `-stdlib=libstdc++`，因为clang在使用libstdc++的时候会默认链接下面这些库，而我们这样显式地编译地时候实际上没有链接全
+
+```cmd
+$ ldd a.out
+        linux-vdso.so.1 (0x00007fff95eff000)
+        libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f4ca94a0000)
+        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f4ca93b9000)
+        libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f4ca9399000)
+        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f4ca9170000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f4ca96da000)
+```
+
+如果要使用libc++，而不是默认的libstdc++的话，记得在编译LLVM的时候设置变量 `-DLLVM_ENABLE_RUNTIMES="libcxx"`
 
 ## *Overview*
 
@@ -1057,74 +1082,73 @@ CompilerInstance 是非常重要的一个类，因为它持有了诸如`preproce
 
 ### FrontendAction
 
-FrontendAction 是Clang前端执行的action的抽象基类
+FrontendAction 是Clang前端执行的action的抽象基类，所有的Action都直接或间接地继承自它。比如ast-dump 这个FrontendAction本质就是对编译一个 translation unit，在前端遍历AST的时候把AST的信息打印出来
 
+* ActionKind 枚举类告诉了我们有哪些LLVM已经实现的前端任务
 
+  ```C++
+  // llvm-project/clang/include/clang/Frontend/FrontendOptions.h
+  enum ActionKind {
+    /// Parse ASTs and list Decl nodes.
+    ASTDeclList,
+    /// Parse ASTs and dump them.
+    ASTDump,
+    /// Parse ASTs and print them.
+    ASTPrint,
+    /// Parse ASTs and view them in Graphviz.
+    ASTView,
+    /// Dump the compiler configuration.
+    DumpCompilerOptions,
+    /// Dump out raw tokens.
+    DumpRawTokens,
+    /// Dump out preprocessed tokens.
+    DumpTokens,
+    /// Emit a .s file.
+    EmitAssembly,
+    EmitLLVM,
+    // ...
+  };  
+  ```
 
- ActionKind 枚举类高速了我们有哪些前端任务
+* `clang::FrontendAction`里可以override的一些方法
 
-```C++
-// llvm-project/clang/include/clang/Frontend/FrontendOptions.h
-enum ActionKind {
-  /// Parse ASTs and list Decl nodes.
-  ASTDeclList,
-  /// Parse ASTs and dump them.
-  ASTDump,
-  /// Parse ASTs and print them.
-  ASTPrint,
-  /// Parse ASTs and view them in Graphviz.
-  ASTView,
-  /// Dump the compiler configuration.
-  DumpCompilerOptions,
-  /// Dump out raw tokens.
-  DumpRawTokens,
-  /// Dump out preprocessed tokens.
-  DumpTokens,
-  /// Emit a .s file.
-  EmitAssembly,
-  /// Emit a .bc file.
-  EmitBC,
-  /// Translate input source into HTML.
-  EmitHTML,
-  /// Emit a .cir file
-  EmitCIR,
-  /// Emit a .ll file.
-  EmitLLVM,
-  // ...
-};  
-```
+  * CreateASTConsumer：当MyFrontendAction构建AST后会调用 CreateASTConsumer来使用我们客制化实现的 ASTConsumer，并将相关节点返回给我们
 
+    ```C++
+    virtual std::unique_ptr<ASTConsumer> CreateASTConsumer (CompilerInstance &CI, StringRef InFile)=0
+    ```
 
+    注意这是一个纯虚函数，派生类必须要重写它
 
-`clang::FrontendAction`里可以override的一些方法
+  * BeginInvocation ：在BeginSourceFileAction执行之前，该函数内还可以修改CompilerInvocation，即CompilerInstance编译参数选项。被FrontendAction的公共接口BeginSourceFile调用
 
-```C++
-//通过在已经初始化的AST消费者上运行Sema，实现ExecuteAction接口
-void ExecuteAction () override
+    ```C++
+    virtual bool BeginInvocation (CompilerInstance &CI)
+    ```
 
-//准备在给定的CompilerInstance上执行动作
-virtual bool PrepareToExecuteAction (CompilerInstance &CI)
+  * BeginSourceFileAction：处理单个输入文件之前，做一些处理工作。被FrontendAction的公共接口BeginSourceFile调用
 
-//当MyFrontendAction构建 AST 树后会调用 CreateASTConsumer来使用我们客制化实现的 ASTConsumer，并将相关节点返回给我们
-virtual std::unique_ptr<ASTConsumer> CreateASTConsumer (CompilerInstance &CI, StringRef InFile)=0
+    ```C++
+    virtual bool BeginSourceFileAction (CompilerInstance &CI)
+    ```
 
-// 在开始处理单一输入之前的回调，让人有机会在BeginSourceFileAction被调用之前修改CompilerInvocation或做一些其他动作
-virtual bool BeginInvocation (CompilerInstance &CI)
+  * ExecuteAction：通过在已经初始化的ASTConsumer上运行Sema，实现ExecuteAction接口，被FrontendAction的公共接口Execute调用
 
-//在处理单一输入的开始时回调
-virtual bool BeginSourceFileAction (CompilerInstance &CI)
+    ```C++
+    void ExecuteAction () override
+    ```
 
-//在处理单个输入结束时的回调
-//比如文档里给出的例子是当处理输入结束时，向控制台输出程序代码
-virtual void EndSourceFileAction ()
+  * EndSourceFileAction：Callback at the end of processing a single input，被FrontendAction的公共接口EndSourceFile调用
 
-//在处理单个输入结束时回调，以确定是否应删除输出文件
-virtual bool shouldEraseOutputFiles ()
-```
+    ```C++
+    virtual void EndSourceFileAction ()
+    ```
 
+  * shouldEraseOutputFiles：在处理单个输入结束时回调，以确定是否应删除输出文件
 
-
-
+    ```C++
+    virtual bool shouldEraseOutputFiles ()
+    ```
 
 ## *AST核心API*
 
@@ -1134,7 +1158,7 @@ virtual bool shouldEraseOutputFiles ()
 
 注：上图的虚线框内为回调方法，表头黑体为类名
 
-构建AST树的核心类是`clang::ParseAST()`
+构建AST树的核心类是`clang::ParseAST()`，它会解析以及通过钩子 ASTConsumer 来把分析后的 AST 节点回传给我们
 
 > Parse the entire file specified, notifying the ASTConsumer as the file is parsed.  This inserts the parsed decls into the translation unit held by Ctx.
 
@@ -1241,12 +1265,6 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
 9. 完成模板实例化观察者链的初始化和清理：将在`Sema`对象中初始化的模板实例化观察者链进行最终的清理工作
 10. 打印统计信息：如果开启了统计信息功能，则在解析结束后打印相关的统计结果
 
-
-
-
-
-为了方便用户加入自己的actions，Clang提供了众多的hooks
-
 ### ASTConsumer
 
 > This is an abstract interface that should be implemented by clients that read ASTs.
@@ -1260,7 +1278,7 @@ ASTConsumer 是一个抽象基类，它定义了一个接口供各种不同的�
 // llvm-project/clang/lib/AST/ASTConsumer.cpp
 ```
 
-以下是ASTConsumer提供的接口虚函数
+以下是ASTConsumer提供的可以重写的接口虚函数
 
 * Initialize
 
@@ -1293,9 +1311,6 @@ ASTConsumer 是一个抽象基类，它定义了一个接口供各种不同的�
   
 
 ```C++
-
-
-
 // 该回调函数在每次有inline函数或友元调用完成的时候被调用
 virtual void HandleInlineFunctionDefinition(FunctionDecl *D) {}
 
@@ -1391,6 +1406,22 @@ llvm-project/clang/lib/AST/ASTContext.cpp
 - `SourceManager`
 - AST 的入口节点: `TranslationUnitDecl* getTranslationUnitDecl()`
 
+有两种方式来获取ASTContext
+
+1. 在调用CreateASTConsumer时，ASTContext可以从CompilerInstance里的 `getASTContext()` 方法获得
+2. 继承了 `clang::FrontendAction` 的类可以通过 `getCompilerInstance()` 来获得CompilerInstance，然后通过 `getASTContext()` 方法获得
+
+```C++
+std::unique_ptr<ASTConsumer> MyFrontendAction::CreateASTConsumer(CompilerInstance& CI, StringRef file) {
+    // 获取ASTContext的办法
+    clang::ASTContext& astContext = CI.getASTContext();
+}
+
+void MyFrontendAction::EndSourceFileAction() {
+    getCompilerInstance().getASTContext();
+}
+```
+
 ## *AST结构*
 
 ### Reminder: Expression & Statement
@@ -1429,23 +1460,54 @@ Expression & Statement 的主要区别在于，表达式是有返回值的，而
 Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共祖先的独立类
 
 * Decl 表示各种声明
-  * FunctionDecl 函数声明。注意：在AST层级中，**不区分函数声明和函数定义，统一用FunctionDecl来标识**，两个区分主要看是否有函数体 function body，可以使用 `bool hasBody()` 来进行判断
-  * VarDecl 变量声明，如果有初始化，可以通过 `getInit()` 获取到对应的初始化Expr
+  * ExternCContextDecl
+  * NamedDecl
+    * NamespaceDecl
+    * TypeDecl
+    * ValueDecl
+      * DeclaratorDecl
+        * FunctionDecl 函数声明。注意：在AST层级中，**不区分函数声明和函数定义，统一用FunctionDecl来标识**，两个区分主要看是否有函数体 function body，可以使用 `bool hasBody()` 来进行判断
+        * VarDecl 局部和全局变量声明。如果有初始化，那么 VarDecl 就会有一个初始值的子节点，其可以通过 `getInit()` 获取到对应的初始化Expr
+          * ParmVarDecl 函数/方法的参数
+  * PragmaCommentDecl
+  * TopLevelStmtDecl
+  * TranslationUnitDecl
+  
 * Stmt 表示各种语句（代码块）
   * CompoundStmt 复合语句：代表大括号，函数实现、struct、enum、for的body等一般用此包起来
+  
   * DeclStmt 定义语句，里边可能有VarDecl等类型的定义
+  
   * ForStmt For语句对应，包括Init/Cond/Inc 对应 `(int a=0;a<mm;a++)` 这三部分，还有一部分是body，可以分别使用 `getInit()`，`getCond()`，`getInc()`，`getBody()` 来分别进行获取
+  
   * IfStmt If语句：包括三部分Cond、TrueBody、FalseBody三部分，分别可以通过 `getCond()`，`getThen()`, `getElse()` 三部分获取，Cond和Then是必须要有的，Else可能为空
+  
   * ReturnStmt 可选的return语句
+  
   * ValueStmt 可能含有 Value & Type 的语句
+    * AttributedStmt
+    
+    * LabelStmt
+    
     * Expr 表达式，clang中expression也是statement的一种
+      
       * BinaryOperator 二元运算符
+      
       * CallExpr 函数调用表达式，子节点有调用的参数列表
+      
       * CastExpr 类型转换表达式
         * ImplicitCastExpr 隐形转换表达式，在左右值转换和函数调用等各个方面都会用到
+        
+      * DeclRefExpr 标识引用声明的变量和函数
+      
+        在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
+      
       * IntegerLiteral 定点Integer值
+      
       * ParenExpr 括号表达式
+      
       * UnartOperator 一元操作符
+  
 * Type 类型
   * PointerType 指针类型
 
@@ -1496,33 +1558,206 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
 
 Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` 和 `ASTMatcher`
 
+### 自定义RecursiveASTVisitor的步骤
+
 [How to write RecursiveASTVisitor based ASTFrontendActions. — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/RAVFrontendAction.html)
 
+<img src="AST_Action.png">
 
+1. `ClangTool::run` 传入ToolAction，Action作为一个我们自定义的执行动作
 
+2. 定义一个自己的类MyFrontendAction，继承自FrontendAction，代表需要执行的操作（如果是AST操作的话，一般直接直接ASTFrontendAction，它会自动执行 `ExcuteaAction()`）
 
+3. 在自己的类MyFrontendAction中override一些FrontendAction需要重新定义的方法，其中 `CreateASTConsumer()` 是为实现自定义操作必须要override的一个方法
 
-继承RecursiveASTVisitor，并且实现其中的 VisitCXXRecordDecl，那么这个方法就会在访问 CXXRecordDecl类型的节点上触发
+   ```C++
+   class FindNamedClassAction : public clang::ASTFrontendAction {
+   public:
+     virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
+       clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
+       return std::make_unique<FindNamedClassConsumer>();
+     }
+   };
+   ```
+
+4. 定义一个自己的类MyASTConsumer，继承自ASTConsumer，以此来使用一些已有的遍历功能。一般来说必须要实现的是 `HandleTranslationUnit()` 来获取最重要的translation unit，另外的比如 `HandleTopLevelDecl()` 实现从上到下的遍历
+
+   ```C++
+   class FindNamedClassConsumer : public clang::ASTConsumer {
+   public:
+     virtual void HandleTranslationUnit(clang::ASTContext &Context) {
+       // Traversing the translation unit decl via a RecursiveASTVisitor
+       // will visit all nodes in the AST.
+       Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+     }
+   private:
+     // A RecursiveASTVisitor implementation.
+     FindNamedClassVisitor Visitor;
+   };
+   ```
+
+5. 最后定义一个自己的类MyASTVisitor，继承自RecursiveASTVisitor，然后在MyASTVisitor里实现自己的操作
+
+   RecursiveASTVisitor提供了很多访问AST Nodes的hooks，它们都是以 `bool VisitNodeType(NodeType *)` 的形式定义的。比如说下面的 `VisitCXXRecordDecl()`，这个方法会在访问 CXXRecordDecl类型的节点上触发
+
+   ```C++
+   class FindNamedClassVisitor
+     : public RecursiveASTVisitor<FindNamedClassVisitor> {
+   public:
+     bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
+       // For debugging, dumping the AST nodes will show which nodes are already
+       // being visited.
+       Declaration->dump();
+   
+       // The return value indicates whether we want the visitation to proceed.
+       // Return false to stop the traversal of the AST.
+       return true;
+     }
+   };
+   ```
+
+这里提供了一个更全面的例子：[二，构建Clang libTooling 工具 - 掘金 (juejin.cn)](https://juejin.cn/post/7347677856694796322)
+
+### 使用方法
+
+[LLVM 编译器前端 Clang AST & API 学习笔记 | jywhy6's blog](https://blog.jywhy6.zone/2020/11/27/clang-notes/)
+
+- `TraverseDecl(Decl *x)` 用于遍历以 `x` 为根的 AST。它将自动调用 `TraverseFoo(Foo *x)` ，进而调用 `WalkUpFromFoo(x)` ，然后递归地以前序或后序的方式深度优先遍历 `x` 的子节点。 `TraverseStmt(Stmt *x)` 和 `TraverseType(QualType x)` 函数的功能类似
+- `WalkUpFromFoo(Foo *x)` 并不尝试访问 `x` 的子节点，而是向上搜索节点 `x` 的类型层级，直到达到 AST 的核心基本类型之一 (`Stmt`/`Decl`/`Type`) 。它首先调用 `WalkUpFromBar(x)` (`Bar` 是 `Foo` 的直接父类 (如果存在))，然后调用 `VisitFoo(x)`
+- `VisitFoo(Foo *x)` 接受类型为 `Foo` 的节点 `x` ，并调用可被用户覆盖的虚函数来访问该节点 (对访问到的具体某类节点的操作逻辑应当写在这个函数里)
+
+### 获取错误信息
 
 ## *ASTMatcher*
 
 [Tutorial for building tools using LibTooling and LibASTMatchers — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersTutorial.html)
 
-- 特性
-  - ASTMatcher本质上是一种带有函数式编程风格的DSL
-  - 由表达式 expressions 触发，用户使用表达式规定触发访问的条件
-  - 与AST上下文信息绑定，即用户可以在表达式中利用上下文信息来筛选节点
-  - 无需遍历，能直接匹配到表达式对应的节点
-- 使用方法
-  - 直接组合各种 `ASTMatcher` 来精确表示匹配节点的规则，语义非常清晰，例如 `binaryOperator(hasOperatorName("+"), hasLHS(integerLiteral(equals(0))))` 匹配的是左操作数为字面量 `0` 的加法操作表达式
-  - 可以对任意层级的表示 Clang AST 节点（而非 LHS、RHS、Type、Operand 等节点属性）的 ASTMatcher 使用 `.bind("foo")` 操作，将该节点与字符串绑定
-  - 可以继承回调类 `MatchFinder::MatchCallback` ，覆盖虚函数 `run(const MatchFinder::MatchResult &Result)`，然后使用 `Result.Nodes.getNodeAs<clang::FooType>("foo")` 来访问此前与字符串绑定的 Clang AST 节点
-- 注意事项
-  - 在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
+[AST Matcher Reference (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersReference.html)
 
+### ASTMatcher的特性
 
+实际上RecursiveASTVisitor这种遍历方法在ASTMatcher推出后就不推荐继续使用了，因为它的代码比较冗余，需要用户自行遍历，编码效率较低。而且无法充分利用 AST 的上下文信息，即无法利用节点之间的关系来筛选节点
+
+ASTMatcher本质上是一种带有函数式编程风格的DSL
+
+- 由表达式 expressions 触发，用户使用表达式规定触发访问的条件
+- 与AST上下文信息绑定，即用户可以在表达式中利用上下文信息来筛选节点
+- 无需遍历，能直接匹配到表达式对应的节点
+
+### Matchers的类型
+
+* Node Matchers, NM: Matchers that match a specific type of AST node 匹配特定类型节点
+
+  每一个自定义的Matcher都应该从NM开始。NM是唯一可以使用 `bind("ID")` 的Matcher
+
+  
+
+  比如 `objcPropertyDecl()` 用来匹配OC属性声明节点
+
+  
+
+* Narrowing Matchers, NaM: Matchers that match attributes on AST nodes 顾名思义，用来 “紧缩” NM的范围，即匹配具有某些属性的NM
+
+  比如 `hasName()` 和 `hasAttr()` 分别匹配具有指定名称、attribute的节点
+
+* Traversal Matchers, TM: Matchers that allow traversal between AST nodes 允许在节点之间递归匹配
+
+  所有的TM都以NM为参数
+
+  比如 `hasAncestor()` 和 `hasDescendant()` 分别匹配祖、后代类节点
+
+直接组合各种 ASTMatchers 来精确表示匹配节点的规则，语义非常清晰，例如 `binaryOperator(hasOperatorName("+"), hasLHS(integerLiteral(equals(0))))` 匹配的是左操作数为字面量 `0` 的加法操作表达式
+
+可以对任意层级的表示 Clang AST 节点（而非 LHS、RHS、Type、Operand 等节点属性）的 ASTMatcher 使用 `.bind("foo")` 操作，将该节点与字符串绑定
+
+### ASTMatcher的使用
+
+[四，Clang ASTMatcher基础学习 - 掘金 (juejin.cn)](https://juejin.cn/post/7347677856694894626)
 
 Matchers are paired with a `MatchCallback` and registered with a `MatchFinder` object, then run from a `ClangTool`
+
+1. 实现 `MatchFinder::MatchCallback` 这个回调的子类。当使用 MatchFinder 的 `addMatcher()` 中将Matcher注册进去后，每当我们的Matchers匹配到相应的节点就会调用我们需要重写的run方法，所以我们只需要重写它的run方法实现需要的功能即可
+
+   ```C++
+   class Func_Call : public MatchFinder::MatchCallback {
+   public:
+       void run(const MatchFinder::MatchResult& Result) override { /*TDB*/ }
+   };
+   ```
+
+2. 有两种使用ASTMatcher的形式
+
+   1. 直接将匹配器通过使用 newFrontendActionFactory 实现一个 FrontendAction 并传递给 ClangTool 直接去运行
+
+      ```C++
+      int FunctionToAnalyzeCodeTree(int argc, const char** argv)
+      {
+          auto FuncDeclMatcher =
+              functionDecl(isExpansionInMainFile(),
+                          anyOf(hasAncestor(cxxRecordDecl().bind("methodclass")), unless(hasAncestor(cxxRecordDecl()))),
+                          anyOf(forEachDescendant(callExpr().bind("callExprFunction")),
+                              unless(forEachDescendant(callExpr().bind("callExprFunction")))))
+                  .bind("FunctiondFeclWithCall"); //bind 不了解没有关系 后边会讲到
+          CommonOptionsParser OptionsParser(argc, argv, ToolingSampleCategory);
+          ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
+          Func_Call FuncCall;
+          MatchFinder Finder;
+          Finder.addMatcher(FuncDeclMatcher, &FuncCall);
+          return Tool.run(newFrontendActionFactory(&Finder).get());
+      }
+      ```
+
+   2. 和RecursiveASTVisitor中一样，自己实现一个 FrontendAction 在 CreateAstConsumer 时构建我们需要的匹配器
+
+      ```C++
+      class MyFrontendAction : public ASTFrontendAction {
+      public:
+          MyFrontendAction() = default;
+          void EndSourceFileAction() override
+          {
+              auto m = getCompilerInstance().getDiagnostics().getNumWarnings();
+              spdlog::info("{} Warning\n", m);
+          }
+          std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance& CI, StringRef file) override
+          {
+              llvm::errs() << "** Creating AST consumer for: " << file << "\n";
+              auto m = CI.getDiagnostics().getNumWarnings();
+              spdlog::info("{}", m);
+              auto FuncDeclMatcher =
+                  functionDecl(isExpansionInMainFile(),
+                              anyOf(hasAncestor(cxxRecordDecl().bind("methodclass")), unless(hasAncestor(cxxRecordDecl()))),
+                              anyOf(forEachDescendant(callExpr().bind("callExprFunction")),
+                                  unless(forEachDescendant(callExpr().bind("callExprFunction")))))
+                      .bind("FunctiondFeclWithCall");
+              Finder.addMatcher(FuncDeclMatcher, &FuncCall);
+              return Finder.newASTConsumer();
+          }
+      
+      private:
+          Func_Call FuncCall;
+          MatchFinder Finder;
+      };
+      
+      int FunctionToAnalyzeCodeError(int argc, const char** argv) {
+          CommonOptionsParser op(argc, argv, ToolingSampleCategory);
+          ClangTool Tool(op.getCompilations(), op.getSourcePathList());
+      
+          // ClangTool::run accepts a FrontendActionFactory, which is then used to
+          // create new objects implementing the FrontendAction interface. Here we use
+          // the helper newFrontendActionFactory to create a default factory that will
+          // return a new MyFrontendAction object every time.
+          // To further customize this, we could create our own factory class.
+          return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
+      }
+      ```
+
+### clang-query
+
+clang-query工具用来快速验证我们写的matcher是否可以正确的parse AST
+
+用 `match` 来定义Matcher
+
+用 `set`来
 
 ## *Source\**
 
@@ -1536,8 +1771,8 @@ Matchers are paired with a `MatchCallback` and registered with a `MatchFinder` o
 
 [CAST-projects/Clang-ast-viewer: Clang AST viewer (github.com)](https://github.com/CAST-projects/Clang-ast-viewer)
 
-1. ###### **Clang AST Viewer (Web Based)** 这是一个基于 Web 的工具，可以将 Clang 的 `-ast-dump` 输出转换为易于浏览的树形结构。用户可以在浏览器中直接查看以及交互式地探索 AST。
-2. **Clang AST Explorer (Online Tool)** Clang AST Explorer 是一个在线工具，允许用户在网页上写代码，并实时看到对应的 AST。这个资源非常适合教学和演示目的。
+1. **Clang AST Viewer (Web Based)** 这是一个基于 Web 的工具，可以将 Clang 的 `-ast-dump` 输出转换为易于浏览的树形结构。用户可以在浏览器中直接查看以及交互式地探索 AST
+2. **Clang AST Explorer (Online Tool)** Clang AST Explorer 是一个在线工具，允许用户在网页上写代码，并实时看到对应的 AST。这个资源非常适合教学和演示目的
 
 # LLVM 中的数据结构
 
@@ -1808,7 +2043,7 @@ Clang Tooling 需要 Compilation Database 来制导每一个文件的build comma
 
 * directory：编译的工作目录。命令或文件字段中指定的所有路径必须是绝对路径，或相对于此目录的相对路径
 
-* file：该编译步骤处理的主要 translation unit 文件。这被工具用作进入编译数据库的关键。对于同一个文件可能存在多个命令对象，比如说如果相同的源文件以不同的配置进行多次编译
+* file：该编译步骤处理的**main** translation unit文件。这被工具用作进入编译数据库的关键。对于同一个文件可能存在多个命令对象，比如说如果相同的源文件以不同的配置进行多次编译
 
 * arguments：编译命令参数 argv 作为字符串列表。这应该执行翻译单元文件的编译步骤。`arguments[0]` 应该是可执行程序的名称，比如 clang++。参数不应该被转义，但应该准备好传递给 `execvp()`
 
@@ -1831,6 +2066,14 @@ Clang Tooling 需要 Compilation Database 来制导每一个文件的build comma
   ```cmake
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
   ```
+
+### Intermezzo: 多文件问题
+
+[如何使用 Clang Plugin 找到项目中的无用代码（Part 3） | Gocy's home page](https://blog.gocy.tech/2017/09/16/DetectingUselessCodeWithClang-p3/)
+
+其实这里读者可能会有一个疑问，上面的Compilation Database中的file字段都是一个文件，即一条编译指令的main translation unit，生成一个 `.o` 目标文件理论上确实只需要一个source code，只要把所有它所需要的头文件全部包含进来就可以建立依赖关系了
+
+无法分析所有的调用？-> 静态分析：跨文件分析
 
 ### 实现
 
@@ -1961,8 +2204,6 @@ libclang的整个C语言接口可以在llvm-project/clang/include/clang-cIndex.h
 
 
 
-
-
 前序遍历
 
 ```C++
@@ -1971,7 +2212,7 @@ clang_visitChildren (CXCursor parent, CXCursorVisitor visitor, CXClientData clie
 
 
 
-### Python API
+### Python Binding
 
 [libclang · PyPI](https://pypi.org/project/libclang/)
 
@@ -1984,18 +2225,6 @@ clang_visitChildren (CXCursor parent, CXCursorVisitor visitor, CXClientData clie
 LibTooling 是用来构建可以单独进行 standalone build 的clang工具的库，它由 /llvm-project/clang/include/clang/Tooling/ 中的头文件和 llvm-project/clang/lib/Tooling 中的cpp文件组成
 
 本质上LibTooling和Plugin都是对代码执行FrontendActions
-
-
-
-ast-dump 这个FrontendAction本质就是对编译一个 translation unit，在前端遍历AST的时候把AST的信息打印出来
-
-
-
-
-
-
-
-
 
 ### 步骤
 
@@ -2042,8 +2271,6 @@ int main(int argc, const char **argv) {
 
 
 ### ClangTool & ToolInvocation
-
-
 
 
 
@@ -3112,6 +3339,51 @@ Java虚拟机（JVM）是使用JIT编译技术的一个著名例子。在JVM中�
 ## *LLD - The LLVM Linker*
 
 [LLD - The LLVM Linker — lld 19.0.0git documentation](https://lld.llvm.org/)
+
+### 使用LLD
+
+```cmd
+$ lld
+lld is a generic driver.
+Invoke ld.lld (Unix), ld64.lld (macOS), lld-link (Windows), wasm-ld (WebAssembly) instead
+```
+
+链接器通常由编译器驱动来调用，所以一般不需要直接使用这个命令
+
+lld命令是一个generic driver，也就是会根据平台的不同调用不同形式的lld，LLD在UNIX上被安装为ld.lld
+
+```cmd
+$ ld.lld --version
+LLD 19.0.0 (compatible with GNU linkers)
+```
+
+编译的时候默认会使用ld，有几种方法可以告诉编译器驱动使用ld.lld而不是默认的ld
+
+* 最简单的方法是创建一个软链接覆盖默认链接器。来创建一个符号链接，这样 `/usr/bin/ld` 就会解析到LLD
+
+  ```cmd
+  $ ln -s /path/to/ld.lld /usr/bin/ld
+  ```
+
+* 如果不想更改系统设置，可以使用clang的 `-fuse-ld` 选项。这样做时，需要在构建程序时将 `-fuse-ld=lld` 设置为LDFLAGS
+
+LLD会将其名称和版本号留在输出文件的.comment节中。如果不确定是否成功地使用了LLD，运行 `readelf --string-dump .comment <output-file>` 并检查输出。如果输出中包含了字符串 `Linker: LLD`，那么就是正在使用LLD
+
+### LLD的一些历史
+
+以下是ELF和COFF端口项目历史的简要介绍。
+
+2015年5月：我们决定重写COFF链接器，并已完成。注意到新链接器比MSVC链接器快得多。
+
+2015年7月：基于COFF链接器架构开发了新的ELF端口。
+
+2015年9月：首批支持MIPS和AArch64的补丁发布。
+
+2015年10月：成功地自托管了ELF端口。我们注意到链接器比GNU链接器快，但当时我们并不确定，随着我们向链接器添加更多特性，能否保持这个优势。
+
+2016年7月：开始致力于提高链接脚本支持。
+
+2016年12月：成功构建了包括内核在内的整个FreeBSD基础系统。我们已经扩大了与GNU链接器的性能差距。
 
 # 其他LLVM工具
 

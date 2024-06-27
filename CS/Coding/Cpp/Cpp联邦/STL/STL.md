@@ -2523,9 +2523,12 @@ https://zhuanlan.zhihu.com/p/86809598
 
 [ | Microsoft Learn](https://learn.microsoft.com/zh-cn/cpp/standard-library/ranges?view=msvc-170)
 
-C++20引入的ranges库是对STL算法库的扩展，使得算法和迭代器可以通过组合变得更加强大。Ranges库的核心概念是**视图 view**，它是间接表示可迭代序列**范围 range**的轻量级对象
+C++20引入的ranges库是对STL算法库的扩展，使得算法和迭代器可以通过组合变得更加强大。Ranges库的核心g概念为
 
-
+* range 可迭代区间的抽象概念
+* range algo 可接受Ranges的算法
+* **view 视图**，它是间接表示可迭代序列**范围 range**的轻量级对象
+* range adaptor 创建Views的适配器
 
 
 

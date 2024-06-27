@@ -866,7 +866,7 @@ https://blog.csdn.net/sinat_21107433/category_9418696.html
   * 适配器模式 adapter、桥接模式 bridge、组合模式 composite、装饰模式 decorator、外观模式 facade、享元模式 flyweight、代理模式 proxy
 * 行为型模式 behavioral
   * 行为型模式关注对象之间的协作和职责分配，以实现更有效的通信和协同工作
-  * 职责链模式 chain of responsibility、命令模式 command、解释器模式 interpreter、迭代器模式 iterator、中介者模式 mediator、备忘录模式 memento/快照模式 snapshot、观察者模式 observer、状态模式 state、策略模式 strategy、模板方法模式 template、访问者模式 visitor
+    * 职责链模式 chain of responsibility、命令模式 command、解释器模式 interpreter、迭代器模式 iterator、中介者模式 mediator、备忘录模式 memento/快照模式 snapshot、观察者模式 observer、状态模式 state、策略模式 strategy、模板方法模式 template、访问者模式 visitor
 
 ## *简单工厂模式*
 
@@ -1039,6 +1039,36 @@ int main() {
 
 通过引入迭代器，可以将数据的遍历功能从聚合对象中分离出来，这样聚合对象只需负责存储数据，而迭代器对象负责遍历数据，使得聚合对象的职责更加单一，符合单一职责原则
 
+## *策略模式*
+
+[如何管理和维护算法族？只需知道策略模式_人们对算法的维护主要有()。-CSDN博客](https://blog.csdn.net/sinat_21107433/article/details/102984862)
+
+策略模式 Strategy Pattern，可以在运行时选择算法的不同变体。策略模式定义了一系列算法，并将每个算法封装起来让它们可以互相替换，使算法的变化不会影响到使用算法的客户端。比如说排序算法是一个算法族，在不同的情况下应该选用不同的排序算法（比如 `std::sort()` 的实现）
+
+策略模式最适用于以下情况：
+
+- 当想使用对象中的各种不同算法变体时，可以使用策略模式
+- 当一个类定义了多种行为，并且这些行为在类的操作中以多个条件语句的形式出现时，可以使用策略模式来代替条件语句
+- 当有很多相似的类，但它们之间只有行为不同时，可以使用策略模式
+
+### 关键组件
+
+1. **上下文 Context**：上下文是算法的使用者，它维护对策略对象的引用，并提供一个接口来设置当前策略或执行策略定义的算法
+2. **策略接口 Strategy Interface**：这个接口是所有具体策略类所遵循的通用接口，它声明了算法/行为的方法
+3. **具体策略 Concrete Strategies**：实现策略接口中的算法或行为的类
+
+## *访问者模式*
+
+访问者模式 Vistor Pattern 允许向一个对象结构（通常是一个复杂的对象组合）中添加更多的操作，而无需修改这些对象的类。它通过将操作逻辑从对象结构中分离出来，可以在不触及复杂对象结构的类的情况下定义新的操作
+
+### 关键组件
+
+* **访问者 Visitor 接口**：定义了访问者可以访问的元素的操作。每个操作对应于元素结构中的一个类
+* **具体访问者 Concrete Visitor**：实现访问者接口，提供了对每个元素类的访问操作的具体实现。一个具体访问者可以实现一组相关的操作，例如序列化一个对象结构或导出数据到不同的文件格式
+* **元素 Element 接口**：定义了一个`accept(Visitor)`方法，该方法将访问者作为参数
+* **具体元素 Concrete Element**：实现元素接口，并定义`accept(Visitor)`方法，在这个方法中调用访问者的访问操作
+* **客户端 Client**：使用访问者和元素对象结构
+
 ## *MVC*
 
 MVC是一种在GoF总结出来的23个设计模式之外的一种复合设计模式，即多种设计模式的组合,并不仅仅只是一个单独的一个模式组
@@ -1052,6 +1082,54 @@ MVC全名是 Model View Controller，是模型 model - 视图 view－控制器 c
 ### MVP模式
 
 Model-View-Presenter, MVP 是从经典的模式MVC演变而来，它们的基本思想有相通的地方Controller/Presenter负责逻辑的处理，Model提供数据，View负责显示
+
+## *委托者模式*
+
+委托者模式 Delegation Pattern 是一种OOD的设计模式，它不属于GoF的23种设计模式，但是委托模式是一项基本技巧，许多其他的模式，如状态模式、策略模式、访问者模式本质上是在更特殊的场合采用了委托模式
+
+**委托模式使得我们可以用聚合来替代继承**，在这种模式中，一个类（我们称之为委托者）将其部分行为委托给另一个支持类的实例（称为委托），而不是通过继承该类
+
+委托模式可以被看作一种避免继承带来的强耦合的替代方案，并且它提供了更多的灵活性。使用委托可以减少子类数量，使系统容易理解和维护。它还使我们可以模拟mixin
+
+### 关键组件
+
+* **委托者 Delegator**：这是使用委托的那个类。它持有委托对象的引用，并将某些任务转发给委托。委托者通常定义了应该被委托的接口
+* **委托 Delegate**：这是真正执行工作的对象。它实现了委托者所需的接口，并具体实现了这些接口方法
+* **客户端 Client**：使用委托者的类或函数。当需要特定功能时，它调用委托者的方法
+
+### demo
+
+```C++
+// 委托接口
+class DelegationInterface {
+public:
+    virtual void operation() = 0;
+};
+
+// 具体的委托类
+class ConcreteDelegate : public DelegationInterface {
+public:
+    void operation() override {
+        // 实现具体操作
+    }
+};
+
+// 委托者
+class Delegator {
+private:
+    DelegationInterface* delegate; // 指向委托对象的指针
+
+public:
+    Delegator(DelegationInterface* d) : delegate(d) {}
+
+    void operation() {
+        // 委托操作
+        delegate->operation();
+    }
+};
+```
+
+在上述简单示例中，`Delegator` 类并没有自己实现 `operation` 方法，而是委托给了一个实现了 `DelegationInterface` 的对象
 
 # 测试
 

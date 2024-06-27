@@ -1546,14 +1546,30 @@ GCC（GNU Compiler Collection）和G++都是由GNU项目开发的编译器，用
 ### 函数库
 
 * 函数库可以让其他开发者用到高质量的代码以及提高自己工程的安全度，防止暴露源代码
+
 * 静态库 Static Library
   * 静态库是指编译链接时，把库文件中用到的目标文件的代码全部链接到可执行文件中，因此生成的文件比较大，但在运行时也就不再需要库文件了
+  
   * CentOS安装C/Cpp静态库（系统默认自带动态库）
     * C: `sudo yum install -y glibc-static`
     * Cpp: `sudo yum install -y libstdc++static`
-  * 可以通过 `ldd` 命令查看依赖库文件 <img src="ldd_command.png" width="80%">
+    
+  * 可以通过 `ldd` 命令查看动态库的依赖库文件。如果是静态库的话，ldd会直接报 not a dynamic executable
+  
+    ```cmd
+    $ ldd a.out
+            linux-vdso.so.1 (0x00007fff7f0f0000)
+            libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fd94ed65000)
+            libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fd94ec7e000)
+            libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fd94ec5e000)
+            libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fd94ea35000)
+            /lib64/ld-linux-x86-64.so.2 (0x00007fd94efa0000)
+    ```
+  
 * 动态库 Dynamic Link Library：动态库在编译链接时并不会把库文件的代码加入到可执行文件中，而是在程序运行时由运行时链接文件加载库，这样可以节省系统的开销
+
 * Linux环境中 `.so` 为动态库，`.a` 为静态库；而 windows环境中 `.dll` 为动态库，`.lib` 为静态库
+
 * gcc生成的二进制文件默认采用动态链接，可以用 `file` 命令验证
 
 <img src="库链接到内存.png">
@@ -1619,6 +1635,16 @@ output:
 clean:    
     rm -rf *.o *.a *.so output    
 ```
+
+## *库路径配置工具*
+
+### 动态装载器
+
+动态装载器 dynamic loader 负责装入动态链接的可执行程序运行所需的共享库，它实际上就是在 `ldd` 得到的动态库清单中列出的 `ld-linux-[xxx].so.x` 库
+
+动态装载器是如何在系统上找到适当的共享库的呢？它需要依赖两个配置文件 `/etc/ld.so.conf` 和 `/etc/ld.so.cache`
+
+`/etc/ld.so.conf` 中的内容就是共享库装载器会去寻找的目录，不过动态装载器并不会直接去读这个文件，在使用之气那必须把`/etc/ld.so.conf` 中的内容转换到 `/etc/ld.so.cache` 中。可以通过 ldconfig 命令手动执行这一过程
 
 ## *CMake构建库*
 

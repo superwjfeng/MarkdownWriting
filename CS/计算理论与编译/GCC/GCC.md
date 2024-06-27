@@ -306,3 +306,9 @@ typedef struct __attribute__((visibility("hidden"))) {
 `-fno-rtti`：禁用运行时类型信息，即不会生成 `type_info`，如果没有使用到这个特性的话可以关闭冗余的RTT特性，I来减小编译文件大小。异常处理使用相同的信息，但它会根据需要生成它。dynamic_cast 仍然可以用于不需要运行时类型信息的转换，即转换到 `void*` 或者无歧义的基类
 
 `fno-exceptions`：禁用异常
+
+
+
+# LD
+
+LD (Link Editor or Loader) 是GNU所使用的链接器

@@ -439,7 +439,7 @@ C++继承了C语言的隐式类型转换和显式类型转换体系，可以看C
 
 这里有一个经典的错误可以看Cpp.md的string类模拟实现部分的insert部分：[经典隐式类型转换错误](#经典隐式类型转换错误)
 
-强制类型转换的形式为 **`cast_name<type>(expression);`**
+强制类型转换的形式为 **`cast_name<new_type>(expression);`**
 
 RTTI思想和 `dynamic_cast` 会在 *面向对象.md* - 多态部分介绍
 
@@ -457,7 +457,7 @@ double *dp = static_cast<double*>(p); //规范使用void*转换
 
 `static_cast` 是一种**相对安全**的类型转换运算符，它可以将一种类型转换为另一种类型。`static_cast` 可以执行隐式类型转换，例如将整数类型转换为浮点类型，也可以执行显式类型转换，例如将指针类型转换为整数类型。`static_cast` 进行类型转换时会执行一些类型检查和转换，以确保类型转换是合法的
 
-* f任何具有明确定义的类型转换，只要不包含底层const，都可以使用 `static_cast`
+* 任何具有明确定义的类型转换，只要不包含底层const，都可以使用 `static_cast`
 * 任意空指针转换都可以用 `void *` 做媒介
 * **存在继承的但没有多态的类**之间的类型转换：派生转基类 上行 derived-to-base 是允许的，但反过来下行 base-to-derived 是不允许的，因为编译器无法自动确定如何构造一个派生类对象，因为基类对象可能不包含派生类的所有数据成员，也不调用派生类的构造函数。这可能导致未定义行为，例如访问未初始化的成员或调用未定义的行为
 * 存在继承的但没有多态的类指针/引用之间的转换是可以转的：上行可以，下行是不安全的，用派生类的指针可以看到的范围大于等于基类的指针，可能会造成危险的越界。不是很理解为什么编译器为什么不和上一条对象转换一样直接把这个下行给禁止了，据说是因为运行时检查会有开销，静态情况下无法判断类继承情况，所以提供了这种方式让开发人员自己斟酌使用
@@ -611,11 +611,13 @@ C++20新引入的类型char8_t可以代替char作为UTF-8的字符类型。char8
 
 ## *格式化字符串库（20）*
 
+Text Fromatting Library
+
 ### `std::format`
 
 std::format - Lancern的文章 - 知乎 https://zhuanlan.zhihu.com/p/355166681
 
-`std::format` 是 C++20 中引入的一个格式化字符串的库，它允许你以一种更简洁和类型安全的方式进行字符串格式化。在使用 `std::format` 之前，通常我们使用 `sprintf` 或者其他类似的函数，但这些函数存在一些安全性和易用性的问题。`std::format` 的设计旨在解决这些问题
+`std::format` 是 C++20 中引入的一个格式化字符串的库，它允许我们以一种更简洁和类型安全的方式进行字符串格式化。在使用 `std::format` 之前，通常我们使用 `sprintf` 或者其他类似的函数，但这些函数存在一些安全性和易用性的问题。`std::format` 的设计旨在解决这些问题
 
 `std::format` 的使用基本和Python的格式化字符串是一模一样的。`std::format` 是一个函数模板，其原型为
 
@@ -643,6 +645,8 @@ int main() {
 ### 为自定义类型指定格式化方法
 
 `std::format` 可以支持对自定义的数据类型进行格式化
+
+### string_view
 
 ### 补充：第三方fmt库
 
@@ -1852,7 +1856,7 @@ C++20引入了新的 `std::format` 库，推荐使用它或者 fmtlib/fmt 这个
 
 ### 流随机访问
 
-## *filesystem*
+## *filesystem (17)*
 
 [C++17 filesystem 文件系统（详解）-CSDN博客](https://blog.csdn.net/qq_40946921/article/details/91394589)
 
@@ -1865,8 +1869,23 @@ namespace fs = std::filesystem;
 
 ### 路径
 
-* 路径 & `std:：string` 之间的关系
+* format observers
+
+  format observers 指的是一系列成员函数，它们都观察（即提供视图）path对象当前的字符串表示形式，但并不修改这个path对象本身。这些函数允许用户以多种格式获取path对象内部存储的路径字符串，例如原生格式、宽字符格式、具有不同字符编码的格式等
+
+  每个format observer成员函数都返回path对象相应的字符串表示，但并不会更改path对象的内部状态。因此，它们被视为对象的观察者。这些观察者函数是只读的，用于向外界提供关于path对象的信息
+
+  ```C++
+  // 没有string到path的转换构造
+  const value_type* c_str() const noexcept;
+  const string_type& native() const noexcept;
+  operator string_type() const; // 类型转换运算符，即可以从path到string
+  std::string string() const;
+  std::string generic_string() const;
+  ```
+
 * 检查路径是否存在 `exist()`
+
 * 对路径的操作
   * concatenation
 
@@ -3223,7 +3242,7 @@ public:
 
 在 `std::shared_ptr<Widget>()` 处会创建一次控制块，因为this指针和裸指针的效果是一样的，所以在emplace_back的时候会调用 `{}` 初始化又创建了一次
 
-当希望一个托管到shared_ptr的类能够安全地由this指针创建一个shared_ptr的时候，要使用 `std::enable_sahred_from_this<T>`，它是一种CRTP
+当希望一个托管到shared_ptr的类能够安全地由this指针创建一个shared_ptr的时候（即希望获取一个指向自己的智能指针），要使用 `std::enable_sahred_from_this<T>`，然后在内部调用 `shared_from_this()`。它是一种CRTP，关于CRTP的内容可以看 *模板.md*
 
 ```c++
 class Widget : public std::enable_shared_from_this<Widget> {
