@@ -1,12 +1,18 @@
-
-
 Doxygen of APIs: [LLVM: LLVM](https://llvm.org/doxygen/)
 
-# Intro
+# 安装 & 编译 & 测试 LLVM
+
+截止到2024.6.11，LLVM的最新release版本为18.1.6
+
+[Getting Started with the LLVM System — LLVM 19.0.0git documentation](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
+
+## *Intro of LLVM Compiler Infrastructure*
 
 [The LLVM Compiler Infrastructure Project](https://llvm.org/)
 
 [Getting Started with LLVM Core Libraries（中文版） — Getting Started with LLVM Core Libraries 文档 (getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io)](https://getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io/zh-cn/latest/index.html#)
+
+LLVM, Low Level Virtual Machine 是一个开源的编译器基础设施项目，旨在为各种编程语言提供优化的编译器和工具，用来开发编译器前端前端和后端。LLVM的设计目标是提供可移植、高效和灵活的编译解决方案
 
 > 它最初的编写者，是一位叫做Chris Lattner(个人主页)的大神，硕博期间研究内容就是关于编译器优化的东西，发表了很多论文，博士论文是提出一套在编译时、链接时、运行时甚至是闲置时的优化策略，与此同时，LLVM的基本思想也就被确定了，这也让他在毕业前就在编译器圈子小有名气。
 >
@@ -15,10 +21,6 @@ Doxygen of APIs: [LLVM: LLVM](https://llvm.org/doxygen/)
 > 最初时，LLVM的前端是GCC，后来Apple还是立志自己开发了一套Clang出来把GCC取代了，不过现在带有Dragon Egg的GCC还是可以生成LLVM IR，也同样可以取代Clang的功能，我们也可以开发自己的前端，和LLVM后端配合起来，实现我们自定义的编程语言的编译器。
 >
 > 原文链接：https://blog.csdn.net/RuanJian_GC/article/details/132031490
-
-## *LLVM Compiler Infrastructure*
-
-LLVM, Low Level Virtual Machine 是一个开源的编译器基础设施项目，旨在为各种编程语言提供优化的编译器和工具，用来开发编译器前端前端和后端。LLVM的设计目标是提供可移植、高效和灵活的编译解决方案
 
 LLVM最早以C/C++为实作对象，到目前它已支援包括ActionScript、Ada、D语言、Fortran、GLSL、Haskell、Java字节码、Objective-C、Swift、Python、Ruby、Crystal、Rust、Scala以及C#等语言
 
@@ -32,31 +34,6 @@ LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下
 4. 工具链和库：LLVM 提供了一整套工具和库，用于构建编译器和开发工具。这些工具包括llvm-as（将汇编代码转换为 LLVM IR）、llvm-dis（将 LLVM IR 转换为可读的汇编代码）、llvm-link（将多个 LLVM 模块链接在一起）
 
 <img src="LLVM程序分析.drawio.png">
-
-## *LLVM项目的组成*
-
-* LLVM核心库（LLVM Core libraries）：这些库提供了一个现代的源代码和目标代码无关的优化器，并支持许多流行CPU（以及一些不太常见的CPU）的代码生成。它们围绕着称为LLVM中间表示（"LLVM IR"）的良好定义的代码表示构建。LLVM核心库文档完善，若你想创造自己的语言（或将现有编译器移植）使用LLVM作为优化器和代码生成器非常容易
-* Clang是LLVM原生的C/C++/Objective-C编译器前端。Clang使用LLVM作为其后端，能够将源码转换成LLVM IR，然后利用LLVM的优化器和代码生成器产生高效的机器码，Clang作为编译器前端，围绕它形成了丰富的工具生态，其中包括：
-  - **libclang**：提供了一个稳定的C语言API，方便其他软件作为库来使用Clang。
-  - **Clang Static Analyzer**：一个静态分析工具，可以在不执行程序的情况下检查源代码中的错误。
-  - **Clang Format**：用于自动格式化C/C++/Obj-C代码，以保持统一的代码风格。
-  - **Clang Tidy**：一个用于诊断和修复常见编程错误的模块化和可扩展的工具。
-* LLDB项目（The LLDB Debugger）基于LLVM和Clang提供的库，提供了一个出色的本地调试器。它使用Clang的AST和表达式解析器、LLVM的即时编译（JIT）、LLVM反汇编器等，从而提供了一个“开箱即用”的体验。它运行速度非常快，并且在加载符号方面比GDB更加高效
-* libc++ 和 libc++ ABI：这两个项目提供了一个符合标准且高性能的C++标准库实现，包括对C++11和C++14的完全支持
-* compiler-rt：compiler-rt项目提供了精调的底层代码生成支持例程的实现，如"`__fixunsdfdi`"等，当目标没有简短的本地指令序列来实现核心IR操作时会生成这些调用。它还提供了动态测试工具（例如AddressSanitizer、ThreadSanitizer、MemorySanitizer和DataFlowSanitizer）的运行时库的实现
-* MLIR：MLIR子项目是构建可复用和可扩展编译器基础设施的新方法。MLIR旨在解决软件碎片化问题，改进异构硬件的编译效率，显著降低构建特定领域编译器的成本，并帮助连接已有的编译器
-* OpenMP：OpenMP子项目提供了一个运行时库，用于支持Clang中实现的OpenMP
-* Polly：Polly项目实现了一系列缓存局部性优化以及使用多面体模型的自动并行化和向量化
-* libclc：libclc项目旨在实现OpenCL标准库
-* klee：klee项目实现了一个“符号虚拟机”，该项目使用定理证明器尝试评估程序中所有动态路径，以便发现bug并证明函数的属性。klee的一个主要特点是，如果检测到bug，它可以产生一个测试用例
-* LLD：LLD项目是一个新的链接器，它可以替换系统链接器，并运行得更快。
-* BOLT：BOLT项目是一个链接后优化器。它通过根据采样分析器收集的执行配置文件优化应用程序的代码布局来实现性能提升
-
-# 安装 & 编译 & 测试 LLVM
-
-截止到2024.6.11，LLVM的最新版本为18.1.6
-
-[Getting Started with the LLVM System — LLVM 19.0.0git documentation](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
 
 ## *准备工作*
 
@@ -756,7 +733,11 @@ $ clang -ccc-print-phases main.cc
 
 默认Clang 16及之后使用C++17标准编译
 
-在Linux clang会默认使用 libstdc++，这里有个坑点，不要自己去显式地使用 `-stdlib=libstdc++`，因为clang在使用libstdc++的时候会默认链接下面这些库，而我们这样显式地编译地时候实际上没有链接全
+在编译LLVM的时候指定变量 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"` 在系统上安装libc++库
+
+在Linux clang会默认使用 libstdc++，如果要使用libc++，而不是默认的libstdc++的话，就在编译的时候给出 `-stdlib=libc++`。这里有个坑点，不要自己去显式地使用 `-stdlib=libstdc++`
+
+因为clang在使用libstdc++的时候会默认链接下面这些库，而我们这样显式地编译地时候实际上没有链接全
 
 ```cmd
 $ ldd a.out
@@ -768,7 +749,47 @@ $ ldd a.out
         /lib64/ld-linux-x86-64.so.2 (0x00007f4ca96da000)
 ```
 
-如果要使用libc++，而不是默认的libstdc++的话，记得在编译LLVM的时候设置变量 `-DLLVM_ENABLE_RUNTIMES="libcxx"`
+### 安装路径的问题
+
+安装libc++的时候碰到了它的安装路径问题。具体表现就是下面的编译没问题，但是运行可执行程序的时候却发现找不到需要的动态库文件
+
+```cmd
+$ clang++ -std=c++20 -stdlib=libc++ -fuse-ld=lld test_format.cpp # OK
+$ ./a.out
+./a.out: error while loading shared libraries: libc++.so.1: cannot open shared object file: No such file or directory
+$ ldd a.out
+        linux-vdso.so.1 (0x00007ffd0d4a1000)
+        libc++.so.1 => not found
+        libc++abi.so.1 => not found
+        libunwind.so.1 => not found
+        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f34ef4a8000)
+        libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f34ef488000)
+        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f34ef25d000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f34ef5c0000)
+```
+
+出现这种情况的原因是编译和运行时使用的动态库查找路径可能不同。编译时链接器根据一系列预设的路径和环境变量来查找库，比如 `LD_LIBRARY_PATH`。它也会考虑编译指令中特定的 `-L` 参数，这些参数告诉链接器在哪些额外的路径下查找库文件。而运行时则是去 `/etc/ld.so.conf.d` 里找的
+
+```cmd
+$ clang++ -### -std=c++20 -stdlib=libc++ -fuse-ld=lld test_format.cpp
+clang version 19.0.0git (git@github.com:llvm/llvm-project.git 348240362f9673c824c0ad22fd9e13ae3f937864)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /usr/local/bin
+ "/usr/local/bin/clang-19" "-cc1" "-triple" "x86_64-unknown-linux-gnu" "-emit-obj" "-dumpdir" "a-" "-disable-free" "-clear-ast-before-backend" "-disable-llvm-verifier" "-discard-value-names" "-main-file-name" "test_format.cpp" "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie" "-mframe-pointer=all" "-fmath-errno" "-ffp-contract=on" "-fno-rounding-math" "-mconstructor-aliases" "-funwind-tables=2" "-target-cpu" "x86-64" "-tune-cpu" "generic" "-debugger-tuning=gdb" "-fdebug-compilation-dir=/mnt/data/mff/tool/trans_loop_detector" "-fcoverage-compilation-dir=/mnt/data/mff/tool/trans_loop_detector" "-resource-dir" "/usr/local/lib64/clang/19" "-internal-isystem" "/usr/local/bin/../include/x86_64-unknown-linux-gnu/c++/v1" "-internal-isystem" "/usr/local/bin/../include/c++/v1" "-internal-isystem" "/usr/local/lib64/clang/19/include" "-internal-isystem" "/usr/local/include" "-internal-isystem" "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../x86_64-linux-gnu/include" "-internal-externc-isystem" "/usr/include/x86_64-linux-gnu" "-internal-externc-isystem" "/include" "-internal-externc-isystem" "/usr/include" "-std=c++20" "-fdeprecated-macro" "-ferror-limit" "19" "-fgnuc-version=4.2.1" "-fno-implicit-modules" "-fskip-odr-check-in-gmf" "-fcxx-exceptions" "-fexceptions" "-fcolor-diagnostics" "-faddrsig" "-D__GCC_HAVE_DWARF2_CFI_ASM=1" "-o" "/tmp/test_format-831b9b.o" "-x" "c++" "test_format.cpp"
+ "/usr/local/bin/ld.lld" "-z" "relro" "--hash-style=gnu" "--eh-frame-hdr" "-m" "elf_x86_64" "-pie" "-dynamic-linker" "/lib64/ld-linux-x86-64.so.2" "-o" "a.out" "/lib/x86_64-linux-gnu/Scrt1.o" "/lib/x86_64-linux-gnu/crti.o" "/usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o" "-L/usr/local/bin/../lib/x86_64-unknown-linux-gnu" "-L/usr/lib/gcc/x86_64-linux-gnu/11" "-L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib64" "-L/lib/x86_64-linux-gnu" "-L/lib/../lib64" "-L/usr/lib/x86_64-linux-gnu" "-L/usr/lib/../lib64" "-L/lib" "-L/usr/lib" "/tmp/test_format-831b9b.o" "-lc++" "-lm" "-lgcc_s" "-lgcc" "-lc" "-lgcc_s" "-lgcc" "/usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o" "/lib/x86_64-linux-gnu/crtn.o"
+```
+
+发现它去找的是 `"-L/usr/local/bin/../lib/x86_64-unknown-linux-gnu"`，往 `/etc/ld.so.conf.d/x86_64-linux-gnu.conf` 里面增加 `/usr/local/lib/x86_64-unknown-linux-gnu` 的搜索路径就可以了
+
+
+
+```cmake
+set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXX_TARGET_SUBDIR} CACHE STRING
+  "Path where built libc++ libraries should be installed.")
+```
+
+
 
 ## *Overview*
 
@@ -3367,7 +3388,20 @@ LLD 19.0.0 (compatible with GNU linkers)
 
 * 如果不想更改系统设置，可以使用clang的 `-fuse-ld` 选项。这样做时，需要在构建程序时将 `-fuse-ld=lld` 设置为LDFLAGS
 
+  ```cmd
+  $ clang++ -std=c++20 -stdlib=libc++ -fuse-ld=lld test_format.cpp 
+  ```
+
 LLD会将其名称和版本号留在输出文件的.comment节中。如果不确定是否成功地使用了LLD，运行 `readelf --string-dump .comment <output-file>` 并检查输出。如果输出中包含了字符串 `Linker: LLD`，那么就是正在使用LLD
+
+```cmd
+$ readelf --string-dump .comment a.out
+
+String dump of section '.comment':
+  [     0]  Linker: LLD 19.0.0
+  [    14]  GCC: (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+  [    3f]  clang version 19.0.0git (git@github.com:llvm/llvm-project.git 348240362f9673c824c0ad22fd9e13ae3f937864)
+```
 
 ### LLD的一些历史
 
