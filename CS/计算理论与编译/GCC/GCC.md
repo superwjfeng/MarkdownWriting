@@ -29,6 +29,38 @@
 
 此外，-I- 还禁止使用当前文件目录作为 #include "file" 的第一个搜索目录。没有办法覆盖 -I- 的这种效果。
 
+
+
+### Enable Warnings
+
+`-W*` 开头的编译选项用于开启编译中的Warnings
+
+`-Wall` 并不会开启所有可能的警告，而是开启了以下一组被认为最有用的警告：
+
+- `-Waddress`: 警告如果一个表达式总是真的或假的（比如数组永远不会被当作false）。
+- `-Warray-bounds` (only with `-O2`): 警告数组下标越界。
+- `-Wc++11-compat` 和 `-Wc++14-compat`: 警告C++代码与C++11和C++14标准不兼容的地方。
+- `-Wchar-subscripts`: 警告如果一个字符类型被用作数组下标。
+- `-Wenum-compare`: 在C++程序中警告如果枚举类型之间进行比较。
+- `-Wimplicit-int`: 在C语言中警告如果声明函数时没有指定返回类型，默认会当作int处理。
+- `-Wimplicit-function-declaration`: 警告函数在使用前未被声明。
+- `-Wcomment`: 警告嵌套的块注释 `/* ... /* ... */`。
+- `-Wformat` 和 `-Wformat-security`: 警告格式字符串不匹配相应参数类型的情况，以及可能的安全问题。
+- `-Wmissing-braces`: 警告在数组初始化时括号可能遗漏的地方。
+- `-Wnonnull`: 警告传递给需要非空参数的函数的参数是空的。
+- `-Wparentheses`: 警告可能因优先级不明确造成歧义的地方。
+- `-Wpointer-sign`: 警告指针类型之间赋值时的符号不匹配。
+- `-Wreorder`: 在C++程序中，警告成员初始化列表的顺序与成员声明的顺序不一致。
+- `-Wreturn-type`: 警告函数没有返回语句或返回了错误类型的值。
+- `-Wsequence-point`: 警告顺序点相关的问题，比如多次改变一个变量的值而不通过顺序点。
+- `-Wsign-compare`: 警告符号比较中可能出现的问题，例如unsigned和signed值之间的比较。
+- `-Wstrict-aliasing`: 针对可能由于别名规则导致的问题的警告。
+- `-Wswitch`: 警告在switch语句中枚举值没有相对应的case。
+- `-Wtrigraphs`: 警告三字符序列，这些是遗留特性，可能会引起混淆。
+- `-Wunused`: 警告任何未使用的变量。
+- `-Wuninitialized`: 使用 `-O1` 或以上优化等级时，警告未初始化的变量。
+- `-Wunknown-pragmas`: 警告不被识别的预处理指令 #pragma。
+
 # 架构
 
 
