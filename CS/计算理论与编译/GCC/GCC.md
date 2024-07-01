@@ -2,6 +2,11 @@
 
 ### 链接选项
 
+[gcc 编译参数 -fPIC 的详解和一些问题_gcc fpic参数-CSDN博客](https://blog.csdn.net/a_ran/article/details/41943749)
+
+* -fPIC & -fpic都是在编译时加入的选项，用于生成位置无关代码 Position-Independent-Code。这两个选项都是可以使代码在加载到内存时使用相对地址，所有对固定地址的访问都通过GOT来实现。-fPIC & -fpic最大的区别在于是否对GOT的大小有限制。-fPIC对GOT表大小无限制，所以如果在不确定的情况下，使用-fPIC是更好的选择，它可以生成更高效的代码
+* -fPIE与-fpie是等价的。这个选项与-fPIC/-fpic大致相同，不同点在于：-fPIC用于生成动态库，-fPIE用与生成可执行文件。再说得直白一点：-fPIE用来生成位置无关的可执行代码
+
 ### 路径搜索
 
 最常用的就是 `-I, -isystem, -iquote, -idirafter`

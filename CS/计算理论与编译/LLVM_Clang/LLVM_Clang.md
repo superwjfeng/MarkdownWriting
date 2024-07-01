@@ -240,7 +240,7 @@ ninja -C $builddir install
 
 - **LLVM_PARALLEL_{COMPILE,LINK}_JOBS:STRING** 构建LLVM工具链可能会消耗大量资源，尤其是Debug的链接。使用这些选项，当使用Ninja生成器时，可以限制并行性。例如，为了避免内存溢出（OOM）或使用交换空间(swap)，每15GB DRAM 可以给一个link job
 
-- **LLVM_TARGETS_TO_BUILD:STRING** 这个变量控制哪些目标架构被启用。例如，如果你只需要为你的本地目标架构（比如x86）构建LLVM，你可以使用 `-DLLVM_TARGETS_TO_BUILD=X86` 来实现
+- **LLVM_TARGETS_TO_BUILD:STRING** 这个变量控制哪些目标架构被启用。例如，如果只需要为本地目标架构（比如x86）构建LLVM，你可以使用 `-DLLVM_TARGETS_TO_BUILD=X86` 来实现
 
 - **LLVM_USE_LINKER:STRING** 这个变量允许你覆盖系统默认的链接器。例如，如果你想使用LLD作为链接器，可以设置 `-DLLVM_USE_LINKER=lld`
 
@@ -392,7 +392,7 @@ LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LL
 
 ### `llvm::Triple`
 
-LLVM作为一个编译器框架支持交叉编译的特性使得它非常适合开发需要在多平台上运行的软件。提供了目标三元组（target triple）的概念——一种标识目标系统的格式，包括CPU类型、制造商和操作系统等信息，以便于交叉编译器生成正确的代码。
+LLVM作为一个编译器框架支持交叉编译的特性使得它非常适合开发需要在多平台上运行的软件。 LLVM提供了目标三元组 target triple 的概念，它用来标识目标系统的格式，包括CPU类型、制造商和操作系统等信息，以便于交叉编译器生成正确的代码
 
 ```
 <arch><sub>-<vendor>-<sys>-<abi>
@@ -1033,15 +1033,308 @@ jobs 构建完成后，会先调用 `Driver::ExecuteCompilation()`，它会依�
 1. 通过 `Compilation::ExecuteJobs()` 执行命令
 2. 如果某些命令存在报错，将结果文件移除，并打印相关信息
 
-# Clang Lexer & Parser
+# Clang Lexer, Preprocessor & Parser
 
 本章介绍Clang的lexer & parser的实现
 
+
+
+
+
+LangOptions：提供一些对于编程语言本身的设定，里面都是bitfield
+
+```C++
+#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
+```
+
+
+
+HeaderSearchOptions
+
+
+
+TargetInfo：负责提供target-specific的信息
+
+
+
 ## *Lexer*
+
+
+
+`llvm-project/clang/include/clang/Basic/TokenKinds.def` 维护了不同编程语言的关键字
+
+
+
+## *Preprocessor*
+
+`clang::Preprocessor`是负责预处理的类，预处理主要是处理编译单元中的一些以#开头的预处理指令
 
 ## *Parser*
 
 Clang使用的Parser是基于递归下降分析 recursive descent parser 的
+
+## *头文件搜索 #include*
+
+
+
+### Prelude：头文件查找有关的编译选项
+
+- `-iquote` 用于双引号形式的 `#include` 的非系统头文件路径
+
+- `-I` 用于尖括号和双引号形式的 `#include` 的通用非系统头文件路径
+
+- `-isystem` 用于系统头文件路径，它可以降低从这些路径包含的头文件所产生的编译器警告级别
+
+  当使用 `-isystem` 指定目录时，该目录下的头文件将被当作系统头文件来处理。这意味着从这些目录中包含的头文件中发现的一些警告可能会被抑制，就像从标准系统头文件目录中包含的文件一样。这对于第三方库非常有用，特别是当我们不希望由于第三方库的潜在警告而干扰你自己项目中的警告报告
+
+- `-isysroot` 设置一个根目录用于系统头文件和库文件的搜索，影响所有的查找路径
+
+
+
+Clang 和大多数 C/C++ 编译器一样，**不会对头文件搜索路径进行递归搜索**。编译器只会在指定的目录中查找头文件，并不会进入那些目录下的子目录。如果需要包括子目录中的头文件，这些子目录必须显式地添加到搜索路径中
+
+
+
+
+
+HeaderMap
+
+HeaderSearch
+
+
+
+DirectoryLookup 代表了header search list的一个entry，它有三种类型：一般的目录路径、Framework和Headermap
+
+```C++
+class DirectoryLookup {
+public:
+  enum LookupType_t {
+    LT_NormalDir,
+    LT_Framework,
+    LT_HeaderMap
+  };
+};
+```
+
+
+
+
+
+### InitHeaderSearch
+
+InitHeaderSearch 负责初始化头文件搜索路径。该组件设置了一些默认的搜索路径，并根据不同的编译标志、目标平台和环境变量来调整这些路径。它是 HeaderSearch 工作的前提，因为它确定了预处理器寻找包含文件时的起始点
+
+
+
+```C++
+struct DirectoryLookupInfo {
+  IncludeDirGroup Group;
+  DirectoryLookup Lookup;
+  std::optional<unsigned> UserEntryIdx;
+
+  DirectoryLookupInfo(IncludeDirGroup Group, DirectoryLookup Lookup,
+                      std::optional<unsigned> UserEntryIdx)
+      : Group(Group), Lookup(Lookup), UserEntryIdx(UserEntryIdx) {}
+};
+
+class InitHeaderSearch {
+  std::vector<DirectoryLookupInfo> IncludePath;
+  // 系统头文件前缀列表，<Prefix, IsSystemHeader>
+  std::vector<std::pair<std::string, bool> > SystemHeaderPrefixes; 
+  HeaderSearch &Headers;
+  bool Verbose;
+  std::string IncludeSysroot;
+  bool HasSysroot;r
+  // ...
+};
+```
+
+* 构造
+
+  ```C++
+  InitHeaderSearch(HeaderSearch &HS, bool verbose, StringRef sysroot)
+    : Headers(HS), Verbose(verbose), IncludeSysroot(std::string(sysroot)),
+      HasSysroot(!(sysroot.empty() || sysroot == "/")) {}
+  ```
+
+* `bool AddPath(...)`：添加指定的路径到搜索列表中，考虑到 sysroot 前缀
+
+* `bool AddUnmappedPath(...)`：添加指定的路径到搜索列表中，但不进行 sysroot 映射
+
+* `void AddSystemHeaderPrefix(...)`：向中添加新的条目
+
+* `void AddMinGWCPlusPlusIncludePaths(...)`：特别为 MinGW 环境添加 C++ 库的标准搜索路径
+
+* `void AddDefaultCIncludePaths(...)`：添加 C 语言的默认系统包含路径
+
+* `void AddDefaultCPlusPlusIncludePaths(...)`：添加 C++ 编程语言的默认系统包含路径
+
+* `bool ShouldAddDefaultIncludePaths(...)`：判断是否应当由InitHeaderSearch来添加默认的包含路径；如果返回值为 false，则意味着路径应该由Clang Driver（CommandLine etc.）来处理
+
+* `void AddDefaultIncludePaths(...)`：添加默认的系统包含路径，确保像 `stdio.h` 这样的系统头文件能够被找到
+
+* `void Realize(...)`：将所有的搜索路径列表合并成一个 SearchList，并发送给 HeaderSearch 对象
+
+
+
+Linux 不在被 `ShouldAddDefaultIncludePaths()` 所排除的triple中，所以它应该 `AddDefaultIncludePaths()`
+
+
+
+
+
+```C++
+// llvm-project/clang/lib/Lex/InitHeaderSearch.cpp
+void clang::ApplyHeaderSearchOptions(HeaderSearch &HS,
+                                     const HeaderSearchOptions &HSOpts,
+                                     const LangOptions &Lang,
+                                     const llvm::Triple &Triple) {
+  InitHeaderSearch Init(HS, HSOpts.Verbose, HSOpts.Sysroot);
+
+  // Add the user defined entries.
+  for (unsigned i = 0, e = HSOpts.UserEntries.size(); i != e; ++i) {
+    const HeaderSearchOptions::Entry &E = HSOpts.UserEntries[i];
+    if (E.IgnoreSysRoot) {
+      Init.AddUnmappedPath(E.Path, E.Group, E.IsFramework, i);
+    } else {
+      Init.AddPath(E.Path, E.Group, E.IsFramework, i);
+    }
+  }
+
+  Init.AddDefaultIncludePaths(Lang, Triple, HSOpts);
+
+  for (unsigned i = 0, e = HSOpts.SystemHeaderPrefixes.size(); i != e; ++i)
+    Init.AddSystemHeaderPrefix(HSOpts.SystemHeaderPrefixes[i].Prefix,
+                               HSOpts.SystemHeaderPrefixes[i].IsSystemHeader);
+
+  if (HSOpts.UseBuiltinIncludes) {
+    // Set up the builtin include directory in the module map.
+    SmallString<128> P = StringRef(HSOpts.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    if (auto Dir = HS.getFileMgr().getOptionalDirectoryRef(P))
+      HS.getModuleMap().setBuiltinIncludeDir(*Dir);
+  }
+
+  Init.Realize(Lang);
+}
+```
+
+`clang::ApplyHeaderSearchOptions()` 在 `CompilerInstance::createPreprocessor()` 创建预处理器的时候被调用
+
+
+
+
+
+
+
+InitHeaderSearch 的主要工作如下：
+
+### 1. 设置默认搜索路径
+
+`InitHeaderSearch` 根据编译器安装的位置和目标系统的架构来配置默认的搜索路径。这些默认的路径通常包括系统头文件目录（比如 `/usr/include`）、C++ 标准库目录（比如 `/usr/include/c++/version`），以及其他平台或架构特定的目录。
+
+### 2. 处理命令行参数
+
+当使用命令行选项（如 `-I`, `-isystem`, `-idirafter`, `-iquote` 等）指定额外的头文件搜索路径时，`InitHeaderSearch` 负责将它们插入到适当的位置。这允许用户覆盖默认的头文件搜索顺序或添加项目特定的目录。
+
+### 3. 环境配置
+
+`InitHeaderSearch` 也会检查环境变量，例如 `CPATH` 或 `C_INCLUDE_PATH`，这些变量可能会影响头文件的搜索路径。如果这些变量被设置，则它们指定的路径将被加入到搜索列表中。
+
+### 4. 考虑交叉编译情况
+
+对于交叉编译环境，`InitHeaderSearch` 会加载适用于目标体系结构的搜索路径，而非宿主机的路径。这通常涉及到加载交叉编译工具链提供的头文件和库路径。
+
+### 5. 框架支持（macOS）
+
+在 macOS 上，`InitHeaderSearch` 还负责设置用于框架（Frameworks）搜索的路径。框架是 macOS 的一种特殊的包含资源、头文件和共享库的目录结构。
+
+### 6. 配置文件支持
+
+`clang` 可能会读取某些配置文件（如果存在的话），这些配置文件可以进一步定义或修改头文件搜索路径。`InitHeaderSearch` 会在初始化期间加载这些配置文件中的设置。
+
+### 7. 链接系统头文件
+
+`InitHeaderSearch` 有时需要确保系统头文件的搜索优先级高于其它任何由 `-I` 添加的路径，以避免引入潜在的不兼容问题。
+
+总之，`InitHeaderSearch` 起着规划和设定 `clang` 编译器在源代码预处理阶段用于查找头文件的路径网络的作用。它确保编译器能够按照正确的顺序，在正确的位置查找源代码中包含的头文件。通过这种方式，`InitHeaderSearch` 对编译流程的顺利执行至关重要
+
+
+
+### HeaderSearch
+
+
+
+HeaderSearch 封装了 `#incldue`、`#include_` 找到正确文件所需要的信息。HeaderSearch 维护了一个包括路径列表，用于确定搜索头文件的顺序。这个列表可以通过编译器命令行选项（比如 `-I` 和 `-isystem`）以及内置的默认路径来配置
+
+
+
+HeaderSearch 需要区分标准库头文件和用户提供的头文件间的不同，并相应地使用不同的搜索路径。通常，对于使用尖括号 `<...>` 包围的头文件，HeaderSearch 会在系统头文件目录中进行查找；而对于使用双引号 `"..."` 包围的头文件，首先在当前文件相对目录查找，然后再到系统目录中寻找
+
+
+
+```C++
+// llvm-project/clang/include/clang/Lex/HeaderSearchOptions.h
+class HeaderSearch {
+  friend class DirectoryLookup;
+  friend ConstSearchDirIterator;
+  friend SearchDirIterator;
+  /// Header-search options used to initialize this header search.
+  std::shared_ptr<HeaderSearchOptions> HSOpts;
+  /// Mapping from SearchDir to HeaderSearchOptions::UserEntries indices.
+  llvm::DenseMap<unsigned, unsigned> SearchDirToHSEntry;
+  DiagnosticsEngine &Diags;
+  FileManager &FileMgr;
+  std::vector<DirectoryLookup> SearchDirs;
+  std::vector<bool> SearchDirsUsage;
+  unsigned AngledDirIdx = 0;
+  unsigned SystemDirIdx = 0;
+  // ...
+};
+```
+
+
+
+
+
+
+
+
+
+```C++
+// llvm-project/clang/include/clang/Lex/HeaderSearchOptions.h
+HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
+             SourceManager &SourceMgr, DiagnosticsEngine &Diags,
+             const LangOptions &LangOpts, const TargetInfo *Target);
+```
+
+
+
+
+
+
+
+HeaderSearchOptions 类表示与头文件搜索相关的所有选项。这些选项可以通过命令行参数、环境变量或编译器默认设置进行配置，并最终传递给 HeaderSearch
+
+
+
+
+
+
+
+
+
+### Apple的优化：Headermap & Framework
+
+HeaderMap & Framework 都是Apple发明的概念，用于提高大型项目的头文件查找和编译速度
+
+* HeaderMap 提供了一种快速查找头文件的机制。一个 Header Map 实际上是一个特殊格式的文件，这个文件作为一个映射表，将头文件名称（可包含相对路径）映射到实际文件系统中的位置。这使得编译器能够更快地定位头文件，尤其是在大型项目中，避免了复杂的目录结构搜索
+
+  Header Maps 主要在苹果的 Xcode 开发环境中被使用来优化构建速度。Xcode 会使用 Header Maps 来映射框架和库的头文件，以便于 `clang` 可以快速访问。这种技术在项目中拥有大量头文件或者使用多个框架时尤其有用
+
+* 在 macOS 和 iOS 的开发环境中，Framework 是一种特定的软件包结构，用于封装共享库（也叫动态链接库）以及相关的资源，如头文件、图片、界面文件等。Framework 提供了一种标准化的方式来分发和使用复用代码
+
+  在 macOS 上，HeaderSearch 还支持框架 Frameworks 的搜索，这是 macOS 特有的一种结构化头文件组织方式
 
 # Clang AST
 
@@ -1076,7 +1369,7 @@ llvm-project/clang/tools/driver/cc1_main.cpp
 
       2. 任务创建完成后，会调用 clang/Frontend 模块的 `ExecuteAction()` 执行编译任务，其会通过 Inputs 获取输入文件，并依次调用以下方法
 
-         1. `Act.BeginSourceFile()` 通过懒加载方式创建 FileManager（负责和文件系统交互，文件缓存、目录查找等任务）和 SourceManager（负责查找并将文件缓存到内存）
+         1. `Act.BeginSourceFile()` 通过懒加载方式创建 FileManager（文件管理器：负责和文件系统交互，文件缓存、目录查找等任务）和 SourceManager（源码管理器：负责查找并将文件缓存到内存）
 
             1. `createPreprocessor()` 创建预处理器
             2. `createASTContext()` 创建 ASTContext
@@ -3305,6 +3598,16 @@ Clang Static Analyzer，下面简称CSA，是LLVM提供的静态分析工具
 [Clang Static Analyzer 介绍 | jywhy6's blog](https://blog.jywhy6.zone/2021/05/31/clang-static-analyzer-intro/)
 
 CSA 是基于libclang实现的
+
+
+
+
+
+整个 clang static analyzer 的入口是 AnalysisConsumer，接着会调 HandleTranslationUnit() 方法进行 AST 层级进行分析或者进行 path-sensitive 分析。默认会按照 inline 的 path-sensitive 分析，构建 CallGraph，从顶层 caller 按照调用的关系来分析，具体是使用的 WorkList 算法，从 EntryBlock 开始一步步的模拟，这个过程叫做 intra-procedural analysis（IPA）。这个模拟过程还需要对内存进行模拟，clang static analyzer 的内存模型是基于《A Memory Model for Static Analysis of C Programs》这篇论文而来，pdf地址：http://lcs.ios.ac.cn/~xuzb/canalyze/memmodel.pdf 在clang里的具体实现代码可以查看这两个文件 [MemRegion.h](https://code.woboq.org/llvm/clang/include/clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h.html)和 [RegionStore.cpp](https://code.woboq.org/llvm/clang/lib/StaticAnalyzer/Core/RegionStore.cpp.html) 。
+
+## *内存模型*
+
+
 
 ## *Exploded Graph*
 
