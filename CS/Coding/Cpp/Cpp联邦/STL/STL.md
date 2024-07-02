@@ -1,5 +1,9 @@
 参考侯捷的 *STL源码剖析*，源码使用 Cygnus C++ 2.91.57 for Windows
 
+```cmd
+$ git clone https://github.com/lwbaptx/sgi-stl.git
+```
+
 # lambda表达式
 
 本章条款来自 *Effective Modern C++*
@@ -953,6 +957,16 @@ https://stackoverflow.com/questions/3221812/how-to-sum-up-elements-of-a-c-vector
 
 # 空间配置器
 
+为什么不说allocator是内存配置器而说它是空间配置器呢？这是因为空间配置器的配置不一定是内存，其实也可以是硬盘或者其他辅助存储介质
+
+
+
+
+
+SGI STL的配置器与众不同，也与标准规范不同，**其名称是 alloc 而非 allocator**，而且不接受任何参数
+
+其实SGI也定义了一个符合部分标准，名为allocator的配置器，但是它自己不使用，也不建议我们使用，主要原因是效率不佳。**它只是把C++的操作符 `::operator new` 和 `::operator delete` 做了一层简单的封装而已**，可以用但是不建议我们使用
+
 ## *SGI-STL空间配置器*
 
 ### STL中的内存管理架构
@@ -1094,6 +1108,10 @@ SGI-STL默认选择使用一级还是二级空间配置器，通过 `USE_MALLOC`
 * `uninitialized_copy_n (b, n, b2)`：从迭代器b指向的元素开始，拷贝n个元素到b2开始的内存中
 * `uninitialized_fill(b, e, t)`：在迭代器b和e指定的原始内存范围中创建对象，对象的值均为t的拷贝
 * `uninitialized_fill_n(b, n, t)`；从迭代器b指向的内存地址开始创建n个对象。b必须指向足够大的未构造的原始内存，能够容纳给定数量的对象
+
+# 迭代器 & Traits
+
+
 
 # string
 
@@ -1540,6 +1558,10 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
 * 一个对象修改影响另外一个对象。解决方案：写时拷贝，本质是一种延迟拷贝，即谁去写谁做深拷贝，若没人写就可以节省空间了
 
 ### 引用计数+写时拷贝
+
+
+
+## *string_view (17)*
 
 # vector & list
 
@@ -2538,10 +2560,14 @@ C++中的`ranges`库提供了一种新的方式来操作和遍历序列。这个
 
 ### 基础概念
 
-- **Range**：一个可以迭代的对象，它拥有`begin()`和`end()`成员函数或可被发现的自由函数（ADL, Argument-dependent name lookup）。
-- **View**：一种特殊类型的Range，它是延迟计算的，不拥有数据，通常用于表示经过过滤或转换的Range视图。
-- **Algorithm**：用于操作Range的函数，例如查找、排序、复制等。
-- **Pipeline**：通过`|`运算符链接多个range/view/algorithm，实现链式调用，类似Unix管道。
+- **Range**：所有拥有`begin()`和`end()`成员函数的可迭代对象或可被发现的自由函数（ADL, Argument-dependent name lookup）
+- **View**：一种特殊类型的Range，它是延迟计算的，不拥有数据，通常用于表示经过过滤或转换的Range视图。和 `std::string_view` 的设计哲学类似
+  - view本身也符合range的特征，可以用迭代器遍历
+  - view对于数据的遍历都是lazy evaluation
+
+- **Range Adaptor**：
+- **Algorithm**：用于操作Range的函数，例如查找、排序、复制等
+- **Pipeline**：通过`|`运算符链接多个range/view/algorithm，实现链式调用，类似Unix管道
 
 ### 如何使用Ranges
 

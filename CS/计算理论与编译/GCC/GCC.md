@@ -1,3 +1,185 @@
+# 安装 & 编译 & 测试GCC
+
+[GCC, the GNU Compiler Collection - GNU Project](https://gcc.gnu.org/)
+
+[Installing GCC - GNU Project](https://gcc.gnu.org/install/)
+
+GCC没有采用cmake编译，而是用了autoconfi-make的编译方式，所以和LLVM相比GCC自身的编译和安装没有那么简单，需要注意很多细节。我们用 `srcdir` 来指代GCC的source directory（`MAINTAINERS` 文件所在的目录），用 `objdir` 来指代toplevel `build/object` 目录
+
+## *Prerequisites*
+
+### 拉取GCC
+
+[gcc-mirror/gcc at releases/gcc-14.1.0 (github.com)](https://github.com/gcc-mirror/gcc/tree/releases/gcc-14.1.0)
+
+截止到2024.07.02，最新的stable edition为GCC 14.1
+
+[GCC Development Plan - GNU Project](https://gcc.gnu.org/develop.html#timeline)
+
+```cmd
+$ git clone --branch releases/gcc-14.1.0 --depth 1 https://github.com/gcc-mirror/gcc.git
+```
+
+或者慢的话可以用阿里的镜像：[gnu-gcc安装包下载_开源镜像站-阿里云 (aliyun.com)](https://mirrors.aliyun.com/gnu/gcc/)
+
+```cmd
+$ wget https://mirrors.aliyun.com/gnu/gcc/
+```
+
+### 安装依赖
+
+GMP (GNU Multiple Precision Arithmetic Library), MPFR (multiple-precision floating-point computations) and MPC (Complex numbers) 
+
+```cmd
+$  ./contrib/download_prerequisites
+```
+
+在srcdir运行上面的script，如果中间报了下面的错误，就是网络连接导致文件没有拉全，多拉几次
+
+```
+WARNING: 1 computed checksum did NOT match
+error: Cannot verify integrity of possibly corrupted file
+```
+
+## *Procedure for native compiler*
+
+### Native Compiler
+
+Native compiler 是和 cross compiler 相对的概念，它指的是一个编译器，它产出的代码是为运行该编译器的本地系统架构而优化的。这意味着，该编译器生成的可执行文件是直接针对当前计算机的 CPU 架构（比如 x86, ARM, MIPS 等）设计的，并可以在没有任何模拟或虚拟化层的情况下执行
+
+比如说如果在一个 x86_64 架构的 Linux 系统上使用 GCC 编译器编译 C 代码，那么这个 GCC 就可以被认为是一个 native compiler，因为它默认会生成专门为 x86_64 架构优化的二进制程序
+
+### 配置 & 编译
+
+```cmd
+$ mkdir objdir
+$ cd objdir
+$ ../configure --enable-languages=c,c++,fortran --prefix=/usr/local/gcc-14.1.0 --disable-multilib
+$ make -j15    # Check the number of CPUs by running grep -w processor /proc/cpuinfo|wc -l. In this example, the number is 15. You can set the parameters as required.0
+$ make install 
+```
+
+GCC采用自举编译
+
+注意我们用的是 `srcdir/configure`，而不是直接 `./configure`，因为
+
+[InstallingGCC - GCC Wiki (gnu.org)](https://gcc.gnu.org/wiki/InstallingGCC)
+
+> A major benefit of running *srcdir*`/configure` from outside the source directory (instead of running `./configure`) is that the source directory will not be modified in any way, so if your build fails or you want to re-configure and build again, you simply delete everything in the *objdir* and start again.
+
+### Test (optional)
+
+## *安装多个版本的GCC*
+
+若系统上安装了多个版本的 GCC，并且想要设置默认使用的版本的话有下面几种方案
+
+### 更新 PATH 环境变量
+
+修改 `PATH` 环境变量，将希望作为默认 GCC 版本的 `bin` 目录放在 `PATH` 的前面。例如，如果想将 `/usr/local/gcc-9.2/bin` 设为默认：
+
+```cmd
+$ export PATH=/usr/local/gcc-9.2/bin:$PATH
+```
+
+这一行可以加入到 shell 配置文件中（比如 `~/.bashrc`、`~/.bash_profile` 或 `~/.profile` 等），然后重新登录或者运行 `source ~/.bashrc` 来应用更改
+
+### 使用 update-alternatives（Debian/Ubuntu 系统）
+
+Debian 和 Ubuntu 使用 `update-alternatives` 系统来管理同一命令的多个版本，它是专门维护系统命令链接符的工具。要使用这个方法，首先要为每个 GCC 版本设置一个替代选项：
+
+* install：增加一组新的系统命令链接符
+
+  ```cmd
+  $ update-alternatives --install <link> <name> <path> <priority> [--slave link name path]
+  ```
+
+  ```cmd
+  $ sudo update-alternatives --install /usr/local/bin/gcc gcc /usr/bin/gcc 50
+  $ sudo update-alternatives --install /usr/local/bin/gcc gcc /usr/local/gcc-14.1.0/bin/gcc 60
+  $ sudo update-alternatives --install /usr/local/bin/g++ g++ /usr/bin/g++ 50
+  $ sudo update-alternatives --install /usr/local/bin/g++ g++ /usr/local/g++-14.1.0/bin/g++ 60
+  ```
+
+* display：display选项用来显示一个命令链接的所有可选命令，即查看一个命令链接组的所有信息，包括链接的模式（自动还是手动）、链接priority值、所有可用的链接命令等等
+
+* remove：删除一个命令的link值，其附带的slave也将一起删除
+
+* config：显示和修改实际指向的候选命令，为在现有的命令链接选择一个作为系统默认
+
+### 修改符号链接
+
+如果你不想使用 `update-alternatives`，也可以直接创建或修改 `/usr/bin` 中的符号链接指向你选择的 GCC 版本。请记住，在对 `/usr/bin` 下的文件进行操作前应非常小心，因为这可能会影响系统中其他程序的正常运行。例如：
+
+```cmd
+$ sudo ln -sf /usr/local/gcc-9.2/bin/gcc /usr/bin/gcc
+$ sudo ln -sf /usr/local/gcc-9.2/bin/g++ /usr/bin/g++
+```
+
+### 模块管理工具
+
+在某些系统中，尤其是HPC环境中，可能会使用模块环境管理工具（如 Environment Modules 或 Lmod）。这些工具允许用户动态修改环境变量，例如 `PATH`、`LD_LIBRARY_PATH` 等。如果系统中有模块化环境，可以加载相应的模块来设置默认的 GCC 版本
+
+```cmd
+$ module load gcc-9.2
+```
+
+## *配置选项*
+
+[Installing GCC: Configuration - GNU Project](https://gcc.gnu.org/install/configure.html)
+
+支持的配置选项可以在srcdir用 `./configure --help` 来查看
+
+### 安装目录
+
+* `--prefix=PREFIX`：安装 architecture-independent的文件到PREFIX目录下，默认是 `/usr/local`。一般会设置为 `/usr/local/gcc_edition`，因为很可能会在系统上安装多个版本的gcc
+* `--exec-prefix=EPREFIX`：安装 architecture-dependent的文件到EPREFIX目录下
+* `--bindir=DIR`：设置用户可执行文件的安装目录，默认通常是 `EPREFIX/bin`。这是普通用户将使用的二进制程序存放的地方
+* `--sbindir=DIR`：设置系统管理员使用的可执行文件的安装目录，默认通常是 `EPREFIX/sbin`。这里包含了系统管理相关的程序
+* `--libexecdir=DIR`：设置应用程序可执行文件的安装目录，默认通常是 `EPREFIX/libexec`。这些不直接被用户调用的可执行文件一般由其他程序内部使用
+* `--sysconfdir=DIR`：设置只读的单机数据文件（如配置文件）的安装目录，默认通常是 `PREFIX/etc`
+* `--sharedstatedir=DIR`：设置可修改的、与架构无关的数据文件的安装目录，默认通常是 `PREFIX/com`
+* `--localstatedir=DIR`：设置可修改的、只针对单个机器的数据文件的安装目录，默认通常是 `PREFIX/var`。这包括像日志文件这样的变化数据
+* `--libdir=DIR`：设置对象代码库文件（如 `.so`, `.a` 文件）的安装目录，默认通常是 `EPREFIX/lib`
+* `--includedir=DIR`：设置 C 头文件的安装目录，默认通常是 `PREFIX/include`。开发者使用的头文件通常放在这里
+* `--oldincludedir=DIR`：设置非 GCC 编译器使用的 C 头文件的安装目录，默认通常是 `/usr/include`
+* `--datarootdir=DIR`：设置只读的、与架构无关的数据文件根目录，默认通常是 `PREFIX/share`
+* `--datadir=DIR`：设置只读的、与架构无关的数据文件的安装目录，默认基于 `DATAROOTDIR`
+* `--infodir=DIR`：设置 info 文档的安装目录，默认基于 `DATAROOTDIR/info`
+* `--localedir=DIR`：设置依赖于地区设置的数据（如本地化信息）的安装目录，默认基于 `DATAROOTDIR/locale`
+* `--mandir=DIR`：设置 man 手册页的安装目录，默认基于 `DATAROOTDIR/man`
+* `--docdir=DIR`：设置文档根目录，默认基于 `DATAROOTDIR/doc/PACKAGE`，其中 `PACKAGE` 通常是软件包的名称
+* `--htmldir=DIR`：设置 html 格式文档的安装目录，默认基于 `DOCDIR`
+* `--dvidir=DIR`：设置 dvi 格式文档的安装目录，默认基于 `DOCDIR`
+* `--pdfdir=DIR`：设置 pdf 格式文档的安装目录，默认基于 `DOCDIR`
+* `--psdir=DIR`：设置 ps（PostScript）格式文档的安装目录，默认基于 `DOCDIR`
+
+### 一些开关
+
+* `--enable-languages=lang1,lang2,...`：只需要编译某些语言的前端和runtime
+
+  可以在 `srcdir/gcc` 下用 `grep ^language= */config-lang.in` 来查看所有gcc支持的语言
+
+
+
+* `--enable-multilib` & `--disable-multilib`
+
+电脑默认的编译配置是32位和64位，但是32位的dev lib不齐全，建议最好关掉32位，进行如下操作
+
+```
+configure: error: I suspect your system does not have 32-bit development libraries (libc and headers). If you have them, rerun configure with --enable-multilib. If you do not have them, and want to build a 64-bit-only compiler, rerun configure with --disable-multilib.
+```
+
+
+
+## *Cross-compile*
+
+### configure
+
+  --build=BUILD     configure for building on BUILD [guessed]
+
+* `--host=HOST`       cross-compile to build programs to run on HOST [BUILD]
+* `--target=TARGET`   configure for building compilers for TARGET [HOST]
+
 # 编译选项
 
 ### 链接选项

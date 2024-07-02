@@ -120,7 +120,7 @@ github上面的是完整的LLVM项目，频繁的拉取完整的LLVM项目开销
 ```cmd
 $ cd llvm-project
 # cmake configure
-$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra" -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
+$ cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra" -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind"
 # $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 $ cmake --build build # cmake build
 $ sudo cmake --build build --target install # cmake install
@@ -220,7 +220,7 @@ ninja -C $builddir install
 
   所谓的Project就是llvm-project下面的那些目录，完整的Project Lists为 `clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl`
 
-- **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让能够控制哪些运行时库被启用。如果想要构建libc++或者libc++abi这样的库，可以使用这个变量。例如，为了同时构建libc++和libc++abi，应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"`
+- **LLVM_ENABLE_RUNTIMES:STRING** 这个变量让能够控制哪些运行时库被启用。如果想要构建libc++或者libc++abi这样的库，可以使用这个变量。例如，为了同时构建libc++和libc++abi，应该在CMake命令中添加 `-DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind"`
 
   这通常是为了确保LLVM能够使用与之兼容的C++标准库，尤其是在那些不希望依赖系统默认C++库，或者想要利用`libc++`提供的特性和性能优势的场景下
 
@@ -607,8 +607,6 @@ Doxygen: [clang: clang (llvm.org)](https://clang.llvm.org/doxygen/)
 
 [clang 源码导读（7）：编译器前端流程简介-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1810976)
 
-[clang 源码导读（8）：词法分析和预处理指令-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1811032)
-
 ## *实操：编译Pipeline*
 
 下图是以Clang为前端的，LLVM为后端的编译器的整体架构
@@ -720,80 +718,9 @@ $ clang -ccc-print-phases main.cc
    $ clang object.o -o executable
    ```
 
-## *libc++*
-
-* libc++是由LLVM项目开发和维护的
-* libstdc++是GNU项目的一部分，由GCC团队开发和维护
-
-### Clang的语言标准实现
-
-[Clang - C++ Programming Language Status (llvm.org)](https://clang.llvm.org/cxx_status.html)
-
-[C++ compiler support - cppreference.com](https://en.cppreference.com/w/cpp/compiler_support)
-
-默认Clang 16及之后使用C++17标准编译
-
-在编译LLVM的时候指定变量 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"` 在系统上安装libc++库
-
-在Linux clang会默认使用 libstdc++，如果要使用libc++，而不是默认的libstdc++的话，就在编译的时候给出 `-stdlib=libc++`。这里有个坑点，不要自己去显式地使用 `-stdlib=libstdc++`
-
-因为clang在使用libstdc++的时候会默认链接下面这些库，而我们这样显式地编译地时候实际上没有链接全
-
-```cmd
-$ ldd a.out
-        linux-vdso.so.1 (0x00007fff95eff000)
-        libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f4ca94a0000)
-        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f4ca93b9000)
-        libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f4ca9399000)
-        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f4ca9170000)
-        /lib64/ld-linux-x86-64.so.2 (0x00007f4ca96da000)
-```
-
-### 安装路径的问题
-
-安装libc++的时候碰到了它的安装路径问题。具体表现就是下面的编译没问题，但是运行可执行程序的时候却发现找不到需要的动态库文件
-
-```cmd
-$ clang++ -std=c++20 -stdlib=libc++ -fuse-ld=lld test_format.cpp # OK
-$ ./a.out
-./a.out: error while loading shared libraries: libc++.so.1: cannot open shared object file: No such file or directory
-$ ldd a.out
-        linux-vdso.so.1 (0x00007ffd0d4a1000)
-        libc++.so.1 => not found
-        libc++abi.so.1 => not found
-        libunwind.so.1 => not found
-        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f34ef4a8000)
-        libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f34ef488000)
-        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f34ef25d000)
-        /lib64/ld-linux-x86-64.so.2 (0x00007f34ef5c0000)
-```
-
-出现这种情况的原因是编译和运行时使用的动态库查找路径可能不同。编译时链接器根据一系列预设的路径和环境变量来查找库，比如 `LD_LIBRARY_PATH`。它也会考虑编译指令中特定的 `-L` 参数，这些参数告诉链接器在哪些额外的路径下查找库文件。而运行时则是去 `/etc/ld.so.conf.d` 里找的
-
-```cmd
-$ clang++ -### -std=c++20 -stdlib=libc++ -fuse-ld=lld test_format.cpp
-clang version 19.0.0git (git@github.com:llvm/llvm-project.git 348240362f9673c824c0ad22fd9e13ae3f937864)
-Target: x86_64-unknown-linux-gnu
-Thread model: posix
-InstalledDir: /usr/local/bin
- "/usr/local/bin/clang-19" "-cc1" "-triple" "x86_64-unknown-linux-gnu" "-emit-obj" "-dumpdir" "a-" "-disable-free" "-clear-ast-before-backend" "-disable-llvm-verifier" "-discard-value-names" "-main-file-name" "test_format.cpp" "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie" "-mframe-pointer=all" "-fmath-errno" "-ffp-contract=on" "-fno-rounding-math" "-mconstructor-aliases" "-funwind-tables=2" "-target-cpu" "x86-64" "-tune-cpu" "generic" "-debugger-tuning=gdb" "-fdebug-compilation-dir=/mnt/data/mff/tool/trans_loop_detector" "-fcoverage-compilation-dir=/mnt/data/mff/tool/trans_loop_detector" "-resource-dir" "/usr/local/lib64/clang/19" "-internal-isystem" "/usr/local/bin/../include/x86_64-unknown-linux-gnu/c++/v1" "-internal-isystem" "/usr/local/bin/../include/c++/v1" "-internal-isystem" "/usr/local/lib64/clang/19/include" "-internal-isystem" "/usr/local/include" "-internal-isystem" "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../x86_64-linux-gnu/include" "-internal-externc-isystem" "/usr/include/x86_64-linux-gnu" "-internal-externc-isystem" "/include" "-internal-externc-isystem" "/usr/include" "-std=c++20" "-fdeprecated-macro" "-ferror-limit" "19" "-fgnuc-version=4.2.1" "-fno-implicit-modules" "-fskip-odr-check-in-gmf" "-fcxx-exceptions" "-fexceptions" "-fcolor-diagnostics" "-faddrsig" "-D__GCC_HAVE_DWARF2_CFI_ASM=1" "-o" "/tmp/test_format-831b9b.o" "-x" "c++" "test_format.cpp"
- "/usr/local/bin/ld.lld" "-z" "relro" "--hash-style=gnu" "--eh-frame-hdr" "-m" "elf_x86_64" "-pie" "-dynamic-linker" "/lib64/ld-linux-x86-64.so.2" "-o" "a.out" "/lib/x86_64-linux-gnu/Scrt1.o" "/lib/x86_64-linux-gnu/crti.o" "/usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o" "-L/usr/local/bin/../lib/x86_64-unknown-linux-gnu" "-L/usr/lib/gcc/x86_64-linux-gnu/11" "-L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib64" "-L/lib/x86_64-linux-gnu" "-L/lib/../lib64" "-L/usr/lib/x86_64-linux-gnu" "-L/usr/lib/../lib64" "-L/lib" "-L/usr/lib" "/tmp/test_format-831b9b.o" "-lc++" "-lm" "-lgcc_s" "-lgcc" "-lc" "-lgcc_s" "-lgcc" "/usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o" "/lib/x86_64-linux-gnu/crtn.o"
-```
-
-发现它去找的是 `"-L/usr/local/bin/../lib/x86_64-unknown-linux-gnu"`，往 `/etc/ld.so.conf.d/x86_64-linux-gnu.conf` 里面增加 `/usr/local/lib/x86_64-unknown-linux-gnu` 的搜索路径就可以了
-
-
-
-```cmake
-set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXX_TARGET_SUBDIR} CACHE STRING
-  "Path where built libc++ libraries should be installed.")
-```
-
-
-
 ## *Overview*
 
-平常使用的可执行文件 `clang.exe` 只是一个Driver，即一个命令解析器，**用于接收gcc兼容的参数**（`clang++.exe`/`clang-cl.exe`同理，用于g++/msvc兼容的参数），然后传递给真正的clang编译器前端，也就是CC1。CC1作为前端，负责解析C++源码为语法树，转换到LLVM IR。比如选项A在gcc中默认开启，但是clang规则中是默认不开启的，那么为了兼容gcc，clang.exe的Driver就要手动开启选项A，也就是添加命令行参数，将它传递给CC1
+平常使用的可执行文件 `clang.exe` 只是一个Driver（Drop-in substitute for GCC，指一种可以直接替换另一种已有组件或产品而无需进行任何修改或仅需最少修改的替代品），即一个命令解析器，**用于接收gcc兼容的参数**（`clang++.exe`/`clang-cl.exe`同理，用于g++/msvc兼容的参数），然后传递给真正的clang编译器前端，也就是CC1。CC1作为前端，负责解析C++源码为语法树，转换到LLVM IR。比如选项A在gcc中默认开启，但是clang规则中是默认不开启的，那么为了兼容gcc，clang.exe的Driver就要手动开启选项A，也就是添加命令行参数，将它传递给CC1
 
 可以把Driver理解为以Clang为前端的LLVM整个软件的main函数，在这个main函数中依次调用整个编译流程中的各个阶段
 
@@ -1033,7 +960,145 @@ jobs 构建完成后，会先调用 `Driver::ExecuteCompilation()`，它会依�
 1. 通过 `Compilation::ExecuteJobs()` 执行命令
 2. 如果某些命令存在报错，将结果文件移除，并打印相关信息
 
+# Runtime
+
+## *libc++*
+
+* libc++是由LLVM项目开发和维护的
+* libstdc++是GNU项目的一部分，由GCC团队开发和维护
+
+### Clang的语言标准实现
+
+[Clang - C++ Programming Language Status (llvm.org)](https://clang.llvm.org/cxx_status.html)
+
+[C++ compiler support - cppreference.com](https://en.cppreference.com/w/cpp/compiler_support)
+
+默认Clang 16及之后使用C++17标准编译
+
+在编译LLVM的时候指定变量 `-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"` 在系统上安装libc++库
+
+在Linux clang会默认使用 libstdc++，如果要使用libc++，而不是默认的libstdc++的话，就在编译的时候给出 `-stdlib=libc++`。这里有个坑点，不要自己去显式地使用 `-stdlib=libstdc++`
+
+因为clang在使用libstdc++的时候会默认链接下面这些库，而我们这样显式地编译地时候实际上没有链接全
+
+```cmd
+$ ldd a.out
+        linux-vdso.so.1 (0x00007fff95eff000)
+        libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f4ca94a0000)
+        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f4ca93b9000)
+        libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f4ca9399000)
+        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f4ca9170000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f4ca96da000)
+```
+
+### 安装路径的问题
+
+安装libc++的时候碰到了它的安装路径问题。具体表现就是下面的编译没问题，但是运行可执行程序的时候却发现找不到需要的动态库文件
+
+```cmd
+$ clang++ -std=c++20 -stdlib=libc++ -fuse-ld=lld test_format.cpp # OK
+$ ./a.out
+./a.out: error while loading shared libraries: libc++.so.1: cannot open shared object file: No such file or directory
+$ ldd a.out
+        linux-vdso.so.1 (0x00007ffd0d4a1000)
+        libc++.so.1 => not found
+        libc++abi.so.1 => not found
+        libunwind.so.1 => not found
+        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f34ef4a8000)
+        libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f34ef488000)
+        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f34ef25d000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f34ef5c0000)
+```
+
+出现这种情况的原因是编译和运行时使用的动态库查找路径可能不同。编译时链接器根据一系列预设的路径和环境变量来查找库，比如 `LD_LIBRARY_PATH`。它也会考虑编译指令中特定的 `-L` 参数，这些参数告诉链接器在哪些额外的路径下查找库文件。而运行时则是去 `/etc/ld.so.conf.d` 里找的
+
+```cmd
+$ clang++ -### -std=c++20 -stdlib=libc++ -fuse-ld=lld test_format.cpp
+clang version 19.0.0git (git@github.com:llvm/llvm-project.git 348240362f9673c824c0ad22fd9e13ae3f937864)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /usr/local/bin
+ "/usr/local/bin/clang-19" "-cc1" "-triple" "x86_64-unknown-linux-gnu" "-emit-obj" "-dumpdir" "a-" "-disable-free" "-clear-ast-before-backend" "-disable-llvm-verifier" "-discard-value-names" "-main-file-name" "test_format.cpp" "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie" "-mframe-pointer=all" "-fmath-errno" "-ffp-contract=on" "-fno-rounding-math" "-mconstructor-aliases" "-funwind-tables=2" "-target-cpu" "x86-64" "-tune-cpu" "generic" "-debugger-tuning=gdb" "-fdebug-compilation-dir=/mnt/data/mff/tool/trans_loop_detector" "-fcoverage-compilation-dir=/mnt/data/mff/tool/trans_loop_detector" "-resource-dir" "/usr/local/lib64/clang/19" "-internal-isystem" "/usr/local/bin/../include/x86_64-unknown-linux-gnu/c++/v1" "-internal-isystem" "/usr/local/bin/../include/c++/v1" "-internal-isystem" "/usr/local/lib64/clang/19/include" "-internal-isystem" "/usr/local/include" "-internal-isystem" "/usr/lib/gcc/x86_64-linux-gnu/11/../../../../x86_64-linux-gnu/include" "-internal-externc-isystem" "/usr/include/x86_64-linux-gnu" "-internal-externc-isystem" "/include" "-internal-externc-isystem" "/usr/include" "-std=c++20" "-fdeprecated-macro" "-ferror-limit" "19" "-fgnuc-version=4.2.1" "-fno-implicit-modules" "-fskip-odr-check-in-gmf" "-fcxx-exceptions" "-fexceptions" "-fcolor-diagnostics" "-faddrsig" "-D__GCC_HAVE_DWARF2_CFI_ASM=1" "-o" "/tmp/test_format-831b9b.o" "-x" "c++" "test_format.cpp"
+ "/usr/local/bin/ld.lld" "-z" "relro" "--hash-style=gnu" "--eh-frame-hdr" "-m" "elf_x86_64" "-pie" "-dynamic-linker" "/lib64/ld-linux-x86-64.so.2" "-o" "a.out" "/lib/x86_64-linux-gnu/Scrt1.o" "/lib/x86_64-linux-gnu/crti.o" "/usr/lib/gcc/x86_64-linux-gnu/11/crtbeginS.o" "-L/usr/local/bin/../lib/x86_64-unknown-linux-gnu" "-L/usr/lib/gcc/x86_64-linux-gnu/11" "-L/usr/lib/gcc/x86_64-linux-gnu/11/../../../../lib64" "-L/lib/x86_64-linux-gnu" "-L/lib/../lib64" "-L/usr/lib/x86_64-linux-gnu" "-L/usr/lib/../lib64" "-L/lib" "-L/usr/lib" "/tmp/test_format-831b9b.o" "-lc++" "-lm" "-lgcc_s" "-lgcc" "-lc" "-lgcc_s" "-lgcc" "/usr/lib/gcc/x86_64-linux-gnu/11/crtendS.o" "/lib/x86_64-linux-gnu/crtn.o"
+```
+
+发现它去找的是 `"-L/usr/local/bin/../lib/x86_64-unknown-linux-gnu"`，往 `/etc/ld.so.conf.d/x86_64-linux-gnu.conf` 里面增加 `/usr/local/lib/x86_64-unknown-linux-gnu` 的搜索路径就可以了
+
+网上说runtime会被默认安装在 `/usr/local` 下面，实际上还有一个用target triple命名的文件夹，见如下的CMakeLists中的设置
+
+```cmake
+# llvm-project/libcxx/CMakeLists.txt
+set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXX_TARGET_SUBDIR} CACHE STRING
+  "Path where built libc++ libraries should be installed.")
+```
+
+## *更换Clang的Runtime*
+
+### 使用GCC Runtime
+
+在Linux上，Clang一般都默认依赖于GCC的运行时库（例如 `crtbeginS.o, libstdc++.so`）和 libstdc++ 头文件。通常情况下，Clang会探测到与target triple匹配的GCC安装路径（这个路径是well-known & hard-coded）（在构建时配置（参见 `clang --version`）；可以通过 `--target=` 覆盖）**并使用最大的版本**。如果配置不符合任何标准场景，可以使用 `--gcc-install-dir=` 为GCC安装目录（类似于 `/usr/lib/gcc/$triple/$major`）。如果GCC安装在 `/usr/lib/gcc` 下但是使用了不同的target triple，可以设置 `--gcc-triple=$triple`
+
+
+
+
+
+Most compilers provide a way to disable the default behavior for finding the standard library and to override it with custom paths. With Clang, this can be done with:
+
+```
+$ clang++ -nostdinc++ -nostdlib++           \
+          -isystem <install>/include/c++/v1 \
+          -L <install>/lib                  \
+          -Wl,-rpath,<install>/lib          \
+          -lc++                             \
+          test.cpp
+```
+
+The option `-Wl,-rpath,<install>/lib` adds a runtime library search path, which causes the system’s dynamic linker to look for libc++ in `<install>/lib` whenever the program is loaded.
+
+GCC does not support the `-nostdlib++` flag, so one must use `-nodefaultlibs` instead. Since that removes all the standard system libraries and not just libc++, the system libraries must be re-added manually. For example:
+
+```
+$ g++ -nostdinc++ -nodefaultlibs           \
+      -isystem <install>/include/c++/v1    \
+      -L <install>/lib                     \
+      -Wl,-rpath,<install>/lib             \
+      -lc++ -lc++abi -lm -lc -lgcc_s -lgcc \
+      test.cpp
+```
+
+
+
+## *compiler-rt*
+
+### intro
+
+["compiler-rt" Runtime Library (llvm.org)](https://compiler-rt.llvm.org/)
+
+compiler-rt 提供了 LLVM 编译器所需要的运行时库。这些运行时库通常包括用于实现低级机器操作的功能，这些操作直接在硬件上进行可能比较复杂或者不可移植。例如，compiler-rt 包含对各种整数和浮点数操作的支持，这些操作在某些架构上可能并不直接由硬件支持（如128位整数、浮点异常处理等）
+
+compiler-rt 的主要组成部分有：
+
+- **内建函数 Builtins**：提供编译器内建函数的实现，这些内建函数通常是用来支持特殊的 CPU 指令，如整数溢出检查以及不同数据类型间的转换操作
+- **Sanitizers**：一系列的工具，用来检测代码中的各种问题，包括地址错误（AddressSanitizer）、未定义行为（UndefinedBehaviorSanitizer）、内存泄漏（LeakSanitizer）等
+- **Profile**：包括代码覆盖率（Coverage）和性能分析（Profiling）工具，用于收集程序运行时的性能数据
+- **Blocks runtime**：支持 Clang 扩展的 Blocks 特性，这是一个类似于 C 语言闭包（或匿名函数）的语法特性，主要在 Apple 的 Objective-C 中使用
+
+Builtins是跨平台的，它可以用于下面的计算机架构和OS，但是大部分Sanitizers Runtime都是只能用于x86-64架构的Linux
+
+- Machine Architectures: i386, X86-64, SPARC64, ARM, PowerPC, PowerPC 64.
+- OS: DragonFlyBSD, FreeBSD, NetBSD, OpenBSD, Linux, Darwin.
+
+compiler-rt 与其他运行时库如 libgcc 并不是冲突的， compiler-rt 主要提供了一些编译器内建函数的实现，以及一些特殊的库，而 libc++ 和 libstdc++ 提供了符合 C++ 标准的高级库
+
+## *DragonEgg*
+
+[DragonEgg (llvm.org)](https://dragonegg.llvm.org/)
+
+用LLVM作为GCC的backend
+
 # Clang Lexer, Preprocessor & Parser
+
+[clang 源码导读（8）：词法分析和预处理指令-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1811032)
 
 本章介绍Clang的lexer & parser的实现
 
