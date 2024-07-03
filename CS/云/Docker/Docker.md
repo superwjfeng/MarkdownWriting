@@ -927,6 +927,8 @@ Ubuntu下一般只会安装基础的 Docker Engine，而 WIn/Mac下安装完整�
 
 ### Docker Engine
 
+<img src="Docker逻辑架构.png" width="70%">
+
 Docker Engine 是一个 Client-Server架构，具有以下内容
 
 * 一个带有长期运行的守护进程 dockerd 服务器
@@ -1097,7 +1099,7 @@ Docker Desktop将容器和镜像存储在Mac文件系统中的单个预先分配
 
 ### Win
 
-# Docker Workerflow
+# Docker Workflow
 
 Docker是一个开放平台，用于开发、发布和运行应用程序。 Docker允许用户将应用程序与基础架构分离，以便快速交付软件。使用Docker，用户可以以与管理应用程序相同的方式管理基础架构。通过利用Docker的代码快速发布、测试和部署方法，可以显著缩短编写代码和在生产环境中运行代码之间的延迟
 
@@ -1310,6 +1312,8 @@ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 
 * `-v, --volume`：挂载主机文件或目录到容器内部，实现数据持久化
 
+* `-mount`：详见Docker Volume部分
+
 * `--name`：为容器指定一个名称
 
 * `-h`：指定容器的 hostname
@@ -1325,8 +1329,6 @@ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 * `--network`：指定容器连接的网络，默认是 bridge
 
 * `--link`：连接到另一个容器，已被弃用，建议使用用户定义的网络
-
-* `-v, --volume`：绑定一个卷
 
 * `-i -t`：以交互模式运行容器，通常与分配伪终端一起使用
 
@@ -1455,6 +1457,8 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
 * `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
 
+  不能直接引用宿主机的绝对路径（如 `/mnt/data/docker_mount_files`）来复制文件到镜像内。Docker 构建只能访问发送给 Docker 守护进程作为构建上下文的那些文件和目录
+
 * `RUN <command>`：在容器内执行指定的指令，并把结果保存下来
 
 * `EXPOSE`：暴露容器的端口，使得可以从主机访问容器内的服务
@@ -1483,9 +1487,69 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
 ## *Build Drivers*
 
+### Architecture
+
+[Docker Build architecture | Docker Docs](https://docs.docker.com/build/architecture/)
+
 <img src="DockerBuild架构.png" width="60%">
 
+docker build系统同样被实现为一个client-server结构，这意味着镜像的build工作并不一定要在host本地完成
+
+* Buildx 是 Docker 官方维护的一个 CLI 插件，它提供了一些在原生 `docker build` 命令中不可用的额外特性。Buildx 使得 Docker 构建可以使用 BuildKit 的先进功能，并且其设计目的是提供更加灵活、可扩展的方式来创建 Docker 镜像
+
+  直到 Docker Engine 23.0 and Docker Desktop 4.19，Buildx 已经是Docker默认的build client，也就是说现在不需要使用 `docker buildx build`，而是直接用 `docker build` 就可以了
+
+* BuildKit 或者 buildkitd 是实际执行build任务的守护进程
+
+  当初始化 Buildx 时，实际上是在设置一个或多个 BuildKit 构建器。每个构建器都可以配置自己的环境和参数，例如，针对不同的 CPU 架构或不同的OS
+
+* Builder 指BuildKit backend中执行构建任务的实体
+
+### Multi-platform Build
+
+## *构建上下文*
+
+### 构建上下文的作用
+
+构建上下文 build context 是指 `docker build` 命令运行时的文件系统上的目录。在构建镜像时，Docker 会将这个目录及其内容发送给 buildkitd 来执行构建过程。这意味着 Dockerfile 中的所有文件引用都应相对于这个构建上下文目录
+
+```cmd
+$ docker build -t my-image .
+```
+
+这里的点 `.` 表示当前目录作为构建上下文，Docker 将发送当前目录下所有内容（除 `.dockerignore` 文件中定义的内容外）给 buildkitd
+
+### `.dockerignore`
+
+由于整个构建上下文目录都会被发送，这可能包括不必要的大文件或敏感信息。为了提升构建性能并避免泄露信息，可以在构建上下文目录中创建 `.dockerignore` 文件，类似于 `.gitignore`，列出想排除的文件和目录
+
+```dockerfile
+# 忽略所有 .txt 文件
+*.txt
+
+# 除了 dockerfile.txt，它将被包含
+!dockerfile.txt
+
+# 忽略 logs 目录
+logs/
+
+# 忽略 temp 文件和临时目录
+*tmp
+*temp
+```
+
 ## *多阶段构建*
+
+### Error: max depth exceeded
+
+Docker在构建镜像时，会构建多个layers，在使用Dockerfile时，过度使用COPY、RUN命令，在频繁构建容器时，就会出现构建层数过多的情况，报max depth exceeded错误，并且无法再次构建容器。一般这个错误都是在有上百个layers的时候才会出现，但是笔者在云服务器上开发的时候，layer貌似被限定到了13层，不是很明白为什么
+
+以下是一些build的建议
+
+* 减少在buildfile中的 `git clone` 等操作，使用COPY
+* 多阶段构建
+
+### 多阶段构建的使用
 
 多阶段构建 Multi-stage build 是指在一个Dockerfile中定义多个构建阶段，每个阶段都可以执行一组特定的操作，生成中间产物，然后将这些中间产物传递到下一个阶段。这样可以有效地减小最终Docker镜像的大小，只包含运行时所需的组件，而不包括构建时使用的工具和中间文件
 
@@ -1571,13 +1635,44 @@ volume 管理卷：默认映射到宿主机的 /var/lib/docker/volumes 目录下
 
 ### Bind Mount
 
-bind mount 绑定数据卷：映射到宿主机指定路径下，在宿主机上的路径要**人工的指定一个特定的路径**，在容器中也需要指定一个特定的路径，两个已知的路径建立关联关系
+bind mount 绑定数据卷：映射到宿主机（文件系统中）的指定路径下，在宿主机上的路径要**人工的指定一个特定的路径**，在容器中也需要指定一个特定的路径，两个已知的路径建立关联关系
 
 非 Docker 的进程或者 Docker 容器可能随时对其进行修改，存在潜在的安全风险
 
 ### tmpfs mount
 
 tmpfs mount 临时数据卷：**映射到宿主机内存中**，一旦容器停止运行，tmpfs mounts会被移除，数据就会丢失。用于**高性能或者有安全性需求的临时数据存储**
+
+### `--volume` & `--mount` 的区别
+
+`-v, --volume` & `--mount` 将主机上的文件或目录挂载到容器中。这两种方式都可以实现数据卷的挂载，但是它们之间存在一些差异。`-v` 是早期 Docker 版本中的原始挂载选项。`--mount` 在后来的版本中引入，为用户提供了更大的灵活性和清晰性
+
+*  `-v, --volume`
+
+  ```cmd
+  $ docker run -v /path/on/host:/path/in/container ...
+  ```
+
+* `--mount`
+
+  ```cmd
+  $ docker run --mount type=bind, source=/path/on/host, target=/path/in/container ...
+  ```
+
+  `--mount` 是更明确和详细的，它允许我们指定挂载类型，以及源和目标位置
+
+  - `type`：挂载类型，可以取bind、volume和tmpfs
+  - `source` 或 `src`：挂载源的路径
+  - `target` 或 `dst`：容器内挂载点的路径
+    - `readonly`：如果设置，则表明挂载是只读的
+
+  ```cmd
+  $ docker run --mount type=bind,source=/home/user/data,target=/data,readonly my_image
+  ```
+
+  上面的命令会将主机的 `/home/user/data` 目录以只读方式挂载到容器中的 `/data` 目录
+
+注意：当指定的挂载点不存在时，`-v` 会自动创建一个目录，而 `--mount` 在默认情况下不会创建目录，如果目录不存在，命令会失败
 
 ## *实操：MySQL灾难恢复*
 
@@ -1726,7 +1821,49 @@ Docker Compose 是一个用于**管理单机容器的编排工具**，而下文�
 
 
 
+## *Docker Context*
 
+Docker context 是一个 Docker CLI（命令行界面）的功能，它允许用户定义和管理与不同 Docker 守护进程（daemon）的连接。这项功能最初是为了方便用户在不同的环境中使用 Docker，例如本地开发环境、测试服务器或生产集群等。
+
+Docker context 的主要目的是让您可以快速切换 Docker 命令所操作的环境。例如，如果您有一个在云服务上运行的 Docker 守护进程和一个在本地机器上运行的守护进程，您可以根据需要切换它们而无需改变任何配置。
+
+### 主要概念
+
+- **Context 名称**：每个 Docker context 都有一个唯一的名称，通过这个名称可以引用特定的上下文。
+- **Docker 守护进程地址**：每个 context 包含 Docker 守护进程的连接信息，比如 TCP 地址和端口，或者 Unix socket 路径。
+- **TLS 配置**：对于安全通信，context 可以包括 TLS 证书和密钥的路径。
+- **其他元数据**：context 还可以包括其他配置，如默认的网络或堆栈名。
+
+### 使用 Docker Context 的命令
+
+- `docker context create`：创建新的 context。
+- `docker context ls`：列出所有可用的 contexts。
+- `docker context use`：切换当前 shell 环境到指定的 context。
+- `docker context rm`：删除一个 context。
+- `docker context inspect`：查看 context 的详细信息。
+
+### 示例流程
+
+创建一个新的 context 并设置为默认：
+
+```
+shell复制代码# 创建一个名为 "my-cloud-context" 的新 context，这里指定 docker daemon 的地址和端口
+docker context create my-cloud-context --docker "host=tcp://<cloud-server-ip>:2376"
+
+# 列出所有 contexts
+docker context ls
+
+# 切换到新创建的 context
+docker context use my-cloud-context
+
+# 执行 Docker 命令将会影响到 cloud-server-ip 上的 Docker 守护进程
+docker ps
+
+# 切换回默认的 context
+docker context use default
+```
+
+当您使用 `docker context use <context-name>` 切换上下文时，之后的所有 Docker 命令都将作用于该 context 指定的 Docker 守护进程。
 
 # Kubernetes
 

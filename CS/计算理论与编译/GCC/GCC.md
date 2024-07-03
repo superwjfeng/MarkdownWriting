@@ -93,11 +93,17 @@ Debian 和 Ubuntu 使用 `update-alternatives` 系统来管理同一命令的多
   $ update-alternatives --install <link> <name> <path> <priority> [--slave link name path]
   ```
 
+  - `<link>`：这指的是由 `update-alternatives` 创建和管理的符号链接。通常这会是一个通用命令名（如 `/usr/bin/editor`），当用户运行该命令时，符号链接会指向用户选择的特定程序版本
+  - `<name>`：这是替代群组的名称。所有提供类似功能的可替换项都会被分配同一个名称
+  - `<path>`：这是到真实的二进制执行文件或脚本的绝对路径。当这个替代项被选择为默认时，`<link>` 指向这个 `<path>`
+  - `<priority>`：这是一个整数值，用于在自动模式下决定哪个替代项成为默认项。具有最高优先级的替代项将被设置为默认项。
+  - `--slave <link> <name> <path>`：这是一个可选参数，允许你同时设置“从属”的链接。当主链接变化时，“从属”链接也会相应改变。例如，当你更新默认的编辑器时，你可能也想更新默认的手册页编辑器。
+
   ```cmd
   $ sudo update-alternatives --install /usr/local/bin/gcc gcc /usr/bin/gcc 50
   $ sudo update-alternatives --install /usr/local/bin/gcc gcc /usr/local/gcc-14.1.0/bin/gcc 60
   $ sudo update-alternatives --install /usr/local/bin/g++ g++ /usr/bin/g++ 50
-  $ sudo update-alternatives --install /usr/local/bin/g++ g++ /usr/local/g++-14.1.0/bin/g++ 60
+  $ sudo update-alternatives --install /usr/local/bin/g++ g++ /usr/local/gcc-14.1.0/bin/g++ 60
   ```
 
 * display：display选项用来显示一个命令链接的所有可选命令，即查看一个命令链接组的所有信息，包括链接的模式（自动还是手动）、链接priority值、所有可用的链接命令等等

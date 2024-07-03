@@ -888,6 +888,8 @@ OutputIterator copy (InputIterator first, InputIterator last, OutputIterator res
 * `replace_if`
 * `copy`
 
+
+
 ## *运算*
 
 ```C++
@@ -1109,9 +1111,13 @@ SGI-STL默认选择使用一级还是二级空间配置器，通过 `USE_MALLOC`
 * `uninitialized_fill(b, e, t)`：在迭代器b和e指定的原始内存范围中创建对象，对象的值均为t的拷贝
 * `uninitialized_fill_n(b, n, t)`；从迭代器b指向的内存地址开始创建n个对象。b必须指向足够大的未构造的原始内存，能够容纳给定数量的对象
 
-# 迭代器 & Traits
+# 迭代器 & Traits技法
 
+这违背了迭代器模式的设计准则，即**迭代器模式中不暴露某个容器的内部表现形式情况下，使之能依次访问该容器中的各个元素的定义**
 
+**独立的迭代器并不能满足我们的要求，所以STL将迭代器的实现交给了容器，每种容器都会以嵌套的方式在内部定义专属的迭代器**
+
+**迭代器依附于具体的容器，即不同的容器有不同的迭代器实现**。 对于泛型算法find，只要给它传入不同的迭代器，就可以对不同的容器进行查找操作。迭代器的穿针引线，有效地实现了算法对不同容器的访问
 
 # string
 
@@ -2637,6 +2643,43 @@ int main() {
 ```
 
 使用ranges，你可以创建更加声明性的代码，减少模板噪声，以及利用管道操作来创建复杂的数据处理流水线。此外，由于views的延迟求值特性，它们可以提高性能并减少内存占用，尤其是在处理大型数据集时
+
+
+
+
+
+
+
+### iota
+
+`iota()` 是定义在 `<numeric>` 头文件中的标准库算法。它用于对一个序列容器填充递增的值。这个函数需要三个参数：开始迭代器、结束迭代器和初始值。序列的第一个元素被设置为初始值，之后每个后续元素的值都比前一个元素的值大 1
+
+```C++
+template <class ForwardIterator, class T>
+void iota(ForwardIterator first, ForwardIterator last, T value);
+```
+
+```C++
+#include <iostream>
+#include <vector>
+#include <numeric> // iota 函数所在的头文件
+
+int main() {
+    std::vector<int> v(10); // 创建一个大小为 10 的 vector
+
+    // 使用 iota 填充 v，起始值为 0
+    std::iota(v.begin(), v.end(), 0);
+
+    // 输出 vector 的内容
+    for (int n : v) {
+        std::cout << n << ' ';
+    }
+
+    return 0;
+}
+```
+
+
 
 # 疑惑
 
