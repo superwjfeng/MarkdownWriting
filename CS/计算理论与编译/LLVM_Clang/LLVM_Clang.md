@@ -421,6 +421,14 @@ public:
 };
 ```
 
+### CMAKE_TOOLCHAIN_FILE
+
+`CMAKE_TOOLCHAIN_FILE` 是一个 CMake 变量，用于指定一个工具链文件的路径。工具链文件包含了一系列用来告知 CMake 如何编译和链接程序的特定于平台或编译器的配置
+
+工具链文件包含了编译器、汇编器、链接器等工具的路径和其他相关设置。它告诉 CMake 使用哪些工具以及如何找到这些工具，还可能包括必要的编译器和链接器的选项
+
+这个变量会被同名的环境变量初始化（若存在的话）
+
 ### 实操
 
 [Cross-compilation using Clang — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/CrossCompilation.html)
@@ -857,6 +865,8 @@ Process 2900 stopped
     frame #6: 0x00005555569fc3e5 clang++`_start + 37
 ```
 
+可以看到入口是在**`llvm_project/clang/tools/driver/driver.cpp::clang_main()`**（实际上是从LLVM 15.0.0-rc1开始从 `main()` 改名为了 `clang_main()`）
+
 ## *参数解析*
 
 
@@ -1030,6 +1040,12 @@ InstalledDir: /usr/local/bin
 # llvm-project/libcxx/CMakeLists.txt
 set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXX_TARGET_SUBDIR} CACHE STRING
   "Path where built libc++ libraries should be installed.")
+```
+
+### Check Version of libc++
+
+```bash
+$ cat /usr/local/include/c++/v1/__config | grep __LIBCPP_VERSION
 ```
 
 ## *更换Clang的Runtime*

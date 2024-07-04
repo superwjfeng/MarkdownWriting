@@ -45,7 +45,7 @@ error: Cannot verify integrity of possibly corrupted file
 
 ### Native Compiler
 
-Native compiler 是和 cross compiler 相对的概念，它指的是一个编译器，它产出的代码是为运行该编译器的本地系统架构而优化的。这意味着，该编译器生成的可执行文件是直接针对当前计算机的 CPU 架构（比如 x86, ARM, MIPS 等）设计的，并可以在没有任何模拟或虚拟化层的情况下执行
+Native compiler 是和 cross compiler 相对w的概念，它指的是一个编译器，它产出的代码是为运行该编译器的本地系统架构而优化的。这意味着，该编译器生成的可执行文件是直接针对当前计算机的 CPU 架构（比如 x86, ARM, MIPS 等）设计的，并可以在没有任何模拟或虚拟化层的情况下执行
 
 比如说如果在一个 x86_64 架构的 Linux 系统上使用 GCC 编译器编译 C 代码，那么这个 GCC 就可以被认为是一个 native compiler，因为它默认会生成专门为 x86_64 架构优化的二进制程序
 
@@ -532,7 +532,15 @@ typedef struct __attribute__((visibility("hidden"))) {
 
 `fno-exceptions`：禁用异常
 
+# libstdc++
 
+libstdc++会被默认安装在 `/usr/local/include/c++/v1` 中
+
+
+
+
+
+GCC 9.3.0: GLIBCXX_3.4.28, CXXABI_1.3.12
 
 # LD
 

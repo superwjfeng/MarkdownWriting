@@ -1277,7 +1277,7 @@ RunC 是一个轻量级的工具，它是专门遵守OCI标准来用来运行容
 
 `docker ps` 查看目前运行的容器，`docker ps -a` 查看运行过的所有容器
 
-```cmd
+```bash
 $ docker ps -a
 CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS         PORTS                    NAMES
 abc123456789   nginx:latest   "nginx -g 'daemon of…"   2 hours ago      Up 2 hours     0.0.0.0:80->80/tcp       web_server
@@ -1296,8 +1296,8 @@ def987654321   ubuntu:20.04   "/bin/bash"              3 days ago        Exited 
 
 注意：`docker container *` 和 `docker *` 是相同的命令，可以互换使用。在较新版本的 Docker 中，为了提高命令行的组织结构，`docker container` 子命令被引入，但为了保持向后兼容性，`docker run` 仍然有效，并且与 `docker container run` 具有相同的功能。下面笔者还是统一使用不带 container 的命令
 
-```cmd
-docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+```bash
+$ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 ```
 
 `docker run` 是容器最重要的命令之一，它相当于 create + start。它的选项为
@@ -1505,15 +1505,13 @@ docker build系统同样被实现为一个client-server结构，这意味着镜�
 
 * Builder 指BuildKit backend中执行构建任务的实体
 
-### Multi-platform Build
-
 ## *构建上下文*
 
 ### 构建上下文的作用
 
 构建上下文 build context 是指 `docker build` 命令运行时的文件系统上的目录。在构建镜像时，Docker 会将这个目录及其内容发送给 buildkitd 来执行构建过程。这意味着 Dockerfile 中的所有文件引用都应相对于这个构建上下文目录
 
-```cmd
+```bash
 $ docker build -t my-image .
 ```
 
@@ -1610,6 +1608,32 @@ https://juejin.cn/post/7130934881554530334
 
 * 如果不想在构建过程中使用缓存，可以在 docker build 命令中使用 `--no-cache=true` 选项
 * 清理 Build Cache 缓存命令 `docker builder prune`
+
+## *Multi-platform Build*
+
+To build an ARM64 image on an x86 Linux machine with Docker, you can use Docker's buildx command with the `--platform` flag. This allows you to specify the target platform for the build output. Here's an example:
+
+```bash
+$ docker buildx build --platform=linux/arm64 -t <registry>/<image> --push .
+```
+
+In this command, replace `<registry>/<image>` with the name of your Docker registry and the name of your image.
+
+Please note that emulation with QEMU can be much slower than native builds, especially for compute-heavy tasks like compilation and compression or decompression.
+
+If you want to build for multiple platforms concurrently, you can enable the containerd image store or create a custom builder. The default image store in Docker Engine doesn't support multi-platform images, but the containerd image store does.
+
+Here's how you can create a custom builder:
+
+```bash
+$ docker buildx create --use --name mybuild node-amd64
+$ docker buildx create --append --name mybuild node-arm64
+$ docker buildx build --platform linux/amd64,linux/arm64 .
+```
+
+This command creates a multi-node builder from Docker contexts named `node-amd64` and `node-arm64`.
+
+For more information, you can refer to the Docker documentation on [building multi-platform images](https://docs.docker.com/build/building/multi-platform/) and [using the docker-container driver](https://docs.docker.com/build/drivers/docker-container/).
 
 # Docker Volume
 
