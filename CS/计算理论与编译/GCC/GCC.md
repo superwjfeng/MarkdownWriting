@@ -545,3 +545,46 @@ GCC 9.3.0: GLIBCXX_3.4.28, CXXABI_1.3.12
 # LD
 
 LD (Link Editor or Loader) 是GNU所使用的链接器
+
+## *GNU gold*
+
+GNU `gold` 链接器是对传统 GNU `ld` 链接器的一种现代替代品，最初由 Ian Lance Taylor 在 Google 工作期间开发。`gold` 的主要目标是提高链接速度，特别是针对大型的 C++ 应用程序。为了达到这一目的，`gold` 采用了许多性能优化措施，例如：
+
+- 使用线程来并行化链接过程
+- 使用更有效率的数据结构和算法
+- 只支持ELF文件格式，这是 Linux 和其他 Unix-like 系统上使用最广泛的文件格式
+
+在很多情况下，`gold` 能够比 `ld` 提供更快的链接时间，这使得它在需要快速迭代编译的开发过程中非常有用。然而，`gold` 并不支持 `ld` 所有的功能，这意味着某些特殊场景下可能还需要依赖 `ld`
+
+# MinGW
+
+## *Win平台C/C++编译器*
+
+### MSVC
+
+MSVC Microsoft Visual C++ 是微软的官方C/C++编译器和开发工具集，主要用于Windows平台上的应用程序开。MSVC通常与Visual Studio集成在一起。它是Windows上最常用的编译器之一
+
+以下是MSVC的主要部件
+
+* 编译器：MSVC包括Microsoft的C/C++编译器，用于将C和C++源代码编译成可执行文件。这个编译器通常是针对Windows平台的性能优化的
+* 开发工具包 SDK：除了编译器，MSVC提供了一套丰富的开发工具，包括调试器、性能分析器、图形用户界面设计器、资源编辑器等，这些工具可以帮助开发者创建、调试和优化Windows应用程序
+* 标准库：MSVC包括Microsoft的C/C++标准库实现，这些库提供了许多标准函数和类，以便开发者能够使用标准的C/C++函数和数据结构
+* Windows API支持：MSVC深度集成了Windows API（应用程序编程接口）支持，使开发者能够轻松地访问Windows操作系统的功能和服务，创建本机Windows应用程序
+* 版本和兼容性：MSVC的版本随着时间的推移而不断更新，支持新的C/C++标准和Windows平台的最新功能。开发者可以选择使用不同版本的MSVC，根据他们的需求和目标平台来进行开发
+
+### MinGW
+
+MinGW, Minimalist GNU for Windows 是一个开源项目（Windows的极简GNU）。它的主要目标是提供一个在Microsoft Windows操作系统上使用的GNU工具链，以便开发者可以编译和运行GNU/Linux类似的软件，而无需在Windows上使用大型的商业编译器
+
+MinGW包括以下关键组件：
+
+* GCC：GNU编译器集合（GCC）的Windows移植版本。这是一个强大的C/C++和其他编程语言的编译器，可以将源代码编译成可在Windows上运行的可执行文件
+* Binutils：GNU二进制工具集的Windows移植版本，包括汇编器、链接器和其他二进制工具，用于处理可执行文件和库文件
+* MSYS：Minimal System（MSYS）是MinGW系统的一部分，提供了一个轻量级的Unix命令行环境，以帮助在Windows上构建和运行Unix风格的工具和脚本。MSYS允许在Windows上使用bash shell、make命令等
+
+MinGW的主要优点包括：
+
+* 免费和开源：MinGW是免费的，并且以开源方式提供，允许开发者自由使用和分发它。
+* 轻量级：MinGW的目标是提供一个轻量级的工具链，不需要庞大的开发环境，因此它非常适合需要在Windows上进行C/C++开发的开发者。
+* 与标准GNU工具链兼容性：MinGW允许开发者使用标准的GNU工具和命令，从而实现与Linux等Unix-like系统的兼容性。
+* 可移植性：MinGW生成的可执行文件可以在Windows上运行，而无需额外的运行时库。

@@ -72,37 +72,6 @@ ASP.NET 通过专门用于生成 web 应用的工具和库扩展 .NET 平台。A
 * 身份验证系统包括用于处理登录名的库、数据库、模板页面，包括使用 Google、X 等进行多重身份验证和外部身份验证
 * 编辑器扩展提供了语法突出显示、代码完成和其他专门用于开发网页的功能
 
-## *Win平台C/C++编译器*
-
-### MSVC
-
-MSVC Microsoft Visual C++ 是微软的官方C/C++编译器和开发工具集，主要用于Windows平台上的应用程序开。MSVC通常与Visual Studio集成在一起。它是Windows上最常用的编译器之一
-
-以下是MSVC的主要部件
-
-* 编译器：MSVC包括Microsoft的C/C++编译器，用于将C和C++源代码编译成可执行文件。这个编译器通常是针对Windows平台的性能优化的
-* 开发工具包 SDK：除了编译器，MSVC提供了一套丰富的开发工具，包括调试器、性能分析器、图形用户界面设计器、资源编辑器等，这些工具可以帮助开发者创建、调试和优化Windows应用程序
-* 标准库：MSVC包括Microsoft的C/C++标准库实现，这些库提供了许多标准函数和类，以便开发者能够使用标准的C/C++函数和数据结构
-* Windows API支持：MSVC深度集成了Windows API（应用程序编程接口）支持，使开发者能够轻松地访问Windows操作系统的功能和服务，创建本机Windows应用程序
-* 版本和兼容性：MSVC的版本随着时间的推移而不断更新，支持新的C/C++标准和Windows平台的最新功能。开发者可以选择使用不同版本的MSVC，根据他们的需求和目标平台来进行开发
-
-### MinGW
-
-MinGW是一个开源项目，其名称代表"Minimalist GNU for Windows"（Windows的极简GNU）。它的主要目标是提供一个在Microsoft Windows操作系统上使用的GNU工具链，以便开发者可以编译和运行GNU/Linux类似的软件，而无需在Windows上使用大型的商业编译器
-
-MinGW包括以下关键组件：
-
-* GCC：GNU编译器集合（GCC）的Windows移植版本。这是一个强大的C/C++和其他编程语言的编译器，可以将源代码编译成可在Windows上运行的可执行文件
-* Binutils：GNU二进制工具集的Windows移植版本，包括汇编器、链接器和其他二进制工具，用于处理可执行文件和库文件
-* MSYS：Minimal System（MSYS）是MinGW系统的一部分，提供了一个轻量级的Unix命令行环境，以帮助在Windows上构建和运行Unix风格的工具和脚本。MSYS允许在Windows上使用bash shell、make命令等
-
-MinGW的主要优点包括：
-
-* 免费和开源：MinGW是免费的，并且以开源方式提供，允许开发者自由使用和分发它。
-* 轻量级：MinGW的目标是提供一个轻量级的工具链，不需要庞大的开发环境，因此它非常适合需要在Windows上进行C/C++开发的开发者。
-* 与标准GNU工具链兼容性：MinGW允许开发者使用标准的GNU工具和命令，从而实现与Linux等Unix-like系统的兼容性。
-* 可移植性：MinGW生成的可执行文件可以在Windows上运行，而无需额外的运行时库。
-
 ## *Qt介绍*
 
 ### Qt简介

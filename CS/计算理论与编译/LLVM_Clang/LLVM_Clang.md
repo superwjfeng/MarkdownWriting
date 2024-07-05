@@ -378,6 +378,10 @@ RUN cmake --build build --target install
 
 ## *Cross-compile*
 
+[How To Cross-Compile Clang/LLVM using Clang/LLVM — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToCrossCompileLLVM.html)
+
+[Cross-compilation using Clang — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/CrossCompilation.html)
+
 ### 交叉编译的需求 
 
 LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LLVM工具链来编译为在不同的目标架构或操作系统上运行的代码。简而言之，交叉编译涉及生成可在与构建环境（即我们正在编译代码的机器）不同的目标环境（即代码将要运行的机器）上执行的程序
@@ -428,6 +432,36 @@ public:
 工具链文件包含了编译器、汇编器、链接器等工具的路径和其他相关设置。它告诉 CMake 使用哪些工具以及如何找到这些工具，还可能包括必要的编译器和链接器的选项
 
 这个变量会被同名的环境变量初始化（若存在的话）
+
+### CMAKE_FIND_ROOT_PATH
+
+`CMAKE_FIND_ROOT_PATH` 的主要作用是为CMake提供一个或多个根目录，CMake将在这些目录下优先搜索各种依赖项、程序、库和头文件。这个变量特别有用于交叉编译场景，因为它允许开发者指定一个与宿主机系统隔离的搜索路径，避免与宿主机系统上的库和头文件混淆
+
+当进行交叉编译时，通常会有一个专门的工具链和一个为目标架构准备好的系统根目录（sysroot），里面包含了所有必要的库和头文件。通过设置 `CMAKE_FIND_ROOT_PATH`，可以确保CMake首先查看这个sysroot路径来寻找构建项目所需的资源
+
+例如，在交叉编译环境中，可能会这样使用 `CMAKE_FIND_ROOT_PATH`：
+
+```cmd
+set(CMAKE_FIND_ROOT_PATH /path/to/sysroot)
+```
+
+CMake在执行例如 `find_package`, `find_library`, `find_file`, `find_path` 等命令时，会考虑此变量指定的路径作为额外的前缀。这意味着如果尝试寻找一个库，CMake不仅会在默认的系统目录中搜索，还会在 `CMAKE_FIND_ROOT_PATH` 所列出的目录中搜索
+
+`CMAKE_FIND_ROOT_PATH` 的行为可以进一步通过以下几个变量控制：
+
+- `CMAKE_FIND_ROOT_PATH_MODE_PROGRAM`
+- `CMAKE_FIND_ROOT_PATH_MODE_LIBRARY`
+- `CMAKE_FIND_ROOT_PATH_MODE_INCLUDE`
+- `CMAKE_FIND_ROOT_PATH_MODE_PACKAGE`
+
+这些变量定义了CMake寻找程序、库、头文件和软件包时是否应该考虑 `CMAKE_FIND_ROOT_PATH`。每个变量都可以设定为 `NEVER`、`ONLY` 或 `BOTH`。`NEVER` 会忽略根路径，`ONLY` 会只在根路径下搜索，而 `BOTH` 会同时在系统路径和根路径下搜索。比如
+
+```cmake
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+```
 
 ### 实操
 
@@ -970,7 +1004,64 @@ jobs 构建完成后，会先调用 `Driver::ExecuteCompilation()`，它会依�
 1. 通过 `Compilation::ExecuteJobs()` 执行命令
 2. 如果某些命令存在报错，将结果文件移除，并打印相关信息
 
-# Runtime
+# Clang ToolChain
+
+ToolChain 工具链用来管理一个平台/架构上的编译器、汇编器、链接器等工具的路径和其他相关设置，以支持编译器正常工作
+
+
+
+
+
+
+
+[Assembling a Complete Toolchain — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/Toolchain.html)
+
+# Runtime Library & Standard Library
+
+## *区别*
+
+### Mystery: Why called Runtime Library?
+
+运行时库 Runtime Library 是一套用复杂汇编实现的功能代码的集合，这些代码提供了程序在运行时基本的服务和支持，侧**重于提供程序执行所需的底层支持和与操作系统的交互**。这包括内存管理、I/O 操作、数学计算以及与操作系统交互等功能
+
+举几个例子
+
+* 低级别运算支持：对于某些处理器架构来说，特定的运算（例如64位乘法和除法）可能不由硬件直接支持，或者硬件实现的指令并不完全满足 C 和 C++ 标准的需求。在这种情况下，编译器需要使用软件方法来实现这些运算。运行时库可以提供这些复杂运算的软件实现
+* 异常处理：C++ 支持异常处理机制，允许捕获和处理错误情况。当程序抛出异常时，需要有一套机制来展开堆栈，析构任何局部对象，并将控制权传递给适当的异常处理程序。运行时库提供了这种堆栈展开逻辑和其他异常处理所需的支持
+* RTTI：在 C++ 中使用 `dynamic_cast` 或 `typeid` 操作符时，编译器生成的代码会依赖 RTTI 来确定对象的确切类型。运行时库提供了维护和查询这些类型信息所需的支持函数
+* 浮点数运算支持：类似于整数运算，某些浮点数运算可能也需要软件实现，特别是在不支持 IEEE 浮点标准的架构上
+* 启动和终止代码：每个 C++ 程序在 `main()` 执行之前和执行之后都有一些初始化和清理工作需要完成。运行时库包含了执行这些任务的代码
+
+为什么这些功能不能直接由标准库来实现？
+
+1. **硬件抽象层**：运行时库像一个桥梁一样连接编译器生成的代码和底层硬件。很多低级操作，比如大整数运算，可能在某些平台上硬件不直接支持，需要软件层面的模拟。这些功能涉及到 CPU 架构细节，通常由运行时库提供，因为它们更接近于机器层面
+2. **编译器相关**：运行时库中的功能通常与编译器的内部实现紧密相关。例如，编译器可能会将源代码中的某些构造转换为对运行时库中特定函数的调用。这种转换由编译器控制，因此相应的函数由运行时库而非标准库提供
+3. **语言规范**：标准库实现的是语言标准中定义的接口，而运行时库实现的是编译器为了满足语言标准所需的后端机制。这些后端机制并不总是暴露给开发者，但对于编译出来的程序来说是必不可少的
+4. **跨语言支持**：运行时库不只是为了支持 C 或 C++，还可能需要支持其他语言。例如，`libgcc` 不只是被 GCC 的 C++ 编译器使用，还被其 C、Fortran 等其他语言前端所使用。标准库则通常是特定于一种语言的
+5. **系统级别的操作**：运行时库还可能包含系统级别的操作，比如处理动态库加载或线程创建等，这些通常超出了标准库的范畴
+
+尽管“运行时”这个词暗示着它们只在程序运行时才需要，但实际上，运行时库中的很多函数或者对象在编译阶段就必须要解析和链接到应用程序中。例如，当编写一个C程序并使用`malloc`函数分配内存时，该函数的实现就来自于C的运行时库。在编译过程中，编译器确保`malloc`的引用指向正确的内存分配函数，在程序运行时，这部分代码被加载并执行以完成内存分配任务
+
+之所以仍然称为“运行时库”，主要是因为这些库提供的大部分功能都是在程序运行期间被调用和执行的。编译器和链接器在构建应用程序时可能会使用到运行时库中的某些部分，但这些库的核心作用是为正在运行的程序提供服务。此外，有些运行时库的组件可能也包含了一些在程序启动时运行的代码，用于初始化程序执行环境，以及在程序结束时做一些清理工作
+
+简单来说，“运行时库”这个名字强调的是它在程序执行时发挥作用的性质，而不是它在编译时是否被使用
+
+### Standard Library
+
+标准库是指一个编程语言按照其标准规范所提供的一套库，这些库实现了语言定义的各种工具和构造。标准库通常包括数据结构、算法、输入输出操作、数学函数、日期和时间处理、字符串操作等多方面的内容。标准库是语言的一部分，由语言的标准定义，并且通常是跨平台的
+
+其实简单来说：标准库是给编程者用的工具，以头文件 & 库的形式给出；运行时库是给编译器用的工具，直接以二进制库的形式给出
+
+尽管 `libgcc` 和 `compiler-rt` 包含了许多底层操作的实现，但它们并不是 `libstdc++` 或 `libc++` 的 C/C++ 特定部分打包成的库。事实上，`libgcc` 和 `compiler-rt` 的运行时支持是为所有用 GCC 或 Clang 编译的语言提供的，而不只是 C++。这意味着即使在编译 Fortran 程序，也可能会链接到 `libgcc` 或 `compiler-rt`
+
+实际上我们自己打包成的库也可以称为运行时库
+
+* GNU
+  * 标准库 libstdc++ 的头文件和库被安装在 `/usr/local/gcc-14.1.0/include/c++/14.1.0` 和
+  *  运行时库 libgcc.a / libgcc_s.so 被安装在 `/usr/local/gcc-14.1.0/lib64` 中
+* LLVM
+  * 标准库 libc++ 的头文件和库分别被默认安装在 `/usr/local/include/c++/v1` 和 `/usr/local/lib/x86_64-unknown-linux-gnu` 中
+  * 运行时库 compiler-rt，`libclang_rt*` 被默认安装在 `/usr/local/lib/clang/19/lib/x86_64-unknown-linux-gnu`
 
 ## *libc++*
 
@@ -1060,7 +1151,7 @@ $ cat /usr/local/include/c++/v1/__config | grep __LIBCPP_VERSION
 
 Most compilers provide a way to disable the default behavior for finding the standard library and to override it with custom paths. With Clang, this can be done with:
 
-```
+```cmd
 $ clang++ -nostdinc++ -nostdlib++           \
           -isystem <install>/include/c++/v1 \
           -L <install>/lib                  \
@@ -1073,7 +1164,7 @@ The option `-Wl,-rpath,<install>/lib` adds a runtime library search path, which 
 
 GCC does not support the `-nostdlib++` flag, so one must use `-nodefaultlibs` instead. Since that removes all the standard system libraries and not just libc++, the system libraries must be re-added manually. For example:
 
-```
+```cmd
 $ g++ -nostdinc++ -nodefaultlibs           \
       -isystem <install>/include/c++/v1    \
       -L <install>/lib                     \
@@ -1106,11 +1197,38 @@ Builtins是跨平台的，它可以用于下面的计算机架构和OS，但是�
 
 compiler-rt 与其他运行时库如 libgcc 并不是冲突的， compiler-rt 主要提供了一些编译器内建函数的实现，以及一些特殊的库，而 libc++ 和 libstdc++ 提供了符合 C++ 标准的高级库
 
+### 内建函数
+
+compiler-rt 提供了许多内建函数的实现，这些内建函数用于执行常见的低级操作，如整数算术、位操作、浮点数操作等
+
+```C++
+__builtin_popcount(x);  // 计算 x 的二进制表示中 1 的数量。
+```
+
+
+
 ## *DragonEgg*
 
 [DragonEgg (llvm.org)](https://dragonegg.llvm.org/)
 
 用LLVM作为GCC的backend
+
+## *ABI*
+
+### ABI
+
+ABI, Application Binary Interface 应用程序二进制接口相比于语言层面的API更加严格和难以实现，定义了编程语言编译器和操作系统之间的接口规范，从而实现一次编译成型后在不同的ISA上都可以运行
+
+ABI没有提供显式接口，而是由内核和工具链 toolchain 定义和实现的
+
+ABI包括了以下方面的规范：
+
+* 数据表示：定义了数据类型的表示方式，包括整数、浮点数、字符等。它规定了数据的字节顺序、对齐方式以及数据在内存中的布局
+* 函数调用约定：规定了函数的参数传递方式、寄存器的使用规则、栈的管理方式以及函数调用的返回值处理方法。不同的架构和操作系统可能有不同的函数调用约定
+* 寄存器使用：定义了哪些寄存器是可用的、用于哪些目的、以及在函数调用时如何保存和恢复寄存器的值
+* 异常处理：规定了异常、中断和系统调用的处理方式，包括如何触发和响应这些事件，以及如何传递异常信息
+* 系统调用：定义了操作系统提供的服务和函数调用接口，包括如何通过系统调用访问操作系统功能，例如文件系统、进程管理、网络通信等
+* 共享库：规定了共享库（也称为动态链接库）的格式、加载方式以及运行时链接过程，以便不同程序可以共享和重用代码
 
 # Clang Lexer, Preprocessor & Parser
 
@@ -1416,6 +1534,14 @@ HeaderMap & Framework 都是Apple发明的概念，用于提高大型项目的�
 * 在 macOS 和 iOS 的开发环境中，Framework 是一种特定的软件包结构，用于封装共享库（也叫动态链接库）以及相关的资源，如头文件、图片、界面文件等。Framework 提供了一种标准化的方式来分发和使用复用代码
 
   在 macOS 上，HeaderSearch 还支持框架 Frameworks 的搜索，这是 macOS 特有的一种结构化头文件组织方式
+
+
+
+
+
+### include_next
+
+
 
 # Clang AST
 
@@ -1897,6 +2023,12 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
       
         在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
       
+      * FullExpr
+      
+        * ConstatnExpr
+      
+        * ExprWithCleanups
+      
       * IntegerLiteral 定点Integer值
       
       * ParenExpr 括号表达式
@@ -2038,6 +2170,10 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 - 由表达式 expressions 触发，用户使用表达式规定触发访问的条件
 - 与AST上下文信息绑定，即用户可以在表达式中利用上下文信息来筛选节点
 - 无需遍历，能直接匹配到表达式对应的节点
+
+### Traverse Modes
+
+
 
 ### Matchers的类型
 

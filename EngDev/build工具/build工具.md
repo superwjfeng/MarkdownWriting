@@ -502,23 +502,43 @@ ${variable_name}
 
 CMake中统一使用set（或者boolean变量的语法糖opt）来定义或修改变量，但是不同类型的变量之间的表现会很不一样
 
-### `set()` & `unset()`
+### 普通变量
+
+```cmake
+set(<variable> <value>... [PARENT_SCOPE])
+```
 
 demo中 `SET(SRC_LIST main.cpp)` 就是创建一个 `SRC_LIST` 变量，并将其值设置为 main.cpp
 
 如果源⽂件名中含有空格，就必须要加双引号，比如 `m ain.cpp`
+
+如果set没有给出一个value的话，等效于unset
+
+### set 的追加操作
+
+追加操作通常是指使用`set`命令将新的值添加到一个已经存在的变量之后。这是一种常见的做法，特别是在处理包含文件路径、库路径、编译器标志等列表时
+
+```cmake
+set(SOURCES main.cpp)
+set(HEADERS main.h)
+
+# 这里我们追加其他源文件到SOURCES变量
+set(SOURCES ${SOURCES} extra.cpp)
+```
+
+上面的代码首先定义了两个变量`SOURCES`和`HEADERS`，分别包含了源文件和头文件列表。然后通过`set`命令，我们将额外的源文件`extra.cpp`追加到`SOURCES`变量中。注意，为了追加文件，我们需要首先引用当前`SOURCES`变量的内容`${SOURCES}`，然后跟上我们想要追加的新值
+
+另外一个常见的场景是追加编译器标志
+
+```cmake
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+```
 
 ### option
 
 CMake 对 BOOL 类型缓存的 set 指令提供了一个简写：option
 
 `option(变量名 "描述" 变量值)` 等价于 `set(变量名 CACHE BOOL 变量值 "描述")`
-
-### 普通变量
-
-```cmake
-set(<variable> <value>... [PARENT_SCOPE])
-```
 
 ### 缓存变量
 
@@ -760,6 +780,8 @@ else()
   # 条件为假时执行的代码
 endif()
 ```
+
+if也有 `break()` 和 `continue()`，效果和C语言的一样
 
 注意：if中用到的变量不需要加 `${}`，cmake会自动尝试作为变量名求值
 
