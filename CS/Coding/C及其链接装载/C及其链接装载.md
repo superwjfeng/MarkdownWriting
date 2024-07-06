@@ -2634,6 +2634,50 @@ int main() { return 0; }
 
 # 目标文件
 
+## *Helper: GNU binutils*
+
+[Binutils - GNU Project - Free Software Foundation](https://www.gnu.org/software/binutils/)
+
+GNU Binutils (GNU Binary Utilities) 是一套针对不同二进制文件格式进行操作的程序集合，它们是 GNU 项目的一部分，旨在为 GNU 系统（包括基于 GNU 的操作系统，如 GNU/Linux）提供编译和链接程序的能力。Binutils 支持多种 Unix 变体和 Windows 系统，并且广泛用于软件开发中，尤其是在跨平台构建和维护方面
+
+下面是一些主要工具的简介：
+
+- **ld**：GNU 链接器，将多个对象文件或库链接成一个可执行文件或共享库
+- **as**：GNU 汇编器，将汇编语言源代码转换为机器语言对象文件
+- **gold**：一个新的、更快速的链接器，只支持 ELF 文件格式
+
+除了上述主要工具，GNU Binutils 还包括以下工具：
+
+- **addr2line**：将地址转换成源码文件名和行号
+- **ar**：用于创建、修改和从归档文件（archive files）中提取内容的工具
+- **c++filt**：过滤器，用来解码 C++ 符号名称
+- **dlltool**：创建用于构建和使用 DLL 的文件
+- **elfedit**：允许修改 ELF 格式文件
+- **gprof**：显示性能分析信息
+- **gprofng**：收集并显示应用程序性能数据
+- **nlmconv**：将对象代码转换为 NLM（NetWare Loadable Module）
+- **nm**：列出对象文件中的符号
+- **objcopy**：复制并转换对象文件
+- **objdump**：显示对象文件中的信息
+- **ranlib**：生成归档文件的索引
+- **readelf**：显示任何 ELF 格式对象文件中的信息
+- **size**：列出对象文件或归档文件的节(section)大小
+- **strings**：从文件中列出可打印的字符串
+- **strip**：删除符号
+- **windmc**：Windows 兼容的消息编译器
+- **windres**：Windows 资源文件的编译器
+
+此外，GNU Binutils 还包含一些库：
+
+- **libbfd**：用于操纵各种格式的二进制文件的库
+- **libctf**：用于操纵 CTF（Compact Type Format）调试格式的库
+- **libopcodes**：用于汇编和反汇编多种汇编语言的库
+- **libsframe**：用于操纵 SFRAME 调试格式的库
+
+大多数 Binutils 工具使用 BFD (Binary File Descriptor) 库来进行底层文件操作。许多工具还利用 opcodes 库来汇编和反汇编机器指令
+
+这些工具提供了广泛的功能，比如分析、转换和优化二进制文件，以及对编译后的代码进行调试和性能分析。它们在软件开发和系统编程中被广泛使用，并且对于支持 GNU/Linux 系统的软件生态至关重要
+
 ## *目标文件的格式及内容*
 
 ### 复习：Linux的进程地址空间
@@ -2646,10 +2690,11 @@ int main() { return 0; }
 
 PC平台流行的可执行文件 executable file 的格式都是COFF, COmmon File Format 格式（Unix System V Release 3 提出，引入了段 Segment 机制）的变种
 
-* Win系统的PE, Portable Executable
+* Win系统的PE-COFF, Portable Executable
 * Linux的ELF, Executable Linkable Format（System V Release 4提出）
 * Unix最早的可执行文件为 `a.out`
 * MacOS的Mach-O（Mach Object）
+* Intel/Microsoft的OMF（Object Module Format）
 
 根据ELF文件标准的规定，除了可执行文件外一共有三类采用与可执行文件中相同格式的文件，它们和可执行文件格式采用同一种格式存储。事实上也几乎和可执行文件没有多少区别，所以在Win中统称它们为PE-COFF文件，而**Linux中统称它们为ELF文件**
 
@@ -2657,16 +2702,18 @@ PC平台流行的可执行文件 executable file 的格式都是COFF, COmmon Fil
 * 共享目标文件 Shared Object File：动态链接库 Dynamic Linking Library，Win中的 `.DLL` 和Linux中的 `.so`
   * 与其他共享目标文件与可执行文件结合，作为进程一部分来运行
   * 与其他可重定位文件和共享目标链接，产生新的目标文件
+* 可执行文件 Executable File：可直接执行的文件
 * 核心转储文件 Core  Dump File：进程意外终止时记录的信息
 
 Linux中可以用 `file` 命令来查看相应文件的格式
 
-```bash
-[WJFeng@centos-s-1vcpu-1gb-fra1-01 test]$ file mstore.o
-mstore.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
-
-[WJFeng@centos-s-1vcpu-1gb-fra1-01 test]$ file main
-main: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.32, BuildID[sha1]=afc9d0ee27b299049bb9101db8fd118ad042697e, not stripped
+```cmd
+$ clang++ main.cc -o main
+$ clang++ -c main.cc -o main.o
+$ file main
+main: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, not stripped
+$ file main.o
+main.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
 ```
 
 ### 目标文件里有什么
@@ -2685,7 +2732,20 @@ main: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (u
 * 数据缓存和指令缓存分离，该删程序的局部性从而提高缓存的命中率
 * 内存共享：因为代码段是共享的，所以运行多个相同进程或者 `fork` 出子进程后只需要在内存中加载同一份代码，节省了大量内存空间
 
-实际中还有很多其他的段，可以查阅自我修养书的表3-2
+实际中还有很多其他的段，具体可以查阅自我修养书的表3-2
+
+* ` rodata1`
+* `.comment`
+* `.debug`
+* `.dynamic`：动态连接信息
+* `.hash`
+* `.line`
+* `.note`：额外的编译器信息，比如程序的公司名、发布版本号等
+* `.strtab`：String Table 字符串表，用于存储ELF文件中用到的各种字符串
+* `.symtab`：Symbol Table 符号表
+* `.shstrtab`：Section String Table 段名表
+* `.plt` & `.got`：动态链接的跳转表和全局入口表
+* `.init` & `.fini`：程序的初始化与终结代码段
 
 ## *例子：`SimpleSecion.o`*
 
@@ -2815,16 +2875,82 @@ Disassembly of section .text:
 
 * `.text` 代码段
 * `.data` 数据段：存储已经初始化了的全局（静态）变量和（局部）静态变量
-* `.rodata` 只读数据段：存储只读数据，如字符串常量，将这个段的权限设置为只读就是支持了 `const` 关键字
+* `.rodata` 只读数据段：存储只读数据，如字符串常量，将这个段的权限设置为只读就是支持了 `const` 关键字语义
 * `.bss` 段：只有4个字节，甚至在通过 `-s` 打印段内容的时候都没有打出来
 
 ## *ELF文件结构描述*
 
 <img src="ELF文件结构.png" width="25%">
 
-ELF文件可以分为上面的部分，主要是3大块：Header、各种段、辅助用的段表 Section Header table、符号表等
+ELF文件可以分为上面的部分，主要是3大块：Header、各种段、辅助用的段表 Section Header table、符号表等##
 
-### C语言如何获取ELF文件的内容？
+### ELF Header的内容
+
+用 `readelf -h SimpleSection.o` 命令来查看ELF文件的文件头，可以看到它们之间的对应关系，因此我们可以反向推测 `readelf` 这个程序必然是利用了 `<elf.h>` 里Header的相关数据结构和接口
+
+```cmd
+$ readelf -h SimpleSection.o
+ELF Header:
+  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI Version:                       0
+  Type:                              REL (Relocatable file)
+  Machine:                           Advanced Micro Devices X86-64
+  Version:                           0x1
+  Entry point address:               0x0
+  Start of program headers:          0 (bytes into file)
+  Start of section headers:          1032 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               64 (bytes)
+  Size of program headers:           0 (bytes)
+  Number of program headers:         0
+  Size of section headers:           64 (bytes)
+  Number of section headers:         14
+  Section header string table index: 13
+```
+
+ELF文件有32位版本和64位版本。它的文件头结构也有这两种版本，分别为 `Elf32_Ehdr` 和 `Elf64_Ehdr`。32位版本与64位版本的ELF文件的文件头内容是一样的，只不过有些成员的大小不一样。为了提高兼容性，对每个成员的大小做出明确的规定以便于在不同的编译环境下都拥有相同的字段长度，`elf.h` 使用typedef定义了一套自己的变量体系，比如 `typedef Elf32_Addr uint32_t;`
+
+下面给出 `Elf32_Ehdr` 结构体（当然还有64位的兼容版本）
+
+```c
+typedef struct {
+    unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
+    Elf32_Half    e_type;         /* Object file type */
+    Elf32_Half    e_machine;      /* Architecture */
+    Elf32_Word    e_version;      /* Object file version */
+    Elf32_Addr    e_entry;        /* Entry point virtual address */
+    Elf32_Off e_phoff;        /* Program header table file offset */
+    Elf32_Off e_shoff;        /* Section header table file offset */
+    Elf32_Word    e_flags;        /* Processor-specific flags */
+    Elf32_Half    e_ehsize;       /* ELF header size in bytes */
+    Elf32_Half    e_phentsize;        /* Program header table entry size */
+    Elf32_Half    e_phnum;        /* Program header table entry count */
+    Elf32_Half    e_shentsize;        /* Section header table entry size */
+    Elf32_Half    e_shnum;        /* Section header table entry count */
+    Elf32_Half    e_shstrndx;     /* Section header string table index */
+} Elf32_Ehdr;
+```
+
+* `e_ident`： 这个数组里包括了ELF header的魔数magic number（前四个字节，ASCII为`\DEC ELF`）、Class、Data、Version、OS/ABI、ABI Version 6个成员，其他结构体成员则是一一对应
+* `e_type` ：OS通过 `e_type` 成员来判断ELF文件的类型（前面说过的几种），而不是通过文件的扩展名。1为可重定位 `ET_REL`，2为可执行 `ET_EXEC`，3为共享目标文件 `ET_DYN`
+* `e_machine`：目标机器架构，指示该文件是为哪种处理器架构设计
+* `e_version`：ELF版本号，通常设置为 1
+* `e_entry`：程序入口点的虚拟地址。如果文件有关联的执行代码，则此处指出了执行开始的地点
+* `e_phoff`：程序头表（Program Header Table）在文件中的偏移量（字节）。如果没有程序头表，则此字段为零
+* `e_shoff`： 给出段表在ELF中的偏移位置
+* `e_flags`：与处理器相关的标志，不同的架构有不同的意义
+* `e_ehsize`：ELF 头部的大小（以字节为单位）
+* `e_phentsize`：程序头表中每个条目的大小（字节）。所有条目都有相同的大小
+* `e_phnum`：程序头表中的条目数量。通过这个数值和 `e_phentsize` 可以计算整个程序头表的大小
+* `e_shentsize`：节头表中每个条目的大小（字节）。所有条目都有相同的大小
+* `e_shnum`：节头表中的条目数量。通过这个数值和 `e_shentsize` 可以计算整个节头表的大小
+* `e_shstrndx`：包含节名称字符串的节头表索引。它是一个指向字符串表的节索引，这个字符串表包含了其他所有节的名称
+
+### C语言获取ELF文件的内容的API 
 
 ELF文件是一种二进制格式的文件，它存储着可执行文件、共享库、目标文件等程序的机器码和数据。C语言本身不能直接读取和解析ELF文件，但是可以通过操作系统提供的系统调用和库函数来读取和处理文件
 
@@ -2866,60 +2992,6 @@ int main(int argc, char **argv) {
     return 0;
 }
 ```
-
-### ELF Header 和 `<elf.h>` 定义的数据结构内容
-
-为了提高兼容性，`elf.h` 利用固定长度变量类型 typedef 了一堆自己的变量体系，比如 `typedef Elf32_Addr uint32_t;`
-
-下面给出 `Elf32_Ehdr` 结构体（当然还有64位的兼容版本）
-
-```c
-typedef struct {
-    unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
-    Elf32_Half    e_type;         /* Object file type */
-    Elf32_Half    e_machine;      /* Architecture */
-    Elf32_Word    e_version;      /* Object file version */
-    Elf32_Addr    e_entry;        /* Entry point virtual address */
-    Elf32_Off e_phoff;        /* Program header table file offset */
-    Elf32_Off e_shoff;        /* Section header table file offset */
-    Elf32_Word    e_flags;        /* Processor-specific flags */
-    Elf32_Half    e_ehsize;       /* ELF header size in bytes */
-    Elf32_Half    e_phentsize;        /* Program header table entry size */
-    Elf32_Half    e_phnum;        /* Program header table entry count */
-    Elf32_Half    e_shentsize;        /* Section header table entry size */
-    Elf32_Half    e_shnum;        /* Section header table entry count */
-    Elf32_Half    e_shstrndx;     /* Section header string table index */
-} Elf32_Ehdr;
-```
-
-用 `readelf -h SimpleSection.o` 命令来查看ELF文件的文件头，可以看到它们之间的对应关系，因此我们可以反向推测 `readelf` 这个程序必然是利用了 `<elf.h>` 里Header的相关数据结构和接口
-
-```assembly
-ELF Header:
-  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
-  Class:                             ELF64
-  Data:                              2's complement, little endian
-  Version:                           1 (current)
-  OS/ABI:                            UNIX - System V
-  ABI Version:                       0
-  Type:                              REL (Relocatable file)
-  Machine:                           Advanced Micro Devices X86-64
-  Version:                           0x1
-  Entry point address:               0x0
-  Start of program headers:          0 (bytes into file)
-  Start of section headers:          1136 (bytes into file)
-  Flags:                             0x0
-  Size of this header:               64 (bytes)
-  Size of program headers:           0 (bytes)
-  Number of program headers:         0
-  Size of section headers:           64 (bytes)
-  Number of section headers:         14
-  Section header string table index: 13
-```
-
-* `e_ident` 这个数组里包括了Header的Magic（前四个字节，Ascii为`\DEC ELF`）、Class、Data、Version、OS/ABI、ABI Version 6个成员，其他结构体成员则是一一对应
-* OS通过 `e_type` 成员来判断ELF文件的类型，而不是通过文件的扩展名。1为可重定位 `ET_REL`，2为可执行 `ET_EXEC`，3为共享目标文件 `ET_DYN`
-* `e_shoff` 给出段表在ELF中的偏移位置
 
 ### 段表 Section header table
 
@@ -2968,7 +3040,7 @@ Key to Flags:
   l (large), p (processor specific)
 ```
 
-ELF中关于段的信息存储在一个结构体数组中，数组的长度就是#段+1，因为第一个数组元素是无效的 `NULL`。结构体 `Elf32_Shdr` 被称为段描述福 Section descriptor
+ELF中关于段的信息存储在一个**结构体数组**中，数组的长度就是\#段+1，因为第一个数组元素是无效的 `NULL`。结构体 `Elf32_Shdr` 被称为段描述符 section descriptor
 
 ```c
 typedef struct
@@ -2985,6 +3057,19 @@ typedef struct
     Elf32_Word    sh_entsize;     /* Entry size if section holds table */
 } Elf32_Shdr;
 ```
+
+- **sh_name**：段名在节头字符串表中的偏移量。它是一个索引值，指向存储节名字符串的字符串表。
+- **sh_type**：段的类型，它决定了节的内容和如何解释该节的数据。例如，它可能标识节为可执行代码、初始化数据、未初始化数据、符号表、字符串表、重定位信息等。
+- **sh_flags**：一组位标记，指示节的属性。标记可能包括是否可写、是否可执行、是否应该在进程地址空间中占据内存等。
+- **sh_addr**：如果段将出现在进程执行时的内存映像中，则此项给出节的起始地址。否则，该字段为0。
+- **sh_offset**：段的第一个字节在文件中的偏移量。通过这个偏移量可以从文件中读取节的内容。
+- **sh_size**：段的大小（以字节为单位）。对于含有固定大小条目的节，比如符号表，`sh_size` 表示总大小；对于字符串表或者可变长度条目的节，`sh_size` 表示全部内容的大小。
+- **sh_link**：与其他段的链接信息。这个字段的具体意义依赖于节的类型。例如，如果段包含重定位信息，那么 `sh_link` 可以包含关联的符号表的索引。
+- **sh_info**：额外的信息。其具体含义也依赖于节的类型。比如，在一个包含符号表的节中，`sh_info` 可能会包含某些索引，指明哪些符号是本地的，哪些是全局的。
+- **sh_addralign**：段的对齐要求。某些段需要按照特定的边界对齐，这个字段指示了对齐的字节数。比如，如果段需要在 4 字节边界上对齐，那么 `sh_addralign` 会被设为 4。
+- **sh_entsize**：如果段中包含固定大小条目的表（如符号表），该字段指示每个条目的大小。如果段不包含这样的表，`sh_entsize` 则为0
+
+### 重定位表
 
 ### 字符串表 String table
 
@@ -3117,15 +3202,15 @@ typedef struct
 
 早期的纸带程序中，在纸带上的指令要跳转时也需要确定跳转目标的地址。但是程序不可能是一成不变的，总是要修改、在中间增删指令的，修改的指令之后所有的指令、数据的地址就需要全部更新。**重新计算各个目标的地址的过程被称为重定位 Relocation**。在汇编器出现之前，这种重复性的计算任务都是人工完成的
 
-随着单一程序规模的不断扩大，先驱者逐步发明了汇编语言，一段二进制指令可以用助记符 Mnemonic来表示了。若发生了指令的增删，自动化的**汇编器 Assembler**也会在翻译的同时**自动完成重定位**的工作了。**符号 Symbol** 的概念随着汇编语言的普及而被广泛使用，**它用来表示一个地址**，一个字程序（函数）的identifier就是这个代码段的起始地址，而一个变量的identifier就是这个变量的地址
+随着单一程序规模的不断扩大，先驱者逐步发明了汇编语言，一段二进制指令可以用助记符 Mnemonic来表示了。若发生了指令的增删，自动化的**汇编器 Assembler**也会在翻译的同时**自动完成重定位**的工作了。**符号 Symbol** 的概念随着汇编语言的普及而被广泛使用，**它用来表示一个地址**，一个子程序（函数）的identifier就是这个代码段的起始地址，而一个变量的identifier就是这个变量的地址
 
 随着汇编语言的出现，单个程序的代码量成倍膨胀。为了提高阅读、检查的效率，必须要推进代码的模块化设计，即将单一大体积程序拆分成不同功能的独立模块。比如把若干变量和函数组织成一个模块
 
-在一个程序被分割成多个模块后，这些模块之间如何拼接起来形成一个完整的可执行程序，或者说不同的模块间如何通信是一个问题。通信问题主要是两个，即模块之间的函数如何调用？模块之间的变量如何访问？它们都需要知道被调用对象的地址，这个通信问题被称为**模块间的符号引用 Symbol referencing 问题**，它需要通过**链接 Linking** 来协调
+在一个程序被分割成多个模块后，这些模块之间如何拼接起来形成一个完整的可执行程序，或者说不同的模块间如何通信是一个问题。通信问题主要是两个，即模块之间的函数如何调用？模块之间的变量如何访问？它们都需要知道被调用对象的地址，这个通信问题被称为**模块间的符号引用 Symbol referencing 问题**，它需要通过**链接 Linking**来协调
 
 ### 链接的主要内容
 
-链接的主要内容就是**协调各个独立编译的模块之间的相互引用，使得各个模块之间能够正确地编译**。本质上来说链接器只不过是代替人工自动化地完成跨模块之间的进行重定位的工作，它主要有三个方面的工作
+链接的主要内容就是**处理好各个独立编译的模块之间的相互引用，使得各个模块之间能够正确地找到在其他模块中所引用的函数、变量等**，从而进行正确的编译。本质上来说链接器只不过是代替人工自动化地完成跨模块之间的进行重定位的工作，它主要有三个方面的工作
 
 * 地址和空间分配 Address and storage allocation
 * 符号决议 Symbol resolution
