@@ -224,7 +224,9 @@ ninja -C $builddir install
 
   这通常是为了确保LLVM能够使用与之兼容的C++标准库，尤其是在那些不希望依赖系统默认C++库，或者想要利用`libc++`提供的特性和性能优势的场景下
 
-  注意如果要添加libcxxabi的话，要把libunwind加上，否则会报下面的错误
+  **libcxx & libcxxabi & libunwind 这三个标准库一般是同时安装的，因为三者间存在依赖关系**
+
+  比如说若要添加libcxxabi的话，要把libunwind加上，否则会报下面的错误
 
   ```
   CMake Error at /mnt/data/llvm-project/libcxxabi/CMakeLists.txt:52 (message):
@@ -875,7 +877,7 @@ InstalledDir: /usr/local/bin
 
 用Debug模式编译后用lldb调试，断点打到 Driver.cpp:4151，得到如下的栈帧
 
-```
+```cmd
 (lldb) r
 Process 2900 launched: '/usr/local/bin/clang++' (x86_64)
 Process 2900 stopped
@@ -1229,6 +1231,13 @@ ABI包括了以下方面的规范：
 * 异常处理：规定了异常、中断和系统调用的处理方式，包括如何触发和响应这些事件，以及如何传递异常信息
 * 系统调用：定义了操作系统提供的服务和函数调用接口，包括如何通过系统调用访问操作系统功能，例如文件系统、进程管理、网络通信等
 * 共享库：规定了共享库（也称为动态链接库）的格式、加载方式以及运行时链接过程，以便不同程序可以共享和重用代码
+
+
+
+
+
+* libsupc++
+* libcxxrt
 
 # Clang Lexer, Preprocessor & Parser
 

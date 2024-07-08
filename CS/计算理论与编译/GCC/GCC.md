@@ -432,6 +432,8 @@ extern void die(const char *format, ...)
 
 https://www.cnblogs.com/justinyo/archive/2013/03/12/2956438.html
 
+在 *C及其链接装载.md* 中介绍过了强弱符号的概念，GCC提供了alias机制来让用户干预
+
 定义在 `include/libc-symbols.h` 下面
 
 `__attribute__((alias))` 用于创建一个符号别名，将一个变量、函数或符号关联到另一个符号上。这可以用于在编译期间将一个符号的名称关联到另一个名称，从而使它们在链接时被视为同一符号
@@ -484,6 +486,8 @@ int original_myFunction() {
 // 创建一个弱别名
 extern int alias_myFunction() __attribute__((weak, alias("original_myFunction")));
 ```
+
+###  弱引用 `__attribute__((weakref))`
 
 ## *Visibility*
 
