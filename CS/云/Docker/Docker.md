@@ -1611,6 +1611,10 @@ https://juejin.cn/post/7130934881554530334
 
 ## *Multi-platform Build*
 
+[巧用 Docker Buildx 构建多种系统架构镜像-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1840622)
+
+[跨平台构建 Docker 镜像新姿势，x86、arm 一把梭-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1543689)
+
 To build an ARM64 image on an x86 Linux machine with Docker, you can use Docker's buildx command with the `--platform` flag. This allows you to specify the target platform for the build output. Here's an example:
 
 ```bash

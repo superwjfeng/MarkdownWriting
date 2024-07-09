@@ -1010,13 +1010,87 @@ jobs 构建完成后，会先调用 `Driver::ExecuteCompilation()`，它会依�
 
 ToolChain 工具链用来管理一个平台/架构上的编译器、汇编器、链接器等工具的路径和其他相关设置，以支持编译器正常工作
 
+<img src="ToolChainOnAllPlatforms.png">
 
-
-
+<img src="ToolChainOnLinuxPlatform.png">
 
 
 
 [Assembling a Complete Toolchain — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/Toolchain.html)
+
+
+
+ToolChain类用来获取某个平台的工具链
+
+Tool类是具体编译工具的信息，即对一个具体编译工作的封装基类，所有的具体的Tool都继承自它，比如说 `clang::driver::tools::Clang`、`clang::driver::tools::gnutools::Linker` 等
+
+
+
+```C++
+class ToolChain {
+public:
+  using path_list = SmallVector<std::string, 16>;  
+  friend class RegisterEffectiveTriple;
+
+  const Driver &D;
+  llvm::Triple Triple;
+  const llvm::opt::ArgList &Args;
+
+  // We need to initialize CachedRTTIArg before CachedRTTIMode
+  const llvm::opt::Arg *const CachedRTTIArg;
+
+  const RTTIMode CachedRTTIMode;
+
+  /// The list of toolchain specific path prefixes to search for libraries.
+  path_list LibraryPaths;
+
+  /// The list of toolchain specific path prefixes to search for files.
+  path_list FilePaths;
+
+  /// The list of toolchain specific path prefixes to search for programs.
+  path_list ProgramPaths;
+
+  mutable std::unique_ptr<Tool> Clang;
+  mutable std::unique_ptr<Tool> Flang;
+  mutable std::unique_ptr<Tool> Assemble;
+  mutable std::unique_ptr<Tool> Link;
+  mutable std::unique_ptr<Tool> StaticLibTool;
+  mutable std::unique_ptr<Tool> IfsMerge;
+  mutable std::unique_ptr<Tool> OffloadBundler;
+  mutable std::unique_ptr<Tool> OffloadWrapper;
+    
+  mutable std::unique_ptr<SanitizerArgs> SanitizerArguments;
+  mutable std::unique_ptr<XRayArgs> XRayArguments;
+
+  /// The effective clang triple for the current Job.
+  mutable llvm::Triple EffectiveTriple;
+  // ...
+};
+```
+
+
+
+
+
+```C++
+class Tool {
+  /// The tool name (for debugging).
+  const char *Name;
+
+  /// The human readable name for the tool, for use in diagnostics.
+  const char *ShortName;
+
+  /// The tool chain this tool is a part of.
+  const ToolChain &TheToolChain;
+
+public:
+  Tool(const char *Name, const char *ShortName, const ToolChain &TC);
+};
+```
+
+
+
+
 
 # Runtime Library & Standard Library
 
@@ -1237,7 +1311,12 @@ ABI包括了以下方面的规范：
 
 
 * libsupc++
+
+  `libsupc++` 是GNU项目的一部分，通常与GNU编译器集合（GCC）一同发布。`libsupc++` 实现了C++标准库中的一些基本功能和异常处理机制。其中最核心的是运行时类型信息（RTTI）和异常处理相关的代码
+
 * libcxxrt
+
+  `libcxxrt` 是另一个C++运行时类型库，是FreeBSD的C++标准库的一部分，但也可以在其他系统上使用。它提供了C++ ABI 的实现，主要用于动态类型识别和异常处理
 
 # Clang Lexer, Preprocessor & Parser
 
@@ -1989,13 +2068,14 @@ Expression & Statement 的主要区别在于，表达式是有返回值的，而
 
 Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共祖先的独立类
 
-* Decl 表示各种声明
+* Decl 表示各种声明 declaration **或者定义 definition**
   * ExternCContextDecl
   * NamedDecl
     * NamespaceDecl
     * TypeDecl
     * ValueDecl
       * DeclaratorDecl
+        * FieldDecl：struct/union/class 的属性/成员变量
         * FunctionDecl 函数声明。注意：在AST层级中，**不区分函数声明和函数定义，统一用FunctionDecl来标识**，两个区分主要看是否有函数体 function body，可以使用 `bool hasBody()` 来进行判断
         * VarDecl 局部和全局变量声明。如果有初始化，那么 VarDecl 就会有一个初始值的子节点，其可以通过 `getInit()` 获取到对应的初始化Expr
           * ParmVarDecl 函数/方法的参数
@@ -2045,14 +2125,28 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
       * UnartOperator 一元操作符
   
 * Type 类型
+  * ArrayType 数组类型
+  * BuiltinType 内置类型，比如 int、char、float 等
+  * FunctionType 函数类型
   * PointerType 指针类型
+  * TagType
+    * EnumType 枚举类型
+    * RecordType 记录类型，指 struct、class 和 union 类型
 
 ### Glue Classes
 
 * DeclContext：包含其他 `Decl` 的 `Decl` 需要继承此类
 * TemplateArgument：模板参数的访问器
 * NestedNameSpecifier
-* QualType：Qual 是 qualifier 的意思，将 C++ 类型中的 `const` 等拆分出来，避免类型的组合爆炸问题
+* QualType
+
+### AST Type的实现
+
+Clang AST 中的类型主要由两个核心类组成：`clang::Type`和`clang::QualType`
+
+所有类型都使用`Type`来表示，而且同一类型的`Type`都是单例类型（singleton type），也就是说如果有两个类型是一样的，那么他们对应的`Type`在内存中只有一份，因此比较不同`Type`是否相同，直接比较即可
+
+QualType：Qual 是 qualifier 的意思，将 C++ 类型中的 `const` 等饰词拆分出来，避免类型的组合爆炸问题
 
 ### 实例
 
@@ -2088,7 +2182,8 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
 
   如果不使用它的话，clang driver的compile部分就会expect一个输入，会输出一个 `clang: error: linker command failed with exit code 1136` 的错误
 
--  `-fmodules` 选项启用了 Clang 的模块功能。模块是一种用于替代传统的 `#include` 预处理器指令和头文件的编译单元，它旨在改进 C 和 C++ 程序的编译时间和封装性
+  - `-fmodules` 选项启用了 Clang 的模块功能。模块是一种用于替代传统的 `#include` 预处理器指令和头文件的编译单元，它旨在改进 C 和 C++ 程序的编译时间和封装性
+
 
 ## *RecursiveASTVisitor*
 
@@ -2170,6 +2265,8 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 
 [AST Matcher Reference (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersReference.html)
 
+用 `*` 标注的Matchers可以匹配任何nodes
+
 ### ASTMatcher的特性
 
 实际上RecursiveASTVisitor这种遍历方法在ASTMatcher推出后就不推荐继续使用了，因为它的代码比较冗余，需要用户自行遍历，编码效率较低。而且无法充分利用 AST 的上下文信息，即无法利用节点之间的关系来筛选节点
@@ -2182,20 +2279,24 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 
 ### Traverse Modes
 
-
+* AsIs mode
+* IgnoreUnlessSpelledInSource mode
 
 ### Matchers的类型
 
 * Node Matchers, NM: Matchers that match a specific type of AST node 匹配特定类型节点
 
-  每一个自定义的Matcher都应该从NM开始。NM是唯一可以使用 `bind("ID")` 的Matcher
+  每一个自定义的Matcher都应该从NM开始。**NM是唯一可以使用 `bind("ID")` 的Matcher**
 
+  比如 `forStmt()` 用来匹配所有for语句节点
+
+  ```
+  Return type	    Name	    Parameters
+  Matcher<Stmt>	forStmt	    Matcher<ForStmt>...
+  ```
   
-
-  比如 `objcPropertyDecl()` 用来匹配OC属性声明节点
-
+  第一列表示Matcher的返回值，第二列表示Matcher的接口名，第三列表示该Matcher接受的参数类型，参数类型中的`...`表示参数的个数可以是 0 个或多个
   
-
 * Narrowing Matchers, NaM: Matchers that match attributes on AST nodes 顾名思义，用来 “紧缩” NM的范围，即匹配具有某些属性的NM
 
   比如 `hasName()` 和 `hasAttr()` 分别匹配具有指定名称、attribute的节点
@@ -2295,9 +2396,39 @@ Matchers are paired with a `MatchCallback` and registered with a `MatchFinder` o
 
 clang-query工具用来快速验证我们写的matcher是否可以正确的parse AST
 
-用 `match` 来定义Matcher
+```
+clang-query> help
+Available commands:
 
-用 `set`来
+  match MATCHER, m MATCHER          Match the loaded ASTs against the given matcher.
+  let NAME MATCHER, l NAME MATCHER  Give a matcher expression a name, to be used later
+                                    as part of other expressions.
+  set bind-root (true|false)        Set whether to bind the root matcher to "root".
+  set print-matcher (true|false)    Set whether to print the current matcher,
+  set traversal <kind>              Set traversal kind of clang-query session. Available kinds are:
+    AsIs                            Print and match the AST as clang sees it.  This mode is the default.
+    IgnoreImplicitCastsAndParentheses  Omit implicit casts and parens in matching and dumping.
+    IgnoreUnlessSpelledInSource     Omit AST nodes unless spelled in the source.
+  set output <feature>              Set whether to output only <feature> content.
+  enable output <feature>           Enable <feature> content non-exclusively.
+  disable output <feature>          Disable <feature> content non-exclusively.
+  quit, q                           Terminates the query session.
+
+Several commands accept a <feature> parameter. The available features are:
+
+  print                             Pretty-print bound nodes.
+  diag                              Diagnostic location for bound nodes.
+  detailed-ast                      Detailed AST output for bound nodes.
+  dump                              Detailed AST output for bound nodes (alias of detailed-ast).
+```
+
+```
+set traversal     IgnoreUnlessSpelledInSource
+set bind-root     false
+# ^ true unless you use any .bind("foo") commands
+set print-matcher true
+enable output     dump
+```
 
 ## *Source\**
 
@@ -3769,6 +3900,8 @@ Debug情况下默认是不优化，Release情况下默认Fastest、Smallest
 
 [看看 LLVM 的码（一）基础数据结构、IR (glass-panel.info)](https://blog.glass-panel.info/post/read-llvm-code-1/)
 
+[LLVM笔记(16) - IR基础详解(一) underlying class - Five100Miles - 博客园 (cnblogs.com)](https://www.cnblogs.com/Five100Miles/p/14083814.html)
+
 ## *bitcode*
 
 [LLVM Bitcode File Format — LLVM 19.0.0git documentation](https://llvm.org/docs/BitCodeFormat.html)
@@ -3964,10 +4097,10 @@ TableGen是LLVM项目用来定义和生成各种数据表和程序结构的一�
 
 LLVM的TableGen工具可以从这些定义文件中生成C++代码、文档或其他格式的数据。例如，它可以被用来自动化以下任务：
 
-- **生成寄存器描述**：TableGen可用于定义处理器的寄存器类、寄存器别名以及其他与寄存器相关的属性。
-- **指令编码解码**：可以定义指令的二进制编码格式，并由此生成编码和解码指令所需的代码。
-- **指令选择规则**：后端编译器的负责将中间表示转换为目标机器代码的指令选择阶段可以通过`.td`文件中的模式来定义。
-- **调度信息**：给出CPU的管线模型和指令的延迟，调度算法需要此信息来进行指令重排序以提高性能。
+- **生成寄存器描述**：TableGen可用于定义处理器的寄存器类、寄存器别名以及其他与寄存器相关的属性
+- **指令编码解码**：可以定义指令的二进制编码格式，并由此生成编码和解码指令所需的代码
+- **指令选择规则**：后端编译器的负责将中间表示转换为目标机器代码的指令选择阶段可以通过`.td`文件中的模式来定义
+- **调度信息**：给出CPU的管线模型和指令的延迟，调度算法需要此信息来进行指令重排序以提高性能
 
 ### DSL: TableGen语言
 
@@ -3975,7 +4108,7 @@ LLVM的TableGen工具可以从这些定义文件中生成C++代码、文档或�
 
 ### `.td` 文件内容
 
-一个`.td`文件会包含一个或多个通过TableGen语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值，然后被TableGen工具处理和转换。下面是一个简单的例子：
+一个`.td`文件会包含一个或多个通过TableGen语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值，然后被TableGen工具处理并输出成不同的结果文件（比如说C++语法的 `.inc` 后缀文件）。下面是一个简单的例子：
 
 ```llvm
 // InstrInfo.td - Example instruction definitions for an imaginary target.
