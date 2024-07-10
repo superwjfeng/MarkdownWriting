@@ -808,6 +808,8 @@ $ clang -ccc-print-phases main.cc
 
    执行阶段，Clang Driver 会创建两个子线程来分别之前上一阶段输出的编译和链接任务，并且产出结果
 
+<img src="ClangDriver编译流程.drawio.png">
+
 ### `-###` option
 
 ```cmd
@@ -905,31 +907,36 @@ Process 2900 stopped
 
 ## *参数解析*
 
+### 用到的数据结构
 
+* `llvm::opt::ArgList`
+  * `llvm::opt::InputArgList : ArgList`：持有输入的原始参数和解析后的参数列表
+  * `llvm::opt::DerivedArgList : ArgList`：持有的参数可能是在其他的参数列表中
+* `llvm::opt::DriverOptTable : OptTable` （`/llvm-project/clang/lib/Driver/DriverOptions.cpp`）记录了Driver支持的所有参数信息。DriverOptTable 初始化时依赖的 InfoTable 参数是导入了通过 TableGen 生成的 `clang/Driver/Options.inc` 
+  * OptTable 最小的单位是 `struct Info`，里面存放了一个 `ArrayRef<Info> OptionInfos`
 
-### DriverOptTable
+### `Driver::ParseArgStrings()` 解析参数的流程
 
-OptTable 最小的单位是 `struct Info`，里面存放了一个 `ArrayRef<Info> OptionInfos`
-
-/llvm-project/clang/lib/Driver/DriverOptions.cpp
-
-
-
-
-
-### `Driver::ParseArgStrings()`
+```
+ParseArgStrings() -> ParseArgs() -> ParseOneArg()
+```
 
 `Driver::ParseArgStrings()` 的作用是将字符串数组解析为 ArgList，并做相关的校验
 
+1. 调用 `Driver::getOpts()` 获取 Driver 支持的所有参数 `Info`
+2. 调用 `ParseArgs()` 解析命令行参数
+   1. 先初始化 `InputArgList` 的实例，并存储原始的入参信息
+   2. 通过 `while` 对**原始参数字符串**进行遍历，并通过 `OptTable::ParseOneArg()` 将所有的**原始参数字符串**解析为 `Arg` 的实例
+      1. 先移除参数的前缀，并通过 `std::lower_bound` 查找第一个前缀匹配的 `Info` 比如，`-arch` 会变成 `arch`
+      2. 根据 `Info` 初始化 `Option` 持有参数信息
+      3. 通过 `Option::accept` 方法校验参数是否正常
+      4. 参数正常时直接返回
+      5. 如果没有找到合适的参数，再判断参数是否以 `/` 开头，如果开始，会把参数当做**源码文件**进行处理
+      6. 其它情况下，会当做参数当做 **未知参数** 进行下一步处理
+   3. 最后 `Args` 会持有所有的解析后的参数
+3. 对解析到的命令行参数进行判断，检测到 **不支持** 或者 **未知** 的参数时，会抛出异常
+
 如何区分不支持或者不认识的参数？clang driver **不支持** 的参数，都可以通过 `Options.td` 文件查到。以 -pass-exit-codes 为例，gcc 支持该参数，但是 clang **不支持** 此参数
-
-### ParseArgs
-
-
-
-### ParseOneArg
-
-`OptTable::ParseOneArg()` 负责解析单个参数
 
 ## *构建Actions*
 
@@ -996,8 +1003,34 @@ Action 是代表一个编译步骤的抽象基类，可以理解为将某种输�
 
 构建 Jobs 包含两个步骤：
 
-1. Bind：将 Actions 转变要运行的实际 Jobs
+1. Bind：将 Actions 组合绑定，最终转换要运行的实际 Jobs
 2. Translate：将 clang driver 接收的参数转为对应 Tools 可以理解的参数
+
+### Procedure
+
+```
+Driver::BuildCompilation() -> Driver::BuildJobs() -> Driver::BuildJobsForAction() -> Driver::BuildJobsForActionNoCache() -> Clang::ConstructJob() -> Clang::AddPreprocessingOptions()
+```
+
+
+
+`BuildJobsForAction()` 方法会先查找缓存 `CachedResults`，查找失败后，再调用 `BuildJobsForActionNoCache()` 创建 InputInfo
+
+
+
+`getToolChain()` 会根据target triple选择相应的工具链，比如Linux的 `toolchains::Linux`
+
+
+
+### `ConstructJob()`
+
+每一个Tool都实现了 `ConstructJob()` 来完成具体Job的构建，该接口会被 `BuildJobsForActionNoCache()` 调用
+
+
+
+
+
+
 
 ## *执行命令*
 
@@ -1032,7 +1065,7 @@ public:
   using path_list = SmallVector<std::string, 16>;  
   friend class RegisterEffectiveTriple;
 
-  const Driver &D;
+  const Driver &D; // 和Clang Driver有绑定关系
   llvm::Triple Triple;
   const llvm::opt::ArgList &Args;
 
@@ -2317,7 +2350,7 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 
 Matchers are paired with a `MatchCallback` and registered with a `MatchFinder` object, then run from a `ClangTool`
 
-1. 实现 `MatchFinder::MatchCallback` 这个回调的子类。当使用 MatchFinder 的 `addMatcher()` 中将Matcher注册进去后，每当我们的Matchers匹配到相应的节点就会调用我们需要重写的run方法，所以我们只需要重写它的run方法实现需要的功能即可
+1. 实现 `MatchFinder::MatchCallback` 这个回调的子类。当使用 MatchFinder 的 `addMatcher()` 中将Matcher注册进去后，每当我们的Matchers匹配到相应的节点就会调用我们需要重写的 `run()`，所以我们只需要重写它的 `run()` 实现需要的功能即可
 
    ```C++
    class Func_Call : public MatchFinder::MatchCallback {
@@ -2679,6 +2712,82 @@ llvm-config可以获取系统中LLVM的所有相关信息，这些信息可以�
 * bindir
 * includedir
 * libdir
+
+### cmake设置
+
+```cmake
+cmake_minimum_required(VERSION 3.15)
+
+# must set cache variables before PROJECT
+set(CMAKE_C_COMPILER               "/usr/local/bin/clang" CACHE STRING "C compiler" FORCE)
+set(CMAKE_C_FLAGS                  "-Wall -std=c99" CACHE STRING "C flags" FORCE)
+set(CMAKE_C_FLAGS_DEBUG            "-g" CACHE STRING "C flags for debug" FORCE)
+set(CMAKE_C_FLAGS_MINSIZEREL       "-Os -DNDEBUG" CACHE STRING "C flags for minsize release" FORCE)
+set(CMAKE_C_FLAGS_RELEASE          "-O4 -DNDEBUG" CACHE STRING "C flags for release" FORCE)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO   "-O2 -g" CACHE STRING "C flags for release with debug info" FORCE)
+
+set(CMAKE_CXX_COMPILER             "/usr/local/bin/clang++" CACHE STRING "C++ compiler" FORCE)
+set(CMAKE_CXX_STANDARD             "20" CACHE STRING "C++ standard" FORCE)
+set(CMAKE_CXX_FLAGS                "-Wall" CACHE STRING "C++ flags" FORCE)
+set(CMAKE_CXX_FLAGS_DEBUG          "-g" CACHE STRING "C++ flags for debug" FORCE)
+set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os -DNDEBUG" CACHE STRING "C++ flags for minsize release" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE        "-O4 -DNDEBUG" CACHE STRING "C++ flags for release" FORCE)
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "C++ flags for release with debug info" FORCE)
+
+set(CMAKE_AR      "/usr/local/bin/llvm-ar" CACHE FILEPATH "Archiver" FORCE)
+set(CMAKE_LINKER  "/usr/local/bin/lld" CACHE FILEPATH "Linker" FORCE)
+set(CMAKE_NM      "/usr/local/bin/llvm-nm" CACHE FILEPATH "NM" FORCE)
+set(CMAKE_OBJDUMP "/usr/local/bin/llvm-objdump" CACHE FILEPATH "ObjDump" FORCE)
+set(CMAKE_RANLIB  "/usr/local/bin/llvm-ranlib" CACHE FILEPATH "RanLib" FORCE)
+
+# Turn this on if LLVM was built with -DLLVM_ENABLE_RTTI=OFF (default for llvm build) to avoid linker failure
+set(NO_RTTI "-fno-rtti")
+add_definitions(${NO_RTTI})
+
+project(MyTool)
+
+find_package(LLVM REQUIRED CONFIG)
+find_package(Clang REQUIRED CONFIG)
+find_package(RapidJSON REQUIRED CONFIG)
+
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+message(STATUS "CMAKE_C_COMPILER: " ${CMAKE_C_COMPILER} )
+message(STATUS "CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
+message(STATUS "CMAKE_C_COMPILER_VERSION: ${CMAKE_C_COMPILER_VERSION}")
+
+message(STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER} )
+message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}")
+
+list(APPEND
+  CMAKE_MODULE_PATH
+  ${LLVM_CMAKE_DIR}
+  )
+include(AddLLVM)
+
+include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
+
+set(LLVM_LINK_COMPONENTS support)
+llvm_map_components_to_libnames(llvm_libs ${LLVM_LINK_COMPONENTS})
+
+add_executable(my_tool
+  my_tool.cpp
+)
+
+target_link_libraries(json_generator
+  PRIVATE
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangFrontend
+  clangSerialization
+  clangTooling
+) 
+```
 
 ## *Prelude: Compilation Database*
 
@@ -3503,7 +3612,7 @@ int main() {
 
 LLVM中默认禁止了C++的RTTI特性（RTTI特性的开关`-fno-rtti`），主要是为了性能考虑（C++默认的RTTI特别冗余，会使得编译生成的文件大小增大）
 
-通过cmake变量 `LLVM_ENABLE_RTTI:BOOL` 来控制C++语言本身的RTTI特性是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-rtti` 来控制
+通过cmake变量 `LLVM_ENABLE_RTTI:BOOL` 来控制**C++语言本身的RTTI**特性是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-rtti` 来控制
 
 和这个特性类似的还有 `LLVM_ENABLE_EH` 来控制C++的异常处理 Error Handling, EH机制是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-exception` 来控制。但是如果这个开关也打开的话，需要重新编译大量的依赖库，比如最重要的 libstdc++
 
@@ -4127,4 +4236,4 @@ def ADD : MyTargetInst<"add", "Add two values">,
 
 上面的例子中，我们首先定义了一个指令类`MyTargetInst`，它有一个5位的操作码字段`Opcode`。接着我们使用该类来定义了一个加法指令`ADD`，并且指定了其输入和输出操作数列表，以及如何在解析器中匹配该指令。
 
-最终，TableGen工具会读取`.td`文件并根据其中的定义来生成相应的代码或数据，这样开发者就不再需要手动编写大量重复而容易出错的代码了。在LLVM中，这种自动化的方法使得支持新的指令集架构或修改现有的指令集变得更加灵活和简单。
+最终，TableGen工具会读取`.td`文件并根据其中的定义来生成相应的代码或数据，这样开发者就不再需要手动编写大量重复而容易出错的代码了。在LLVM中，这种自动化的方法使得支持新的指令集架构或修改现有的指令集变得更加灵活和简单

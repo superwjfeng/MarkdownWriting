@@ -474,10 +474,10 @@ ${variable_name}
     set(CMAKE_CXX_EXTENSIONS ON)
     ```
 
-    注意：**不要使用下面这种方法，因为没有跨平台性质。选择CMake为我们准备好的CMAKE_CXX_STANDARD**
+    注意：**最好不要使用下面这种方法，因为没有跨平台性质。选择CMake为我们准备好的CMAKE_CXX_STANDARD**
 
     ```cmake
-    # 缺乏夸平台性的做法：在CMAKE_CXX_FLAGS编译选项后追加-std=c++11
+    # 缺乏跨平台性的做法：在CMAKE_CXX_FLAGS编译选项后追加-std=c++11
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     ```
 

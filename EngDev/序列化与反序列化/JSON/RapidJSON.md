@@ -4,21 +4,25 @@
 
 
 
+## *DOM & SAX*
+
+### DOM
+
+### SAX
 
 
 
+### RapidJSON的两种API风格
 
-DOM, Document Object Model
+其实DOM和SAX两种解析风格都是用于XML文件的，RapidJSON借用了这两种名字来描述它的两种JSON解析器风格
 
-JSON被解析到一个内存中的DOM-like结构。这意味着整个JSON文档被读取并转换成一个树状结构，其中包含了多种类型的节点，如对象、数组、字符串、数字等
+* DOM, Document Object Model
 
+  JSON被解析到一个内存中的DOM-like结构。这意味着整个JSON文档被读取并转换成一个树状结构，其中包含了多种类型的节点，如对象、数组、字符串、数字等
 
+* SAX, Simple API for XML
 
-SAX, Simple API for XML
-
-RapidJSON还提供SAX-style的解析器。与DOM解析不同，SAX解析器是基于事件的，并且它在解析JSON文档时不会在内存中构建完整的树状结构。这使得SAX解析器非常快速且内存消耗低，但是也更难使用，因为你需要处理解析过程中发生的事件
-
-
+  RapidJSON还提供SAX-style的解析器。与DOM解析不同，SAX解析器是基于事件的，并且它在解析JSON文档时不会在内存中构建完整的树状结构。这使得SAX解析器非常快速且内存消耗低，但是也更难使用，因为你需要处理解析过程中发生的事件
 
 
 
