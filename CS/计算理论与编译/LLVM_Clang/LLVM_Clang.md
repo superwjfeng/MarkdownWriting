@@ -2355,9 +2355,21 @@ Matchers are paired with a `MatchCallback` and registered with a `MatchFinder` o
    ```C++
    class Func_Call : public MatchFinder::MatchCallback {
    public:
-       void run(const MatchFinder::MatchResult& Result) override { /*TDB*/ }
+       void run(const MatchFinder::MatchResult& Result) override {
+           auto *result_handle = Result.Nodes.getNodeAs<CallExpr>("defaultSubstateSetCall");
+   
+           if (result_handle) {
+               clang::SourceManager &SM = *Result.SourceManager;
+               clang::SourceLocation loc = result_handle->getBeginLoc();
+   
+               llvm::outs() << "Found member call at " << SM.getPresumedLineNumber(loc)
+                            << ":" << SM.getPresumedColumnNumber(loc) << "\n" << "Matcher: " <<
+                            result_handle->getExprLoc().printToString(SM) << "\n";
+               }
    };
    ```
+
+   `getNodeAs<T>` 的模板参数应该是希望从匹配结果中提取的 AST 节点的类型，返回一个指向特定类型的 AST 节点的指针，该节点与之前在 Matcher 中通过 `bind()` 定义的标识符相关联
 
 2. 有两种使用ASTMatcher的形式
 

@@ -1477,6 +1477,8 @@ C语言是面向对象的，只能指针内置类型
 
 C++标准库提供给了4个**全局流对象** `cin`，`cout`，`cerr`，`clog`。从下图可以看到 **`std::cin` 是一个 `istream` 类的全局流对象**
 
+
+
 <img src="cin对象.png">
 
 C++对这部分的设计并不是特别好，因此这几个对象在输出上基本没有区别，只是应用该场景略有不同
@@ -1604,23 +1606,47 @@ if (state == std::ios_base::goodbit) {
 }
 ```
 
-## *C++文件IO流*
+## *C++文件IO流 fstream*
+
+fstream 用于从文件读取流和向文件写入流，使用的时候必须同时包含头文件 `<iostream>` 和 `<fstream>`
 
 ### 使用文件流对象
 
 C++用文件IO流的使用步骤
 
 1. 定义一个文件流对象
-   * `std::ifstream` 只输入用
-   * `std::ofstream` 只输出
+   * `std::ifstream` 只输入用，用于从文件读取信息
+   * `std::ofstream` 只输出，用于创建文件并向文件写入信息
    * `std::fstream` 既输入又输出
-2. 使用文件流对象的成员函数打开一个磁盘文件，使得文件流对象和磁盘文件之间建立联系
+2. 使用文件流对象的成员函数打开一个硬盘文件，使得文件流对象和磁盘文件之间建立联系
 3. 使用提取和插入运算符对文件进行读写操作，或使用成员函数进行读写
 4. 关闭文件 `close()`
 
-### 文件模式
+### 打开文件的问题
 
-打开模式，注意**C++根据文件内容的数据格式分为二进制文件和文本文件**
+要读写文件首先要打开文件，有两种方式来打开文件
+
+1. 构造函数本身就可以用来打开文件
+
+   ```C++
+   explicit fstream (const char* filename, ios_base::openmode mode = ios_base::in | ios_base::out);
+   explicit fstream (const string& filename, ios_base::openmode mode = ios_base::in | ios_base::out);
+   ```
+
+   可以搭配 `is_open()` 来检查文件是否被正确打开
+
+   ```C++
+   bool is_open() const;
+   ```
+
+2. `open()` 方法允许在对象创建之后的任意时间点打开文件，这在某些情况下会更加灵活。例如，如果需要根据程序逻辑决定是否打开文件，或者想要先创建一个流对象然后再稍后指定文件名
+
+   ```C++
+   void open (const char* filename, ios_base::openmode mode = ios_base::in | ios_base::out);
+   void open (const string& filename, ios_base::openmode mode = ios_base::in | ios_base::out);
+   ```
+
+介绍一下上面两种方式都用到的打开模式 `ios_base::openmode`，注意**C++根据文件内容的数据格式分为二进制文件和文本文件**
 
 * `std::ios::in` 读
 * `std::ios::out` 写
