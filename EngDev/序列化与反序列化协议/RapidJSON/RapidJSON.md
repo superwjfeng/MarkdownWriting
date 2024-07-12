@@ -113,11 +113,21 @@ PrettyWriter的用法与Writer几乎一样，不同之处是PrettyWriter提供�
 
 ## *自定义流*
 
-# 架构 & 实现
+# 创建 & 查看Value
+
+```json
+{
+    "hello": "world",
+    "t": true ,
+    "f": false,
+    "n": null,
+    "i": 123,
+    "pi": 3.1416,
+    "a": [1, 2, 3, 4]
+}
+```
 
 <img src="architecture.png">
-
-
 
 ## *Value & Document*
 
@@ -143,41 +153,196 @@ typedef GenericDocument<UTF8<> > Document;
 * Value是RapidJSON中最重要的类之一，代表JSON值的所有可能类型，包括`null`、布尔值、数字（整数和浮点数）、字符串、数组和对象。Value对象可以轻松地从一个类型转换为另一个类型，并且可以容纳复杂的嵌套结构
 * Document类继承自Value类，并代表整个JSON文档。它通常作为DOM解析的起点，加载和存储整个JSON DOM树
 
+禁止拷贝
+
 ### Move Semantics
 
+rapidjson为了最大化性能，在可能复制的地方采用的都是转移语义 move，注意：意思是直接对对左值move，类似于 `std::auto_ptr` 的管理权转移
 
-
-
-
-​	
-
-rapidjson为了最大化性能，大量使用了浅拷贝，使用之前一定要了解清楚。
 如果采用了浅拷贝，特别要注意局部对象的使用，以防止对象已被析构了，却还在被使用
 
+<img src="转移语义.png">
 
+有时候，我们想直接构造一个 Value 并传递给一个“转移”函数（如 `PushBack()`、`AddMember()`）。由于临时对象是不能转换为正常的 Value 引用，RapidJSON加入了一个方便的 `Move()` 函数
 
-## *查询Value*
+```C++
+Value a(kArrayType);
+Document::AllocatorType& allocator = document.GetAllocator();
+// a.PushBack(Value(42), allocator);       // 不能通过编译
+a.PushBack(Value().SetInt(42), allocator); // fluent API
+a.PushBack(Value(42).Move(), allocator);   // 和上一行相同
+```
 
-map风格的获取KV pair的value，不过此时仍然是RapidJSON的Value数据类型，还得通过 `GetXXX()` 来转换成某种具体的C++类型
+### Type of Values
 
-通过 `IsXXX()` 来验证Value是否是某种类型
+```C++
+// include/rapidjson/rapidjson.h
+enum rapidjson::Type {
+    kNullType = 0,      //!< null
+    kFalseType = 1,     //!< false
+    kTrueType = 2,      //!< true
+    kObjectType = 3,    //!< object
+    kArrayType = 4,     //!< array
+    kStringType = 5,    //!< string
+    kNumberType = 6     //!< number
+};
+```
 
 ## *创建/修改值*
 
-当使用默认构造函数创建一个 Value 或 Document，它的类型便会是 `Null`。要改变其类型，需调用 `SetXXX()` 或赋值操作
+### 创建值
+
+* 使空的用默认构造函数
+
+  当使用默认构造函数创建一个 Value 或 Document，它的类型会是 `Null`。要改变其类型，需调用 `SetXXX()` 或赋值操作
+
+  ```C++
+  Document d; // Null
+  d.SetObject();
+   
+  Value v;    // Null
+  v.SetInt(10);
+  v = 10;     // 简写，和上面的v.SetInt(10);等价
+  ```
+
+* 使用重载的构造函数
+
+  ```C++
+  Value b(true);    // 调用 Value(bool)
+  Value i(-123);    // 调用 Value(int)
+  Value u(123u);    // 调用 Value(unsigned)
+  Value d(1.5);     // 调用 Value(double)
+  ```
+
+  直接给 `rapidjson::Type` 也可以
+
+  ```C++
+  Value o(kObjectType);
+  Value a(kArrayType);
+  ```
+
+### String
+
+1. copy-string：分配缓冲区，然后把来源数据深拷贝给它
+2. const-string：浅拷贝，简单地储存字符串的指针，下面5个 `SetString()` 中单参数的就是浅拷贝，需要特别注意
+3. StringRef：提供一个快速的方式来指定字符串字面量或者已经存在的、生命周期已知的 `const char*` 字符串，而不需要复制这个字符串到 JSON DOM（Document Object Model）中
+
+为了让用户自定义内存分配方式，当一个操作可能需要内存分配时，RapidJSON 要求用户传递一个 allocator 实例作为 API 参数。此设计避免了在每个 Value 存储 allocator（或 document）的指针
 
 ```C++
-Document d; // Null
-d.SetObject();
+GenericValue& SetString(const Ch* s, SizeType length);
+GenericValue& SetString(StringRefType s);
+GenericValue& SetString(const Ch* s, SizeType length, Allocator& allocator);
+GenericValue& SetString(const Ch* s, Allocator& allocator);
+GenericValue& SetString(StringRefType s, Allocator& allocator);
+```
+
+### Array/list
+
+```C++
+Clear()
+Reserve(SizeType, Allocator&)
+Value& PushBack(Value&, Allocator&)
+template <typename T> GenericValue& PushBack(T, Allocator&)
+Value& PopBack()
+ValueIterator Erase(ConstValueIterator pos)
+ValueIterator Erase(ConstValueIterator first, ConstValueIterator last)
+```
+
+### Object/dict
+
+```C++
+Value& AddMember(Value&, Value&, Allocator& allocator)
+Value& AddMember(StringRefType, Value&, Allocator&)
+template <typename T> Value& AddMember(StringRefType, T value, Allocator&)
+```
+
+### 深拷贝Value
+
+## *查询Value*
+
+map风格的获取KV pair的value，即 `document["key"]` 这种风格，**不过此时仍然是RapidJSON的Value数据类型，还得通过 `GetXXX()` 来转换成某种具体的C++类型**
+
+* 若我们不确定一个成员是否存在，便需要在调用 `operator[](const char*)` 前先调用 `HasMember()`。不过这会导致两次查找。更好的做法是调用 `FindMember()`，它能同时检查成员是否存在并返回它的 Value
+
+  ```C++
+  Value::ConstMemberIterator itr = document.FindMember("hello");
+  if (itr != document.MemberEnd())
+      printf("%s\n", itr->value.GetString());
+  ```
+
+注意，RapidJSON 并不自动转换各种 JSON 类型。例如，对一个 String 的 Value 调用 `GetInt()` 是非法的。在调试模式下，它会被断言失败。在发布模式下，其行为是未定义的
+
+通过 `IsXXX()` 来验证Value是否是某种类型，最简单的是针对Bool和Null类型的，其他的类型的会分别介绍
+
+* `IsBool()`
+* `IsNull()`
+
+### 查询Array/list
+
+* 使用索引来访问
+
+  ```C++
+  // 使用引用来连续访问，方便之余还更高效。
+  const Value& a = document["a"];
+  assert(a.IsArray());
+  for (SizeType i = 0; i < a.Size(); i++) // 使用 SizeType 而不是 size_t
+          printf("a[%d] = %d\n", i, a[i].GetInt());
+  ```
+
+* 使用迭代器来访问
+
+  ```C++
+  for (Value::ConstValueIterator itr = a.Begin(); itr != a.End(); ++itr)
+      printf("%d ", itr->GetInt());
+  
+  for (auto& v : a.GetArray())
+      printf("%d ", v.GetInt());
+  ```
+
+缺省情况下，`SizeType` 是 `unsigned` 的 typedef。在多数系统中，Array 最多能存储 2^32^-1 个元素
+
+### 查询Object/dict
+
+```C++
+static const char* kTypeNames[] = 
+    { "Null", "False", "True", "Object", "Array", "String", "Number" };
  
-Value v;    // Null
-v.SetInt(10);
-v = 10;     // 简写，和上面的相同
+for (Value::ConstMemberIterator itr = document.MemberBegin();
+    itr != document.MemberEnd(); ++itr) {
+    printf("Type of member %s is %s\n",
+        itr->name.GetString(), kTypeNames[itr->value.GetType()]);
+}
+
+for (auto& m : document.GetObject())
+    printf("Type of member %s is %s\n",
+        m.name.GetString(), kTypeNames[m.value.GetType()]);
+```
+
+### 查询 Number
+
+JSON Number 类型表示所有数值。然而，C++ 需要使用更专门的类型
+
+```C++
+assert(document["i"].IsNumber());
+ 
+// 在此情况下，IsUint()/IsInt64()/IsUint64() 也会返回 true
+assert(document["i"].IsInt());          
+printf("i = %d\n", document["i"].GetInt());
+// 另一种用法： (int)document["i"]
+ 
+assert(document["pi"].IsNumber());
+assert(document["pi"].IsDouble());
+printf("pi = %g\n", document["pi"].GetDouble());
+```
+
+### 查询String
+
+```C++
+const Ch* GetString();
+SizeType GetStringLength();
 ```
 
 
 
-
-
-
-
+### 比较两个Value

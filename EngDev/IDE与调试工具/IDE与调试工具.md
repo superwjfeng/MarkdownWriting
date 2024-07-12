@@ -132,7 +132,7 @@ gcc/g++编译出来的二进制程序默认是release模式，**要使用gdb调�
   * 直接 `gdb file_name` 来加载调试文件
   * 如果是先打开了gdb，可以通过 `file file_name` 来加载调试文件 
   
-* 调试需要参数的程序退出GDB
+* 调试需要参数的程序
 
   * gdb打开程序后，使用 `run` 命令并附带程序需要的参数
 
@@ -375,17 +375,20 @@ LLDB 是 LLVM 工具链中的debugger
 
 和gdb一样，LLVM 编译出来的二进制程序默认是release模式，编译的时候一定要 `-g` 才会把程序的debug信息放进去，从而才能使用debugger调试
 
-* 两种加载调试文件的方式
+* 调试需要参数的程序
 
-  * 直接 `lldb file_name` 来加载调试文件
-  * 如果是先打开了gdb，可以通过 `file file_name` 来加载调试文件 
+  * 在lldb打开程序的时候直接给出
 
-* 调试需要参数的程序退出GDB
+    ```cmd
+    $ lldb -- a.out 1 2 3
+    ```
 
-  * gdb打开程序后，使用 `run` 命令并附带程序需要的参数
+  * lldb打开程序后，使用 `process launch` 命令并附带程序需要的参数
 
     ```
-    run arg1 arg2 arg3
+    (lldb) process launch -- <args>
+    (lldb) run <args>
+    (lldb) r <args>
     ```
 
   * 使用 `settings set` 命令设置参数后再run
@@ -397,8 +400,12 @@ LLDB 是 LLVM 工具链中的debugger
     (lldb) run
     ...
     ```
+    
+    如果参数本身是有 `-` 或者 `--` 的话，需要用 `settings set -- target.run-args 1 2 3`，否则lldb会把它们解析为传递给lldb本身的选项
+    
+    在 LLDB 中，`--` 通常用来明确表示后面的参数不应该被 LLDB 解释器解析，而是直接传递给要运行的程序
 
-* 当完成调试时，可以使用 `q` 或者 `quit` 命令退出GDB
+* 当完成调试时，可以使用 `q` 或者 `quit` 命令退出lldb
 
 ### 启动调试
 
