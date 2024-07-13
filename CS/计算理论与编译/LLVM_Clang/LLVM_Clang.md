@@ -1053,6 +1053,24 @@ ToolChain 工具链用来管理一个平台/架构上的编译器、汇编器、
 
 
 
+
+
+
+
+
+
+
+
+
+
+<img src="workflow-of-clang-driver.png" width="60%">
+
+
+
+
+
+
+
 ToolChain类用来获取某个平台的工具链
 
 Tool类是具体编译工具的信息，即对一个具体编译工作的封装基类，所有的具体的Tool都继承自它，比如说 `clang::driver::tools::Clang`、`clang::driver::tools::gnutools::Linker` 等
@@ -1379,7 +1397,43 @@ TargetInfo：负责提供target-specific的信息
 
 ## *Lexer*
 
+### Token
 
+Token类提供了关于词法分析后的token的全部信息。Token的设计并不在于要节省空间，而是旨在返回尽可能多的有关每个返回标记的信息。解析器可以创建一个特殊的注解标记 annotation token，代表一系列已经被解析和语义上解决的标记流，比如 `foo::MyClass<int>` 可以通过一个携带了标记的SourceRange和类型对象信息的单独类型名注解标记来表示
+
+```C++
+// llvm-project/clang/include/clang/Lex/Token.h
+class Token {
+  unsigned Loc;
+  unsigned UintData;
+  void *PtrData;
+  tok::TokenKind Kind;
+  unsigned short Flags;
+
+public:
+  // Various flags set per token:
+  enum TokenFlags {
+    StartOfLine = 0x01,   // At start of line or only after whitespace
+                          // (considering the line after macro expansion).
+    LeadingSpace = 0x02,  // Whitespace exists before this token (considering
+                          // whitespace after macro expansion).
+    DisableExpand = 0x04, // This identifier may never be macro expanded.
+    NeedsCleaning = 0x08, // Contained an escaped newline or trigraph.
+    LeadingEmptyMacro = 0x10, // Empty macro exists before this token.
+    HasUDSuffix = 0x20,  // This string or character literal has a ud-suffix.
+    HasUCN = 0x40,       // This identifier contains a UCN.
+    IgnoredComma = 0x80, // This comma is not a macro argument separator (MS).
+    StringifiedInMacro = 0x100, // This string or character literal is formed by
+                                // macro stringizing or charizing operator.
+    CommaAfterElided = 0x200, // The comma following this token was elided (MS).
+    IsEditorPlaceholder = 0x400, // This identifier is a placeholder.
+    IsReinjected = 0x800, // A phase 4 token that was produced before and
+                          // re-added, e.g. via EnterTokenStream. Annotation
+                          // tokens are *not* reinjected.
+  };
+  // ...
+};
+```
 
 `llvm-project/clang/include/clang/Basic/TokenKinds.def` 维护了不同编程语言的关键字
 
@@ -1661,6 +1715,10 @@ HeaderMap & Framework 都是Apple发明的概念，用于提高大型项目的�
 
 
 ### include_next
+
+
+
+## *FileManager*
 
 
 
@@ -2479,7 +2537,39 @@ enable output     dump
 
 ### SourceLocation & SourceManager
 
+Clang 通过 SourceLocation 和 SourceManager 来定位定位源码中Token的位置
+
+* SourceLocation用于在源代码中编码一个位置。SourceManager可以解码这个位置，以获取完整的包含栈、行号和列号信息。严格来说，SourceLocation仅仅是SourceManage view输入源中的一个偏移量，也就是所有输入缓冲区（包括宏展开）在一个实质上任意的顺序中被串联起来。管理器实际上维护了两块输入缓冲区的数据块。一块从偏移量0开始并向上增长，包含了此模块的所有缓冲区；另一块从最高可能偏移量开始并向下增长，包含了已加载模块的缓冲区。 /// /// 此外，SourceLocation中的一位用于快速访问位置信息，以判断该位置是在文件中还是在宏展开中。 /// /// 确保这种类型保持小尺寸是重要的。它目前是32位宽
+
+  * spelling location：宏展开之前代码在源文件中的位置
+
+  * expansion location：宏展开之后代码在源文件中的位置
+
+* SourceManager 负责将源文件加载和缓存到内存中，SourceManager拥有所有已加载文件的MemoryBuffer对象，并为每一个独特的 `#include` 链分配唯一的FileID。SourceManager可以被用于查询关于SourceLocation的信息，将它们spelling location或者expansion location。拼写位置 /// 表示与一个标记（token）相对应的字节来自哪里，而展开位置表示在用户视角中该位置所在的地方。例如，在宏展开 /// 的场合，拼写位置表明展开的标记来自哪里，而展开位置指定了它被展开的地点
+
 ### SourceRange & CharSourceRange
+
+SourceRange是两个SourceLocation组成的区间
+
+CharSourceRange是在SourceRange上加了一个 `bool IsTokenRange` 作为一个标志位
+
+### SourceManager的常用接口
+
+如上所述，SourceManager的接口基本都可以分为Spelling和Expansion两套接口
+
+* `getFileID`: 根据源码位置获取唯一标识的文件ID
+* `getPresumedLoc`: 根据源码位置获取推定的位置信息，这可能因为预处理指令（如`#line`）而与实际文件不同
+* `getSpellingLoc`: 获取给定位置的拼写位置，通常用于宏展开
+* `getExpansionLoc`: 获取宏扩展位置，即宏调用的位置
+* `getExpansionRange`: 获取宏展开的范围
+* `getDecomposedLoc`: 分解位置到其文件ID和偏移量
+* `getCharacterData`: 获取给定位置的字符指针
+* `getLineNumber`: 获取给定文件ID和偏移量对应的行号
+* `getColumnNumber`: 获取给定文件ID和偏移量对应的列号
+* `getLocForStartOfFile`: 获取给定文件ID的开始位置
+* `getLocForEndOfFile`: 获取给定文件ID的结束位置
+* `isInSystemHeader`: 检查给定位置是否位于系统头文件中
+* `isInMainFile`: 检查给定位置是否位于主文件中
 
 ## *AST可视化*
 

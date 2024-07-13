@@ -257,6 +257,8 @@ Value& AddMember(StringRefType, Value&, Allocator&)
 template <typename T> Value& AddMember(StringRefType, T value, Allocator&)
 ```
 
+使用 `StringRefType` 作为 name 参数的重载版本与字符串的 `SetString` 的接口相似。 这些重载是为了避免复制 `name` 字符串，因为 JSON object 中经常会使用常数键名
+
 ### 深拷贝Value
 
 ## *查询Value*
