@@ -2196,9 +2196,17 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
       
       * CallExpr 函数调用表达式，子节点有调用的参数列表
       
+        * CUDAKernelCallExpr
+      
+        * CXXMemberCallExpr：类方法调用
+      
+        * CXXOperatorCallExpr：运算符重载调用
+      
+        * UserDefinedLiteral
+      
       * CastExpr 类型转换表达式
         * ImplicitCastExpr 隐形转换表达式，在左右值转换和函数调用等各个方面都会用到
-        
+      
       * DeclRefExpr 标识引用声明的变量和函数
       
         在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
@@ -2368,6 +2376,8 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 - 与AST上下文信息绑定，即用户可以在表达式中利用上下文信息来筛选节点
 - 无需遍历，能直接匹配到表达式对应的节点
 
+不过实际上ASTMatcher内部还是用RecursiveASTVisitor的方式来实现的
+
 ### Traverse Modes
 
 * AsIs mode
@@ -2377,7 +2387,7 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 
 * Node Matchers, NM: Matchers that match a specific type of AST node 匹配特定类型节点
 
-  每一个自定义的Matcher都应该从NM开始。**NM是唯一可以使用 `bind("ID")` 的Matcher**
+  每一个自定义的Matcher都应该从NM开始。对于一个复杂的Matcher，可能会想要同时提取多种信息，此时可以用`bind()` 来绑定其结果。**NM是唯一可以使用 `bind("ID")` 的Matcher**
 
   比如 `forStmt()` 用来匹配所有for语句节点
 
@@ -2401,6 +2411,8 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 直接组合各种 ASTMatchers 来精确表示匹配节点的规则，语义非常清晰，例如 `binaryOperator(hasOperatorName("+"), hasLHS(integerLiteral(equals(0))))` 匹配的是左操作数为字面量 `0` 的加法操作表达式
 
 可以对任意层级的表示 Clang AST 节点（而非 LHS、RHS、Type、Operand 等节点属性）的 ASTMatcher 使用 `.bind("foo")` 操作，将该节点与字符串绑定
+
+注意：如果一个matcher中bind了多种类型的nodes，那么必须是该matcher的**所有条件同时满足**才会触发回调，而不是一个bound node触发一次
 
 ### ASTMatcher的使用
 
@@ -2532,6 +2544,10 @@ set bind-root     false
 set print-matcher true
 enable output     dump
 ```
+
+## *一些特殊的AST Matcher*
+
+
 
 ## *Source\**
 

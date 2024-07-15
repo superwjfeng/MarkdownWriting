@@ -223,7 +223,7 @@ enum rapidjson::Type {
 
 ### String
 
-1. copy-string：分配缓冲区，然后把来源数据深拷贝给它
+1. copy-string：深拷贝，分配缓冲区，然后把来源数据深拷贝给它
 2. const-string：浅拷贝，简单地储存字符串的指针，下面5个 `SetString()` 中单参数的就是浅拷贝，需要特别注意
 3. StringRef：提供一个快速的方式来指定字符串字面量或者已经存在的、生命周期已知的 `const char*` 字符串，而不需要复制这个字符串到 JSON DOM（Document Object Model）中
 
