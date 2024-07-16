@@ -408,26 +408,6 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
   
   * `emplace_back()`
 
-## *STL库在C++11中的变化*
-
-### forward_list 以及 unordered 系列
-
-forward_list和list的区别是它是一个单向链表，所以只有正向迭代器，在只需要正向迭代的情况下它的效率可能更高
-
-unordered系列下面会详细介绍
-
-### array
-
-封装关系：vector `->` array `->` 原生数组
-
-增加array的初衷是为了替代C语言的数组，因为委员会认为C语言的数组由于其越界判定问题所以特别不好，数组的越界写是抽查，所以不一定能查出来；越界读除了常数区和代码区外基本检查不出来
-
-array容器进行越界判定的方式是和vector类似的`[]`运算符重载函数。所以从越界检查的严格性和安全性角度来看还是有意义的。但因为用数组还是很方便而且用array不如用vector+resize
-
-另一个特点是array和数组都是开在栈上，而vector是在栈上。利用这个特点有助于矢量化，所以array在高性能并行编程中用的很多，这部分可以看 *ParallelProgramming.md*
-
-为了尽量模拟原生数组，array设计成了一种聚合类，所以它用 `{}` 初始化还有很多坑，可以看 *EffectiveModernCpp.md* 的条款7
-
 ## *包装器 Wrapper*
 
 ### 包装器解决的2个问题
@@ -1569,6 +1549,12 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
 
 ## *string_view (17)*
 
+SSO, Small String, Optimization
+
+[SSO - 小串优化快速一览 - hzSomthing (hedzr.com)](https://hedzr.com/c++/algorithm/small-string-optimization-in-short/)
+
+[C++中std::string的COW及SSO实现 | 高明飞的博客 (gaomf.cn)](https://gaomf.cn/2017/07/26/Cpp_string_COW_SSO/)
+
 # vector & list
 
 ## *vector 顺序表*
@@ -2296,7 +2282,19 @@ unordered系列是单向迭代器（哈希桶是单列表）
 
 # 其他数据结构
 
-## *array类型*
+## *array类型（11）*
+
+`std::array` 是C++11新增的序列容器，和其他容器的区别是，array的大小是固定的，无法动态扩展或者收缩。这也就意味着，在使用该容器的过程无法借由增加或移除元素而改变其大小，它只允许访问或者替换存储的元素
+
+封装关系：vector `->` array `->` 原生数组
+
+增加array的初衷是为了替代C语言的数组，因为C++委员会认为C语言的数组由于其越界判定问题所以特别不好，数组的越界写是抽查，所以不一定能查出来；越界读除了常数区和代码区外基本检查不出来
+
+array容器进行越界判定的方式是和vector类似的`[]`运算符重载函数。所以从越界检查的严格性和安全性角度来看还是有意义的。但因为用数组还是很方便而且用array不如用vector+resize
+
+另一个特点是array和数组都是开在栈上，避免了动态内存分配的开销和可能出现的内存碎片问题，而vector是在堆上。利用这个特点有助于矢量化，所以array在高性能并行编程中用的很多，这部分可以看 *ParallelProgramming.md*
+
+为了尽量模拟原生数组，array设计成了一种聚合类，所以它用 `{}` 初始化还有很多坑，可以看 *EffectiveModernCpp.md* 的条款7
 
 ## *tuple类型*
 
@@ -2355,9 +2353,9 @@ explicit bitset (const charT* str,
 
 ## *any（17）*
 
-C++17引入了`std::any`库，它是一种类型安全的容器，可存储任意类型的数据。与`void*`不同，`std::any`可以检查是否存储了值，并且可以安全地检索和转换存储的值
+C++17引入了`std::any`库，它是一种类型安全的容器，**可存储任意类型的数据**。`std::any` 类型对于不知道确切数据类型，但需要在同一容器中存储不同类型数据的情况非常有用
 
-使用 `std::any` 的时候，可以放入任何类型的对象，并在之后查询或取回原始类型的值。这比 `void*` 更安全，因为 `std::any` 会保留类型信息，并且不需要进行手动的类型转换
+与`void*`不同，`std::any`可以检查是否存储了值，并且可以安全地检索和转换存储的值。使用 `std::any` 的时候，可以放入任何类型的对象，并在之后查询或取回原始类型的值。这比 `void*` 更安全，因为 `std::any` 会保留类型信息，并且不需要进行手动的类型转换
 
 ```c++
 #include <any>
@@ -2412,7 +2410,13 @@ int main() {
 
 在上面的例子中，我们创建了一个 `std::any` 对象 `a` 并对其进行了多次赋值操作。当尝试用 `std::any_cast` 转换为错误类型时，程序捕获并处理了 `std::bad_any_cast` 异常。通过 `has_value()` 方法，我们可以检查 `std::any` 对象是否包含值。使用 `reset()` 方法来清除存储的值，并使 `std::any` 对象为空。使用 `type()` 方法可以得到当前存储值的类型信息。
 
-请注意，频繁使用 `std::any` 可能会引入性能开销，因为类型擦除和运行时类型识别通常涉及额外的间接性和动态分配。所以在考虑使用 `std::any` 时，确保这些代价是合理的。
+请注意，频繁使用 `std::any` 可能会引入性能开销，因为类型擦除和运行时类型识别通常涉及额外的间接性和动态分配。所以在考虑使用 `std::any` 时，确保这些代价是合理的
+
+
+
+### any的实现
+
+[Modern C++ std::any的实现原理_std any 源码-CSDN博客](https://blog.csdn.net/zhaiminlove/article/details/136335896)
 
 # 标准库特殊设施
 
