@@ -2209,6 +2209,8 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
       * CastExpr 类型转换表达式
         * ImplicitCastExpr 隐形转换表达式，在左右值转换和函数调用等各个方面都会用到
       
+      * CXXThisExpr：this指针，它也被称为implicit object argument of a member call expression
+      
       * DeclRefExpr 标识引用声明的变量和函数
       
         在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
@@ -2549,7 +2551,61 @@ enable output     dump
 
 ## *一些特殊的AST Matcher*
 
+### on
 
+```
+Matcher<CXXMemberCallExpr>	on	Matcher<Expr> InnerMatcher
+```
+
+```
+Matches on the implicit object argument of a member call expression, after
+stripping off any parentheses or implicit casts.
+
+Given
+  class Y { public: void m(); };
+  Y g();
+  class X : public Y {};
+  void z(Y y, X x) { y.m(); (g()).m(); x.m(); }
+cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y")))))
+  matches `y.m()` and `(g()).m()`.
+cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("X")))))
+  matches `x.m()`.
+cxxMemberCallExpr(on(callExpr()))
+  matches `(g()).m()`.
+```
+
+`on` 这个Matcher是用来匹配成员函数调用表达式 member call expression `CXXMemerCallExpr`，更具体地说，它匹配那些隐含的对象参数。在C++中，当调用一个类的成员函数时，这个函数的隐含对象参数（也就是`this`指针指向的对象）通常是调用发生的上下文。`on` Matcher 允许对这个隐含对象进行特定的匹配
+
+AST Matcher Reference 提供了几个使用`on`的例子，每个都说明了如何匹配某些类型的隐含对象参数：
+
+1. `cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y")))))`
+   - 这将匹配隐含对象类型为 `Y` 的成员函数调用。在给出的代码示例中，这匹配了`y.m()`和`(g()).m()`。因为`y`是 `Y` 类的实例，而`g()`返回的对象被隐式转换为`Y`类
+2. `cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("X")))))`
+   - 这将匹配隐含对象类型为 `X` 的成员函数调用。在给出的代码示例中，这匹配了`x.m()`。因为`x`是`X`类的实例，`X`继承自`Y`
+3. `cxxMemberCallExpr(on(callExpr()))`
+   - 这将匹配任何其隐含对象来自另外一个函数调用的成员函数调用。在给出的代码示例中，这会匹配`(g()).m()`因为`(g())`是一个函数调用表达式
+
+`on`这里的作用是可以专门针对成员函数调用的隐含对象进行约束。它通过剥去任何括号或隐式转换来直接匹配隐含对象本身的类型或者其他属性
+
+例如，如果想要找到所有调用了`X`类成员函数的表达式，不管这个调用发生在`X`类的直接实例上还是通过子类的实例，可以按照第二个匹配器的形式编写
+
+### anything
+
+有些Matcher构造函数需要一个具体的Matcher作为参数。如果想表示“在这一位置上，我不关心匹配到什么”，那么就可以使用`anything()`来满足这个参数需求（占位）。例如，在`has()`或`hasDescendant()`等需要子匹配器的匹配器中，使用`anything()`可以明确表示没有特定的匹配要求
+
+```C++
+// Without using anything()
+hasArgument(1, expr()) // 第二个参数可以是任何表达式
+
+// Using anything()
+hasArgument(1, anything()) // 显式地表明我们不在乎第二个参数是什么
+```
+
+### Matcher之间的逻辑
+
+- 逻辑与：用 `clang::ast_matchers::allOf` 来组合多个`Matcher<T>`，其实这个matcher可以不用的，因为默认就是要所有matcher同时满足才会触发回调
+- 逻辑或：用 `clang::ast_matchers::anyOf` 来组合多个 `Matcher<T>`
+- 逻辑非：用 `clang::ast_matchers::unless` 为 `Matcher<T>` 取否
 
 ## *Source\**
 

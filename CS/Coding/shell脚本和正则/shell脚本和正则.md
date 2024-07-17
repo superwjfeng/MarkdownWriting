@@ -1177,8 +1177,10 @@ $ echo "今天的日期是 $(date)"
 
 * test命令：当测试条件有多个的时候，用Shell的test内置命令比较方便，它有两种形式
 
-  * `if test condition`。用 `""` 将 condition括起来是一种良好的工程实践，确保了就算其志伟空，test也能将其视为参数
-  *  `if [ condition ]` 比较方便。注意condition前后的空格、`[]` 前后的空格不可少。`[]` 符号可理解为指向test命令的一个软链接，所以其用法可完全参照test
+  [Shell test 命令 | 菜鸟教程 (runoob.com)](https://www.runoob.com/linux/linux-shell-test.html)
+  
+  * `if test condition`。用 `""` 将 condition括起来是一种良好的工程实践，确保了就算其值为空，test也能将其视为参数
+  *  `if [ condition ]` 比较方便。注意condition前后的空格、**`[]` 前后的空格不可少**。`[]` 符号可理解为指向test命令的一个软链接，所以其用法可完全参照test
 
 
   ``` shell
@@ -1192,7 +1194,7 @@ $ echo "今天的日期是 $(date)"
 注意和高级语言不同：**test或 `[]` 是不可以测试管道命令的**
 
 ```cmd
-$ if [ who | grep "$user" ]; then echo x; fi # 错误！
++$ if [ who | grep "$user" ]; then echo x; fi # 错误！
 $ if who | grep "$user"; then echo x; fi     # 正确
 ```
 

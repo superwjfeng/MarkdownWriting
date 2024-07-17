@@ -9,6 +9,12 @@ https://www.modernescpp.com/index.php/c23-the-next-c-standard/
 
 C with classes `->` C++1.0 `->` ... `->` C++98（C++标准第一个版本，引入STL库）`->` C++11（增加了许多特性，使得C++更像是一种新语言）`->` C++14 `->` C++17 `->` C++20（自C++11以来最大的发行版，引入了许多新的特性）`->` C++23
 
+`__cplusplus` 取值，L代表 long int 长整型
+
+* C++11: 201103L
+* C++14: 201402L
+* C++17: 201703L
+
 # 数据类型
 
 ## *引用*
@@ -662,11 +668,11 @@ int main() {
 
 在C++20及之后的标准中，优先选择使用 `std::format`，因为它是标准库的一部分，有望成为C++中的通用标准。而对于早期标准的项目，或者对于不支持C++20的编译器，可以考虑使用 `fmt::format` 这个第三方库
 
-## *属性*
+## *属性 Attribute*
 
 ### 属性标准的出来
 
-程序员又需要和编译器沟通的需求，从而可以为某些实体添加一些编译时额外的信息（有点类似于 `#pragma`），这种指令被称为属性 attribute
+程序员有需要和编译器沟通的需求，从而可以为某些实体添加一些编译时额外的信息（有点类似于 `#pragma`），这种指令被称为属性 attribute
 
 为了避免又创造出一个新的关键词乃至于引起一些需要维护老代码的麻烦，同时又必须让这些扩展内容不至于污染标准的命名空间，所以C++98标准保留了一个特殊的用户命名空间：双下划线关键词，以方便各大编译器厂商能够根据需要添加相应的语言扩展
 
@@ -680,23 +686,116 @@ int main() {
 [[attr]] [[attr1, attr2, attr3(args)]] [[namespace::attr(args)]]
 ```
 
-以双中括号开头、以反双中括号结尾,括号中是具体的属性
+以双中括号开头、以反双中括号结尾，括号中是具体的属性
 
 ### noreturn (11)
 
+noreturn 不是表示函数不会返回值，因为如果函数声明了 void 为返回值就已经是这个意思了。noreturn 的意思是表明函数将不通过正常的返回流程来结束，即函数执行完毕后不会返回到调用点
+
+`[[noreturn]]` 属性通常用于那些由于抛出异常、调用 `std::exit()`、执行无限循环或调用 `std::_Exit()` 等操作而永远不会返回控制权给调用者的函数。这个属性使得编译器能够进行更好的代码生成和优化，并且可以发出警告或错误，如果函数体中存在可能导致函数返回的代码路径
+
+```C++
+[[noreturn]] void fail() {
+    throw std::runtime_error("failure");
+}
+```
+
 ### carries_dependency (11)
+
+用于多线程编程中的内存模型优化。它在指定与数据依赖相关的内存顺序时使用
+
+在多核处理器系统中，编译器和硬件通常会对执行的指令进行排序（出于性能优化的目的）。由于这种重排序，其他线程观察到的操作可能与它们在程序中编写的顺序不同，这可能导致非预期的行为。C++ 标准中的内存模型定义了一组规则，用于控制这种指令重排，并确保代码的正确同步。
+
+```C++
+void release(std::atomic<int>* var, int* guard) {
+    *guard = 42;
+    var->store(0, std::memory_order_release);
+}
+
+void acquire(std::atomic<int>* var, [[carries_dependency]] int* guard) {
+    if (var->load(std::memory_order_acquire)) {
+        assert(*guard == 42);
+    }
+}
+```
+
+在上面的例子中，`acquire` 函数带有 `[[carries_dependency]]` 属性的参数 `guard` 意味着如果根据先前的 `release` 函数对 `var` 进行的 `store` 操作，`guard` 变量的读取携带一个依赖链。这可以告知编译器和硬件，当它看到基于 `var` 的特定加载时，它不应该重新排序这个读取`guard`操作之前的任何读或写操作，因为这些操作可能存在数据依赖性
+
+此属性允许编译器放宽对具有依赖性数据的操作的内存顺序限制，使得高级的并发程序可以进一步优化性能。然而，`[[carries_dependency]]` 并不常见，因为它用于非常具体的情况，并且需要开发者了解底层的内存模型和硬件架构
+
+请注意，`[[carries_dependency]]` 主要是针对那些需要手动管理内存屏障的低级别编程场景，而大部分应用程序通常会依赖于更高层次的同步原语，如锁、条件变量、期物等，因此它在实际编程中使用得较少
 
 ### deprecated (14)
 
+表示某个实体已弃用，建议不再使用。如果使用了被标记为 `[[deprecated]]` 的实体，编译器可能会生成一条警告消息
+
+```C++
+[[deprecated("Use newFunction instead")]]
+void oldFunction() {}
+```
+
 ### fallthrough (17)
+
+在 switch 语句的 case 块中使用，表明即使没有 break，控制流程也会故意“跌落”到下一个 case 块
+
+```C++
+switch (value) {
+    case 1:
+        // 执行一些操作
+        [[fallthrough]]; // 明确表示下面的 case 也应执行
+    case 2:
+        // ...
+        break;
+}
+```
 
 ### nodiscard (17)
 
+鼓励使用函数返回值。如果调用带有 `[[nodiscard]]` 属性的函数，并且没有使用其返回值，则编译器可能会生成警告
+
+```C++
+[[nodiscard]] int compute() {
+    return 42;
+}
+// 如果忽略 'compute' 函数的返回值，可能会产生编译器警告
+```
+
 ### maybe_unused (17)
+
+表示函数、变量或参数可能不被使用，从而防止编译器因为未使用的实体而生成警告
+
+```C++
+[[maybe_unused]] int unused_variable = 42;
+```
 
 ### likely & unlikely (20)
 
+`[[likely]]` 和 `[[unlikely]]` 属性用于指示编译器某个分支具有较高或较低的执行可能性。这允许编译器优化代码的布局来提高预测分支的效能。要使用这些属性，可以将它们放在 if 语句或 switch case 标签旁
+
+```C++
+if (x > 0) [[likely]] {
+    // 这段代码很可能会执行
+}
+
+if (x < 0) [[unlikely]] {
+    // 这段代码不太可能会执行
+}
+```
+
 ### no_unique_address (20)
+
+`[[no_unique_address]]` 属性用于告知编译器一个非静态数据成员可以没有唯一的地址，如果可能的话，编译器可以省略为该成员分配存储空间。这通常用于空类或仅具有静态成员函数的类的数据成员，其中不存在实际的数据存储需求。它经常用于空基类优化（Empty Base Optimization, EBO）和压缩成员间的存储空间
+
+```C++
+struct Empty {};
+
+class Example {
+    [[no_unique_address]] Empty e;
+    int value;
+};
+```
+
+在上面的代码中，`Empty` 是一个空类。由于 `e` 被声明时使用了 `[[no_unique_address]]` 属性，如果编译器选择应用此优化，那么 `Example` 类的实例可能不会为 `e` 分配额外的存储空间，而是与 `value` 共享地址
 
 # 基本语法更新
 

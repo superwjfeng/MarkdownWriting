@@ -4,6 +4,18 @@
 $ git clone https://github.com/lwbaptx/sgi-stl.git
 ```
 
+另外介绍一下GCC的C++标准库的组织
+
+C 标准库的头文件一般位于 `/usr/include` 目录下，C++标准库的头文件则一般放在 `/usr/include/c++/11` 下
+
+- **顶层头文件**：这些文件通常直接位于 `11` 目录下，例如 `<vector>`, `<string>`, `<map>`, `<algorithm>`, `<iostream>`, `<thread>` 等，它们对应于 C++ 标准库的各种组件，提供了模板类的定义、函数声明、类型定义等接口
+- **bits 子目录**：这个目录通常包含标准头文件的实现细节。许多头文件都会包括这里的文件，但这些文件不是为直接使用而设计的。例如 `bits/stl_vector.h` 或者 `bits/ios_base.h` 这样的文件，它们包含 `std::vector` 和 I/O 流类的底层实现代码
+- **ext 子目录**：包含 GNU 扩展的头文件，这些扩展并不是 C++ 标准的一部分，但它们提供了额外的功能，有时也遵循特定的技术规范。例如，可以在这里找到 `__gnu_cxx` 命名空间内的哈希表和池分配器等实现
+- **debug 和 profile 子目录**：这些目录提供了工具用于调试和性能分析。例如，当使用 `#include <debug/vector>` 而不是标准的 `<vector>` 时，就会得到一个包含额外检查以帮助调试的 `std::vector` 实现
+- **parallel 子目录**：包含支持并行算法的组件，允许利用多处理器架构进行并行计算
+- **tr1 子目录**：包含对 TR1 (Technical Report 1) 的支持，TR1 是 C++11 正式发布之前的一个标准提案，提供了一些现在已经集成进 C++11 或更新标准中的功能
+- **backward 子目录**：这个目录通常包含向后兼容的头文件，旨在帮助从较旧的 C++ 版本迁移到新版本
+
 # lambda表达式
 
 本章条款来自 *Effective Modern C++*
@@ -271,7 +283,7 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
     <img src="迭代器初探.png" width="60%">
 
   * 迭代器按方向和是否能修改对象分类：iterator、const_iterator、reverse_iterator、const_reverse_iterator
-  * [迭代器按功能分类](#迭代器按功能分类)
+  * [迭代器按功能分类](#迭代器类型)
   
 * Functor 仿函数：greater、less ...。定义在 `<functional>` 中，里面是一些模版类，用来声明内建的函数对象
   
@@ -1093,11 +1105,49 @@ SGI-STL默认选择使用一级还是二级空间配置器，通过 `USE_MALLOC`
 
 # 迭代器 & Traits技法
 
+由于 *STL源码剖析* 使用的Cygnus C++ 2.91.57 for Windows 早于C++11出现，它使用的是SGCS公司自己研发的萃取器，而非我们现在熟知的GCC的标准库实现的 `type_traits`。不过阅读这一部分的代码有助于我们更加理解萃取的核心思想，因为它们的实现思想上有一定的相似性
+
+## *Traits技法*
+
+
+
+
+
+
+
 这违背了迭代器模式的设计准则，即**迭代器模式中不暴露某个容器的内部表现形式情况下，使之能依次访问该容器中的各个元素的定义**
 
 **独立的迭代器并不能满足我们的要求，所以STL将迭代器的实现交给了容器，每种容器都会以嵌套的方式在内部定义专属的迭代器**
 
 **迭代器依附于具体的容器，即不同的容器有不同的迭代器实现**。 对于泛型算法find，只要给它传入不同的迭代器，就可以对不同的容器进行查找操作。迭代器的穿针引线，有效地实现了算法对不同容器的访问
+
+
+
+## *STL中的迭代器类型*
+
+### 萃取类型
+
+- value_type：迭代器所指对象的类型。原生指针也是一种迭代器，比如说原生指针 `int*`，int即为指针所指对象的类型，即其value_type
+- difference_type：用来表示两个迭代器之间的距离，对于原生指针，STL以C++内建的 `ptrdiff_t` 作为原生指针的difference_type
+- reference_type：迭代器所指对象的类型的引用，reference_type一般用在迭代器的 `*` 运算符重载上，如果value_type是T，那么对应的reference_type就是 `T&`；如果value_type是const T，那么对应的reference_type就是 `const T&`
+- pointer_type：相应的指针类型，对于指针来说，最常用的功能就是 `operator*` 和 `operator->` 两个运算符
+- iterator_category的作用是标识迭代器的移动特性和可以对迭代器执行的操作，从iterator_category上，可将迭代器分为Input Iterator、Output Iterator、Forward Iterator、Bidirectional Iterator、Random Access Iterator五类，这样分可以尽可能地提高效率。不同的iterator_category见下
+
+### 迭代器类型
+
+前两种迭代器是通用的，而后三种则是不同容器的迭代器，与容器的实现方式有关，比如vector的迭代器封装的是数组元素的指针，因为动态数组是连续的，可以通过硬件达成***O(1)***的直接寻址。而链表的元素地址不是连续的，查找的时候需要线性复杂度，所以不能***O(1)***实现 `+-`（不是不能实现！）
+
+* InputIterator：输入迭代器，允许按顺序遍历容器中的元素，但每个元素只能被遍历一次（只能向前走一步），即只支持 `value = *iter`。这种类型的迭代器通常用于只读操作，如遍历集合并读取其中的元素
+
+* OutputIterator：输出迭代器，允许按顺序将值写入容器中（只能向前走一步），即只支持 `*iter = value`。但与 `InputIterator`不同，它并不关心从容器读取值的操作。这种类型的迭代器通常用于只写操作，如通过迭代器将数据写入某个容器
+
+* ForwardIterator：只支持 `++`，不支持 `--`：比如forward_list、unordered_map、unordered_set
+
+* BidirectionalIterator：既支持 `++`，也支持 `--`：比如list、map、set
+
+* RandomAccessIterator：不仅支持 `++,--`，还支持 `+,-`，支持***O(1)***复杂度对元素的随机访问。比如vector、deque
+
+  <img src="迭代器类型.drawio.png" width="50%">
 
 # string
 
@@ -1894,22 +1944,6 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
 
 ### list的反向迭代器，采用适配器（复用）的方向进行设计
 
-* <span id="迭代器按功能分类">迭代器按功能分类</span>
-
-  前两种迭代器是通用的，而后三种则是不同容器的迭代器，与容器的实现方式有关，比如vector的迭代器封装的是数组元素的指针，因为动态数组是连续的，可以通过硬件达成***O(1)***的直接寻址。而链表的元素地址不是连续的，查找的时候需要线性复杂度，所以不能***O(1)***实现+-（不是不能实现！）
-
-  * InputIterator：输入迭代器，允许按顺序遍历容器中的元素，但每个元素只能被遍历一次（只能向前走一步），即只支持 `value = *iter`。这种类型的迭代器通常用于只读操作，如遍历集合并读取其中的元素
-
-  * OutputIterator：输出迭代器，允许按顺序将值写入容器中（只能向前走一步），即只支持 `*iter = value`。但与 `InputIterator`不同，它并不关心从容器读取值的操作。这种类型的迭代器通常用于只写操作，如通过迭代器将数据写入某个容器
-
-  * ForwardIterator：只支持++，不支持--：比如forward_list、unordered_map、unordered_set
-
-  * BidirectionalIterator：既支持++，也支持--：比如list、map、set
-
-  * RandomAccessIterator：不仅支持++--，还支持+-，支持***O(1)***复杂度对元素的随机访问。比如vector、deque
-
-    <img src="迭代器类型.drawio.png" width="50%">
-
 * 实现方法
 
   * 普通思维：拷贝一份正向迭代器，对其进行修改
@@ -1941,8 +1975,6 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
   <img src="end与rbegin对称关系的底层设计.png">
 
 * 只要实现了正向迭代器，那么 `reverse_iterator` 可以复用到其他的容器上，除了 `forward_list`，`unordered_map` 和 `unordered_set` 不能被复用，因为这些容器的迭代器不支持 `--`
-
-
 
 # stack & queue
 
