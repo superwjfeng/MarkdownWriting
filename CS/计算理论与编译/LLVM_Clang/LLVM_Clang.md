@@ -2379,6 +2379,7 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 - 由表达式 expressions 触发，用户使用表达式规定触发访问的条件
 - 与AST上下文信息绑定，即用户可以在表达式中利用上下文信息来筛选节点
 - 无需遍历，能直接匹配到表达式对应的节点
+- Clang AST Matchers 不直接处理宏；相反，它们处理宏展开后的代码。可以尝试在源文件中找到经过宏展开之后的实际代码，并且确定如何匹配它
 
 不过实际上ASTMatcher内部还是用RecursiveASTVisitor的方式来实现的
 
@@ -4092,6 +4093,20 @@ llvm-project/clang/tools/clang-check/ClangCheck.cpp
 4. 许多IDE和编辑器支持`clang-format`，可以集成进去以便自动格式化代码
 
 5. 还可以编写脚本，来自动化格式化整个项目中的文件
+
+
+
+### 配置代码风格
+
+[Clang-Format Style Options — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangFormatStyleOptions.html)
+
+`.clang-format` 文件采用YAML格式
+
+```C++
+// clang-format off
+这两个注释中间的代码不受clang-format的影响
+// clang-format on
+```
 
 ### 源代码
 
