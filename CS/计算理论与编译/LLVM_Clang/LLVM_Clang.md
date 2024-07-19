@@ -1720,7 +1720,13 @@ HeaderMap & Framework 都是Apple发明的概念，用于提高大型项目的�
 
 ## *FileManager*
 
+### FileInfo & FileID
 
+FileInfo代表的是一个文件相关的引入文件信息和自身的被引入信息
+
+### ContentCache
+
+clang为了管理每一个读入的文件，为每一个读入的文件都创建了一个`ContentCache`结构
 
 
 
@@ -2166,67 +2172,33 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
   * NamedDecl
     * NamespaceDecl
     * TypeDecl
+      * TagDecl: declaration of a struct/union/class/enum
+        * EnumDecl
+        * RecordDecl
+          * CXXRecordDecl
+            * ClassTemplateSpecializationDecl
+              * ClassTemplatePartialSpecializationDecl
+      * TemplateTypeParmDecl
     * ValueDecl
       * DeclaratorDecl
         * FieldDecl：struct/union/class 的属性/成员变量
         * FunctionDecl 函数声明。注意：在AST层级中，**不区分函数声明和函数定义，统一用FunctionDecl来标识**，两个区分主要看是否有函数体 function body，可以使用 `bool hasBody()` 来进行判断
-        * VarDecl 局部和全局变量声明。如果有初始化，那么 VarDecl 就会有一个初始值的子节点，其可以通过 `getInit()` 获取到对应的初始化Expr
-          * ParmVarDecl 函数/方法的参数
+        * VarDecl 局部和全局变量声明。**如果有初始化，那么 VarDecl 就会有一个初始值的子节点**，其可以通过 `getInit()` 获取到对应的初始化Expr。比如说 `int x = 1`，就会产生一个IntegerLiteral节点
+          * ParmVarDecl 函数/方法的参数声明
   * PragmaCommentDecl
   * TopLevelStmtDecl
   * TranslationUnitDecl
-  
 * Stmt 表示各种语句（代码块）
-  * CompoundStmt 复合语句：代表大括号，函数实现、struct、enum、for的body等一般用此包起来
-  
-  * DeclStmt 定义语句，里边可能有VarDecl等类型的定义
-  
+  * CompoundStmt 复合语句：代表用大括号 `{}` 括起来的函数体，比如函数实现、struct、enum、for的body等一般用此包起来
+  * DeclStmt 定义语句，用来表示局部变量的声明，里边可能有VarDecl等类型的定义
   * ForStmt For语句对应，包括Init/Cond/Inc 对应 `(int a=0;a<mm;a++)` 这三部分，还有一部分是body，可以分别使用 `getInit()`，`getCond()`，`getInc()`，`getBody()` 来分别进行获取
-  
   * IfStmt If语句：包括三部分Cond、TrueBody、FalseBody三部分，分别可以通过 `getCond()`，`getThen()`, `getElse()` 三部分获取，Cond和Then是必须要有的，Else可能为空
-  
   * ReturnStmt 可选的return语句
-  
   * ValueStmt 可能含有 Value & Type 的语句
-    * AttributedStmt
-    
+    * AttributedStmt：表示 `[[]]`
     * LabelStmt
-    
-    * Expr 表达式，clang中expression也是statement的一种
+    * Expr 表达式，clang中expression也是statement的一种。这是非常重要也非常复杂的一种node，所以把它单列，见下
       
-      * BinaryOperator 二元运算符
-      
-      * CallExpr 函数调用表达式，子节点有调用的参数列表
-      
-        * CUDAKernelCallExpr
-      
-        * CXXMemberCallExpr：类方法调用
-      
-        * CXXOperatorCallExpr：运算符重载调用
-      
-        * UserDefinedLiteral
-      
-      * CastExpr 类型转换表达式
-        * ImplicitCastExpr 隐形转换表达式，在左右值转换和函数调用等各个方面都会用到
-      
-      * CXXThisExpr：this指针，它也被称为implicit object argument of a member call expression
-      
-      * DeclRefExpr 标识引用声明的变量和函数
-      
-        在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
-      
-      * FullExpr
-      
-        * ConstatnExpr
-      
-        * ExprWithCleanups
-      
-      * IntegerLiteral 定点Integer值
-      
-      * ParenExpr 括号表达式
-      
-      * UnartOperator 一元操作符
-  
 * Type 类型
   * ArrayType 数组类型
   * BuiltinType 内置类型，比如 int、char、float 等
@@ -2235,6 +2207,106 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
   * TagType
     * EnumType 枚举类型
     * RecordType 记录类型，指 struct、class 和 union 类型
+
+### Expr
+
+* BinaryOperator 二元运算符
+
+* CallExpr 函数调用表达式，子节点有调用的参数列表
+
+  * CUDAKernelCallExpr
+
+  * CXXMemberCallExpr：类方法调用
+
+  * CXXOperatorCallExpr：使用运算符的调用，比如 `x+y` 或 `*p`，虽然和普通的调用是等价的，但它提供了更多的语义
+
+  * UserDefinedLiteral
+
+* CastExpr 类型转换表达式
+
+  * ExplicitCstExpr 显式转换表达式
+    * BuiltinBitCastExpr：表示一个 `C++2a __builtin_bit_cast(T, v)` 表达式，用来实现 `std::bit_cast`
+    * CStyleCastExpr：C风格的 `()` 强转
+    * CXXFunctionalCastExpr
+    * CXXNamedCastExpr：C++关键字风格（named）的强转
+      * CXXAddrspaceCastExpr: OpenCL
+      * CXXConstCastExpr
+      * CXXDynamicCastExpr
+      * CXXReinterpretCastExpr
+      * CXXStaticCastExpr
+  * ImplicitCastExpr 隐式转换表达式，在左右值转换和函数调用等各个方面都会用到。这个表达式非常常用，不过它不会显式地在用户层给出，所以也是引起语义误解的罪魁祸首之一，下面会给出Clang中常见的ImplicitCastExpr
+    * **LValueToRValue**：从左值转换到右值，通常用于读取变量的值
+    * **ArrayToPointerDecay**：数组类型衰减为指向数组第一个元素的指针类型
+    * **FunctionToPointerDecay**：函数类型衰减为函数指针类型，当函数名被用作值时发生
+    * **NullToPointer**：空指针字面量（如`nullptr`或`0`）转换为指针类型
+    * **NullToMemberPointer**：空指针字面量转换为成员指针类型
+    * **BaseToDerived**：指向基类的指针或引用转换为指向派生类的指针或引用
+    * **DerivedToBase**：指向派生类的指针或引用转换为指向基类的指针或引用
+    * **IntegralCast**：整数类型之间的转换，比如整型提升或降低精度
+    * **FloatingCast**：浮点类型之间的转换，比如单精度浮点数转双精度浮点数
+    * **IntegralToBoolean**：整数类型转换到布尔类型
+    * **BooleanToSignedIntegral**：布尔类型转换到有符号整数类型
+    * **PointerToIntegral**：指针类型转换到整数类型
+    * **IntegralToPointer**：整数类型转换到指针类型
+    * **ToVoid**：任何类型转换为`void`类型，通常用于强制表达式不返回值
+    * **Dynamic**：运行时动态转换，如`dynamic_cast`
+    * **ConstCast**：移除类型的`const`属性
+    * **BitCast**：位转换，通常涉及不相关类型之间无损失的二进制转换
+    * **NoOp**：无操作转换，类型没有变化，可能用于保持AST的一致性
+    * **BuiltinFnToFnPtr**：内置函数转换为函数指针
+
+* CXXFoldExpr 用于表示一个参数包（parameter pack）在某个操作符上的展开。这是 C++11 引入的变参模板（variadic templates）功能的一部分，在 C++17 中进一步增加了对折叠表达式（fold expressions）的支持
+
+  > Represents a folding of a pack over an operator. This expression is always dependent and represents a pack expansion of the forms: ( expr op ... ) ( ... op expr ) ( expr op ... op expr )
+
+  `CXXFoldExpr` 在 Clang AST 中代表三种形式的折叠表达式：
+
+  1. **Unary Right Fold** (`(expr op ...)`)
+
+     这里 `op` 是一个二元操作符，`expr` 是和参数包中元素进行运算的表达式，参数包在右侧。例如，给定参数包 `args` 和操作符 `+`，表达式 `(x + ...)` 将被展开为 `x + arg1 + arg2 + ... + argN`，其中 `arg1, arg2, ..., argN` 是 `args` 参数包中的元素
+
+  2. **Unary Left Fold** (`(... op expr)`)
+
+     与 Unary Right Fold 相反，参数包在这里位于左侧。以 `+` 操作符为例，`( ... + x)` 将展开为 `arg1 + arg2 + ... + argN + x`
+
+  3. **Binary Fold** (`(expr op ... op expr)`)
+
+     这种形式使用两个非包扩展的表达式作为边界，参数包位于中间。比如，`(x + ... + y)` 可能会展开为 `x + arg1 + arg2 + ... + argN + y`
+
+  ```C++
+  template<typename ...Args>
+  auto sum(Args... args) {
+      return (... + args); // Unary Left Fold
+  }
+  ```
+
+  在这个例子中，`sum` 函数模板接收一个可变数量的参数，并利用 Unary Left Fold 表达式将它们相加。当对一组具体的参数实例化函数模板时，`(... + args)` 的折叠表达式会将提供的所有参数累加起来。如果调用 `sum(1, 2, 3)`，则在模板实例化后，它会展开为 `1 + 2 + 3`
+
+* CXXThisExpr：this指针，它也被称为implicit object argument of a member call expression
+
+* DeclRefExpr 标识引用声明的变量和函数
+
+  在 Clang AST 中，对变量的使用被表达为 `declRefExpr` (declaration reference expressions，声明引用表达式)，例如 `declRefExpr(to(varDecl(hasType(isInteger()))))` 表示对一个整数类型变量声明的使用 (请注意，不是 C++ 中的引用) 
+
+* FullExpr
+
+  * ConstatnExpr
+
+  * ExprWithCleanups
+
+* Literal 字面值类型
+
+  * CharacterLiteral
+  * CXXBoolLiteralExpr
+  * CXXNullPtrLiteralExpr
+  * IntegerLiteral 定点Integer值
+  * StringLiteral
+
+* MemberExpr: Structure and Union Members，比如 `X->F` 和 `X.F`
+
+* ParenExpr 括号表达式
+
+* UnartOperator 一元操作符
 
 ### Glue Classes
 
@@ -2286,6 +2358,54 @@ $ clang -Xclang -ast-dump -fsyntax-only test.cc
   如果不使用它的话，clang driver的compile部分就会expect一个输入，会输出一个 `clang: error: linker command failed with exit code 1136` 的错误
 
   - `-fmodules` 选项启用了 Clang 的模块功能。模块是一种用于替代传统的 `#include` 预处理器指令和头文件的编译单元，它旨在改进 C 和 C++ 程序的编译时间和封装性
+
+```
+|-FunctionDecl 0x56073c0d40e0 <line:4:1, line:10:1> line:4:6 used myPrint 'void (int)'
+| |-ParmVarDecl 0x56073c0d4018 <col:14, col:18> col:18 used param 'int'
+| `-CompoundStmt 0x56073c0d4650 <col:25, line:10:1>
+|   |-IfStmt 0x56073c0d43b8 <line:5:2, line:6:22>
+|   | |-BinaryOperator 0x56073c0d41e8 <line:5:6, col:15> 'bool' '=='
+|   | | |-ImplicitCastExpr 0x56073c0d41d0 <col:6> 'int' <LValueToRValue>
+|   | | | `-DeclRefExpr 0x56073c0d4190 <col:6> 'int' lvalue ParmVar 0x56073c0d4018 'param' 'int'
+|   | | `-IntegerLiteral 0x56073c0d41b0 <col:15> 'int' 1
+|   | `-CallExpr 0x56073c0d4378 <line:6:3, col:22> 'int'
+|   |   |-ImplicitCastExpr 0x56073c0d4360 <col:3> 'int (*)(const char *__restrict, ...)' <FunctionToPointerDecay>
+|   |   | `-DeclRefExpr 0x56073c0d42d8 <col:3> 'int (const char *__restrict, ...)' lvalue Function 0x56073c0b28f0 'printf' 'int (const char *__restrict, ...)'
+|   |   `-ImplicitCastExpr 0x56073c0d43a0 <col:10> 'const char *' <ArrayToPointerDecay>
+|   |     `-StringLiteral 0x56073c0d42b0 <col:10> 'const char[11]' lvalue "param is 1"
+|   `-ForStmt 0x56073c0d4618 <line:7:2, line:9:2>
+|     |-DeclStmt 0x56073c0d4478 <line:7:7, col:17>
+|     | `-VarDecl 0x56073c0d43f0 <col:7, col:15> col:11 used i 'int' cinit
+|     |   `-IntegerLiteral 0x56073c0d4458 <col:15> 'int' 0
+|     |-<<<NULL>>>
+|     |-BinaryOperator 0x56073c0d44e8 <col:19, col:23> 'bool' '<'
+|     | |-ImplicitCastExpr 0x56073c0d44d0 <col:19> 'int' <LValueToRValue>
+|     | | `-DeclRefExpr 0x56073c0d4490 <col:19> 'int' lvalue Var 0x56073c0d43f0 'i' 'int'
+|     | `-IntegerLiteral 0x56073c0d44b0 <col:23> 'int' 10
+|     |-UnaryOperator 0x56073c0d4528 <col:28, col:29> 'int' postfix '++'
+|     | `-DeclRefExpr 0x56073c0d4508 <col:28> 'int' lvalue Var 0x56073c0d43f0 'i' 'int'
+|     `-CompoundStmt 0x56073c0d4600 <col:34, line:9:2>
+|       `-CompoundAssignOperator 0x56073c0d45d0 <line:8:3, col:13> 'int' lvalue '+=' ComputeLHSTy='int' ComputeResultTy='int'
+|         |-DeclRefExpr 0x56073c0d4540 <col:3> 'int' lvalue Var 0x56073c0d3f98 'global' 'int'
+|         `-ImplicitCastExpr 0x56073c0d4580 <col:13> 'int' <LValueToRValue>
+|           `-DeclRefExpr 0x56073c0d4560 <col:13> 'int' lvalue Var 0x56073c0d43f0 'i' 'int'
+`-FunctionDecl 0x56073c0d48a8 <line:12:1, line:16:1> line:12:5 main 'int (int, char **)'
+  |-ParmVarDecl 0x56073c0d4688 <col:10, col:14> col:14 argc 'int'
+  |-ParmVarDecl 0x56073c0d4780 <col:20, col:31> col:26 argv 'char **'
+  `-CompoundStmt 0x56073c0d4b58 <col:34, line:16:1>
+    |-DeclStmt 0x56073c0d4a00 <line:13:2, col:15>
+    | `-VarDecl 0x56073c0d4978 <col:2, col:14> col:6 used param 'int' cinit
+    |   `-IntegerLiteral 0x56073c0d49e0 <col:14> 'int' 1
+    |-CallExpr 0x56073c0d4ae8 <line:14:2, col:15> 'void'
+    | |-ImplicitCastExpr 0x56073c0d4ad0 <col:2> 'void (*)(int)' <FunctionToPointerDecay>
+    | | `-DeclRefExpr 0x56073c0d4a80 <col:2> 'void (int)' lvalue Function 0x56073c0d40e0 'myPrint' 'void (int)'
+    | `-ImplicitCastExpr 0x56073c0d4b10 <col:10> 'int' <LValueToRValue>
+    |   `-DeclRefExpr 0x56073c0d4a60 <col:10> 'int' lvalue Var 0x56073c0d4978 'param' 'int'
+    `-ReturnStmt 0x56073c0d4b48 <line:15:2, col:9>
+      `-IntegerLiteral 0x56073c0d4b28 <col:9> 'int' 0
+```
+
+**destroyed**：当出现在参数声明（`ParmVarDecl`）旁边时，表示此参数在作用域结束时会被销毁。在C++中，如果一个对象的生命周期到达其作用域的末尾，它就会被自动销毁
 
 
 ## *RecursiveASTVisitor*
@@ -2368,7 +2488,7 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 
 [AST Matcher Reference (llvm.org)](https://clang.llvm.org/docs/LibASTMatchersReference.html)
 
-用 `*` 标注的Matchers可以匹配任何nodes
+用 `*` 标注的Matchers可以匹配任何nodes，参数中用 `...` 表示0个或多个
 
 ### ASTMatcher的特性
 
@@ -2411,6 +2531,8 @@ ASTMatcher本质上是一种带有函数式编程风格的DSL
 
   所有的TM都以NM为参数
 
+  递归的寻找是很有用的，因为普通的NM只能找到当前节点的直接子节点，对于包裹在更深节点中的却无能无力，所以此时要使用TM
+  
   比如 `hasAncestor()` 和 `hasDescendant()` 分别匹配祖、后代类节点
 
 直接组合各种 ASTMatchers 来精确表示匹配节点的规则，语义非常清晰，例如 `binaryOperator(hasOperatorName("+"), hasLHS(integerLiteral(equals(0))))` 匹配的是左操作数为字面量 `0` 的加法操作表达式
@@ -2552,6 +2674,19 @@ enable output     dump
 
 ## *一些特殊的AST Matcher*
 
+### callExpr & callee
+
+```C++
+callExpr(callee(functionDecl(hasName("myFunction"))),
+        /* other matchers to specify condtitions */)
+    .bind("myFuncCall")
+```
+
+寻找一个函数/方法调用的一般形式如上
+
+* callExpr 是最广泛的matcher，它找到的是所有的函数/方法调用，它需要其他matcher来细化
+* callee 是指被调用的函数，它是一个traversal matcher，它会找到和给定条件匹配的被调用函数
+
 ### on
 
 ```
@@ -2590,6 +2725,8 @@ AST Matcher Reference 提供了几个使用`on`的例子，每个都说明了如
 
 例如，如果想要找到所有调用了`X`类成员函数的表达式，不管这个调用发生在`X`类的直接实例上还是通过子类的实例，可以按照第二个匹配器的形式编写
 
+### to
+
 ### anything
 
 有些Matcher构造函数需要一个具体的Matcher作为参数。如果想表示“在这一位置上，我不关心匹配到什么”，那么就可以使用`anything()`来满足这个参数需求（占位）。例如，在`has()`或`hasDescendant()`等需要子匹配器的匹配器中，使用`anything()`可以明确表示没有特定的匹配要求
@@ -2608,19 +2745,46 @@ hasArgument(1, anything()) // 显式地表明我们不在乎第二个参数是�
 - 逻辑或：用 `clang::ast_matchers::anyOf` 来组合多个 `Matcher<T>`
 - 逻辑非：用 `clang::ast_matchers::unless` 为 `Matcher<T>` 取否
 
+### 递归查找
+
+* hasDescendant
+
 ## *Source\**
 
 ### SourceLocation & SourceManager
 
 Clang 通过 SourceLocation 和 SourceManager 来定位定位源码中Token的位置
 
-* SourceLocation用于在源代码中编码一个位置。SourceManager可以解码这个位置，以获取完整的包含栈、行号和列号信息。严格来说，SourceLocation仅仅是SourceManage view输入源中的一个偏移量，也就是所有输入缓冲区（包括宏展开）在一个实质上任意的顺序中被串联起来。管理器实际上维护了两块输入缓冲区的数据块。一块从偏移量0开始并向上增长，包含了此模块的所有缓冲区；另一块从最高可能偏移量开始并向下增长，包含了已加载模块的缓冲区。 /// /// 此外，SourceLocation中的一位用于快速访问位置信息，以判断该位置是在文件中还是在宏展开中。 /// /// 确保这种类型保持小尺寸是重要的。它目前是32位宽
+SourceLocation用于在源代码中编码一个位置的信息。SourceManager可以解码这个位置，以获取完整的包含栈、行号和列号信息
 
-  * spelling location：宏展开之前代码在源文件中的位置
+* 严格来说，SourceLocation仅仅是SourceManage view输入源中的一个偏移量，也就是所有输入缓冲区（包括宏展开）在一个实质上任意的顺序中被串联起来。管理器实际上维护了两块输入缓冲区的数据块。一块从偏移量0开始并向上增长，包含了此模块的所有缓冲区；另一块从最高可能偏移量开始并向下增长，包含了已加载模块的缓冲区。 /// /// 此外，SourceLocation中的一位用于快速访问位置信息，以判断该位置是在文件中还是在宏展开中。 /// /// 确保这种类型保持小尺寸是重要的。它目前是32位宽
+
+  ```C++
+  class SourceLocation {
+      unsigned ID;
+      enum : unsigned {
+          MacroIDBit = 1U << 31
+      };
+  }
+  ```
+
+  
+
+  * spelling location：宏的定义位置
 
   * expansion location：宏展开之后代码在源文件中的位置
 
+  * presumed location：根据`#line`导言调整之后的展开位置
+
 * SourceManager 负责将源文件加载和缓存到内存中，SourceManager拥有所有已加载文件的MemoryBuffer对象，并为每一个独特的 `#include` 链分配唯一的FileID。SourceManager可以被用于查询关于SourceLocation的信息，将它们spelling location或者expansion location。拼写位置 /// 表示与一个标记（token）相对应的字节来自哪里，而展开位置表示在用户视角中该位置所在的地方。例如，在宏展开 /// 的场合，拼写位置表明展开的标记来自哪里，而展开位置指定了它被展开的地点
+
+* FullSourceLoc的作用是用来打包传递SourceLocation和SourceManager两个参数的
+
+  ```C++
+  class FullSourceLoc : public SourceLocation {
+      const SourceManager *SrcMgr;
+  }
+  ```
 
 ### SourceRange & CharSourceRange
 
