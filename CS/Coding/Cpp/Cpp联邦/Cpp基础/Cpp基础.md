@@ -2175,7 +2175,7 @@ delete [] pal; // 正确
 
 `operator new()` 与 `operator delete()` 是系统提供的全局函数。注意：`operator new()` 不是new的运算符重载，这个函数的名字就叫它，实际上我们根本没有办法去重载 `new` 和 `delete` 的
 
-下面是new和delete的函数签名，他
+下面是new和delete的函数签名
 
 ```c++
 void *operator new(std::size_t);
@@ -2236,9 +2236,11 @@ void operator delete(void *rawMemroy, std::size_t size) noexcept;
 
 一般不需要重载，除非在申请和释放空间的时候有某些特殊的需求，比如
 
-* 打印日志信息
+* 用来检测运行时错误，比如说内存泄露
 
-* 重载一个类专属的 `operator new()`：利用STL容器专属的空间配置器（容器专用的内存池），当然实际STL的源码封装和下面的思路是不同的，可以看上面的封装
+* 收集统计数据、打印日志信息
+
+* 提高性能，重载一个类专属的 `operator new()`：利用STL容器专属的空间配置器（容器专用的内存池），当然实际STL的源码封装和下面的思路是不同的，可以看上面的封装
 
   ```cpp
   struct ListNode {
@@ -2258,11 +2260,25 @@ void operator delete(void *rawMemroy, std::size_t size) noexcept;
 
 每个类可以实现自己专属的 operator new，自定义的operator new会默认覆盖库里的operator new
 
+## *错误处理：new-handler*
+
+new-handler 是当 `operator new` 无法满足用户的内存需求时所调用的函数
+
+```C++
+namespace std
+{
+    typedef void (*new_handler)();
+    new_handler set_new_handler(new_handler p) throw();
+}
+```
+
+`set_new_handler()` 的参数是一个指向 `operator new` 无法分配足够内存时所调用的函数，返回值则是 `set_new_handler()` 被调用前正在执行（即马上要被调换）的 new-handler 函数
+
 ## *定位new*
 
 ### 标准库定位new
 
-全局范围的标准库中是有定位new placement-new的，它们的函数签名如下。定位new接受一个指针，用来指定在何处构建对象，其中的pMemory需要用户给出
+全局范围的标准库中是有定位new, placement-new的，它们的函数签名如下。定位new接受一个指针，用来指定在何处构建对象，其中的pMemory需要用户给出
 
 ```c++
 void *operator new(std::size_t); // 普通new
@@ -2274,11 +2290,11 @@ void *operator new(std::size_t, const std::nothrow_t &) noexcept; // nothrow new
 
 定位new表达式是在**已经分配好的内存空间中**再调用构造函数初始化一个对象。定位new 是在已分配的内存块上执行对象构造操作，而不是分配内存。它的主要目的是为了构造对象，而不是分配内存
 
-定位new也可以自定义重载，但是一定同时也要自定义重载定位delete，具体的可以看 *EffectiveCpp.md* 的条款52
+定位new也可以自定义重载，但是一定同时也要自定义重载定位delete，具体的可以看 [*EffectiveCpp.md* 的条款52](#如有需要，应成对重载定位new & 定位delete)
 
 ### 使用场景
 
-因为普通new出来的已经调用构造初始化过了，所以**定位new是专门给malloc用的**，要是直接用一般的new的话直接给初始值就行了也不会存在没有初始化的问题。**内存池的构建需要使用定位new**，因为内存池都是通过malloc向系统系统申请的，因为内存池分配出的内存是没有初始化过的裸内存，所以若是自定义类型对象，需要使用定位new
+因为普通new出来的已经调用构造初始化过了（一般的new的话直接给初始值就行了也不会存在没有初始化的问题），所以**定位new是专门给malloc用的**。**内存池的构建需要使用定位new**，因为内存池都是通过malloc向系统系统申请的，因为内存池分配出的内存是没有初始化过的裸内存，所以若是自定义类型对象，需要使用定位new
 
 ```cpp
 class A {};
@@ -2298,6 +2314,10 @@ placement new构造起来的对象数组，要显式的调用他们的析构函�
 ```c++
 int *p1 = new (nothrow) int;
 ```
+
+### 如有需要，应成对重载定位new & 定位delete
+
+本节取自 *EffectiveCpp.md* 的条款52
 
 ## *内存泄漏*
 
