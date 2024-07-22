@@ -1369,6 +1369,209 @@ ABI包括了以下方面的规范：
 
   `libcxxrt` 是另一个C++运行时类型库，是FreeBSD的C++标准库的一部分，但也可以在其他系统上使用。它提供了C++ ABI 的实现，主要用于动态类型识别和异常处理
 
+# Clang Basic
+
+## *File Related*
+
+### FileInfo & FileID
+
+```C++
+class FileID {
+  int ID = 0;
+};
+```
+
+FileID 只有一个数据成员 `int ID = 0;` 用来表示文件的索引。通过这个索引，SourceManager 可以得到其`MemoryBuffer`和引入该文件的位置
+
+FileID 的正负可以用来表示加载域，如果当前文件是从当前模块中加载的，则 FileID 是正的，否则是负的，0和-1是无效的。实现时是通过一个全局的 `ID=index++` 来分配，如果是从其他模块中加载进来的，则设置为 `ID=-ID-2`
+
+```C++
+class FileInfo {
+  SourceLocation IncludeLoc;
+  unsigned NumCreatedFIDs : 31;
+  unsigned HasLineDirectives : 1;
+  llvm::PointerIntPair<const ContentCache *, 3, CharacteristicKind> ContentAndKind;
+};
+```
+
+- IncludeLoc：代表当前文件被引入的位置，也就是`#include`当前文件的那一行代码所在位置。这个位置是使用 `SourceLocation` 来表示的，即如上所述一个 `unsigned`。对于`cpp`文件来说，它是引用链的头，所以它的值为0
+
+- NumCreatedFIDs：代表的是当前文件所引入的新的 `#include` 文件和宏展开的数目
+
+- HasLineDirectives：有无 `#line` 来调整宏展开的位置
+
+- ContentAndKind：一个指针，指向糅合了 `ContentCache*` 和标志位的一个数据结构
+
+  CharacteristicKind 用来表示当前 `#include` 文件的类型
+
+   ```C++
+   enum CharacteristicKind {
+     C_User,            // 用户文件
+     C_System,          // 系统文件
+     C_ExternCSystem,   // 通过extern C引入的系统文件
+     C_User_ModuleMap,
+     C_System_ModuleMap
+   };
+   ```
+
+FileInfo代表的是一个文件相关的引入文件信息和自身的被引入信息
+
+### ContentCache
+
+clang为了管理每一个读入的文件，为每一个读入的文件都创建了一个`ContentCache`结构
+
+```C++
+class alignas(8) ContentCache {
+  mutable std::unique_ptr<llvm::MemoryBuffer> Buffer;
+
+public:
+  const FileEntry *OrigEntry;
+  const FileEntry *ContentsEntry;
+  StringRef Filename;
+  mutable LineOffsetMapping SourceLineCache;
+  unsigned BufferOverridden : 1;
+
+  /// True if this content cache was initially created for a source file
+  /// considered to be volatile (likely to change between stat and open).
+  unsigned IsFileVolatile : 1;
+
+  /// True if this file may be transient, that is, if it might not
+  /// exist at some later point in time when this content entry is used,
+  /// after serialization and deserialization.
+  unsigned IsTransient : 1;
+
+  mutable unsigned IsBufferInvalid : 1;
+};
+```
+
+* Buffer
+* OrigEntry & ContentEntry：OrigEntry 代表的是当前文件的句柄，而 ContentEntry 代表的是实际内容来源的文件句柄，这两者一般是相同的。如果当前文件是在内存中建立的临时文件的话，origEntry 可以是空的。如果当前文件被另外一个文件的内容覆盖了的话，ContentEntry 就是覆盖文件的句柄
+* Filename：用来获取OrigEntry的文件名
+* SourceLineCache：一个 bump pointer（bump-allocation 垃圾回收），指向 ContentCache 具体包含的内容，lazy evaluated
+* BufferOverridden 代表的是当前缓存是否最后将写回相关文件，如果为true的话 OrigEntry 可能是一个不存在的虚拟文件
+
+文件的 MemoryBuffer 是延迟构造的，只有在需要的时候才会分配这些资源，否则所有文件一load就全部在内存中构造，那么整个内存空间就直接被塞满了
+
+通过 ContentCache 可以实现对文件的增删查改
+
+### ExpansionInfo
+
+
+
+## *Source\**
+
+Clang 通过 SourceLocation 和 SourceManager 来定位定位源码中Token的位置
+
+### SourceLocation
+
+```C++
+class SourceLocation {
+  unsigned ID = 0;
+
+  enum : unsigned { MacroIDBit = 1U << 31 };
+};
+```
+
+
+
+SourceLocation用于在源代码中编码一个位置的信息。SourceManager可以解码这个位置，以获取完整的包含栈、行号和列号信息。在编译器中需要用到的三个核心的Location信息，即行号、列号以及声明和调用文件路径，都与SourceLocation有关
+
+严格来说，SourceLocation仅仅是SourceManage view输入源中的一个偏移量，也就是所有输入缓冲区（包括宏展开）在一个实质上任意的顺序中被串联起来。管理器实际上维护了两块输入缓冲区的数据块。一块从偏移量0开始并向上增长，包含了此模块的所有缓冲区；另一块从最高可能偏移量开始并向下增长，包含了已加载模块的缓冲区。 /// /// 此外，SourceLocation中的一位用于快速访问位置信息，以判断该位置是在文件中还是在宏展开中。 /// /// 确保这种类型保持小尺寸是重要的。它目前是32位宽
+
+```C++
+class SourceLocation {
+    unsigned ID;
+    enum : unsigned {
+        MacroIDBit = 1U << 31
+    };
+}
+```
+
+* spelling location：宏的定义位置
+
+* expansion location：宏展开之后代码在源文件中的位置
+
+* presumed location：根据 `#line` 导言调整之后的展开位置
+
+
+
+
+
+
+
+
+
+### SourceRange & CharSourceRange
+
+SourceRange是两个SourceLocation组成的区间
+
+CharSourceRange是在SourceRange上加了一个 `bool IsTokenRange` 作为一个标志位
+
+### ExpansionInfo
+
+```C++
+// llvm_12/clang/include/clang/Basic/SourceManager.h
+class ExpansionInfo {
+  SourceLocation SpellingLoc;
+  SourceLocation ExpansionLocStart, ExpansionLocEnd;
+  bool ExpansionIsTokenRange;
+};
+```
+
+- 如果是简单的文本替换，则 `start` 和 `end` 是相等的
+- 如果是函数调用宏展开，则 `end` 指向的是 `)`
+- 如果是宏参数展开，则 `end` 是非法 `Location`，此时它的值为0
+
+
+
+### SourceManager
+
+
+
+* SourceManager 负责将源文件加载和缓存到内存中，SourceManager拥有所有已加载文件的MemoryBuffer对象，并为每一个独特的 `#include` 链分配唯一的FileID。SourceManager可以被用于查询关于SourceLocation的信息，将它们spelling location或者expansion location。拼写位置 /// 表示与一个标记（token）相对应的字节来自哪里，而展开位置表示在用户视角中该位置所在的地方。例如，在宏展开 /// 的场合，拼写位置表明展开的标记来自哪里，而展开位置指定了它被展开的地点
+
+  ```C++
+  class SourceManager : public RefCountedBase<SourceManager> {};
+  ```
+
+  
+
+* FullSourceLoc的作用是用来打包传递SourceLocation和SourceManager两个参数的
+
+  ```C++
+  class FullSourceLoc : public SourceLocation {
+      const SourceManager *SrcMgr;
+  }
+  ```
+
+
+
+### SourceManager的常用接口
+
+如上所述，SourceManager的接口基本都可以分为Spelling和Expansion两套接口
+
+* `getFileID`: 根据源码位置获取唯一标识的文件ID
+* `getPresumedLoc`: 根据源码位置获取推定的位置信息，这可能因为预处理指令（如`#line`）而与实际文件不同
+* `getSpellingLoc`: 获取给定位置的拼写位置，通常用于宏展开
+* `getExpansionLoc`: 获取宏扩展位置，即宏调用的位置
+* `getExpansionRange`: 获取宏展开的范围
+* `getDecomposedLoc`: 分解位置到其文件ID和偏移量
+* `getCharacterData`: 获取给定位置的字符指针
+* `getLineNumber`: 获取给定文件ID和偏移量对应的行号
+* `getColumnNumber`: 获取给定文件ID和偏移量对应的列号
+* `getLocForStartOfFile`: 获取给定文件ID的开始位置
+* `getLocForEndOfFile`: 获取给定文件ID的结束位置
+* `isInSystemHeader`: 检查给定位置是否位于系统头文件中
+* `isInMainFile`: 检查给定位置是否位于主文件中
+
+
+
+## *资源管理*
+
+## *查询访问*
+
+
+
 # Clang Lexer, Preprocessor & Parser
 
 [clang 源码导读（8）：词法分析和预处理指令-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1811032)
@@ -1437,15 +1640,11 @@ public:
 
 `llvm-project/clang/include/clang/Basic/TokenKinds.def` 维护了不同编程语言的关键字
 
+### Lexer的入口函数
+
+整个lexer的入口函数是 `Lexer::lex`，调用之后会返回一个Token
 
 
-## *Preprocessor*
-
-`clang::Preprocessor`是负责预处理的类，预处理主要是处理编译单元中的一些以#开头的预处理指令
-
-## *Parser*
-
-Clang使用的Parser是基于递归下降分析 recursive descent parser 的
 
 ## *头文件搜索 #include*
 
@@ -1696,6 +1895,8 @@ HeaderSearchOptions 类表示与头文件搜索相关的所有选项。这些选
 
 
 
+### Multiple Include Optimization
+
 
 
 ### Apple的优化：Headermap & Framework
@@ -1710,25 +1911,30 @@ HeaderMap & Framework 都是Apple发明的概念，用于提高大型项目的�
 
   在 macOS 上，HeaderSearch 还支持框架 Frameworks 的搜索，这是 macOS 特有的一种结构化头文件组织方式
 
+### include_next	
 
 
 
+## *符号管理*
 
-### include_next
+### 符号表
 
+## *宏管理*
 
+宏可以分为两大类：对象型和函数型，区别就在于有没有参数。MacroInfo描述了宏本身的信息，而MacroArgs则存储了宏的参数列表
 
-## *FileManager*
-
-### FileInfo & FileID
-
-FileInfo代表的是一个文件相关的引入文件信息和自身的被引入信息
-
-### ContentCache
-
-clang为了管理每一个读入的文件，为每一个读入的文件都创建了一个`ContentCache`结构
+```C++
+```
 
 
+
+## *Preprocessor*
+
+`clang::Preprocessor`是负责预处理的类，预处理主要是处理编译单元中的一些以#开头的预处理指令
+
+## *Parser*
+
+Clang使用的Parser是基于递归下降分析 recursive descent parser 的
 
 # Clang AST
 
@@ -2198,7 +2404,7 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
     * AttributedStmt：表示 `[[]]`
     * LabelStmt
     * Expr 表达式，clang中expression也是statement的一种。这是非常重要也非常复杂的一种node，所以把它单列，见下
-      
+  
 * Type 类型
   * ArrayType 数组类型
   * BuiltinType 内置类型，比如 int、char、float 等
@@ -2685,7 +2891,7 @@ callExpr(callee(functionDecl(hasName("myFunction"))),
 寻找一个函数/方法调用的一般形式如上
 
 * callExpr 是最广泛的matcher，它找到的是所有的函数/方法调用，它需要其他matcher来细化
-* callee 是指被调用的函数，它是一个traversal matcher，它会找到和给定条件匹配的被调用函数
+* callee 是指被调用的函数本身，它是一个traversal matcher，它会找到和给定条件匹配的被调用函数。可以把它理解为找到的callExpr的内容
 
 ### on
 
@@ -2748,67 +2954,6 @@ hasArgument(1, anything()) // 显式地表明我们不在乎第二个参数是�
 ### 递归查找
 
 * hasDescendant
-
-## *Source\**
-
-### SourceLocation & SourceManager
-
-Clang 通过 SourceLocation 和 SourceManager 来定位定位源码中Token的位置
-
-SourceLocation用于在源代码中编码一个位置的信息。SourceManager可以解码这个位置，以获取完整的包含栈、行号和列号信息
-
-* 严格来说，SourceLocation仅仅是SourceManage view输入源中的一个偏移量，也就是所有输入缓冲区（包括宏展开）在一个实质上任意的顺序中被串联起来。管理器实际上维护了两块输入缓冲区的数据块。一块从偏移量0开始并向上增长，包含了此模块的所有缓冲区；另一块从最高可能偏移量开始并向下增长，包含了已加载模块的缓冲区。 /// /// 此外，SourceLocation中的一位用于快速访问位置信息，以判断该位置是在文件中还是在宏展开中。 /// /// 确保这种类型保持小尺寸是重要的。它目前是32位宽
-
-  ```C++
-  class SourceLocation {
-      unsigned ID;
-      enum : unsigned {
-          MacroIDBit = 1U << 31
-      };
-  }
-  ```
-
-  
-
-  * spelling location：宏的定义位置
-
-  * expansion location：宏展开之后代码在源文件中的位置
-
-  * presumed location：根据`#line`导言调整之后的展开位置
-
-* SourceManager 负责将源文件加载和缓存到内存中，SourceManager拥有所有已加载文件的MemoryBuffer对象，并为每一个独特的 `#include` 链分配唯一的FileID。SourceManager可以被用于查询关于SourceLocation的信息，将它们spelling location或者expansion location。拼写位置 /// 表示与一个标记（token）相对应的字节来自哪里，而展开位置表示在用户视角中该位置所在的地方。例如，在宏展开 /// 的场合，拼写位置表明展开的标记来自哪里，而展开位置指定了它被展开的地点
-
-* FullSourceLoc的作用是用来打包传递SourceLocation和SourceManager两个参数的
-
-  ```C++
-  class FullSourceLoc : public SourceLocation {
-      const SourceManager *SrcMgr;
-  }
-  ```
-
-### SourceRange & CharSourceRange
-
-SourceRange是两个SourceLocation组成的区间
-
-CharSourceRange是在SourceRange上加了一个 `bool IsTokenRange` 作为一个标志位
-
-### SourceManager的常用接口
-
-如上所述，SourceManager的接口基本都可以分为Spelling和Expansion两套接口
-
-* `getFileID`: 根据源码位置获取唯一标识的文件ID
-* `getPresumedLoc`: 根据源码位置获取推定的位置信息，这可能因为预处理指令（如`#line`）而与实际文件不同
-* `getSpellingLoc`: 获取给定位置的拼写位置，通常用于宏展开
-* `getExpansionLoc`: 获取宏扩展位置，即宏调用的位置
-* `getExpansionRange`: 获取宏展开的范围
-* `getDecomposedLoc`: 分解位置到其文件ID和偏移量
-* `getCharacterData`: 获取给定位置的字符指针
-* `getLineNumber`: 获取给定文件ID和偏移量对应的行号
-* `getColumnNumber`: 获取给定文件ID和偏移量对应的列号
-* `getLocForStartOfFile`: 获取给定文件ID的开始位置
-* `getLocForEndOfFile`: 获取给定文件ID的结束位置
-* `isInSystemHeader`: 检查给定位置是否位于系统头文件中
-* `isInMainFile`: 检查给定位置是否位于主文件中
 
 ## *AST可视化*
 
@@ -3035,6 +3180,54 @@ public:
 
 
 ## *Bit Storage Containers*
+
+
+
+## *Pointer*
+
+### 引用计数器
+
+* RefCountedBase
+
+  一个CRTP模板，引用增加会调用 `Retain()`，而引用减少则调用 `Release()`
+
+  * ThreadSafeRefCountedBase
+
+* IntrusiveRefCntPtr
+
+  侵入式引用计数是一种内存管理技术，其中对象自身负责跟踪有多少个指针引用了它。这与非侵入式引用计数（如 C++ 中的 `std::shared_ptr`）相对，后者通常在控制块中维护引用计数
+
+  侵入式引用计数要求每个想要被引用计数管理的对象内部都有一个引用计数器，通常是一个整数类型的成员变量。当创建一个新的指向对象的指针时，该对象的引用计数会增加。当指针销毁或改变指向时，相应对象的引用计数减少。一旦某个对象的引用计数归零，意味着没有任何指针再指向它，那么这个对象就可以被销毁
+
+  IntrusiveRefCntPtr 用于持有一个指向继承自 RefCountedBase 的对象的指针
+
+### PointerIntPair
+
+`PointerIntPair` 是一个通常用于C++编程中的数据结构，它允许在一个指针的存储空间内同时存储一个指针和一个小整数。这通过对指针和整数进行位操作实现，能够在不增加额外存储开销的情况下保存这两种信息
+
+在32或64位架构中，由于指针的对齐要求，指针的低位通常是未使用的（例如，可能是4字节或8字节对齐），因此可以将整数值编码到指针值的低位来利用这些位。这样的编码和解码过程需要依赖特定平台和对象类型的对齐规则
+
+`PointerIntPair` 的设计考虑了以下特点：
+
+1. **空间效率**：通常情况下，它使用单个指针大小的存储空间来存储一个指针和一个小整数
+2. **整数位数限制**：能够存储的整数位数受限于可用的未使用低位数。比如在一个系统上，可能只能存储3位的整数
+3. **高位存储整数值**：`PointerIntPair` 总是尝试使用高位来存储整数值。即使只有一个比特位被用于布尔值，也会使用最高的那个可用位，而不是最低的位。这样做的目的是留出空间供其他可能的用途，比如进一步地嵌套 `PointerIntPair`
+
+```C++
+PointerIntPair<void*, 1, bool>
+```
+
+在这个例子中，可能会把布尔值存储在指针的第二位，而不是第零位，这使得指针的低两位可用于其他目的
+
+如果我们嵌套使用 `PointerIntPair`：
+
+```C++
+PointerIntPair<PointerIntPair<void*, 1, bool>, 1, bool>
+```
+
+这个结构就能够存储两个独立的布尔值，并且每个布尔值占用不同的位
+
+这种数据结构在性能关键的应用程序中非常有用，尤其是在需要压缩数据表示以减少内存占用和提高缓存利用率的场合。然而，它的使用需要对底层平台的内存对齐和整数编码有较深的理解，以确保正确地进行位操作
 
 # 编程接口
 

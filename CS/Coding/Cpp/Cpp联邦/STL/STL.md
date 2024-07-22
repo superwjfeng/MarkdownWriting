@@ -96,11 +96,12 @@ C 标准库的头文件一般位于 `/usr/include` 目录下，C++标准库的�
 
 ### `.tcc` 文件
 
-`tcc`文件是一种源文件，通常包含模板类的实现代码。这些文件并不是C++标准的一部分，而是libstdc++特有的约定。
+`tcc`文件是一种源文件，通常包含模板类的实现代码。这些文件并不是C++标准的一部分，而是libstdc++特有的约定
 
 在C++编程中，模板的定义通常需要在每个使用它们的文件中都可见。这是因为编译器在编译带有模板使用的代码时需要看到模板定义，以便进行模板实例化。一种常见的做法是将模板定义放在头文件中，并且在每次使用模板时包含这些头文件
 
-然而，把所有模板代码都放在头文件中会导致头文件变得非常庞大，并且可能包含很多不必要的细节，这使得编译时间增加，也使得代码难以阅读和维护。为了解决这个问题，libstdc++采用了分离模板声明与定义的策略：
+C++里面模板的实现不能放在 `.cpp` 文件中,必须写在头文件中，如果模板函数实现较复杂，就会导致头文件臃肿和杂
+乱，所以STL就把较复杂的模板实现抽出来放在 `.tcc` 文件里面，然后当做头文件来包含
 
 - **头文件**（通常以`.h`结尾）包含模板的声明。这些是其他代码在使用模板时需要知道的部分
 - **模板实现文件**（以`.tcc`结尾）则包含模板的定义和实现代码，这些文件仅在需要时才由相应的头文件包含进来
@@ -2250,6 +2251,32 @@ class basic_string;
 
 `basic_string` 是 C++ 标准库中表示字符串的模板类。它是一个通用的字符串类模板，提供了一组成员函数和操作符，用于处理字符串的各种操作
 
+
+
+```C++
+// gcc/libstdc++-v3/include/bits/stringfwd.h
+  /// A string of @c char
+  typedef basic_string<char>    string;   
+  /// A string of @c wchar_t
+  typedef basic_string<wchar_t> wstring;   
+
+#ifdef _GLIBCXX_USE_CHAR8_T
+  /// A string of @c char8_t
+  typedef basic_string<char8_t> u8string;
+#endif
+
+#if __cplusplus >= 201103L
+  /// A string of @c char16_t
+  typedef basic_string<char16_t> u16string; 
+  /// A string of @c char32_t
+  typedef basic_string<char32_t> u32string; 
+#endif
+```
+
+
+
+
+
 ### char_traits 特征类模版
 
 char_traits 类是一种特性类模板，对给定的字符类型抽象基础字符和字符串比较操作
@@ -2674,15 +2701,19 @@ std提供的swap函数代价很高，需要进行3次拷贝（1次拷贝，2次�
 
 ### 引用计数+写时拷贝
 
+## *COW 的问题*
 
+[std::string的Copy-on-Write：不如想象中美好 - PromisE_谢 - 博客园 (cnblogs.com)](https://www.cnblogs.com/promise6522/archive/2012/03/22/2412686.html)
 
-## *string_view (17)*
+## *SSO*
 
 SSO, Small String, Optimization
 
 [SSO - 小串优化快速一览 - hzSomthing (hedzr.com)](https://hedzr.com/c++/algorithm/small-string-optimization-in-short/)
 
 [C++中std::string的COW及SSO实现 | 高明飞的博客 (gaomf.cn)](https://gaomf.cn/2017/07/26/Cpp_string_COW_SSO/)
+
+## *string_view (17)*
 
 # 其他数据结构
 
