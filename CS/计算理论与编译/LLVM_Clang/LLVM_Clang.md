@@ -2878,6 +2878,28 @@ set print-matcher true
 enable output     dump
 ```
 
+## *将获取的Stmt/Expr, Decl转换为string*
+
+### Decl
+
+```C++
+std::string MyCallback::getSimpleName(const Expr *expr) {
+    if (const auto *declRefExpr = dyn_cast<DeclRefExpr>(expr->IgnoreImpCasts())) {
+        if (const auto *valueDecl = declRefExpr->getDecl()) {
+            return valueDecl->getNameAsString();
+        }
+    }
+    // 其他情况处理...
+    return "";
+}
+```
+
+### Stmt/Expr
+
+Stmt 和 Expr 本身都不直接提供一个将节点转换为字符串的成员函数，因为AST通常用于表示源代码的结构化信息，并非仅仅用于获取源代码文本
+
+
+
 ## *一些特殊的AST Matcher*
 
 ### callExpr & callee
