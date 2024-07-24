@@ -873,6 +873,10 @@ https://www.liujiangblog.com/course/python/24
 {'e', 'l', 'h', 'o'}
 ```
 
+* `add(key)` or `update(key)`
+* `remove(key)`
+* `pop()`
+
 ## *推导式 Comprehension*
 
 推导式是Python语言特有的一种语法糖，可以写出较为精简的代码
@@ -2804,6 +2808,35 @@ PyYaml 的 load 可以构造任意 Python 对象（Pickle 协议），这意味�
 
 
 ### 遍历
+
+## *正则*
+
+```python 
+import re
+```
+
+- 使用原始字符串（如 `r'text'`）来表示正则表达式，这样可以避免转义字符带来的困扰。关于正则表达式的书写可以看 *shell脚本和正则.md*
+- 正则表达式的匹配默认是区分大小写的，可以通过设置 `re.IGNORECASE` 标志来忽略大小写
+
+### 常用方法
+
+* `re.match()` 尝试从字符串的**起始位置**匹配一个模式，如果不是起始位置匹配成功的话，`match()`就返回`None`
+
+* `re.serach()` 搜索整个字符串，并返回**第一个**成功的匹配对象
+
+* `re.findall()` 在字符串中找到正则表达式所匹配的所有子串，并返回一个列表，如果没有找到匹配的，则返回空列表
+
+* `re.finditer()` 与 `findall()` 类似，但返回的不是直接的列表，而是一个迭代器，迭代器里的每个元素都是 match 对象
+
+* `re.sub()` 用于替换字符串中的匹配项
+
+* `re.compile()` 可以将正则表达式编译成一个正则表达式对象，可以用于重复使用
+
+  ```python
+  pattern = re.compile(r'\d+')
+  string = '12 drummers drumming, 11 pipers piping, 10 lords a-leaping'
+  found_all = pattern.findall(string)
+  ```
 
 ## *tqdm 进度条*
 
