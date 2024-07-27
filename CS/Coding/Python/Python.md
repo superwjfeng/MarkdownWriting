@@ -159,10 +159,13 @@ https://cloud.tencent.com/developer/article/2124483
 https://www.cnblogs.com/zingp/p/8525138.html
 
 ```cmd
-pip install pipenv
+$ pip install pipenv
 ```
 
-# 模块和包
+pipenv创建虚拟环境后，会在工程目录生成如下两个文件：
+
+- Pipfile：用于保存项目的python版本、依赖包等相关信息。该文件可以单独移放到其他项目内，用于项目虚拟环境的建立和依赖包的安装
+- Pipfile.lock：用于对Pipfile的锁定
 
 ## *模块 Module*
 
@@ -250,29 +253,40 @@ Python包，就是里面装了.py文件的文件夹
 
 可以看到Python标准库中就是一堆的,py文件模块和文件夹（包）
 
-# 对象和基础语法
+## *requirements.txt*
 
-参考 [(19条消息) 语法：Python与C++对比_yuyuelongfly的博客-CSDN博客_python c++](https://blog.csdn.net/Cxiazaiyu/article/details/108937936)
+`requirements.txt` 是一个文本文件，用于列出Python项目的依赖包以及它们的版本号，以确保在不同环境中都能准确地重建相同的Python环境
 
-## *命名规范*
+* 构建
 
-### 标识符 Indentifier
+  * 手动构建
 
-* 第一个字符必须是字母表中的字母或下划线 `_`，标识符的其他部分由字母、数字和下划线组成
-* 变量名全部小写，常量名全部大写
-* 类名用大写驼峰
-* 模块和包的名字用小写
-* Python3支持unicode之后标识符可以用中文的，但是实际中不要这么做
+    ```
+    package1==x.x.x
+    package2>=y.y.y
+    ```
 
-### Python下划线命名规范
+  * 自动生成
 
-和 C/C++ 中 `_` 只是作为一种非强制的明明规则而已，**Python 中的 `_` 是会实际被解释器解释为特定的语法意义的**
+    ```cmd
+    $ pip freeze > requirements.txt
+    ```
 
-* 单前导下划线 `_var`：作为类的私有属性，但不会被强制执行，一般只是作为一种提醒。唯一的影响是 `import` 的时候不会被导入
-* 双前导下划线 `__var`：强制作为类的私有属性，无法在类外被访问，因为通过名称修饰规则修改过了，解释器对该属性的访问会发生变化
-* 单末尾下划线 `var_`：按约定使用以防止与Python关键字冲突
-* 双前导和双末尾下划线 `__var__`：表示Python中类定义的特殊方法，称为 dunder method 或者 magic method 魔法函数
-* 单下划线 `_`：临时或者无意义的变量，可以用来接受不需要的返回值
+* 使用
+
+  ```cmd
+  $ pip install -r requirements.txt
+  ```
+
+# Object
+
+下面参考的是Cpython 3.7的代码
+
+```cmd
+$ git clone --branch v3.7.0 --depth 1 https://github.com/python/cpython.git
+```
+
+
 
 ## *对象、变量和引用*
 
@@ -312,6 +326,17 @@ typedef struct _object {
   * `PyObject_VAR_HEAD` 是另一个 `PyTypeObject` 类型的对象，封装了 `PyType_Type`，**是真正意义上的所有class的基类**，被称作 metaclass
 
 * 对于变长对象，还会再增加一个 `ob_size` 来记录变长对象的长度
+
+
+### Object的分类
+
+<img src="object-category.jpg" width="60%">
+
+- Fundamental 对象：类型对象
+- Numeric 对象：数值对象
+- Sequence 对象：容纳其他对象的序列集合对象
+- Mapping 对象：类似 C++中的 map 的关联对象
+- Internal 对象：Python 虚拟机在运行时内部使用的对象
 
 ### 变量及引用
 
@@ -426,6 +451,34 @@ Python中的深浅拷贝问题是针对组合对象，也就是 list、set、dic
 
 * isinstance 会认为子类是一种父类类型，考虑继承关系
 * type 不会认为子类是一种父类类型，不考虑继承关系
+
+# Python虚拟机
+
+Python是一门解释型语言，它没有编译器后端生成二进制码，需要借助虚拟机运行
+
+# 基本语法
+
+参考 [(19条消息) 语法：Python与C++对比_yuyuelongfly的博客-CSDN博客_python c++](https://blog.csdn.net/Cxiazaiyu/article/details/108937936)
+
+## *命名规范*
+
+### 标识符 Indentifier
+
+* 第一个字符必须是字母表中的字母或下划线 `_`，标识符的其他部分由字母、数字和下划线组成
+* 变量名全部小写，常量名全部大写
+* 类名用大写驼峰
+* 模块和包的名字用小写
+* Python3支持unicode之后标识符可以用中文的，但是实际中不要这么做
+
+### Python下划线命名规范
+
+和 C/C++ 中 `_` 只是作为一种非强制的明明规则而已，**Python 中的 `_` 是会实际被解释器解释为特定的语法意义的**
+
+* 单前导下划线 `_var`：作为类的私有属性，但不会被强制执行，一般只是作为一种提醒。唯一的影响是 `import` 的时候不会被导入
+* 双前导下划线 `__var`：强制作为类的私有属性，无法在类外被访问，因为通过名称修饰规则修改过了，解释器对该属性的访问会发生变化
+* 单末尾下划线 `var_`：按约定使用以防止与Python关键字冲突
+* 双前导和双末尾下划线 `__var__`：表示Python中类定义的特殊方法，称为 dunder method 或者 magic method 魔法函数
+* 单下划线 `_`：临时或者无意义的变量，可以用来接受不需要的返回值
 
 ## *运算符*
 
@@ -1700,7 +1753,7 @@ Python会为实例化的类配备大量默认的魔法函数 Magic method/dunder
 
 ```python
 class Foo(superA, superB, superC....):
-class DerivedClassName(modname.BaseClassName):  ## 当父类定义在另外的模块时
+class DerivedClassName(modname.BaseClassName):  # 当父类定义在另外的模块时
 ```
 
 Python支持多继承，按照括号里父类的继承顺序依次继承，在Python中父类又称为超类 Superclass
@@ -2507,109 +2560,6 @@ Python shell不能直接执行shell命令，需要借助sys；IPython通过 `!` 
 
 关于conda和pip的使用可以看 *包管理工具.md*
 
-## *argparse*
-
-[argparse --- 用于命令行选项、参数和子命令的解析器 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/library/argparse.html)
-
-argparse 是 Python 标准库中的一个模块，用于编写用户友好的命令行界面。程序定义它需要的参数，argparse 将会从 `sys.argv` 中解析出那些参数。argparse 模块还会自动生成帮助和使用手册，并在用户给程序传递无效参数时报错
-
-### 基本用法
-
-1. 创建 `ArgumentParser` 对象
-
-   ```python
-   import argparse
-   parser = argparse.ArgumentParser(description='这是一个示例程序.')
-   ```
-
-2. 使用 `add_argument` 方法添加参数
-
-   [python之parser.add_argument()用法——命令行选项、参数和子命令解析器-CSDN博客](https://blog.csdn.net/qq_34243930/article/details/106517985)
-
-   * name or flags：选项字符串的名字或者列表，例如foo或者 `-f,--foo`
-   * action：命令行遇到参数时的动作，默认值是store
-   * store_const：表示赋值为const
-   * append,将遇到的值存储成列表,也就是如果参数重复则会保存多个值;
-   * append_const：将参数规范中定义的一个值保存到一个列表;
-   * count：存储遇到的次数。此外也可以继承 `argparse.Action` 自定义参数解析
-   * nargs-应该读取的命令行参数个数,可以是具体的数字,或者是?号,当不指定值时对于Positional argument使用default,对于Optional argument使用const;或者是*号,表示0或多个参数;或者是+号表示1或多个参数
-   * const：action和nargs所需要的常量值
-   * default：不指定参数时的默认值
-   * type：命令行参数应该被转换成的类型
-   * choices：参数可允许的值的一个容器
-   * required-可选参数是否可以省略(仅针对可选参数)。
-   * help：参数的帮助信息。当指定为 `argparse.SUPPRESS` 时表示不显示该参数的帮助信息
-   * metavar：在usage说明中的参数名称。对于必选参数默认就是参参数名称，对于可选参数默认是全大写的参数名称
-   * dest：解析后的参数名称。默认情况下，对于可选参数选取最长长的名称，中划线转换为下划线
-
-   ```python
-   parser.add_argument('echo', help='描述这个参数的作用')
-   parser.add_argument('-v', '--verbose', action='store_true', help='增加输出的详细性')
-   ```
-
-   - 第一个参数通常是位置参数（如 `'echo'`）
-
-   - `-v` 或 `--verbose` 表示可选参数
-
-3. 使用 `parse_args()` 解析添加参数的参数对象，获得解析对象
-
-下面是一段完整的代码示例：
-
-```python
-import argparse
-
-# 初始化解析器
-parser = argparse.ArgumentParser(description="这是一个示例程序.")
-# 添加位置参数
-parser.add_argument("echo", help="echo 参数的帮助信息")
-# 添加可选参数
-parser.add_argument("-v", "--verbose", action="store_true", help="显示更多信息")
-
-# 解析参数
-args = parser.parse_args()
-
-# 根据参数执行不同的操作
-if args.verbose:
-    print(f"你输入了 '{args.echo}', 并且激活了详细模式.")
-else:
-    print(args.echo)
-```
-
-### 默认值问题
-
-如果在使用 `argparse` 的 `add_argument` 方法时没有指定 `default` 参数，那么默认值的行为依赖于该参数是否为可选（optional）或位置（positional）参数：
-
-* **对于可选参数**（通常以 `-` 或 `--` 开头），如果命令行中没有给出该参数，则默认值为 `None`
-* **对于位置参数**（那些不以 `-` 或 `--` 开头的参数），你必须在命令行中提供这个参数，否则 `argparse` 会报错。不存在默认值的概念，因为它们是必须由用户明确提供的
-
-### 参数列表的覆盖
-
-```python
-arguments = ['-m', '0', 
-           '-c', case_path,
-           '-e', extend_path,
-           '-r', root_path, 
-           '-u', master_uri]
-if not flag:
-    arguments += ['-m', '1']	
-```
-
-arguments 是一个列表，当执行 `+=` 操作时，会将右侧的列表元素追加到左侧的列表中。这种操作不会替换或覆盖原有元素，而是在列表末尾添加新元素
-
-这意味着如果代码后面执行了 `arguments += ['-m', '1']`，它会在列表的末尾添加 `'-m'` 和 `'1'` 这两个元素
-
-因此，原始列表中包含的 `'-m', '0'` 不会被删除或更改，但现在列表中会有两组 `'-m'` 和对应值。这可能导致问题，因为通常情况下命令行解析器（如 `argparse`）会根据参数的最后一次出现来解析值。在这种情况下，如果传递整个 `simulator_arguments` 列表给解析器，`'-m'` 的值可能会被解析为 `'1'` 而不是 `'0'`，因为它是最后出现的
-
-### 进阶功能
-
-除了上述功能，`argparse` 还支持很多其他功能，比如：
-
-- 为参数指定数据类型
-- 选择性地使参数成为必须提供项 (`required=True`)
-- 设置默认值 (`default=` 值)
-- 限制参数的选择范围 (`choices=[...]`)
-- 支持变长参数列表 ( `nargs='+'` 或 `'*'` 等)
-
 ## *logging*
 
 [日志指南 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/howto/logging.html)
@@ -2857,6 +2807,10 @@ import re
   found_all = pattern.findall(string)
   ```
 
+## *rich*
+
+
+
 ## *tqdm 进度条*
 
 简介：https://zhuanlan.zhihu.com/p/163613814
@@ -2883,3 +2837,28 @@ for i in tqdm(range(100), desc='Processing'):
 It/s 的意思是 iteration per second
 
 ### 手动进行更新
+
+# 工程工具
+
+## *Debugger*
+
+```cmd
+$ python3 -m pdb detector.py -f <file>
+```
+
+## *Linter*
+
+## *Formatter*
+
+[life4/awesome-python-code-formatters: A curated list of awesome Python code formatters (github.com)](https://github.com/life4/awesome-python-code-formatters)
+
+### yapf
+
+[google/yapf: A formatter for Python files (github.com)](https://github.com/google/yapf)
+
+```cmd
+$ yapf --style='{based_on_style: facebook, indent_width: 2}' -i detector.py
+```
+
+预定义风格：google, yapf, pep8 (default), facebook
+
