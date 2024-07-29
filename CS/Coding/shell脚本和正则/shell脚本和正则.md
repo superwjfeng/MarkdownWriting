@@ -989,11 +989,24 @@ Unix/Linux shell支持
 
 https://www.junmajinlong.com/shell/bash_source/index.html
 
+在bash中使用相对路径往往不太靠谱，因为当前script在哪里执行往往会影响到相对路径的解析，因此使用绝对路径是有必要的
+
 `BASH_SOURCE` 是一个 Bash 的内置数组变量，它包含了当前 Bash 脚本的文件名和路径，以及调用当前脚本的所有函数的名称和路径
 
 * `BASH_SOURCE[0]`: 包含了当前执行的脚本的文件名和路径
 * `BASH_SOURCE[1]`: 如果脚本是从另一个脚本中被调用的，那么 `BASH_SOURCE[1]` 将包含调用当前脚本的脚本的文件名和路径
 * `BASH_SOURCE[2]`、`BASH_SOURCE[3]` 等等，以此类推，如果存在更深层次的嵌套调用，它们将包含更多调用的脚本的信息
+
+### 使用方法
+
+```bash
+# 获取脚本所在的绝对路径
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+# 定义目标目录的绝对路径
+TARGET_DIR="$SCRIPT_DIR/../docker_mount_files"
+```
+
+
 
 # 环境变量
 

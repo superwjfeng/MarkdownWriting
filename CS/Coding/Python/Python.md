@@ -62,9 +62,21 @@ pip install virtualenv
 
 Conda是一个用于管理和部署软件包的开源包管理工具和环境管理器，Conda可以帮助用户创建、管理和切换不同的Python环境，并安装各种软件包，使得项目之间的依赖关系更加清晰和可管理
 
+安装conda [Miniconda — Anaconda documentation](https://docs.anaconda.com/free/miniconda/)
+
+```c,d
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm -rf ~/miniconda3/miniconda.sh
+```
+
 用zsh安装sh可能会有问题，这时候可以换用bash安装
 
-安装conda [Miniconda — Anaconda documentation](https://docs.anaconda.com/free/miniconda/)
+```cmd
+~/miniconda3/bin/conda init bash
+~/miniconda3/bin/conda init zsh
+```
 
 ### 使用
 
@@ -78,7 +90,7 @@ Conda是一个用于管理和部署软件包的开源包管理工具和环境管
 
     这将创建一个名为 "myenv" 的新环境，并指定Python版本为3.8
 
-  * 激活环境：
+  * 激活/切换环境：
 
     ```cmd
     $ conda activate myenv
@@ -90,6 +102,12 @@ Conda是一个用于管理和部署软件包的开源包管理工具和环境管
 
     ```cmd
     $ conda deactivate
+    ```
+
+  * 删除环境
+
+    ```cmd
+    $ conda remove --name ENV_NAME --all
     ```
 
 * 安装和管理软件包
@@ -164,7 +182,7 @@ $ pip install pipenv
 
 pipenv创建虚拟环境后，会在工程目录生成如下两个文件：
 
-- Pipfile：用于保存项目的python版本、依赖包等相关信息。该文件可以单独移放到其他项目内，用于项目虚拟环境的建立和依赖包的安装
+- Pipfile：用于保存项目的python版本、依赖包等相关信息。该文件是可移植的，可以被单独移放到其他项目内，用于项目虚拟环境的建立和依赖包的安装
 - Pipfile.lock：用于对Pipfile的锁定
 
 ## *模块 Module*

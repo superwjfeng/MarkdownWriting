@@ -3880,6 +3880,7 @@ using namespace llvm;
 
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
+  // ...
 }
 ```
 
@@ -3923,16 +3924,25 @@ int main(int argc, char **argv) {
   };
   ```
 
-### Options
+### Option Attributes
+
+Options `cl::opt<>` 必须被声明为全局变量，比如下面的例子
+
+```C++
+// must be declared as a global variable
+cl::opt<string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
+```
 
 <img src="cl_Option.png">
+
+option分为scalar和vector两种，即单个option和list of options
 
 * `cl::opt` 是用来表示标量命令行选项的模板类
 
   ```C++
   namespace cl {
     template <class DataType, bool ExternalStorage = false,
-              class ParserClass = parser<DataType> >
+              class ParserClass =  parser<DataType> >
     class opt;
   }
   ```
@@ -3951,38 +3961,23 @@ int main(int argc, char **argv) {
   }
   ```
 
+下面介绍一些用来修改option本身的性质
+
 * `cl::alias`是一个非模板类，用于为其他参数形成别名
 
 * `cl::bits`是用于以 bit vector 的形式表示命令行选项列表的模板类
 
+* `cl::desc` 是对选项的说明，它会在 `-help` 中被展示出来
 
+* `cl::value_desc` 是用来描述选项需要给出的值
 
+* `cl::Positional` 不需要用选项的形式给出，比如 `-` 或者 `--` 等，而是通过选项的位置来确定
 
+  Positional Arguments 是不需要通过 hyphen 指定的选项，这些选项的意义由指定选项的位置所决定
 
+  Positional Arguments 的顺序由它们被构造的顺序所确定（即它们在 `.cpp` 文件中存放的顺序）
 
-
-`cl::opt<>` 需要是一个全局变量
-
-```C++
-cl::opt<string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
-
-int main(int argc, char **argv) {
-  cl::ParseCommandLineOptions(argc, argv);
-  // ...
-}
-```
-
-
-
-Positional Arguments 是不需要通过 hyphen 指定的选项，这些选项的意义由指定选项的位置所决定
-
-Positional Arguments 的顺序由它们被构造的顺序所确定（即它们在 `.cpp` 文件中存放的顺序）
-
-
-
-`cl::desc` 是对选项的说明
-
-
+* `cl::init` 给出初值，如果没设置初值的，且不是 `cl::Required` 那么就调用option的第一个模板参数类型的默认构造
 
 ### Option Modifiers
 
@@ -4012,7 +4007,10 @@ Positional Arguments 的顺序由它们被构造的顺序所确定（即它们�
   };
   ```
 
-  介绍一下最后一个 `cl::ConsumeAfter`
+  * `cl::Optional` 是 `cl::opt` 和 `cl::alias` 的默认选项
+  * `cl::ZeroOrMore` 是 `cl::list` 的默认选项
+  * `cl::Required` 一定要给出选项
+  * `cl::ConsumeAfter`
 
 * 控制是否需要显式给出值
 
@@ -4029,7 +4027,12 @@ Positional Arguments 的顺序由它们被构造的顺序所确定（即它们�
 * Options Grouping
 
   * `cl::Grouping`
+
   * `cl::OptionCategory`是一个用于声明选项类别的简单类
+
+    ```C++
+    static cl::OptionCategory MyToolCategory("my-tool options", "Specification for my-tool");
+    ```
 
 * Miscellaneous option modifiers
 
@@ -4060,7 +4063,9 @@ Positional Arguments 的顺序由它们被构造的顺序所确定（即它们�
 
 ### Internal vs. External Storage
 
+Internal Storage & External Storage 指的是是否把解析得到的Option转换成一个全局变量，Internal Storage是局部的，External Storage 则是全局的
 
+External Storage 要把 `cl::opt` 的第二个模板参数设置为 true，并且配合 `cl::location` 使用
 
 ### Parser
 
