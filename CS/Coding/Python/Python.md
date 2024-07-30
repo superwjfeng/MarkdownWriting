@@ -2053,6 +2053,14 @@ for key, value in os.environ.items():
 * `os.times()`：返回当前的全局进程时间，五个属性
 * `os.sep`：不同OS的分隔符是不同的，Win文件的路径分隔符是 `'\'`，在Linux上是 `'/'`，可以用 `os.sep` 来代替
 
+## *shutil*
+
+shutil (shell utilities) 模块提供了一系列对文件和文件集合进行高阶操作的函数
+
+`shutil.move()` 可以用于移动文件或重命名文件
+
+`shutil.copytree()` 可以递归地复制整个目录树
+
 ## *sys库*
 
 # 网络编程
