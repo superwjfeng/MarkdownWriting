@@ -474,6 +474,22 @@ double *dp = static_cast<double*>(p); //规范使用void*转换
 1. 有 ` T *obj = nullptr;` 和 `char *_memory = nullptr;`，`obj = (T *)_memory` 可以通过编译，而 `obj = static_cast<T *>(_memory) ` 会报错：`invalid ‘static_cast’ from type ‘char*’ to type ‘TreeNode*’ 。编译器检查到这两个类之间没有定义明确的类型转换，故禁止了转换
 2. `void *next = *(static_cast<void **>(_freeList)` 从 `*` 转换成 `**` 是可以的
 
+C++风格的 `static_cast` 相比于C风格的 `()` 强转更规范了，有很多好处
+
+* 类型安全
+
+  - 静态检查：`static_cast` 在编译时会执行类型检查，而 C 风格的转换则不会。这意味着 `static_cast` 可以防止一些潜在错误的转换，在编译期间就被捕获
+
+  - 限制转换：`static_cast` 不允许执行某些类型的转换，例如从指针到整数类型的转换除非显式地使用 `reinterpret_cast` 或 C 风格的强制转换。该限制可以避免不安全或无意的类型转换
+
+* 可读性和可维护性
+
+  - 意图清晰：`static_cast` 明确了程序员的意图，使得代码审查和未来的维护更加容易。阅读者可以立即看到这是一个类型转换操作，并了解其安全级别
+
+  - 减少模糊性：在复杂的表达式中，C 风格的转换可能会引起歧义，因为它也用于函数调用和初始化等其他目的。`static_cast` 的语法消除了这种模糊性
+
+* 与 C++ 特性协作：`static_cast` 能够与 C++ 的多态性、重载和模板等特性更好地协作。例如，它可以用于基类和派生类之间的向上转型和向下转型
+
 ### `reinterpret_cast` 用于对位进行简单的重新解释
 
 C++类型转换之reinterpret_cast - 叫啥名呢的文章 - 知乎 https://zhuanlan.zhihu.com/p/33040213

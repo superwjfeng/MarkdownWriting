@@ -2878,6 +2878,26 @@ set print-matcher true
 enable output     dump
 ```
 
+### 创造一个新的Matcher
+
+具体步骤为
+
+1. 创建一个从`clang::ast_matchers::internal::MatcherInterface<T>`派生的类，其中`T`是目标AST节点的类型
+1. 实现`bool matches(const T &Node, ASTMatchFinder *Finder, BoundNodesTreeBuilder *Builder) const override`方法来确定何时认为一个节点满足匹配条件
+
+```C++
+class MyCustomMatcher : public MatcherInterface<Stmt> {
+public:
+  bool matches(const Stmt &Node,
+               ASTMatchFinder *Finder,
+               BoundNodesTreeBuilder *Builder) const override {
+    // Implement your custom matching logic here...
+    // For example, return true if the statement is a specific kind of expression.
+    return /* some condition */;
+  }
+};
+```
+
 ## *将获取的Stmt/Expr, Decl转换为string*
 
 ### Decl
@@ -3083,6 +3103,8 @@ int main() {
 总之，`Twine` 是一个高效的工具，用于在需要动态构建字符串但又想避免频繁内存分配时使用。然而，正因为它的这种设计，开发者需要谨慎使用，并确保 `Twine` 使用的上下文适合其设计意图
 
 ### SmallString
+
+### Formatting
 
 ## *Sequential Containers*
 
@@ -4177,25 +4199,6 @@ LLVM中默认禁止了C++的RTTI特性（RTTI特性的开关`-fno-rtti`），主
 
 和这个特性类似的还有 `LLVM_ENABLE_EH` 来控制C++的异常处理 Error Handling, EH机制是否打开，默认由 `LLVMConfig.cmake` 设定为FALSE。也可以使用 `-fno-exception` 来控制。但是如果这个开关也打开的话，需要重新编译大量的依赖库，比如最重要的 libstdc++
 
-### 引入的新模板
-
-为了方便在关闭C++默认的RTTI的时候的使用，LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
-
-* `isa<>`
-
-### 改造为 LLVM-Sytle RTTI
-
-[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
-
-[How to set up LLVM-style RTTI for your class hierarchy — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToSetUpLLVMStyleRTTI.html)
-
-### 经验法则
-
-1. The `Kind` enum should have one entry per concrete class, ordered according to a preorder traversal of the inheritance tree.
-2. The argument to `classof` should be a `const Base *`, where `Base` is some ancestor in the inheritance hierarchy. The argument should *never* be a derived class or the class itself: the template machinery for `isa<>` already handles this case and optimizes it.
-3. For each class in the hierarchy that has no children, implement a `classof` that checks only against its `Kind`.
-4. For each class in the hierarchy that has children, implement a `classof` that checks a range of the first child’s `Kind` and the last child’s `Kind`.
-
 ### Challenge for linker
 
 [Undefined reference to `typeinfo for llvm::cl::GenericOptionValue' - Beginners - LLVM Discussion Forums](https://discourse.llvm.org/t/undefined-reference-to-typeinfo-for-llvm-genericoptionvalue/71526)
@@ -4208,6 +4211,65 @@ add_definitions(${NO_RTTI})
 ```
 
 TODO：如果是用Clang来编译的话可以避免这个问题？
+
+### 引入的新模板
+
+为了方便在关闭C++默认的RTTI的时候的使用，LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
+
+* `isa<>`：用法和Pyhon的 `isinstance()` 基本一样，用来判断一个**指针或引用**是否指向属于某个类的一个实例
+
+  ```C++
+  const CallExpr *initExpr = Result.Nodes.getNodeAs<CallExpr>(binder);
+  if (isa<CXXMemberCallExpr>(initExpr)) {}
+  ```
+
+* `cast<>` 
+
+  ```C++
+  Instruction *I = ...;
+  if (auto *AI = dyn_cast<AllocaInst>(I)) {
+    // I is indeed an AllocaInst
+  }
+  // Safe to use cast<> because we already know I's type
+  AllocaInst *AI = cast<AllocaInst>(I);
+  
+  ```
+
+  * 用于那些我们确定转换是安全的情况（a checked cast operatio ），即转换不会失败。如果转换失败（即实际对象的类型不是目标类型），`cast<>` 会触发断言
+  * 如果转换合法，它将返回转换后的类型；如果不合法，并且断言被禁用，则其行为是未定义的
+
+* `dyn_cast<>` 
+
+  ```C++
+  Instruction *I = ...;
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    // I can be safely used as a CallInst
+  } else {
+    // I is not a CallInst, and CI is nullptr
+  }
+  ```
+
+  * 用于那些转换可能会失败的情况（a checking cast operation），在这些情形下需要先检查转换是否成功
+  * 如果转换合法，它将返回转换后的类型；如果转换不合法，它将返回 `nullptr`
+
+* `isa_and_nonnull<>`、`cast_or_null<>`、`dyn_cast_or_null<>` 可以传递 `nullptr` 作为参数
+
+### 改造为 LLVM-Sytle RTTI
+
+[LLVM的RTTI特性 - 转换无极限 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jourluohua/p/11173121.html)
+
+[How to set up LLVM-style RTTI for your class hierarchy — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToSetUpLLVMStyleRTTI.html)
+
+LLVM-Style RTTI实际上是把编译成生成V-table的任务交给了用户自己来实现，即按需支持，只有那些真正需要的类才需要实现，而不是为所有类都支持
+
+### 经验法则
+
+1. The `Kind` enum should have one entry per concrete class, ordered according to a preorder traversal of the inheritance tree.
+2. The argument to `classof` should be a `const Base *`, where `Base` is some ancestor in the inheritance hierarchy. The argument should *never* be a derived class or the class itself: the template machinery for `isa<>` already handles this case and optimizes it.
+3. For each class in the hierarchy that has no children, implement a `classof` that checks only against its `Kind`.
+4. For each class in the hierarchy that has children, implement a `classof` that checks a range of the first child’s `Kind` and the last child’s `Kind`.
+
+
 
 # 错误、故障诊断 & 日志
 

@@ -1530,13 +1530,15 @@ struct __type_traits {
 template < class T, class Alloc = allocator<T> > class vector; // generic template
 ```
 
-* vector是一个类模板，对应的是数据结构中的顺序表/数组。比如声明一个存储int数据的数组 `vector<int> v1;`
+vector是一个类模板，对应的是数据结构中的顺序表/数组。比如声明一个存储int数据的数组 `vector<int> v1;`
 
-* vector成员
+下图是vector的数据结构，其中start和finish分别指向已经使用空间的头和尾，end_of_storage则指向vector当前分配空间的尾部
 
-  <img src="底层是数组的容器的结构.drawio.png">
+<img src="底层是数组的容器的结构.drawio.png">
 
 ### vector迭代器在 insert 和 erase 中的失效问题
+
+vector的空间是会随着存储数据的变化而重新分配空间，从而动态缩小或扩大的，一旦重新分配空间，则原来已经使用的迭代器就全部失效了
 
 * 问题一：当insert（在pos前插入数据）中进行扩容时因为**会重新分配空间**会出现迭代器失效问题
 
@@ -2233,15 +2235,13 @@ unordered系列是单向迭代器（哈希桶是单列表）
 
 ## *STL中的string类*
 
-### 介绍
+`std::string` 的操作接口很丰富也很灵活，利用string操作字符串是leetcode等算法题的重要部分，所以关于string类的接口类的使用及其效率分析可以看 *刷题.md*。这里的内容主要是string类的实现以及其中涉及到的深浅拷贝等优化问题的分析
+
+### basic_string 模版
 
 > `std::string`. Strings are objects that represent sequences of characters. **String是一个char类型的动态增长数组 ** -- cplusplus.com
 
 string是一个特殊的动态数组，与普通动态数组的不同之处是它的操作对象是字符，并且最后一个数据默认是 `\0`
-
-string类的操作接口很丰富也很灵活，利用string操作字符串是leetcode等算法题的重要部分，所以关于string类的接口类的使用及其效率分析可以看 *刷题.md*。这里的内容主要是一个string类的实现以及其中涉及到的深浅拷贝等问题的分析
-
-### basic_string 模版
 
 ```c++
 template < class charT, class traits = char_traits<charT>, class Alloc = allocator<charT> >   
@@ -2249,9 +2249,9 @@ class basic_string;
 // basic_string::traits_type                   // basic_string::allocator_type           
 ```
 
-`basic_string` 是 C++ 标准库中表示字符串的模板类。它是一个通用的字符串类模板，提供了一组成员函数和操作符，用于处理字符串的各种操作
+basic_string 是 C++ 标准库中表示字符串的模板类。它是一个通用的字符串类模板，提供了一组成员函数和操作符，用于处理字符串的各种操作
 
-
+string 是 basic_string 的一个实例化模板
 
 ```C++
 // gcc/libstdc++-v3/include/bits/stringfwd.h
@@ -2273,20 +2273,9 @@ class basic_string;
 #endif
 ```
 
+### `std::string` 的问题
 
 
-
-
-### char_traits 特征类模版
-
-char_traits 类是一种特性类模板，对给定的字符类型抽象基础字符和字符串比较操作
-
-### 模版实例
-
-* `typedef basic_string<char> string;`
-* `typedef basic_string<char16_t> u16string;`
-* `typedef basic_string<char32_t> u32string;`
-* `typedef basic_string<wchar_t> wstring;`
 
 
 ## *string模拟实现中构造函数的问题*
