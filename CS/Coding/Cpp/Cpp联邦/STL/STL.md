@@ -1339,6 +1339,10 @@ void * __malloc_alloc_template<inst>::oom_malloc(size_t n) {
 
 ### 实现
 
+## *GNU-STL中的allocator实现*
+
+相比于SGI-STL使用alloc作为空间配置器，GNU-STL使用的是标准的 `std::allocator`
+
 # 迭代器 & Traits技法
 
 由于 *STL源码剖析* 使用的Cygnus C++ 2.91.57 for Windows 早于C++11出现，SGI-STL 中使用的迭代器和我们现在熟知的GCC的标准库实现的 `type_traits` 在形式上还是有较大的差距的。不过阅读这一部分的代码有助于我们更加理解萃取的核心思想，因为它们的实现思想上有一定的相似性
@@ -2275,7 +2279,110 @@ string 是 basic_string 的一个实例化模板
 
 ### `std::string` 的问题
 
+`std::string` 也是内存连续存储，且可以伸缩的，所以实际表现类似于 `std::vector`，在很多情况下都容易引起数据拷贝
 
+* 在实际项目中，拷贝 `std::vector` 或 `std::string` 会引起效率问题，我们更想要的是 copy-on-write string、不可变string、基于引用计数的string等。在实际使用的过程中，`std::string` 的最大问题就是它不适用于作为参数传递，因为它非常容易导致不必要的数据拷贝
+* 此外，由于各个标注库实现的方式不同，会给跨平台一直带来风险
+
+所以现在不少大型项目都会自己实现相关的string类。在实际使用过程中一般有以下替代品：
+
+- `boost::string_ref`（chrome: StringPiece）
+- `std::string_view` (c++17后才可用)
+- 不直接传递一个string，而是传递它的迭代器
+
+## *basic_string 实现*
+
+### 数据结构
+
+如下为关于basic_string的部分说明
+
+```C++
+   *  A string looks like this:
+   *
+   *  @code
+   *                                     [_Rep]
+   *                                     _M_length   // 长度
+   *  [basic_string<char_type>]          _M_capacity // 容量
+   *  _M_dataplus                        _M_refcount // 引用，使用了COW
+   *  _M_p ---------------->             unnamed array of char_type // 指向实际的数据
+   *  @endcode
+```
+
+
+
+basic_string 中只有一个非静态成员变量
+
+```C++
+mutable _Alloc_hider  _M_dataplus;
+```
+
+`_Alloc_hider` 是个结构体类型
+
+```C++
+// Use empty-base optimization: http://www.cantrip.org/emptyopt.html
+struct _Alloc_hider : _Alloc {
+    _Alloc_hider(_CharT* __dat, const _Alloc& __a) : _Alloc(__a), _M_p(__dat) { }
+    _CharT* _M_p; // The actual data.
+};
+```
+
+那么上面提到过的 `_M_length`、`_M_capacity` 和 `_M_refcount` 这三个数据成员是放在哪里呢
+
+
+
+basic_string仅仅包含一个成员`_M_dataplus`，它会指向一个`_Rep`的结构，`_Rep`中才会实际存放字符串的内容和长度等信息。初始化过程中，对于短字符串，会先存放在栈中，待生成`_Rep`指针后才会将数据拷贝至`_Rep`中，这样可以避免初始化短字符串的时候去申请动态内存空间
+
+
+
+```C++
+template<typename _CharT, typename _Traits, typename _Alloc>
+   basic_string<_CharT, _Traits, _Alloc>::
+   basic_string(const _CharT* __s, size_type __n, const _Alloc& __a)
+   : _M_dataplus(_S_construct(__s, __s + __n, __a), __a)
+   { }
+```
+
+
+
+```C++
+_CharT* basic_string<_CharT, _Traits, _Alloc>::
+  _S_construct(size_type __n, _CharT __c, const _Alloc& __a)
+{
+  // Check for out_of_range and length_error exceptions.
+  _Rep* __r = _Rep::_S_create(__n, size_type(0), __a);
+  if (__n)
+    _M_assign(__r->_M_refdata(), __n, __c);
+
+  __r->_M_set_length_and_sharable(__n);
+  return __r->_M_refdata();
+}
+```
+
+`_S_construct` 的主要作用就是根据输入的参数来构造一个string的内存区域，并返回指向该内存的指针，值得注意的是返回的指针并不是string内存空间的起始地址
+
+该函数前两个参数 `__n` 和 `__c`, 说明了它的作用是构造一个内存空间，并用 `__n` 个 `__c` 字符来初始化它，这正好也是string的一个构造函数的功能；`_Rep::_S_create` 是用来构造一个空的string内存空间，并返回一个 `_Rep` 指针，`_Rep` 的定义如下
+
+```C++
+struct _Rep_base
+{
+  size_type   _M_length;
+  size_type   _M_capacity;
+  _Atomic_word _M_refcount;
+};
+
+struct _Rep : _Rep_base
+{
+  _CharT* _M_refdata() throw()
+    { return reinterpret_cast<_CharT*>(this + 1); }
+
+  static _Rep* _S_create(size_type, size_type, const _Alloc&);
+  ...
+}
+```
+
+通过 `_Rep` 来管理这些变量，这样string只需要保存一个 `_Rep` 指针即可
+
+`_M_refdata()` 用来获取指向数据部分的指针
 
 
 ## *string模拟实现中构造函数的问题*

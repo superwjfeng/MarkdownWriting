@@ -17,7 +17,8 @@ GCC没有采用cmake编译，而是用了autoconfi-make的编译方式，所以�
 [GCC Development Plan - GNU Project](https://gcc.gnu.org/develop.html#timeline)
 
 ```cmd
-$ git clone --branch releases/gcc-14.1.0 --depth 1 https://github.com/gcc-mirror/gcc.git
+$ git clone --branch releases/gcc-14.1.0 --depth 1 https://github.com/gcc-mirror/gcc.git gcc14.1.0
+$ git clone --branch releases/gcc-4.9.0 --depth 1 https://github.com/gcc-mirror/gcc.git gcc4.9.0
 ```
 
 或者慢的话可以用阿里的镜像：[gnu-gcc安装包下载_开源镜像站-阿里云 (aliyun.com)](https://mirrors.aliyun.com/gnu/gcc/)
