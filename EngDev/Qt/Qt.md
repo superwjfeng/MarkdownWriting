@@ -382,9 +382,11 @@ int main(int argc, char *argv[])
 
 信号槽机制就是 Sender 产生了一个信号，该信号会发送给 Receiver，接着 Receiver 会调用槽函数来处理信号。换句话说，无非就是发出信号调用槽函数，通过信号和槽建立对象之间的联系
 
-### 订阅者模型的问题
+### Observer 的问题
 
 为什么不直接使用订阅者模型呢？在 *EIST软件工程.md* 中说过观察者模式/发布-订阅模型的问题
+
+[Observer之谬何在?_c++ observer之缪-CSDN博客](https://blog.csdn.net/weixin_43705457/article/details/104138568)
 
 ## *信号槽的简单实现*
 
