@@ -1893,11 +1893,83 @@ docker context use default
 
 当您使用 `docker context use <context-name>` 切换上下文时，之后的所有 Docker 命令都将作用于该 context 指定的 Docker 守护进程。
 
-# Kubernetes
+# Docker-python
 
-<https://www.redhat.com/zh/topics/containers/what-is-kubernetes>
+## *docker-py*
+
+[docker/docker-py: A Python library for the Docker Engine API (github.com)](https://github.com/docker/docker-py)
+
+docker-py 是docker官方提供的用于操作docker的python库
+
+```python
+import docker
+from docker.errors import APIError, ContainerError, ImageNotFound
+
+# 创建Docker客户端
+client = docker.from_env()
+
+def list_containers(all=True):
+    """列出所有容器"""
+    try:
+        containers = client.containers.list(all=all)
+        for container in containers:
+            print(f"Container ID: {container.id}, Name: {container.name}, Status: {container.status}")
+    except APIError as e:
+        print(f"API Error: {e}")
+
+def run_container(image, command, name=None, detach=True):
+    """运行一个新的容器"""
+    try:
+        container = client.containers.run(image, command, name=name, detach=detach)
+        return container
+    except ImageNotFound as e:
+        print(f"Image not found: {e}")
+    except ContainerError as e:
+        print(f"Container error: {e}")
+
+def stop_container(container_id):
+    """停止容器"""
+    try:
+        container = client.containers.get(container_id)
+        container.stop()
+        print(f"Stopped container {container_id}")
+    except APIError as e:
+        print(f"API Error: {e}")
+
+def remove_container(container_id):
+    """删除容器"""
+    try:
+        container = client.containers.get(container_id)
+        container.remove()
+        print(f"Removed container {container_id}")
+    except APIError as e:
+        print(f"API Error: {e}")
+
+def pull_image(repository, tag="latest"):
+    """拉取镜像"""
+    try:
+        image = client.images.pull(repository, tag=tag)
+        return image
+    except APIError as e:
+        print(f"API Error: {e}")
+
+# 示例：列出所有容器
+list_containers(all=True)
+
+# 示例：运行一个新的容器
+new_container = run_container("busybox", "echo hello world")
+
+# 示例：拉取镜像
+new_image = pull_image("alpine")
+
+# 使用完毕后，记得清理
+stop_container(new_container.id)
+remove_container(new_container.id)
+```
 
 
+
+## *docker-compose*
 
 # 云安全
 
