@@ -1901,6 +1901,28 @@ docker context use default
 
 docker-py 是docker官方提供的用于操作docker的python库
 
+所有的操作首先需要创建一个Docker客户端对象。通常情况下，使用默认配置连接到本地Docker守护进程
+
+```python
+import docker
+client = docker.from_env()
+```
+
+### docker操作的实现
+
+### 异常
+
+docker-py的异常从 `docker.errors.DockerException` 基类派生而来
+
+* **DockerException**：所有其他异常的基类，如果捕获到此异常，它通常表示某种未分类的通用错误。
+* **APIError**：当服务器返回一个错误状态码时抛出。例如，尝试操作一个不存在的容器可能会引发 `404 Client Error`
+* **ContainerError**：当容器运行命令失败时抛出。提供了容器的输出信息、退出状态码和命令本身
+* **ImageNotFound**：在尝试操作一个不存在的镜像时抛出
+* **NotFound**：通用的“未找到”异常，例如寻找不存在的容器或镜像时抛出
+* **BuildError**：在构建过程中如果发生了错误，则抛出此异常。包含了构建日志，可以用于调试
+* **TlsError**：在配置 TLS 错误时抛出
+* **InvalidVersion**：当客户端与服务器版本不兼容时抛出
+
 ```python
 import docker
 from docker.errors import APIError, ContainerError, ImageNotFound
