@@ -680,7 +680,19 @@ reset和restore的区别主要在于
 
 ### 关于合并冲突的问题
 
-合并冲突模式
+当执行 `git merge` 时，如果本地有未提交的更改，并且这些更改和远程分支中的更改有冲突，Git 会拒绝合并操作以防止覆盖本地更改。在上面的情况下，Git 告诉需要先处理本地更改
+
+```cmd
+$ git merge origin/rc/main-v4.2
+error: Your local changes to the following files would be overwritten by merge:
+        (list of files)
+Please commit your changes or stash them before you merge.
+Aborting
+```
+
+这种情况下要先对本地代码做提交、暂存、放弃等操作
+
+两种合并冲突模式
 
 * Fast-forward：看不出来是否有创建分支并merge，看起来就像是直接在当前分支上修改的，可以通过 `git merge [--no-ff -m "提提交信息"] <branch>` 来不使用fast-forward模式来merge，注意 -m 是一定要写的
 * No-ff 非fast-forward：可以看出来有没有经过merge

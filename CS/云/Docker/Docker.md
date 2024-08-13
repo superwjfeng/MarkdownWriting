@@ -1330,9 +1330,11 @@ $ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 
 * `--link`：连接到另一个容器，已被弃用，建议使用用户定义的网络
 
-* `-i -t`：以交互模式运行容器，通常与分配伪终端一起使用
+* `-i, --interactive`：表示运行容器时保持 STDIN 打开，即以交互模式运行容器；`-t, --tty`：分配一个伪终端，也就是模拟的终端，这样可以在容器内以交互式方式执行命令。这两个选项有一般都是一块使用，即 `-it`，无需额外的参数
 
 * `--restart`：设置容器的重启策略，默认是无限重启
+
+* `-w, --workdir`：用于设置容器内部的工作目录
 
 我们以下面这个命令来说明一下 `docker run` 的时候都发生了什么
 
@@ -1453,8 +1455,6 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
   在初学的时候犯过的错误：把 Dockerfile 当成 Shell Script 来写用了cd，实际上对于跨文件层（即Dockerfile中的两条指令）来说cd没有意义。Docker采用分层存储来构建，所以不同行的命令是不同的容器，因此想要持久地更改目录，应该要用 `WORKDIR`
 
-* `SHELL`：Docker 使用 `/bin/sh -c` 作为默认的 shell。但是可以通过 `SHELL` 指令来指定使用其他的 shell。`-c` 表示把后面的字符串当作命令来执行，而是当作一个脚本文件来执行
-
 * `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
 
   不能直接引用宿主机的绝对路径（如 `/mnt/data/docker_mount_files`）来复制文件到镜像内。Docker 构建只能访问发送给 Docker 守护进程作为构建上下文的那些文件和目录
@@ -1463,10 +1463,36 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
 * `EXPOSE`：暴露容器的端口，使得可以从主机访问容器内的服务
 
+* `SHELL`：Linux-Docker 使用 `/bin/sh -c` 作为默认的 shell，Windows-Docker 则使用 `cmd /S /C` 作为默认的 shell。但是可以通过 `SHELL` 指令来指定使用其他的 shell。`-c` 表示把后面的字符串当作命令来执行，即当作一个脚本文件来执行
+
+  ```dockerfile
+  SHELL ["/bin/bash", "-c"]
+  ```
+
 * `CMD <command>`
 
-  * 用来定义当启动基于某个镜像的容器时的默认程序
+  * 用来定义当启动基于某个镜像的容器时的默认程序，这个命令只有在 `docker run` 时没有指定任何要运行的命令时才会执行，比如说command是一个bash的时候，这个CMD就无效了
+
   * 每一个Dockerfile只能有一个CMD
+
+  * CMD有两种形式
+
+    * EXEC格式
+
+      ```dockerfile
+      CMD ["executable", "param1", "param2"]
+      ```
+
+    * Shell格式
+
+      ```dockerfile
+      CMD executable param1 param2
+      ```
+
+* `ENTRYPOINT`
+
+  * 如果 `CMD` 与 `ENTRYPOINT` 一起使用，则 `CMD` 中的参数会作为默认参数传递给 `ENTRYPOINT`
+  * 和CMD一样，同样有两种格式
 
 * `LABEL`：以键值对的形式为镜像添加元数据
 
@@ -2031,3 +2057,25 @@ remove_container(new_container.id)
 ### Key management service KMS
 
 ### Remote attestationa
+
+
+
+
+
+
+
+### `--privileged`
+
+`--privileged` 标志给予容器额外的权限，允许它几乎具有与宿主机（host machine）相同的能力。使用 `--privileged` 启动的容器可以访问宿主机的设备，并且可以执行一些通常受到限制的操作。
+
+默认情况下，为了安全考虑，Docker 容器运行在一个有限的权限模式下。这意味着容器内的进程不能影响宿主机的核心系统操作。例如，没有特权的容器无法加载内核模块、更改网卡属性或直接访问硬件设备等。
+
+当你运行一个带有 `--privileged` 标志的容器时，容器内的进程将获得类似于 root 用户的能力，并且能够绕过 AppArmor 或 SELinux 等安全机制的约束。这样就能执行以下操作：
+
+- 操作宿主机的网络堆栈
+- 使用 `mount` 之类的命令挂载文件系统
+- 直接访问宿主机的设备节点（如 `/dev` 下的设备）
+
+例如，如果你需要在容器内运行测试需要访问/dev或/sys目录中的设备的软件，或者你想在容器内部使用 `ip link` 或 `iptables` 等工具来更改网络设置，你可能需要使用 `--privileged` 标志。
+
+注意：使用 `--privileged` 标志会降低容器和宿主机的隔离级别，因此会增加安全风险。这是因为如果容器内运行恶意代码，那么这个代码现在有接近于宿主机 root 权限的能力。所以，除非确实需要，否则应避免在生产环境中使用 `--privileged` 标志
