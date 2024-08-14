@@ -1644,13 +1644,11 @@ public:
 
 整个lexer的入口函数是 `Lexer::lex`，调用之后会返回一个Token
 
-
-
 ## *头文件搜索 #include*
 
-
-
 ### Prelude：头文件查找有关的编译选项
+
+Clang 和大多数 C/C++ 编译器一样，**不会对头文件搜索路径进行递归搜索**。编译器只会在指定的目录中查找头文件，并不会进入那些目录下的子目录。如果需要包括子目录中的头文件，这些子目录必须显式地添加到搜索路径中
 
 - `-iquote` 用于双引号形式的 `#include` 的非系统头文件路径
 
@@ -1662,17 +1660,45 @@ public:
 
 - `-isysroot` 设置一个根目录用于系统头文件和库文件的搜索，影响所有的查找路径
 
+Clang中定义了一个enum来区分头文件的类型
+
+```C++
+// llvm_12/clang/include/clang/Lex/HeaderSearchOptions.h
+enum IncludeDirGroup {
+  /// '\#include ""' paths, added by 'gcc -iquote'.
+  Quoted = 0,
+  /// Paths for '\#include <>' added by '-I'.
+  Angled,
+  /// Like Angled, but marks header maps used when building frameworks.
+  IndexHeaderMap,
+  /// Like Angled, but marks system directories.
+  System,
+  /// Like System, but headers are implicitly wrapped in extern "C".
+  ExternCSystem,
+  /// Like System, but only used for C.
+  CSystem,
+  /// Like System, but only used for C++.
+  CXXSystem,
+  /// Like System, but only used for ObjC.
+  ObjCSystem,
+  /// Like System, but only used for ObjC++.
+  ObjCXXSystem,
+  /// Like System, but searched after the system directories.
+  After
+};
+```
 
 
-Clang 和大多数 C/C++ 编译器一样，**不会对头文件搜索路径进行递归搜索**。编译器只会在指定的目录中查找头文件，并不会进入那些目录下的子目录。如果需要包括子目录中的头文件，这些子目录必须显式地添加到搜索路径中
 
 
 
 
-
-HeaderMap
 
 HeaderSearch
+
+HeaderFileInfo：预处理器为每个include的文件都保存了这个信息
+
+HeaderSearchOptions：用来定义头文件搜索的一些选项
 
 
 
@@ -1834,7 +1860,7 @@ InitHeaderSearch 的主要工作如下：
 
 
 
-### HeaderSearch
+### 头文件定位：HeaderSearch
 
 
 
@@ -1897,7 +1923,7 @@ HeaderSearchOptions 类表示与头文件搜索相关的所有选项。这些选
 
 ### Multiple Include Optimization
 
-
+多次包含优化
 
 ### Apple的优化：Headermap & Framework
 
@@ -1913,7 +1939,13 @@ HeaderMap & Framework 都是Apple发明的概念，用于提高大型项目的�
 
 ### include_next	
 
+[gcc：预处理语句－－#include和#include_next_gcc -inc-CSDN博客](https://blog.csdn.net/fjb2080/article/details/5247494)
 
+`#include_next` 和 `#include` 指令一样，也是包含一个头文件，它们的不同地方是包含的路径不一样
+
+`#include_next` 的意思就是包含第二次搜索到的指定文件
+
+例如有个搜索路径链，在 `#include` 中，它们的搜索顺序依次是A，B，C，D和E。在B目录中有个头文件叫 `a.h`，在D目录中也有个头文件叫 `a.h`，如果在我们的源代码中这样写 `#include <a.h>`，那么我们就会包含的是B目录中的 `a.h` 头文件，如果我们这样写 `#include_next <a.h>` 那么我们就会包含的是D目录中的 `a.h` 头文件
 
 ## *符号管理*
 
