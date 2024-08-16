@@ -398,10 +398,12 @@ LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LL
 
 ### `llvm::Triple`
 
-LLVM作为一个编译器框架支持交叉编译的特性使得它非常适合开发需要在多平台上运行的软件。 LLVM提供了目标三元组 target triple 的概念，它用来标识目标系统的格式，包括CPU类型、制造商和操作系统等信息，以便于交叉编译器生成正确的代码
+LLVM作为一个编译器框架支持交叉编译的特性使得它非常适合开发需要在多平台上运行的软件。 LLVM提供了目标三元组 target triple（不一定是三元的，取这个名字是因为历史原因，之前是严格triple的）的概念，它用来标识目标系统的格式，包括CPU类型、制造商和操作系统等信息，以便于交叉编译器生成正确的代码
 
 ```
-<arch><sub>-<vendor>-<sys>-<abi>
+ARCHITECTURE-VENDOR-OPERATING_SYSTEM（CPU架构-CPU制造商-操作系统）
+or
+ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT（CPU架构-CPU制造商-操作系统-环境）
 ```
 
 ```cmd
@@ -425,6 +427,41 @@ public:
   Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr,
          const Twine &EnvironmentStr);
 };
+```
+
+这里面比较特殊的是EnvironmentType，它进一步指定了目标操作系统或 ABI 的环境。这个字段对于支持不同 ABI 类型或对同一操作系统有不同变体支持的编译器来说是非常有用的
+
+例如，在 ARM 架构上，可能需要区分使用硬浮点调用约定的软件（hard-float）与使用软浮点调用约定的软件（soft-float）。为此，`EnvironmentType` 可能会是 `gnueabihf` 表明使用了硬浮点 ABI，或者是 `gnueabi` 表示使用了软浮点 ABI
+
+另一个例子是在 x86 架构上，可以通过 `EnvironmentType` 来指定目标是 32 位 (`i386`) 还是 64 位 (`x86_64`) 的程序，并且还可以指定是否针对具有特定功能的 Linux 发行版（如 Android 操作系统的 `android` 环境）
+
+```C++
+  enum EnvironmentType {
+    UnknownEnvironment,
+
+    GNU, // 使用GNU工具链
+    GNUABIN32,
+    GNUABI64,
+    GNUEABI,
+    GNUEABIHF,
+    GNUX32,
+    GNUILP32,
+    CODE16,
+    EABI, // 嵌入式应用二进制接口 EABI
+    EABIHF,
+    Android,
+    Musl,
+    MuslEABI,
+    MuslEABIHF,
+
+    MSVC,
+    Itanium,
+    Cygnus,
+    CoreCLR,
+    Simulator, // Simulator variants of other systems, e.g., Apple's iOS
+    MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
+    LastEnvironmentType = MacABI
+  };
 ```
 
 ### CMAKE_TOOLCHAIN_FILE
@@ -1018,7 +1055,7 @@ Driver::BuildCompilation() -> Driver::BuildJobs() -> Driver::BuildJobsForAction(
 
 
 
-`getToolChain()` 会根据target triple选择相应的工具链，比如Linux的 `toolchains::Linux`
+
 
 
 
@@ -1041,49 +1078,40 @@ jobs 构建完成后，会先调用 `Driver::ExecuteCompilation()`，它会依�
 
 # Clang ToolChain
 
+## *ToolChain构成*
+
 ToolChain 工具链用来管理一个平台/架构上的编译器、汇编器、链接器等工具的路径和其他相关设置，以支持编译器正常工作
 
-<img src="ToolChainOnAllPlatforms.png">
-
-<img src="ToolChainOnLinuxPlatform.png">
-
-
-
 [Assembling a Complete Toolchain — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/Toolchain.html)
-
-
-
-
-
-
-
-
-
-
-
-
 
 <img src="workflow-of-clang-driver.png" width="60%">
 
 
 
+### Clang支持的ToolChain
 
+Clang支持各种平台的toolchain，下面是所有支持的toolchain
 
+<img src="ToolChainOnAllPlatforms.png">
 
+我们会重点介绍Linux/Generic_GCC toolchain
+
+<img src="ToolChainOnLinuxPlatform.png">
+
+## *核心类实现*
+
+### ToolChain
 
 ToolChain类用来获取某个平台的工具链
 
-Tool类是具体编译工具的信息，即对一个具体编译工作的封装基类，所有的具体的Tool都继承自它，比如说 `clang::driver::tools::Clang`、`clang::driver::tools::gnutools::Linker` 等
-
-
-
 ```C++
+// llvm_12/clang/include/clang/Driver/ToolChain.h
 class ToolChain {
 public:
   using path_list = SmallVector<std::string, 16>;  
   friend class RegisterEffectiveTriple;
 
-  const Driver &D; // 和Clang Driver有绑定关系
+  const Driver &D; // 和Clang Driver有绑定关系，Driver可以有多套ToolChain
   llvm::Triple Triple;
   const llvm::opt::ArgList &Args;
 
@@ -1119,29 +1147,110 @@ public:
 };
 ```
 
+### Tool
 
-
-
+Tool类是具体编译工具的信息，即对一个具体编译工作的封装基类，所有的具体的Tool都继承自它，比如说 `clang::driver::tools::Clang`、`clang::driver::tools::gnutools::Linker` 等
 
 ```C++
+// llvm_12/clang/include/clang/Driver/Tool.h
 class Tool {
   /// The tool name (for debugging).
   const char *Name;
-
   /// The human readable name for the tool, for use in diagnostics.
   const char *ShortName;
-
-  /// The tool chain this tool is a part of.
+  /// The tool chain this tool is a part of. 每一个Tool都关联于一套ToolChain
   const ToolChain &TheToolChain;
 
 public:
   Tool(const char *Name, const char *ShortName, const ToolChain &TC);
+  virtual void ConstructJob(Compilation &C, const JobAction &JA,
+                            const InputInfo &Output,
+                            const InputInfoList &Inputs,
+                            const llvm::opt::ArgList &TCArgs,
+                            const char *LinkingOutput) const = 0;
+  virtual void ConstructJobMultipleOutputs(Compilation &C, const JobAction &JA,
+                                           const InputInfoList &Outputs,
+                                           const InputInfoList &Inputs,
+                                           const llvm::opt::ArgList &TCArgs,
+                                           const char *LinkingOutput) const;
 };
 ```
 
+## *Generic_GCC ToolChain*
+
+Generic_GCC是一个特定的ToolChain实现，它被设计为使用GCC提供的工具来执行所有子命令。Clang可以充当GCC的 前端，即 Clang 使用与 GCC 兼容的命令行接口来调用 GCC 的后端工具链进行编译和链接等操作
+
+换言之，即使使用的是Clang编译器，这个工具链会让Clang在内部调用GCC提供的工具，比如GCC自己的编译器、汇编器和链接器
+
+为何要这么做？因为GCC的工具链在很多系统上都被广泛支持和使用，而且有些系统可能只预装了GCC而没有预装Clang。Generic_GCC允许用户在这样的系统上通过安装Clang来获得Clang的某些优势，比如更好的诊断信息和现代化的代码分析工具，同时仍然可以利用已经存在的基于GCC的构建系统和工具链
+
+Linux ToolChain就是Generic_GCC的一个子类，这说明Linux OS上是默认使用GCC工具链的，这也说明Generic_GCC的重要性
+
+Generic_GCC ToolChain的核心在于GCCInstallationDetector，本章将围绕它来讲述
+
+### Init
+
+`Generic_GCC::GCCInstallationDetector::init()` 的作用是从Clang Driver初始化一个GCCInstallationDetector， 这将执行所有的自动检测并设置各种路径。一旦构建完成，GCCInstallationDetector 基本上就是不可变的
 
 
 
+## *Linux ToolChain*
+
+Linux ToolChain 中包括了在Linux平台上寻找toolchain的方法，这也是我们有最多疑惑因此最关心的部分，所以单独成章来详细介绍一下
+
+Linux ToolChain还有4个子类，分别是Hexagon, Mips, PPCLinux和VE，简单介绍下它们
+
+* Hexagon 是高通公司的微处理器架构，主要用于移动和嵌入式设备。
+* MIPS架构，RISC的先驱者，在 *计算机组成原理.md* 中有详细介绍
+* PPCLinux（PowerPC Linux）：PowerPC 是由 IBM、苹果和摩托罗拉共同开发的另一种 RISC 处理器架构，旨在面向个人电脑、服务器、嵌入式系统和游戏机等广泛的产品线
+* VE（Vector Engine）：VE （Nec SX-Aurora TSUBASA Vector Engine）是 NEC 公司开发的向量处理器架构。这种架构特别适合执行大规模并行操作，常见于科学计算、数据分析和机器学习等领域，需要大量数值计算的任务
+
+### 获取工具链
+
+`Driver::getToolChain()` 会根据target triple选择相应的工具链，比如Linux的 `toolchains::Linux`
+
+它的实现非常简单，就是通过switch来得到target triple对应的工具链
+
+```C++
+// llvm_12/clang/lib/Driver/Driver.cpp
+const ToolChain &Driver::getToolChain(const ArgList &Args,
+                                      const llvm::Triple &Target) const {
+
+  auto &TC = ToolChains[Target.str()]; // 一个Driver可能有多套ToolChain
+  if (!TC) {
+    switch (Target.getOS()) {
+    // ...
+    case llvm::Triple::Linux:
+    case llvm::Triple::ELFIAMCU:
+      if (Target.getArch() == llvm::Triple::hexagon)
+        TC = std::make_unique<toolchains::HexagonToolChain>(*this, Target,
+                                                             Args);
+      else if ((Target.getVendor() == llvm::Triple::MipsTechnologies) &&
+               !Target.hasEnvironment())
+        TC = std::make_unique<toolchains::MipsLLVMToolChain>(*this, Target,
+                                                              Args);
+      else if (Target.isPPC())
+        TC = std::make_unique<toolchains::PPCLinuxToolChain>(*this, Target,
+                                                              Args);
+      else if (Target.getArch() == llvm::Triple::ve)
+        TC = std::make_unique<toolchains::VEToolChain>(*this, Target, Args);
+
+      else
+        TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
+      break;
+    // ...
+    }
+  return *TC;
+}
+```
+
+从上面的代码也可以看到，如果OS是Linux，得到的工具链就是Linux ToolChain（当然也就是G）
+
+## *其他平台（TDB）*
+
+### Darwin
+
+### MinGW
 
 # Runtime Library & Standard Library
 
@@ -1187,7 +1296,7 @@ public:
   * 标准库 libstdc++ 的头文件和库被安装在 `/usr/local/gcc-14.1.0/include/c++/14.1.0` 和
   *  运行时库 libgcc.a / libgcc_s.so 被安装在 `/usr/local/gcc-14.1.0/lib64` 中
 * LLVM
-  * 标准库 libc++ 的头文件和库分别被默认安装在 `/usr/local/include/c++/v1` 和 `/usr/local/lib/x86_64-unknown-linux-gnu` 中
+  * 标准库 libc++ 的头文件和库分别被默认安装在 `/usr/local/include/c++/v1` 和 `/usr/local/lib/x86_64-unknown-linux-gnu/c++` 中
   * 运行时库 compiler-rt，`libclang_rt*` 被默认安装在 `/usr/local/lib/clang/19/lib/x86_64-unknown-linux-gnu`
 
 ## *libc++*
@@ -4869,24 +4978,26 @@ LLDB的使用可以看 *IDE与调试工具.md*
 
 [TableGen Overview — LLVM 19.0.0git documentation](https://llvm.org/docs/TableGen/index.html)
 
-TableGen是LLVM项目用来定义和生成各种数据表和程序结构的一种工具。这些`.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
+TableGen是LLVM项目用来定义和生成各种数据表和程序结构的一种工具。这些`.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明，然后被TableGen工具处理并输出成不同的结果文件（比如说最常用的C++语法的 `.inc` 后缀文件）
 
-### TableGen工具
+TableGen工具被LLVM、Clang和MLIR使用，可以从这些定义文件中生成C++代码、文档或其他格式的数据。但是它们的使用目标有所不同
 
-LLVM的TableGen工具可以从这些定义文件中生成C++代码、文档或其他格式的数据。例如，它可以被用来自动化以下任务：
+- LLVM
+  - **生成寄存器描述**：TableGen可用于定义处理器的寄存器类、寄存器别名以及其他与寄存器相关的属性
+  - **指令编码解码**：可以定义指令的二进制编码格式，并由此生成编码和解码指令所需的代码
+  - **指令选择规则**：后端编译器的负责将中间表示转换为目标机器代码的指令选择阶段可以通过`.td`文件中的模式来定义
+  - **调度信息**：给出CPU的管线模型和指令的延迟，调度算法需要此信息来进行指令重排序以提高性能
 
-- **生成寄存器描述**：TableGen可用于定义处理器的寄存器类、寄存器别名以及其他与寄存器相关的属性
-- **指令编码解码**：可以定义指令的二进制编码格式，并由此生成编码和解码指令所需的代码
-- **指令选择规则**：后端编译器的负责将中间表示转换为目标机器代码的指令选择阶段可以通过`.td`文件中的模式来定义
-- **调度信息**：给出CPU的管线模型和指令的延迟，调度算法需要此信息来进行指令重排序以提高性能
+- Clang 生成诊断信息
+- MLIR  定义operation
 
-### DSL: TableGen语言
+### TableGen语言（DSL）
 
 [StormQ's Blog (csstormq.github.io)](https://csstormq.github.io/blog/LLVM 之后端篇（1）：零基础快速入门 TableGen)
 
 ### `.td` 文件内容
 
-一个`.td`文件会包含一个或多个通过TableGen语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值，然后被TableGen工具处理并输出成不同的结果文件（比如说C++语法的 `.inc` 后缀文件）。下面是一个简单的例子：
+一个`.td`文件会包含一个或多个通过TableGen语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值。下面是一个简单的例子：
 
 ```llvm
 // InstrInfo.td - Example instruction definitions for an imaginary target.
@@ -4906,3 +5017,27 @@ def ADD : MyTargetInst<"add", "Add two values">,
 上面的例子中，我们首先定义了一个指令类`MyTargetInst`，它有一个5位的操作码字段`Opcode`。接着我们使用该类来定义了一个加法指令`ADD`，并且指定了其输入和输出操作数列表，以及如何在解析器中匹配该指令。
 
 最终，TableGen工具会读取`.td`文件并根据其中的定义来生成相应的代码或数据，这样开发者就不再需要手动编写大量重复而容易出错的代码了。在LLVM中，这种自动化的方法使得支持新的指令集架构或修改现有的指令集变得更加灵活和简单
+
+
+
+llvm-tblgen
+
+
+
+
+
+```tablegen
+// llvm_12/clang/include/clang/Driver/Options.td
+def version : Flag<["-"], "version">,
+  HelpText<"Print the compiler version">,
+  MarshallingInfoFlag<FrontendOpts<"ShowVersion">>;
+
+def v : Flag<["-"], "v">, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Show commands to run and use verbose output">,
+  MarshallingInfoFlag<HeaderSearchOpts<"Verbose">>;
+```
+
+`Options.td` 中用到的字段，比如Flag，HelpText等定义在 `llvm_12/llvm/include/llvm/Option/OptParser.td` 中
+
+
+
