@@ -59,6 +59,8 @@ $ sudo apt install -y gcc g++ git cmake ninja-build
 
 zlib 是一个库，没有命令行的命令
 
+另外要编译LLVM需要host compiler， 即已经安装的GCC或LLVM，注意它们及其toolchain的版本是否满足条件（比如说string_view从GCC 7才开始提供）
+
 ## *使用预编译二进制包*
 
 该方法适用于系统配置不足以完成编译的计算机体验LLVM，但如果未来要进行LLVM的自定义和实验，不建议使用该方法
@@ -1086,8 +1088,6 @@ ToolChain 工具链用来管理一个平台/架构上的编译器、汇编器、
 
 <img src="workflow-of-clang-driver.png" width="60%">
 
-
-
 ### Clang支持的ToolChain
 
 Clang支持各种平台的toolchain，下面是所有支持的toolchain
@@ -1191,6 +1191,62 @@ Generic_GCC ToolChain的核心在于GCCInstallationDetector，本章将围绕它
 ### Init
 
 `Generic_GCC::GCCInstallationDetector::init()` 的作用是从Clang Driver初始化一个GCCInstallationDetector， 这将执行所有的自动检测并设置各种路径。一旦构建完成，GCCInstallationDetector 基本上就是不可变的
+
+### 标准库头文件搜索路径
+
+```
+Clang::ConstructJob() -> Clang::AddPreprocessingOptions() -> addLibCxxIncludePaths() or addLibStdCxxIncludePaths()
+```
+
+```C++
+// llvm_12/clang/lib/Driver/ToolChains/Clang.cpp
+void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
+                                    const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs,
+                                    const InputInfo &Output,
+                                    const InputInfoList &Inputs) const {
+    // ...
+    // Add C++ include arguments, if needed.
+    if (types::isCXX(Inputs[0].getType())) {
+    bool HasStdlibxxIsystem = Args.hasArg(options::OPT_stdlibxx_isystem);
+    forAllAssociatedToolChains(
+        C, JA, getToolChain(),
+        [&Args, &CmdArgs, HasStdlibxxIsystem](const ToolChain &TC) {
+          HasStdlibxxIsystem ? TC.AddClangCXXStdlibIsystemArgs(Args, CmdArgs)
+                             : TC.AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
+        });
+    }
+	// ...
+}
+
+// llvm_12/clang/lib/Driver/ToolChains/Gnu.cpp
+void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                               ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx:
+    addLibCxxIncludePaths(DriverArgs, CC1Args);
+    break;
+
+  case ToolChain::CST_Libstdcxx:
+    addLibStdCxxIncludePaths(DriverArgs, CC1Args);
+    break;
+  }
+}
+```
+
+HasStdlibxxIsystem 需要通过选项 `stdlibxx_isystem` 指定，这里重点介绍一下 `AddClangCXXStdlibIncludeArgs()`
+
+```
+addLibStdCxxIncludePaths(2参) -> addGCCLibStdCxxIncludePaths() -> addLibStdCXXIncludePaths(8参)
+```
+
+
+
+
 
 
 
@@ -1755,6 +1811,8 @@ public:
 
 ## *头文件搜索 #include*
 
+在Clang Toolchain中介绍了ToolChain是如何添加预处理器选项的，重点是如何添加头文件搜索选项，这部分介绍一下在构建预处理器的时候又发生了什么
+
 ### Prelude：头文件查找有关的编译选项
 
 Clang 和大多数 C/C++ 编译器一样，**不会对头文件搜索路径进行递归搜索**。编译器只会在指定的目录中查找头文件，并不会进入那些目录下的子目录。如果需要包括子目录中的头文件，这些子目录必须显式地添加到搜索路径中
@@ -1765,9 +1823,11 @@ Clang 和大多数 C/C++ 编译器一样，**不会对头文件搜索路径进�
 
 - `-isystem` 用于系统头文件路径，它可以降低从这些路径包含的头文件所产生的编译器警告级别
 
-  当使用 `-isystem` 指定目录时，该目录下的头文件将被当作系统头文件来处理。这意味着从这些目录中包含的头文件中发现的一些警告可能会被抑制，就像从标准系统头文件目录中包含的文件一样。这对于第三方库非常有用，特别是当我们不希望由于第三方库的潜在警告而干扰你自己项目中的警告报告
+  当使用 `-isystem` 指定目录时，该目录下的头文件将被当作系统头文件来处理。**这意味着从这些目录中包含的头文件中发现的一些警告可能会被抑制**，就像从标准系统头文件目录中包含的文件一样。这对于第三方库非常有用，特别是当我们不希望由于第三方库的潜在警告而干扰自己项目中的警告报告
 
-- `-isysroot` 设置一个根目录用于系统头文件和库文件的搜索，影响所有的查找路径
+- `-isysroot` 设置一个根目录用于系统头文件和库文件的搜索前缀，影响所有的查找路径
+
+- `-internal-isystem` 是Clang内部使用的，它将目录标记为系统级包含目录，不过这个标记并不暴露给外部命令行接口
 
 Clang中定义了一个enum来区分头文件的类型
 
@@ -1797,17 +1857,82 @@ enum IncludeDirGroup {
 };
 ```
 
+### 头文件选项和环境变量的关系
+
+在添加选项的函数中可以看出选项和环境变量的对应关系，比如说 `CPATH` 对应的就是 `-I`
+
+```C++
+// llvm_12/clang/lib/Driver/ToolChains/Clang.cpp
+void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
+                                    const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs,
+                                    const InputInfo &Output,
+                                    const InputInfoList &Inputs) const {
+    // ...
+    // Parse additional include paths from environment variables.
+    // FIXME: We should probably sink the logic for handling these from the
+    // frontend into the driver. It will allow deleting 4 otherwise unused flags.
+    // CPATH - included following the user specified includes (but prior to
+    // builtin and standard includes).
+    addDirectoryList(Args, CmdArgs, "-I", "CPATH");
+    // C_INCLUDE_PATH - system includes enabled when compiling C.
+    addDirectoryList(Args, CmdArgs, "-c-isystem", "C_INCLUDE_PATH");
+    // CPLUS_INCLUDE_PATH - system includes enabled when compiling C++.
+    addDirectoryList(Args, CmdArgs, "-cxx-isystem", "CPLUS_INCLUDE_PATH");
+    // OBJC_INCLUDE_PATH - system includes enabled when compiling ObjC.
+    addDirectoryList(Args, CmdArgs, "-objc-isystem", "OBJC_INCLUDE_PATH");
+    // OBJCPLUS_INCLUDE_PATH - system includes enabled when compiling ObjC++.
+    addDirectoryList(Args, CmdArgs, "-objcxx-isystem", "OBJCPLUS_INCLUDE_PATH");
+	// ...
+}
+```
+
+```C++
+/// \p EnvVar is split by system delimiter for environment variables.
+/// If \p ArgName is "-I", "-L", or an empty string, each entry from \p EnvVar
+/// is prefixed by \p ArgName then added to \p Args. Otherwise, for each
+/// entry of \p EnvVar, \p ArgName is added to \p Args first, then the entry
+/// itself is added.
+void addDirectoryList(const llvm::opt::ArgList &Args,
+                      llvm::opt::ArgStringList &CmdArgs, const char *ArgName,
+                      const char *EnvVar);
+```
+
+这个函数的作用是将环境变量中的路径 EnvVar 转换为编译选项 CmdArgs
+
+如果命令类型 ArgName 是 `-I, -L`  或者空字符串的话，就要把ArgName作为前缀和EnvVar拼接后再加入。比如
+
+- 若 `CombinedArg` 为 true，则 `ArgName` 和目录被组合成一个单独的字符串。例如 `-I` + `/usr/include` 变成 `-I/usr/include`
+- 若 `CombinedArg` 为 false，则 `ArgName` 和目录被作为两个独立的参数添加。例如，`-isystem` 和 `/usr/include` 分别被添加
+
+头尾部的特殊分隔符（Linux为冒号，Win为分号）表示应该把当前目录 `.` 也加入搜索路径：
+
+- 对于以分隔符开头的情况，意味着有一个前导分隔符，此时会将当前目录 `.` 添加到参数列表中
+- 对于以分隔符结尾的情况，意味着有一个尾随分隔符，也会将当前目录 `.` 添加
+
+举个例子：希望通过设置环境变量 `CPATH` 来添加额外的头文件搜索路径
+
+```bash
+export CPATH=/usr/local/include:/home/user/mylib/include:
+```
+
+由于 `CPATH` 的值是 `/usr/local/include:/home/user/mylib/include:`，`addDirectoryList` 函数将生成以下的参数列表 CmdArgs
+
+```
+-I/usr/local/include
+-I/home/user/mylib/include
+-I.
+```
 
 
 
-
-
+### 数据结构
 
 HeaderSearch
 
 HeaderFileInfo：预处理器为每个include的文件都保存了这个信息
 
-HeaderSearchOptions：用来定义头文件搜索的一些选项
+HeaderSearchOptions：用来定义头文件搜索的一些选项，由CompilerInstance的CompilerInvocation持有
 
 
 
@@ -1825,12 +1950,6 @@ public:
 ```
 
 
-
-
-
-### InitHeaderSearch
-
-InitHeaderSearch 负责初始化头文件搜索路径。该组件设置了一些默认的搜索路径，并根据不同的编译标志、目标平台和环境变量来调整这些路径。它是 HeaderSearch 工作的前提，因为它确定了预处理器寻找包含文件时的起始点
 
 
 
@@ -1889,10 +2008,36 @@ Linux 不在被 `ShouldAddDefaultIncludePaths()` 所排除的triple中，所以�
 
 
 
+### InitHeaderSearch
 
+`CompilerInstance::createPreprocessor()` 是初始化并执行头文件搜索的地方
 
 ```C++
-// llvm-project/clang/lib/Lex/InitHeaderSearch.cpp
+// clang/lib/Frontend/CompilerInstance.cpp
+void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
+  // ...
+  const llvm::Triple *HeaderSearchTriple = &PP->getTargetInfo().getTriple();
+  ApplyHeaderSearchOptions(PP->getHeaderSearchInfo(), getHeaderSearchOpts(),
+                           PP->getLangOpts(), *HeaderSearchTriple);
+
+  PP->setPreprocessedOutput(getPreprocessorOutputOpts().ShowCPP);
+
+  if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules) {
+    std::string ModuleHash = getInvocation().getModuleHash();
+    PP->getHeaderSearchInfo().setModuleHash(ModuleHash);
+    PP->getHeaderSearchInfo().setModuleCachePath(
+        getSpecificModuleCachePath(ModuleHash));
+  }
+  // ...
+}
+```
+
+`InitHeaderSearch.cpp` 负责初始化头文件搜索路径。该组件设置了一些默认的搜索路径，并根据不同的编译标志、目标平台和环境变量来调整这些路径。它是 HeaderSearch 工作的前提，因为它确定了预处理器寻找包含文件时的起始点
+
+`clang::ApplyHeaderSearchOptions()` 是 `InitHeaderSearch.cpp` 的核心，它将所有的数据结构联系起来
+
+```C++
+// llvm_12/clang/lib/Frontend/InitHeaderSearch.cpp
 void clang::ApplyHeaderSearchOptions(HeaderSearch &HS,
                                      const HeaderSearchOptions &HSOpts,
                                      const LangOptions &Lang,
@@ -1903,9 +2048,9 @@ void clang::ApplyHeaderSearchOptions(HeaderSearch &HS,
   for (unsigned i = 0, e = HSOpts.UserEntries.size(); i != e; ++i) {
     const HeaderSearchOptions::Entry &E = HSOpts.UserEntries[i];
     if (E.IgnoreSysRoot) {
-      Init.AddUnmappedPath(E.Path, E.Group, E.IsFramework, i);
+      Init.AddUnmappedPath(E.Path, E.Group, E.IsFramework);
     } else {
-      Init.AddPath(E.Path, E.Group, E.IsFramework, i);
+      Init.AddPath(E.Path, E.Group, E.IsFramework);
     }
   }
 
@@ -1919,7 +2064,7 @@ void clang::ApplyHeaderSearchOptions(HeaderSearch &HS,
     // Set up the builtin include directory in the module map.
     SmallString<128> P = StringRef(HSOpts.ResourceDir);
     llvm::sys::path::append(P, "include");
-    if (auto Dir = HS.getFileMgr().getOptionalDirectoryRef(P))
+    if (auto Dir = HS.getFileMgr().getDirectory(P))
       HS.getModuleMap().setBuiltinIncludeDir(*Dir);
   }
 
@@ -1927,45 +2072,13 @@ void clang::ApplyHeaderSearchOptions(HeaderSearch &HS,
 }
 ```
 
-`clang::ApplyHeaderSearchOptions()` 在 `CompilerInstance::createPreprocessor()` 创建预处理器的时候被调用
+`clang::ApplyHeaderSearchOptions()` 的主要工作如下：
+
+1. 设置默认搜索路径
 
 
 
-
-
-
-
-InitHeaderSearch 的主要工作如下：
-
-### 1. 设置默认搜索路径
-
-`InitHeaderSearch` 根据编译器安装的位置和目标系统的架构来配置默认的搜索路径。这些默认的路径通常包括系统头文件目录（比如 `/usr/include`）、C++ 标准库目录（比如 `/usr/include/c++/version`），以及其他平台或架构特定的目录。
-
-### 2. 处理命令行参数
-
-当使用命令行选项（如 `-I`, `-isystem`, `-idirafter`, `-iquote` 等）指定额外的头文件搜索路径时，`InitHeaderSearch` 负责将它们插入到适当的位置。这允许用户覆盖默认的头文件搜索顺序或添加项目特定的目录。
-
-### 3. 环境配置
-
-`InitHeaderSearch` 也会检查环境变量，例如 `CPATH` 或 `C_INCLUDE_PATH`，这些变量可能会影响头文件的搜索路径。如果这些变量被设置，则它们指定的路径将被加入到搜索列表中。
-
-### 4. 考虑交叉编译情况
-
-对于交叉编译环境，`InitHeaderSearch` 会加载适用于目标体系结构的搜索路径，而非宿主机的路径。这通常涉及到加载交叉编译工具链提供的头文件和库路径。
-
-### 5. 框架支持（macOS）
-
-在 macOS 上，`InitHeaderSearch` 还负责设置用于框架（Frameworks）搜索的路径。框架是 macOS 的一种特殊的包含资源、头文件和共享库的目录结构。
-
-### 6. 配置文件支持
-
-`clang` 可能会读取某些配置文件（如果存在的话），这些配置文件可以进一步定义或修改头文件搜索路径。`InitHeaderSearch` 会在初始化期间加载这些配置文件中的设置。
-
-### 7. 链接系统头文件
-
-`InitHeaderSearch` 有时需要确保系统头文件的搜索优先级高于其它任何由 `-I` 添加的路径，以避免引入潜在的不兼容问题。
-
-总之，`InitHeaderSearch` 起着规划和设定 `clang` 编译器在源代码预处理阶段用于查找头文件的路径网络的作用。它确保编译器能够按照正确的顺序，在正确的位置查找源代码中包含的头文件。通过这种方式，`InitHeaderSearch` 对编译流程的顺利执行至关重要
+Linux 的头处理都放到Driver里了，即上面在ToolChain中所介绍过的
 
 
 
