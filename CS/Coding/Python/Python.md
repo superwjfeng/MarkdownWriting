@@ -1825,6 +1825,37 @@ Python的多态与重写非常简单，不需要像C++那样要满足2个必要�
 
 这可能是因为Python中没有函数重载体系，相同名字的函数，即使是参数不同也会被覆盖
 
+### 接口类
+
+Python没有像C++纯虚类或Java中的显式接口 interface 关键字，因为它是一种动态类型语言。不过可以通过抽象基类（Abstract Base Class，ABC）来模拟接口类的行为。在Python中，可以使用`abc`模块来定义一个抽象基类，并使用装饰器`@abstractmethod`标记那些在子类中必须被重写的方法
+
+下面是一个例子，展示了如何定义一个包含抽象方法的接口类：
+
+```python
+from abc import ABC, abstractmethod
+
+class MyInterface(ABC):
+    
+    @abstractmethod
+    def my_method(self):
+        pass
+
+class ConcreteClass(MyInterface):
+    
+    def my_method(self):
+        print("实现了接口中的my_method")
+
+# 如果尝试实例化MyInterface，将会抛出TypeError，
+# 因为它包含有抽象方法而不能被实例化。
+# my_interface = MyInterface()  # TypeError: Can't instantiate abstract class MyInterface with abstract method my_method
+
+# 只有当所有的抽象方法都被覆盖时，子类才能被实例化。
+concrete_class = ConcreteClass()
+concrete_class.my_method()  # 输出: 实现了接口中的my_method
+```
+
+如果创建了一个`MyInterface`的子类但没有实现所有的抽象方法，Python解释器将不允许实例化该子类。这就迫使任何继承自`MyInterface`的子类提供`my_method`方法的具体实现
+
 ## *Property decorator*
 
 Python 内置的 `@property` 装饰器可以**把类的方法伪装伪装成属性调用的方式**，也就是本来 `Foo.func()` 的调用方式变成了 `Foo.func` 的方式

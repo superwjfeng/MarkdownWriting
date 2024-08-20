@@ -180,10 +180,17 @@ gcc/g++编译出来的二进制程序默认是release模式，**要使用gdb调�
 ### 断点类型
 
 * 行号断点：通过在源代码的特定行上设置断点，可以使程序在执行到该行时停止。`break [filename:]linenumber`
+
 * 函数断点：通过指定要在特定函数内停止程序执行的方式来设置函数断点。`break function_name`
-* **条件断点**：设置一个条件，只有当条件满足时才会触发断点。`break location if condition`
+
+* **条件断点 conditional breakpoint**：设置一个条件，只有当条件满足时才会触发断点。`break location if condition`
+
 * 硬件断点：硬件断点是在处理器级别实现的断点，可以用于监视内存地址的读写操作。`break location hardware`
-* 监视断点：监视断点用于监视变量的值的更改。当变量的值发生变化时，程序会停止执行。`watch variable`
+
+* 监视断点 watchpoint：监视断点用于监视变量的值的更改。当变量的值发生变化时，程序会停止执行。`watch variable`
+
+  监视断点允许我们在一个变量的值发生改变时暂停程序的执行，或者内存地址被读取或写入时暂停。它关注的是数据的变化，而不像断点那样关注代码的位置。监视点非常有用于追踪变量何时和如何被修改，这在调试复杂的状态错误和内存覆写问题时很有帮助
+
 * 静态断点：静态断点是指在程序启动之前设置的断点，用于在程序加载时立即生效。`break filename:linenumber static`
 
 ### 断点操作
@@ -359,87 +366,389 @@ info register eax
 
    这将允许 GDB 自动加载任何路径下的 `.gdbinit` 文件，但请注意，这可能会引入一些安全风险
 
-# LLDB
+## *GDB插件 & 库*
+
+### GUI & prettier
+
+# LLDB的使用
 
 [🐛 LLDB (llvm.org)](https://lldb.llvm.org/)
 
 [GDB to LLDB command map - 🐛 LLDB (llvm.org)](https://lldb.llvm.org/use/map.html)
 
-LLDB 是 LLVM 工具链中的debugger
+LLDB 是 LLVM 工具链中的debugger，相比于GDB它更现代、复杂，作为LLVM的一员，它同样提供了API用于开发
 
 > LLDB is a next generation, high-performance debugger. It is built as a set of reusable components which highly leverage existing libraries in the larger [LLVM Project](https://llvm.org/), such as the Clang expression parser and LLVM disassembler.
 >
 > LLDB is the default debugger in Xcode on macOS and supports debugging C, Objective-C and C++ on the desktop and iOS devices and simulator.
 
+## *LLDB编译*
+
+### 箭头问题
+
+lldb 箭头没有用，比如上箭头会打印出 `^[[A`
+
+原因是：[lldb arrow keys nor working : r/LLVM (reddit.com)](https://www.reddit.com/r/LLVM/comments/1e9opgt/lldb_arrow_keys_nor_working/)，缺少libedit
+
+[Editline Library (libedit) - Port of NetBSD Command Line Editor Library (thrysoee.dk)](https://thrysoee.dk/editline/)
+
+```cmd
+$ sudo apt-get install libedit-dev
+```
+
+构建的时候带上 `-DLLDB_ENABLE_LIBEDIT=ON` 即可
+
+## *LLDB命令结构*
+
+相比于GDB较为自由的命令形式，LLDB的命令结构基本上是遵守下面的格式的
+
+```cmd
+<noun> <verb> [-options [option-value]] [argument [argument...]]
+```
+
+可以使用 `''` 或 `""` 来给出空格，可以用 `\` 进行转义，用 backtick ` `` ` 进行命令替换
+
+### 命令别名
+
+```cmd
+(lldb) command unalias b
+(lldb) command alias b breakpoint
+```
+
+如果别名和已有命令产生冲突的时候，lldb parser会选择使用别名，前提是如果只有一个相同的别名的话
+
+### raw-input
+
+```
+(lldb) help raw-input
+  <raw-input> -- Free-form text passed to a command without prior interpretation, allowing spaces without requiring quotes.  To pass arguments and free form text put two dashes
+                 ' -- ' between the last argument and any raw input.
+```
+
+raw-input是指传递给命令的未经解释（原始格式）的文本。当使用某些需要接收原始输入的LLDB命令时，可以直接输入文本而不需要用引号包围其中包含的空格。这意味着LLDB会将该输入当作一个整体字符串来处理，而不是试图解析它
+
+例如，如果一个命令通常需要使用引号来包围一个包含空格的字符串参数，那么在启用raw-input模式后，就无需使用引号。这对于某些要求精确控制输入格式的命令很有用
+
+`--` 是一种在命令行界面中常见的约定，用于表明命令参数的结束和原始输入的开始。当需要传递一些应该被视为单个参数的文本，且该文本可能包含通常会被解释为多个参数的空格或特殊字符时，这种方法非常有用
+
+```cmd
+(lldb) some-command arg1 arg2 -- 这是原始输入内容
+```
+
+注意：一旦使用了`--`来标记原始输入的开始，LLDB会认为所有随后的内容都是原始输入，直到该命令处理完毕。没有办法可以说明结束了raw-input，之后给出的内容又是正常的输入了
+
 ## *调试执行*
+
+### Loading Program into LLDB
 
 和gdb一样，LLVM 编译出来的二进制程序默认是release模式，编译的时候一定要 `-g` 才会把程序的debug信息放进去，从而才能使用debugger调试
 
 * 调试需要参数的程序
 
-  * 在lldb打开程序的时候直接给出
+  1. 在lldb打开程序的时候直接给出
 
-    ```cmd
-    $ lldb -- a.out 1 2 3
-    ```
+     ```cmd
+     $ lldb -- a.out 1 2 3
+     ```
 
-  * lldb打开程序后，使用 `process launch` 命令并附带程序需要的参数
+  2. lldb打开程序后，使用 `process launch` 命令并附带程序需要的参数
 
-    ```
-    (lldb) process launch -- <args>
-    (lldb) run <args>
-    (lldb) r <args>
-    ```
+     ```
+     (lldb) process launch -- <args>
+     (lldb) run <args>
+     (lldb) r <args>
+     ```
 
-  * 使用 `settings set` 命令设置参数后再run
+  3. 使用 `settings set` 命令设置参数后再run
 
-    ```
-    (lldb) settings set target.run-args 1 2 3
-    (lldb) run
-    ...
-    (lldb) run
-    ...
-    ```
-    
-    如果参数本身是有 `-` 或者 `--` 的话，需要用 `settings set -- target.run-args 1 2 3`，否则lldb会把它们解析为传递给lldb本身的选项
-    
-    在 LLDB 中，`--` 通常用来明确表示后面的参数不应该被 LLDB 解释器解析，而是直接传递给要运行的程序
+     ```
+     (lldb) settings set target.run-args 1 2 3
+     (lldb) run
+     ...
+     (lldb) run
+     ...
+     ```
+
+     如果参数本身是有 `-` 或者 `--` 的话，需要用 `settings set -- target.run-args 1 2 3`，否则lldb会把它们解析为传递给lldb本身的选项
+
+     在 LLDB 中，`--` 通常用来明确表示后面的参数不应该被 LLDB 解释器解析，而是直接传递给要运行的程序
+
+  4. 新开一个Terminal来load（MacOS only）
+
+     ```
+     (lldb) process launch --tty -- <args>
+     (lldb) pro la -t -- <args>
+     ```
+
+* 和gdb一样，先 `lldb` 打开LLDB，然后用 `file` 来打开待调试文件也是可以的
+
+* 调试已经在运行的程序 `process attach`
+
+  ```
+  (lldb) process attach --pid 123
+  (lldb) process attach --name Sketch
+  (lldb) process attach --name Sketch --waitfor
+  ```
+
+  `--waitfor` 和挂起断点有点类似，等该进程出现的时候再attach
 
 * 当完成调试时，可以使用 `q` 或者 `quit` 命令退出lldb
 
-### 启动调试
+### 设置环境变量
+
+* 设置
+
+  ```
+  (lldb) settings set target.env-vars DEBUG=1
+  (lldb) set se target.env-vars DEBUG=1
+  (lldb) env DEBUG=1
+  ```
+
+* 取消设置
+
+  ```
+  (lldb) settings remove target.env-vars DEBUG
+  (lldb) set rem target.env-vars DEBUG
+  ```
+
+* 在 `process launch` 的时候设置
+
+  ```
+  (lldb) process launch -E DEBUG=1
+  ```
+
+### 程序执行
+
+LLDB中，所有的完整进程控制命令都是以 `thread` 作为 noun 的
+
+```
+(lldb) thread continue   // 断点命中后继续执行
+Resuming thread 0x2c03 in process 46915
+Resuming process 46915
+(lldb) thread step-in    // The same as GDB's "step" or "s" 进入一个函数
+(lldb) thread step-over  // The same as GDB's "next" or "n" 单步调试
+(lldb) thread step-out   // The same as GDB's "finish" or "f" 执行完当前函数
+(lldb) thread return [RETURN EXPRESSION] // 马上从当前栈中返回，附一个可选的返回值
+```
+
+也有汇编指令级别的控制
+
+```
+(lldb) thread step-inst       // The same as GDB's "stepi" / "si"
+(lldb) thread step-over-inst  // The same as GDB's "nexti" / "ni"
+```
+
+### 多线程控制
+
 
 ## *断点管理*
 
 ### 断点操作
 
-* 设置断点：在程序中设置断点，以在特定位置停止程序的执行。使用 `breakpoint` or `br` or `b` 命令，后面跟上文件名和行号或函数名
+```
+(lldb) help breakpoint
+Commands for operating on breakpoints (see 'help b' for shorthand.)
+
+Syntax: breakpoint <subcommand> [<command-options>]
+
+The following subcommands are supported:
+
+      clear   -- Delete or disable breakpoints matching the specified source file and line.
+      command -- Commands for adding, removing and listing LLDB commands executed when a breakpoint is hit.
+      delete  -- Delete the specified breakpoint(s).  If no breakpoints are specified, delete them all.
+      disable -- Disable the specified breakpoint(s) without deleting them.  If none are specified, disable all breakpoints.
+      enable  -- Enable the specified disabled breakpoint(s). If no breakpoints are specified, enable all of them.
+      list    -- List some or all breakpoints at configurable levels of detail.
+      modify  -- Modify the options on a breakpoint or set of breakpoints in the executable.  If no breakpoint is specified, acts on the last created breakpoint.  With
+                 the exception of -e, -d and -i, passing an empty argument clears the modification.
+      name    -- Commands to manage name tags for breakpoints
+      read    -- Read and set the breakpoints previously saved to a file with "breakpoint write".
+      set     -- Sets a breakpoint or set of breakpoints in the executable.
+      write   -- Write the breakpoints listed to a file that can be read in with "breakpoint read".  If given no arguments, writes all breakpoints.
+```
+
+* 设置断点
+
+  * `breakpoint set` / `br s`
+
+    * `-n/--name` 为某个名字的函数设置断点
+    * `-f/--file` 为某个文件设置断点
+    * `-l/--line` 为某行代码设置断点
+
+  * LLDB提供了GDB风格的断点设置，即使用 `b` 可以不使用上面的选项就直接使用设置断点
+
+    ```
+    (lldb) b test.c:12
+    ```
+
+  * 使用正则表达式设置断点
+
+    ```
+    (lldb) breakpoint set --source-pattern regular-expression --file SourceFile
+    (lldb) br s -p regular-expression -f file
+    ```
+
+  * 设置条件断点
+
+    ```
+    (lldb) breakpoint set --name foo --condition '(int)strcmp(y,"hello") == 0'
+    (lldb) br s -n foo -c '(int)strcmp(y,"hello") == 0'
+    ```
+
 * 查看断点：`breakpoint list` or `br l`
+
 * 启用和禁用断点：使用 `breakpoint enable` or `br en` 和 `breakpoint disable` or `br dis` 命令可以分别启用和禁用一个或多个断点
+
 * 删除断点
   * `breakpoint delete` or `br del` 删除所有断点；`delete 断点编号` 删除指定编号的断点；`delete 范围` 删除编号范围内的断点
   * `clear 函数名` 删除函数断点；`clear 行号` 删除指定行号的断点
+
 * 临时断点：可以设置一个临时断点，它会在首次触发后自动删除。使用 `tbreak` 命令来设置临时断点，例如，`tbreak function_name`
 
 ### 断点的重复操作
 
-1. **忽略计数**：
-   * 可以使用 `ignore` 命令来设置一个断点的忽略计数，以指定触发断点的次数。例如，`ignore 3 1` 表示在第3次触发后停止。
-2. **条件断点修改**：
-   * 使用 `condition` 命令可以更改条件断点的条件。例如，`condition breakpoint_number new_condition`。
+* **忽略计数**：
+  * 可以使用 `ignore` 命令来设置一个断点的忽略计数，以指定触发断点的次数。例如，`ignore 3 1` 表示在第3次触发后停止。
+  
+* **条件断点修改**：
+  * 使用 `condition` 命令可以更改条件断点的条件。例如，`condition breakpoint_number new_condition`。
+  
+* 自定义断点命中时的操作
 
-## *程序执行*
+  ```
+  (lldb) breakpoint set --name myFunction --command 'frame variable'
+  ```
 
-c/continue，继续执行
-n/next，单步调试
-s/step，进入一个函数
-finsh，执行完当前函数
+  当然也可以在断点创建后追加命令
+
+  ```
+  (lldb) breakpoint command add 1.1
+  Enter your debugger command(s). Type 'DONE' to end.
+  > bt
+  > DONE
+  ```
+
+  或者用 `--script` 让断点命中后执行该脚本文件中的命令
+
+* 挂起断点：LLDB是默认挂起断点的，也就是说如果当前活跃的已加载的进程中没有找到断点，会把Warning而不是Error，不需要像GDB一样用 `set breakpoint pending on` 来显式开启这种行为
+
+## *查看 & 打印*
+
+### 检查栈
+
+* 显示当前线程的调用栈
+
+  ```
+  (lldb) thread backtrace
+  (lldb) bt
+  * thread #1, name = 'a.out', stop reason = breakpoint 1.1
+    * frame #0: 0x00005555555551f3 a.out`main at test_string.cpp:5:14
+      frame #1: 0x00007ffff7a80d90 libc.so.6`__libc_start_call_main(main=(a.out`main at test_string.cpp:4), argc=1, argv=0x00007fffffffe3a8) at libc_start_call_main.h:58:16
+      frame #2: 0x00007ffff7a80e40 libc.so.6`__libc_start_main_impl(main=(a.out`main at test_string.cpp:4), argc=1, argv=0x00007fffffffe3a8, init=<unavailable>, fini=<unavailable>, rtld_fini=<unavailable>, stack_end=0x00007fffffffe398) at libc-start.c:392:3
+      frame #3: 0x0000555555555115 a.out`_start + 37
+  ```
+
+* 切换栈
+
+  ```
+  (lldb) frame select [frame index]
+  (lldb) fr s
+  ```
+
+* 查看当前栈和源代码
+
+  ```
+  (lldb) f
+  (lldb) process status
+  ```
+
+### 检查变量
+
+* 查看当前源文件中的 global/static 变量
+
+  ```
+  (lldb) target variable
+  (lldb) ta v
+  ```
+
+* 每次停下来展示 `argc` 和 `argv`
+
+  ```
+  (lldb) target stop-hook add --one-liner "frame variable argc argv"
+  (lldb) ta st a -o "fr v argc argv"
+  (lldb) display argc
+  (lldb) display argv
+  ```
+
+### 线程信息
+
+### 底层信息：寄存器、内存
+
+## *Formatting*
+
+LLDB一共有5种格式化特征
+
+* `type format`
+* `type summary`
+* `type filter`
+* `type synthetic`
+* `type category`
+
+除了 `type category` 外每种特种都有下面4个子命令
+
+- `add`: associates a new printing option to one or more types
+- `delete`: deletes an existing association
+- `list`: provides a listing of all associations
+- `clear`: deletes all associations
+
+### Synthetic Children
+
+对于内部结构复杂的数据结构需要特殊处理
+
+### Frame & Thread Format
 
 ## *Python API*
 
 ### 自定义断点类型
 
 ### 自定义LLDB命令
+
+## *Remote Debugging*
+
+### 远端 & 本地的设置
+
+* 远端
+* 本地
+
+### 调试
+
+# LLDB原理 & 开发
+
+[lldb的一些调试用法前言 LLDB是我们平常在开发过程中的默认调试器 如上图所示: lldb还有一个lldb-driv - 掘金 (juejin.cn)](https://juejin.cn/post/7112446964402225160#heading-2)
+
+[BUD17-310 - Introducing LLDB for Linux on Arm and AArch64.pdf (linaro.org)](https://static.linaro.org/connect/bud17/Presentations/BUD17-310 - Introducing LLDB for Linux on Arm and AArch64.pdf)
+
+## *LLDB架构*
+
+[lldb的流程&环境的配置lldb 的断点分类 lldb的断点类型: 软件断点:正在调试的二进制文件中的断点，在调试器中 - 掘金 (juejin.cn)](https://juejin.cn/post/7113844055863197726)
+
+### 本地调试
+
+
+
+### 远端调试
+
+## *API*
+
+### C++: SB
+
+Scripting Bridge, SB API 是LLDB提供的稳定C++ API，可以通过SWIG将其转换为Python代码
+
+### Python
+
+## *制作LLDB插件*
+
+[记制作lldb插件搭建模板 在上文lldb的流程&环境的配置一文中已经分析过，lldb-plugin被调用到的关键点在于 - 掘金 (juejin.cn)](https://juejin.cn/post/7114595912814444575)
 
 # 核心转储文件调试分析
 
@@ -949,7 +1258,7 @@ CMake工具不会用到VS的build和debug系统（即tasks.json和launch.json）
 
 当然如果想要用tasks.json来使用CMake也是可以的
 
-# VS Code在容器环境中开发
+# 开发VS Code插件
 
 
 
