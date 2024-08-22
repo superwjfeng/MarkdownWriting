@@ -35,7 +35,7 @@ GMP (GNU Multiple Precision Arithmetic Library), MPFR (multiple-precision floati
 $  ./contrib/download_prerequisites
 ```
 
-在srcdir运行上面的script，如果中间报了下面的错误，就是网络连接导致文件没有拉全，多拉几次
+在srcdir运行上面的script，如果中间报了下面的错误，就是由于网络连接问题导致文件没有拉全，多拉几次就行
 
 ```
 WARNING: 1 computed checksum did NOT match

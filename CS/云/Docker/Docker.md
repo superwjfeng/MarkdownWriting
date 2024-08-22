@@ -1198,11 +1198,18 @@ Docker中有镜像、容器、网络、volume、插件等对象
   * `docker history`：显示一个镜像的历史记录，包括各个层的详细信息
 
   * `docker inspect`：查看详细的镜像信息，包括配置、挂载点等
+  
 * `docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]` 给一个镜像打标签
 
 * `docker pull` 下载镜像。如果不写tag，就默认下载latest
 
-* `docker commit` 命令用于从容器的更改创建一个新的映像。将容器的文件更改或设置提交到新映像可能很有用
+* `docker commit` 命令用于从容器的更改创建一个新的映像
+
+  ```cmd
+  $ docker commit <CONTAINER> <REPOSITORY[:TAG]>
+  ```
+
+  即使容器已经退出（状态为 Exited），我们依然可以使用 `docker commit` 命令将其保存成一个新的镜像。只要容器没有被删除，它的文件系统更改都还在，并且可以被 `commit` 操作捕捉到
 
 * `docker rmi -f 镜像ide` 删除指定的镜像
 
@@ -1382,8 +1389,6 @@ docker unpause CONTAINER [CONTAINER...]
     * `docker rm -f $(docker ps -aq) ` 删除所有的容器
     * `docker container prune` 删除所有 stop 的容器
 
-### 镜像快照、导入导出
-
 ### 查看信息
 
 * 日志 `docker logs -f -t --tail NUM` 显示日志条数
@@ -1396,6 +1401,49 @@ docker unpause CONTAINER [CONTAINER...]
 * `docker exec -it 容器id shell`，进入容器后开启一个新的中断，可以在里面操作（常用）
 * `docker attach 容器id`，进入容器横在执行的终端，不会启动新的进程
 * `docker cp 容器id:容器内路径` 目的主机路径
+
+### 资源清理
+
+1. 通过 `docker system df` 可以查看docker相关的系统资源占用
+
+   ```cmd
+   $ docker system df
+   TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+   Images          5         5         184.7GB   27.68GB (14%)
+   Containers      9         5         13.48kB   93B (0%)
+   Local Volumes   0         0         0B        0B
+   Build Cache     323       0         533.5GB   533.5GB
+   ```
+
+2. 清理镜像 & 容器
+
+   ```cmd
+   $ docker image prune
+   WARNING! This will remove all dangling images.
+   $ docker image prune -a
+   WARNING! This will remove all images without at least one container associated to them.
+   ```
+
+   上面的 dangling images 指的是那些不再有任何标签引用的镜像
+
+   1. 当构建一个新版本的镜像并且使用相同的标签时，之前的镜像像会失去标签而变成悬挂镜像。例如，如果你两次执行 `docker build -t myapp:latest .`，第一次构建的镜像，在第二次构建后，如果没有其他标签或容器指向它，将会变成一个悬挂镜像
+   2. 删除镜像时，如果该镜像有多个标签，删除其中一个标签可能导致其成为悬挂镜像。
+   3. 构建过程中创建的中间层镜像，在构建完成后也可能成为悬挂镜像。
+
+   悬挂镜像通常不包含有用的内容，占用不必要的磁盘空间，因此可以安全地删除
+
+3. 清理构建缓存
+
+下面的是一个大杀器，一定要谨慎使用它
+
+```cmd
+$ docker system prune -a
+WARNING! This will remove:
+  - all stopped containers
+  - all networks not used by at least one container
+  - all images without at least one container associated to them
+  - all build cache
+```
 
 # Build详解
 
@@ -1458,6 +1506,15 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 * `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
 
   不能直接引用宿主机的绝对路径（如 `/mnt/data/docker_mount_files`）来复制文件到镜像内。Docker 构建只能访问发送给 Docker 守护进程作为构建上下文的那些文件和目录
+
+* `ADD` 指令在 Dockerfile 中用于将文件、目录或远程文件 URL 的内容复制到镜像中的指定路径。与 `COPY` 指令相比，`ADD` 具有一些额外的功能：
+
+  1. 自动解压缩归档文件：如果 `ADD` 源是一个本地的压缩格式文件（例如 `.tar.gz`, `.zip` 等），那么它会被自动解压缩为目标路径中的目录和文件
+  2. 支持从 URL 直接添加文件：可以直接使用 `ADD` 来下载远程文件并将其添加到镜像中，而不需要额外的 `wget` 或 `curl` 命令
+
+  ```dockerfile
+  ADD <src>... <dest>
+  ```
 
 * `RUN <command>`：在容器内执行指定的指令，并把结果保存下来
 
@@ -1564,18 +1621,11 @@ logs/
 
 ## *多阶段构建*
 
-### Error: max depth exceeded
-
-Docker在构建镜像时，会构建多个layers，在使用Dockerfile时，过度使用COPY、RUN命令，在频繁构建容器时，就会出现构建层数过多的情况，报max depth exceeded错误，并且无法再次构建容器。一般这个错误都是在有上百个layers的时候才会出现，但是笔者在云服务器上开发的时候，layer貌似被限定到了13层，不是很明白为什么
-
-以下是一些build的建议
-
-* 减少在buildfile中的 `git clone` 等操作，使用COPY
-* 多阶段构建
-
 ### 多阶段构建的使用
 
-多阶段构建 Multi-stage build 是指在一个Dockerfile中定义多个构建阶段，每个阶段都可以执行一组特定的操作，生成中间产物，然后将这些中间产物传递到下一个阶段。这样可以有效地减小最终Docker镜像的大小，只包含运行时所需的组件，而不包括构建时使用的工具和中间文件
+多阶段构建 Multi-stage build 是指在一个Dockerfile中定义多个构建阶段，每个阶段都可以使用不同的基础镜像，都可以执行一组特定的操作，生成中间产物，然后将这些中间产物传递到下一个阶段。这样可以有效地减小最终Docker镜像的大小，只包含运行时所需的组件，而不包括构建时使用的工具和中间文件
+
+**多阶段构建的核心在于可以使用不同的基础镜像做不同的事情**，即专业的人做专门的事，用完就抛弃LOL（不需要保存冗余的中间层）
 
 多阶段构建有助于减小Docker镜像的大小，提高安全性，并减少潜在的攻击面。一般情况下，构建阶段可以包含用于编译、测试和生成中间产物的工具，而最终阶段则只包含应用程序和运行时所需的依赖项
 
@@ -1606,7 +1656,7 @@ EXPOSE 3000
 CMD ["node", "app.js"]
 ```
 
-在这个例子中，第一个阶段使用`node:14`基础镜像构建应用程序，安装依赖，编译应用，并生成中间产物。第二个阶段则使用更轻量的`node:14-alpine`基础镜像，并从第一个阶段复制只需的文件，最终构建一个更小的镜像，只包含运行时所需的内容。
+在这个例子中，第一个阶段使用`node:14`基础镜像构建应用程序，安装依赖，编译应用，并生成中间产物。第二个阶段则使用更轻量的`node:14-alpine`基础镜像以运行第一个阶段构建完的可执行程序，即从第一个阶段复制只需的文件，最终构建一个更小的镜像，只包含运行时所需的内容（不过这样就不能重复构建了，可以用于发布版本）
 
 ## *构建缓存*
 
@@ -1627,8 +1677,6 @@ Dockerfile 中的每一条指令都会产生一层 image layer。**当某一层 
 ### 缓存失效
 
 https://juejin.cn/post/7130934881554530334
-
-### dangling
 
 ### 命令
 
@@ -1664,6 +1712,19 @@ $ docker buildx build --platform linux/amd64,linux/arm64 .
 This command creates a multi-node builder from Docker contexts named `node-amd64` and `node-arm64`.
 
 For more information, you can refer to the Docker documentation on [building multi-platform images](https://docs.docker.com/build/building/multi-platform/) and [using the docker-container driver](https://docs.docker.com/build/drivers/docker-container/).
+
+## *Debug & 优化*
+
+### Error: max depth exceeded
+
+Docker在构建镜像时，会构建多个layers，在使用Dockerfile时，过度使用COPY、RUN命令，在频繁构建容器时，就会出现构建层数过多的情况，报max depth exceeded错误，并且无法再次构建容器。一般这个错误都是在有上百个layers的时候才会出现，但是笔者在云服务器上开发的时候，layer貌似被限定到了13层，不是很明白为什么
+
+以下是一些build的建议
+
+* 减少在buildfile中的 `git clone` 等操作，使用COPY
+* 多阶段构建
+
+
 
 # Docker Volume
 
@@ -1871,7 +1932,7 @@ Network Address Translation, NAT 网络地址转换模式 使用 VMware Network 
 
 ## *Compose的作用*
 
-Docker Compose 是一个用于**管理单机容器的编排工具**，而下文会讲的k8s则是一个跨主机的集群部署工具，Docker Compose的功能并不像Docker Swarm和Kubernetes是基于Dcoker的跨主机的容器管理平台那么丰富，但已经足够单机和本地开发环境的使用
+Docker Compose 是一个用于**管理单机容器的编排工具**，而下文会讲的k8s则是一个跨主机的集群部署工具，Docker Compose的功能并不像Docker Swarm和Kubernetes是基于Docker的跨主机的容器管理平台那么丰富，但已经足够单机和本地开发环境的使用
 
 
 

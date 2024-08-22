@@ -120,7 +120,9 @@ Samba 是一个开源的**局域网络协议套件**，允许不同操作系统�
 
 在一般情况下，程序直接在操作系统中运行，而使用调试器启动程序时，程序是在调试器的控制下运行的
 
-http://c.biancheng.net/gdb/
+GDB命令入门：http://c.biancheng.net/gdb/
+
+GDB Doc：[Top (Debugging with GDB) (sourceware.org)](https://sourceware.org/gdb/current/onlinedocs/gdb.html/index.html#SEC_Contents)
 
 ## *调试执行*
 
@@ -134,17 +136,23 @@ gcc/g++编译出来的二进制程序默认是release模式，**要使用gdb调�
   
 * 调试需要参数的程序
 
+  * gdb打开程序的时候就指定参数
+
+    ```cmd
+    $ gdb --args myprogram --option1 value1 --option2 value2
+    ```
+
   * gdb打开程序后，使用 `run` 命令并附带程序需要的参数
 
     ```
-    run arg1 arg2 arg3
+    (gdb) run arg1 arg2 arg3
     ```
 
   * 使用 `set args` 命令设置参数后再run
 
     ```
-    set args arg1 arg2 arg3
-    run
+    (gdb) set args arg1 arg2 arg3
+    (gdb) run
     ```
     
     如果觉得每次都要 `set args` 很麻烦，可以写入 `.gdbinit` 或者用脚本文件等方式
@@ -292,7 +300,7 @@ info register eax
 
 ## *.gdbinit*
 
-[cyrus-and/gdb-dashboard: Modular visual interface for GDB in Python (github.com)](https://github.com/cyrus-and/gdb-dashboard)
+### `.gdbinit` 的脚本命令
 
 `.gdbinit` 是 GDB 的初始化文件，它是一个用于配置 GDB 行为的用户自定义文件。当启动 GDB 时，它会自动在用户的 home 目录下查找并加载 `.gdbinit` 文件，执行其中的命令。这使得用户可以在 GDB 启动时自动执行一系列的设置和命令，以方便调试
 
@@ -338,7 +346,19 @@ info register eax
 
 确保在编辑 `.gdbinit` 文件时谨慎，以免引入错误或不必要的设置。此文件对于个性化和简化调试工作流程非常有用，但要确保其中的设置不会影响到特定项目之外的其他调试任务
 
-### 安全机制
+### 全局gdbinit的安全机制
+
+gdbinit有两种
+
+* 全局 `gdbinit` 文件，**它必须以 `gdbinit` 命名（注意开头没有 `.`）**，通常位于系统的特定目录中，例如 `/etc/gdb/gdbinit` 或者某个其他对所有用户均可见的位置。当任何用户启动 GDB 时，全局 `.gdbinit` 文件中的命令会被自动执行
+
+  使用全局 `.gdbinit` 文件允许系统管理员为整个系统设置默认的 GDB 配置，比如定义默认的 pretty-printers，设置常用的别名，或者加载特定的扩展
+
+* 局部 `.gdbinit`
+
+  局部 `.gdbinit` 文件则相对于用户或项目私有。当在某个特定目录下启动 GDB 时，该目录下的 `.gdbinit` 文件（如果存在的话）会被自动执行。用户也可以在其主目录（通常是 `~/.gdbinit`）下创建一个 `.gdbinit` 文件，这样每当该用户启动 GDB 时，都会加载用户主目录下的 `.gdbinit`
+
+  使用局部 `.gdbinit` 文件允许用户或项目设置特定的 GDB 配置，这些配置可能只对当前工作目录下的调试会话有效，或者是用户特定偏好的设置
 
 为了防止恶意代码或不安全的文件自动加载到 GDB 中，GDB 引入了 "Auto-loading safe path" 机制
 
@@ -350,13 +370,13 @@ info register eax
 >
 > For more information about this security protection see the "Auto-loading safe path" section in the GDB manual.  E.g., run from the shell: `info "(gdb)Auto-loading safe path"`
 
-1. **添加特定文件的安全路径：** 在警告信息中，建议将以下行添加到 GDB 配置文件 `~/.config/gdb/gdbinit`（注意这个文件不是 `.` 开头的） 中：
+1. **添加特定文件的安全路径：** 在警告信息中，建议将以下行添加到 GDB 配置文件 `~/.config/gdb/gdbinit`（**注意这个文件不是 `.` 开头的**） 中：
 
    ```
    add-auto-load-safe-path /home/wjfeng/SharedBike/bin/.gdbinit
    ```
 
-   这将允许 GDB 自动加载指定的 `.gdbinit` 文件。
+   这将允许 GDB 自动加载指定的 `.gdbinit` 文件
 
 2. **完全禁用安全保护：** 如果对 `.gdbinit` 文件的内容有充分的信任，也可以选择完全禁用安全保护。为此，将以下行添加到 GDB 配置文件中：
 
@@ -364,11 +384,63 @@ info register eax
    set auto-load safe-path /
    ```
 
-   这将允许 GDB 自动加载任何路径下的 `.gdbinit` 文件，但请注意，这可能会引入一些安全风险
-
-## *GDB插件 & 库*
+   这将允许 GDB 自动加载任何路径下的 `.gdbinit` 文件，但注意，这可能会引入一些安全风险
 
 ### GUI & prettier
+
+[cyrus-and/gdb-dashboard: Modular visual interface for GDB in Python (github.com)](https://github.com/cyrus-and/gdb-dashboard)
+
+## *Python API*
+
+API Doc: [Python (Debugging with GDB) (sourceware.org)](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Python.html#Python)
+
+GDB 提供了一个 Python API，允许用户在 GDB 中使用 Python 脚本来扩展调试器功能。这个接口可以用来编写自定义的命令、断点动作（breakpoint actions）、pretty-printers 以及其他各种工具和自动化脚本
+
+GDB 的 Python API 支持创建以下类型的扩展：
+
+- **命令**：用户可以通过 Python 编写新的 GDB 命令
+- **Pretty-printers**：用户可以定义格式化打印复杂数据结构的方式，提高可读性
+- **断点**：用户可以自定义断点行为，包括在断点触发时执行特定的 Python 脚本
+- **事件监听**：Python 脚本可以响应不同的 GDB 事件，例如停止或退出事件
+- **自定义数据显示**：可以创建自定义的数据显示方法，用于监视变量
+- **扩展现有命令**：可以扩展甚至覆盖 GDB 内置命令的行为
+
+要在 GDB 中启用 Python 支持，GDB 需要在编译时启用 Python 支持，大多数现代 Linux 发行版提供的 GDB 版本通常都已经具备了这一功能。`.gdbinit` 文件本身由 GDB 读取并解释，它可以包含纯 GDB 命令，也可以在其中嵌入 Python 脚本
+
+当需要在 `.gdbinit` 文件中执行 Python 代码时，要使用特殊的 GDB 命令 `python` 来告诉 GDB 接下来的部分是 Python 代码。例如：
+
+```
+python
+# Your Python code goes here.
+end
+```
+
+由于这种方式内嵌了 Python 代码，GDB 在解释这些代码时已经知道它们将通过 Python 解释器执行，因此不需要再次导入 `gdb` 模块。实际上，当 GDB 执行内嵌的 Python 代码时，**它自动地为该段代码提供了 `gdb` 模块的上下文**
+
+下面是一个简单的例子，展示了如何在 GDB 中定义一个新的命令：
+
+```python
+import gdb
+
+class HelloWorld(gdb.Command):
+    """Greet the world."""
+
+    def __init__(self):
+        super(HelloWorld, self).__init__("hello-world", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        print("Hello, World!")
+
+HelloWorld() # 创建并注册命令
+```
+
+将上述脚本保存到一个文件中，然后在 GDB 中使用下面的命令加载脚本：
+
+```
+(gdb) source /path/to/the/script.py
+```
+
+之后就可以在 GDB 中直接使用 `hello-world` 这个新定义的命令了
 
 # LLDB的使用
 
@@ -684,6 +756,21 @@ The following subcommands are supported:
 
 ### 底层信息：寄存器、内存
 
+### 自定义断点类型
+
+### 自定义LLDB命令
+
+## *Remote Debugging*
+
+### 远端 & 本地的设置
+
+* 远端
+* 本地
+
+### 调试
+
+# 配置文件 & 格式化
+
 ## *Formatting*
 
 LLDB一共有5种格式化特征
@@ -707,20 +794,13 @@ LLDB一共有5种格式化特征
 
 ### Frame & Thread Format
 
+## *`.lldbinit`*
+
+和GDB使用的 `.gdbinit` 类似，LLDB使用 `.lldbinit` 作为其配置文件
+
 ## *Python API*
 
-### 自定义断点类型
 
-### 自定义LLDB命令
-
-## *Remote Debugging*
-
-### 远端 & 本地的设置
-
-* 远端
-* 本地
-
-### 调试
 
 # LLDB原理 & 开发
 
