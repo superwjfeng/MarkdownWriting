@@ -380,23 +380,7 @@ RUN cmake --build build --target install
 # LLVM non-relevant install if needed
 ```
 
-## *Cross-compile*
-
-[How To Cross-Compile Clang/LLVM using Clang/LLVM — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToCrossCompileLLVM.html)
-
-[Cross-compilation using Clang — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/CrossCompilation.html)
-
-### 交叉编译的需求 
-
-LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LLVM工具链来编译为在不同的目标架构或操作系统上运行的代码。简而言之，交叉编译涉及生成可在与构建环境（即我们正在编译代码的机器）不同的目标环境（即代码将要运行的机器）上执行的程序
-
-比如说我们可能在一台x86架构的Linux电脑上开发软件，但是需要为ARM架构的嵌入式设备编译这个软件。使用交叉编译，我们可以创建一个专门针对ARM架构的可执行文件，尽管我们的开发机器是基于x86架构的
-
-交叉编译通常用于以下情况：
-
-1. 编写嵌入式系统或移动设备应用程序，因为这些设备通常没有足够的资源来编译复杂的代码
-2. 构建为特定操作系统或硬件优化的软件，尤其是当开发环境与目标环境不同时
-3. 创建操作系统镜像，通常在主机系统上为其他架构的设备构建系统镜像
+## *Prelude: Target Triple*
 
 ### `llvm::Triple`
 
@@ -465,6 +449,72 @@ public:
     LastEnvironmentType = MacABI
   };
 ```
+
+### Biarch & Multiarch
+
+`Biarch` 是指双架构的概念，这意味着某些系统既支持 32 位架构也支持 64 位架构。例如，在 x86 架构中，一个系统可能同时支持 i386/x86 (32 位) 和 x86_64 (64 位) 指令集
+
+我们以 `Generic_GCC::GCCInstallationDetector::init()` 中的代码为例
+
+```C++
+// llvm_12/clang/lib/Driver/ToolChains/Gnu.cpp
+llvm::Triple BiarchVariantTriple = TargetTriple.isArch32Bit()
+                                     ? TargetTriple.get64BitArchVariant()
+                                     : TargetTriple.get32BitArchVariant();
+```
+
+这段代码是在计算与当前目标三元组 TargetTriple 相对应的另一个架构的三元组 BiarchVariantTriple。具体来说：
+
+- 如果 TargetTriple 表示的是一个 32 位架构（`isArch32Bit()` 返回 `true`），那么 BiarchVariantTriple 将会是对应的 64 位版本的架构
+- 反过来，如果 TargetTriple 表示的是一个 64 位架构，则 BiarchVariantTriple 将会是对应的 32 位版本的架构
+
+这样做允许编译器或工具链处理与双架构相关的逻辑，比如当搜索库和工具时，可能需要知道同一平台上另一种位数的对应架构
+
+我们可以看下 `isArch64Bit()` 是如何实现判断的，非常简单，就是switch穷举的
+
+```C++
+// llvm_12/llvm/lib/Support/Triple.cpp
+bool Triple::isArch64Bit() const {
+  return getArchPointerBitWidth(getArch()) == 64;
+}
+
+static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
+  switch (Arch) {
+  case llvm::Triple::UnknownArch:
+    return 0;
+          
+  case llvm::Triple::msp430:
+    return 16;
+
+  case llvm::Triple::x86:
+    return 32;
+
+  case llvm::Triple::x86_64:
+    return 64;
+  }
+  llvm_unreachable("Invalid architecture value");
+}
+```
+
+类似的，MultiarchTriple 就是多种架构
+
+## *Cross-compile*
+
+[How To Cross-Compile Clang/LLVM using Clang/LLVM — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToCrossCompileLLVM.html)
+
+[Cross-compilation using Clang — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/CrossCompilation.html)
+
+### 交叉编译的需求 
+
+LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LLVM工具链来编译为在不同的目标架构或操作系统上运行的代码。简而言之，交叉编译涉及生成可在与构建环境（即我们正在编译代码的机器）不同的目标环境（即代码将要运行的机器）上执行的程序
+
+比如说我们可能在一台x86架构的Linux电脑上开发软件，但是需要为ARM架构的嵌入式设备编译这个软件。使用交叉编译，我们可以创建一个专门针对ARM架构的可执行文件，尽管我们的开发机器是基于x86架构的
+
+交叉编译通常用于以下情况：
+
+1. 编写嵌入式系统或移动设备应用程序，因为这些设备通常没有足够的资源来编译复杂的代码
+2. 构建为特定操作系统或硬件优化的软件，尤其是当开发环境与目标环境不同时
+3. 创建操作系统镜像，通常在主机系统上为其他架构的设备构建系统镜像
 
 ### CMAKE_TOOLCHAIN_FILE
 
@@ -1184,73 +1234,9 @@ Generic_GCC是一个特定的ToolChain实现，它被设计为使用GCC提供的
 
 为何要这么做？因为GCC的工具链在很多系统上都被广泛支持和使用，而且有些系统可能只预装了GCC而没有预装Clang。Generic_GCC允许用户在这样的系统上通过安装Clang来获得Clang的某些优势，比如更好的诊断信息和现代化的代码分析工具，同时仍然可以利用已经存在的基于GCC的构建系统和工具链
 
+### Linux ToolChain
+
 Linux ToolChain就是Generic_GCC的一个子类，这说明Linux OS上是默认使用GCC工具链的，这也说明Generic_GCC的重要性
-
-Generic_GCC ToolChain的核心在于GCCInstallationDetector，本章将围绕它来讲述
-
-### Init
-
-`Generic_GCC::GCCInstallationDetector::init()` 的作用是从Clang Driver初始化一个GCCInstallationDetector， 这将执行所有的自动检测并设置各种路径。一旦构建完成，GCCInstallationDetector 基本上就是不可变的
-
-### 标准库头文件搜索路径
-
-```
-Clang::ConstructJob() -> Clang::AddPreprocessingOptions() -> addLibCxxIncludePaths() or addLibStdCxxIncludePaths()
-```
-
-```C++
-// llvm_12/clang/lib/Driver/ToolChains/Clang.cpp
-void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
-                                    const Driver &D, const ArgList &Args,
-                                    ArgStringList &CmdArgs,
-                                    const InputInfo &Output,
-                                    const InputInfoList &Inputs) const {
-    // ...
-    // Add C++ include arguments, if needed.
-    if (types::isCXX(Inputs[0].getType())) {
-    bool HasStdlibxxIsystem = Args.hasArg(options::OPT_stdlibxx_isystem);
-    forAllAssociatedToolChains(
-        C, JA, getToolChain(),
-        [&Args, &CmdArgs, HasStdlibxxIsystem](const ToolChain &TC) {
-          HasStdlibxxIsystem ? TC.AddClangCXXStdlibIsystemArgs(Args, CmdArgs)
-                             : TC.AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
-        });
-    }
-	// ...
-}
-
-// llvm_12/clang/lib/Driver/ToolChains/Gnu.cpp
-void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
-                                               ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
-    return;
-
-  switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx:
-    addLibCxxIncludePaths(DriverArgs, CC1Args);
-    break;
-
-  case ToolChain::CST_Libstdcxx:
-    addLibStdCxxIncludePaths(DriverArgs, CC1Args);
-    break;
-  }
-}
-```
-
-HasStdlibxxIsystem 需要通过选项 `stdlibxx_isystem` 指定，这里重点介绍一下 `AddClangCXXStdlibIncludeArgs()`
-
-```
-addLibStdCxxIncludePaths(2参) -> addGCCLibStdCxxIncludePaths() -> addLibStdCXXIncludePaths(8参)
-```
-
-
-
-
-
-
-
-## *Linux ToolChain*
 
 Linux ToolChain 中包括了在Linux平台上寻找toolchain的方法，这也是我们有最多疑惑因此最关心的部分，所以单独成章来详细介绍一下
 
@@ -1260,8 +1246,6 @@ Linux ToolChain还有4个子类，分别是Hexagon, Mips, PPCLinux和VE，简单
 * MIPS架构，RISC的先驱者，在 *计算机组成原理.md* 中有详细介绍
 * PPCLinux（PowerPC Linux）：PowerPC 是由 IBM、苹果和摩托罗拉共同开发的另一种 RISC 处理器架构，旨在面向个人电脑、服务器、嵌入式系统和游戏机等广泛的产品线
 * VE（Vector Engine）：VE （Nec SX-Aurora TSUBASA Vector Engine）是 NEC 公司开发的向量处理器架构。这种架构特别适合执行大规模并行操作，常见于科学计算、数据分析和机器学习等领域，需要大量数值计算的任务
-
-### 获取工具链
 
 `Driver::getToolChain()` 会根据target triple选择相应的工具链，比如Linux的 `toolchains::Linux`
 
@@ -1301,6 +1285,104 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
 ```
 
 从上面的代码也可以看到，如果OS是Linux，得到的工具链就是Linux ToolChain（当然也就是G）
+
+### Init
+
+Generic_GCC ToolChain的核心在于GCCInstallationDetector
+
+`Generic_GCC::GCCInstallationDetector::init()` 的作用是从Clang Driver初始化一个GCCInstallationDetector， 这将执行所有的自动检测并设置各种路径。一旦构建完成，GCCInstallationDetector 基本上就是不可变的
+
+1. 检查用户有没有指定 `--gcc-toolchain`
+
+   ```C++
+   // llvm_12/clang/lib/Driver/ToolChains/Gnu.cpp
+   static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
+                                             llvm::StringRef SysRoot) {
+     const Arg *A = Args.getLastArg(clang::driver::options::OPT_gcc_toolchain);
+     if (A)
+       return A->getValue();
+   
+     // If we have a SysRoot, ignore GCC_INSTALL_PREFIX.
+     // GCC_INSTALL_PREFIX specifies the gcc installation for the default
+     // sysroot and is likely not valid with a different sysroot.
+     if (!SysRoot.empty())
+       return "";
+   
+     return GCC_INSTALL_PREFIX;
+   }
+   ```
+
+   如果用户指定了 `--gcc-toolchain` 选项，就直接用它，否则就返回SysRoot或者 `GCC_INSTALL_PREFIX`
+
+2. 根据target triple来收集可能的目录名
+
+   ```C++
+   // llvm_12/clang/lib/Driver/ToolChains/Gnu.cpp
+   /*static*/ void Generic_GCC::GCCInstallationDetector::CollectLibDirsAndTriples(
+       const llvm::Triple &TargetTriple, const llvm::Triple &BiarchTriple,
+       SmallVectorImpl<StringRef> &LibDirs,
+       SmallVectorImpl<StringRef> &TripleAliases,
+       SmallVectorImpl<StringRef> &BiarchLibDirs,
+       SmallVectorImpl<StringRef> &BiarchTripleAliases) {
+     static const char *const X86_64LibDirs[] = {"/lib64", "/lib"};
+     static const char *const X86_64Triples[] = {
+         "x86_64-linux-gnu",       "x86_64-unknown-linux-gnu",
+         "x86_64-pc-linux-gnu",    "x86_64-redhat-linux6E",
+         "x86_64-redhat-linux",    "x86_64-suse-linux",
+         "x86_64-manbo-linux-gnu", "x86_64-linux-gnu",
+         "x86_64-slackware-linux", "x86_64-unknown-linux",
+         "x86_64-amazon-linux",    "x86_64-linux-android"};
+     static const char *const X32LibDirs[] = {"/libx32"};
+     static const char *const X86LibDirs[] = {"/lib32", "/lib"};
+     static const char *const X86Triples[] = {
+         "i686-linux-gnu",       "i686-pc-linux-gnu",     "i486-linux-gnu",
+         "i386-linux-gnu",       "i386-redhat-linux6E",   "i686-redhat-linux",
+         "i586-redhat-linux",    "i386-redhat-linux",     "i586-suse-linux",
+         "i486-slackware-linux", "i686-montavista-linux", "i586-linux-gnu",
+         "i686-linux-android",   "i386-gnu",              "i486-gnu",
+         "i586-gnu",             "i686-gnu"};
+       
+     switch (TargetTriple.getArch()) {
+     case llvm::Triple::x86_64:
+       LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+       TripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+       // x32 is always available when x86_64 is available, so adding it as
+       // secondary arch with x86_64 triples
+       if (TargetTriple.getEnvironment() == llvm::Triple::GNUX32) {
+         BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+         BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+       } else {
+         BiarchLibDirs.append(begin(X86LibDirs), end(X86LibDirs));
+         BiarchTripleAliases.append(begin(X86Triples), end(X86Triples));
+       }
+       break;
+     case llvm::Triple::x86:
+       LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
+       // MCU toolchain is 32 bit only and its triple alias is TargetTriple
+       // itself, which will be appended below.
+       if (!TargetTriple.isOSIAMCU()) {
+         TripleAliases.append(begin(X86Triples), end(X86Triples));
+         BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+         BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+       }
+       break;
+     }
+   }
+   
+   ```
+
+3. 根据上面的目录去拼接一些固定目录。大概来说x86和x86_64中肯定会搜索的路径有
+
+   * Clang安装目录的父目录（gcc installed alongside clang）
+   * `/usr`
+
+   然后分别拼接 LibDir（`/lib64` 和 `/lib`，虽然目录的名字是lib，但实际里面也有我们需要的标准库头文件等）、`'/gcc'` 以及所有可能的target-triple（Target Tripe以及Candidate，或者说TargetTripleAliases），比如一个例子是 `/usr/lib/gcc/x86_64-linux-gnu`
+
+4. 通过 `ScanLibDirForGCCTriple()` 开启寻找，这里面还会有gcc的版本号，所以一个最终的目录例子为 `/usr/lib/gcc/x86_64-linux-gnu/9`
+
+根据上面第三步的内容，如果指定了 `--gcc-toolchain`，就一定要把目录细化到 target-triple
+
+
 
 ## *其他平台（TDB）*
 
@@ -1809,9 +1891,9 @@ public:
 
 整个lexer的入口函数是 `Lexer::lex`，调用之后会返回一个Token
 
-## *头文件搜索 #include*
+## *头文件管理 #include*
 
-在Clang Toolchain中介绍了ToolChain是如何添加预处理器选项的，重点是如何添加头文件搜索选项，这部分介绍一下在构建预处理器的时候又发生了什么
+在Clang Toolchain中介绍了ToolChain是如何添加预处理器选项的，重点是如何添加头文件搜索选项，这部分介绍一下预处理器是如何管理这些头文件的
 
 ### Prelude：头文件查找有关的编译选项
 
@@ -2005,6 +2087,81 @@ class InitHeaderSearch {
 
 
 Linux 不在被 `ShouldAddDefaultIncludePaths()` 所排除的triple中，所以它应该 `AddDefaultIncludePaths()`
+
+### 标准库头文件搜索路径
+
+```
+ignoring nonexistent directory "/include"
+ignoring duplicate directory "/usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/x86_64-linux-gnu/c++/9"
+#include "..." search starts here:
+#include <...> search starts here:
+ /mnt/data/mff-csa/include
+ /usr/local/include/rapidjson
+ /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9
+ /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/x86_64-linux-gnu/c++/9
+ /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/backward
+ /usr/local/include
+ /usr/local/lib/clang/12.0.1/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+```
+
+在找到了工具链之后，`clang -v` 所打印出来的这些头文件及其选项（比如说 `-internal-isystem`）又是怎么添加的呢？我们该如何指定不同的标准库，比如GNU的libstdcxx和Clang的libcxx。我们在这部分介绍一下
+
+这一步骤是在 `BuildCompilation()` 的 `getToolChain()` 之后，也就是说我们已经知道了GCC工具链（ 假设Linux & x86_64）在哪里了
+
+```
+Clang::ConstructJob() -> Clang::AddPreprocessingOptions() -> addLibCxxIncludePaths() or addLibStdCxxIncludePaths()
+```
+
+```C++
+// llvm_12/clang/lib/Driver/ToolChains/Clang.cpp
+void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
+                                    const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs,
+                                    const InputInfo &Output,
+                                    const InputInfoList &Inputs) const {
+    // ...
+    // Add C++ include arguments, if needed.
+    if (types::isCXX(Inputs[0].getType())) {
+    bool HasStdlibxxIsystem = Args.hasArg(options::OPT_stdlibxx_isystem);
+    forAllAssociatedToolChains(
+        C, JA, getToolChain(),
+        [&Args, &CmdArgs, HasStdlibxxIsystem](const ToolChain &TC) {
+          HasStdlibxxIsystem ? TC.AddClangCXXStdlibIsystemArgs(Args, CmdArgs)
+                             : TC.AddClangCXXStdlibIncludeArgs(Args, CmdArgs);
+        });
+    }
+	// ...
+}
+
+// llvm_12/clang/lib/Driver/ToolChains/Gnu.cpp
+void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                               ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx:
+    addLibCxxIncludePaths(DriverArgs, CC1Args);
+    break;
+
+  case ToolChain::CST_Libstdcxx:
+    addLibStdCxxIncludePaths(DriverArgs, CC1Args);
+    break;
+  }
+}
+```
+
+HasStdlibxxIsystem 需要通过选项 `stdlibxx_isystem` 指定，这里重点介绍一下 `AddClangCXXStdlibIncludeArgs()`
+
+```
+addLibStdCxxIncludePaths(2参) -> addGCCLibStdCxxIncludePaths() -> addLibStdCXXIncludePaths(8参)
+```
+
+
 
 
 

@@ -807,9 +807,15 @@ echo "hello, world"
 * 环境变量
 * 全局和局部
   * 全局对所有bash有效，局部只对当前bash有效
-  * 用户自定义的默认都是局部变量，可以通过 `export` 来导出为全局变量。但是特别的是对于子shell中更改了全局变量，不会对父shell造成影响
+  * 用户自定义的默认都是局部变量，可以通过 `export` 来导出为全局变量。但是特别的是对于子shell中更改了全yi局变量，不会对父shell造成影响
 
-使用一个定义过的变量，只要在变量名前面加 `$` 符号
+使用（引用）一个定义过的变量，只要在变量名前面加 `$` 符号。注意：**`$` 引用变量不能被重新赋值**，这和C++的引用是一样的。要改变变量值的话直接使用变量名，无需 `$`
+
+```shell
+if [[ $IS_DEBUG = true ]]; then
+    IS_DEBUG="_is_debug"
+fi
+```
 
 ### 变量定义的规则
 
@@ -1024,7 +1030,9 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 TARGET_DIR="$SCRIPT_DIR/../docker_mount_files"
 ```
 
-
+1. `cd "$(dirname "${BASH_SOURCE[0]}")"`：这个命令试图改变当前工作目录到`"${BASH_SOURCE[0]}"`所在的目录
+2. `&> /dev/null`：重定向命令，它把标准输出和标准错误都重定向到了`/dev/null`，意思是忽略所有输出和错误信息
+3. `&& pwd`：如果前面的`cd`命令成功执行（即目录切换成功），那么接下来执行`pwd`命令，它打印出当前工作目录的完整路径
 
 # 环境变量
 
@@ -1118,11 +1126,40 @@ export可以用来设置一个新的环境变量（增减环境变量），当�
 
 ## *引号和反斜线*
 
+### Shell 中的引号只是一种提示！
+
+以shell中迷惑的ture & false为例。引号的使用不影响 `false` 是否被视为命令还是字符串，但可以帮助阐明意图。引号通常用于确保字符串被当作单个实体处理，特别是当字符串包含空格或特殊字符时
+
+**引号引起来的一定是字符串，不引的可以是字符串，也可以是命令**
+
+```shell
+if [[ -n false ]]; then
+    echo "This will print because 'false' is a non-empty string."
+fi
+
+if [[ -n true ]]; then
+    echo "This will print because 'true' is a non-empty string."
+fi
+
+if false; then
+    echo "This will not print."
+fi
+
+if true; then
+    echo "This will not print."
+fi
+```
+
+理解 `false` 二者的区别主要在于它们的上下文使用。当 `false` 出现在一个命令的位置时，它被当作命令；而当 `false` 被用作参数或者在测试表达式中进行字符串比较时，它是一个字符串
+
+1. 在前两个例子中，`false` 出现在 `[[ ]]` 测试表达式中，并且在 `-n` 操作符的后面，所以它被看作是一个字符串字面量。这里检查的是字符串内容是否非空，和执行任何命令无关。由于字符串 `false` 包含字符，所以结果为真，相应的 `echo` 命令会执行
+2. 在后两个例子中，`false` 位于 `if` 语句后面，因此它是作为命令执行的。Shell 会查找名为 "false" 的命令并执行它，该命令总是返回一个失败的状态码（通常是1）
+
 ### 单引号 Single Quote
 
 当 Shell 看到第一个单引号时，**它会忽略随后的所有特殊字符**，直到碰到下一个与之匹配的的封闭单引号 matching closing quote。单引号内的任何字符都会被视为字面文本，包括单引号本身。因此在单引号内部无法嵌套其他单引号。**单引号适用于需要确保字符串内容不被修改或解释的情况**
 
-和Shell会把一般的命令去掉空格不同，无论引号中有多少个空格，它们都会被 Shell 所保留
+和Shell会把一般的命令去掉空格不同，无论引号中有多少个空格，它们都会被Shell所保留
 
 ```cmd
 $ echo  one            two      three    four
@@ -1246,9 +1283,11 @@ $ if who | grep "$user"; then echo x; fi     # 正确
 
 * 两个字符串之间的比较：用单等号 `=` 或双等号 `==` 来判断字符串相等，这两个是等价的，用 `!=` 判断不等
 
-* 按照文件权限进行判断：-r -w -x 是否有读、写、执行的权限
+* `-n` 用来判断string是否为空
 
-* 按照文件类型进行判断：-e -f -d 文件是否存在 existence、存在并且是一个常规文件 file 、存并且是一个目录 directory
+* 按照文件权限进行判断：`-r -w -x` 是否有读、写、执行的权限
+
+* 按照文件类型进行判断：`-e -f -d` 文件是否存在 existence、存在并且是一个常规文件 file 、存并且是一个目录 directory
 
 * 多条件判断：`&&`/-a 表示前一条指令执行成功时，才执行后一条命令；`||`/-o 表示上一条命令执行失败后，才执行下一条命令
 
@@ -1303,6 +1342,167 @@ $ if who | grep "$user"; then echo x; fi     # 正确
   ```shell
   if [ "$pattern" = "*" ]; then
       echo "With quotes, * is treated as a literal character."
+  fi
+  ```
+
+## *Shell的true & false问题*
+
+### Shell 中 ture & false 的两种形式 
+
+在 shell（包括 Bash）脚本中，true & false 并不是内建的数据类型或关键字，但它们是两个基本的 Unix 命令：
+
+- `true`: 这个命令什么也不做，并且总是返回退出状态码 0（在 shell 脚本中，0 表示成功或“真”）
+- `false`: 同样地，这个命令什么也不做，但是总是返回非零的退出状态码（通常是 1），在 shell 脚本中，非零值表示失败或“假”
+
+```cmd
+$ true
+$ echo $?
+0
+$ false
+$ echo $?
+1
+```
+
+true & false 的第二种形式是作为字符串。读者可能会对这种说法产生疑惑，字符串不是一定要用引号引起来吗，这个问题在 [Shell 中的引号只是一种提示！](#Shell 中的引号只是一种提示！) 有过说明。即**引号引起来的一定是字符串，不引的可以是字符串，也可以是命令**
+
+Bash 中没有内建的布尔类型，所以我们不能像在高级编程语言中那样操作布尔值
+
+要作为 shell script 的if判断条件，则一定要将引号将 true & false 作为字符串使用（既然是字符串，那么其实这个字符串具体是什么已经不重要了，叫啥都行）。此时做的就是字符串的比较了
+
+也就是说不能用 `$value==true`（这不是有效的语法），而是要直接用字符串比较 `[[ "$value" == true ]]` 或者 `[[ -n "$value" ]]` 来比较
+
+```shell
+value="true"
+if [[ "$value" == "true" ]]; then
+    echo "The value is true."
+fi
+```
+
+如果想要利用命令的返回状态码来模拟布尔逻辑，你可以定义函数来模仿布尔值的行为
+
+```shell
+is_true() {
+    [[ "$1" == "true" ]]
+}
+
+is_false() {
+    ! is_true "$1"
+}
+
+value="true"
+
+if is_true "$value"; then
+    echo "The value is true."
+fi
+
+value="false"
+
+if is_false "$value"; then
+    echo "The value is false."
+fi
+```
+
+注意：这些函数仍然依赖于字符串比较，并且 `$1` 参数是被双引号包围的，这样即使其值为空或包含空格，它们也可以正常工作
+
+### Python的传参问题
+
+举个例子：我们的script是通过下面的python语句调用的，其中is_debug是一个boolean
+
+```python
+subprocess.run(['bash', docker_build_script_path, project, image_name, is_debug])
+```
+
+在 shell 脚本环境中，并不存在原生的布尔类型。当使用 `subprocess.run` 或类似的命令在 Python 中调用一个 shell 脚本时，所有传递给 shell 的参数都会被转换成字符串。**这是因为操作系统的进程模型只支持字符串形式的参数**
+
+所以当尝试从 Python 传递一个布尔值作为参数给 shell 脚本时，Python 的 `subprocess` 模块不会自动将布尔值 `True` 或 `False` 转换成对应的字符串 `'true'` 或 `'false'`。它实际上会调用 `str()` 函数来转换参数为字符串，于是布尔值 `True` 和 `False` 就变成了 `"True"` 和 `"False"` 字符串（注意大小写）。这些字符串与 shell 脚本中通常预期的全小写 `'true'` 或 `'false'` 不同
+
+举个例子：
+
+```python
+import subprocess
+
+subprocess.run(['bash', 'script.sh', True])
+```
+
+在 `script.sh` 接收到的实参并不是一个布尔值，而是字符串 `"True"`，因为 Python 会把 `True` 转换成它的字符串表示
+
+为了保证兼容性和明确性，建议显式地将布尔值转换为 `'true'` 或 `'false'` 字符串：
+
+```python
+is_debug = True  # 这是 Python 中的布尔值
+
+# 将布尔值转换为字符串 'true' 或 'false'
+is_debug_str = 'true' if is_debug else 'false'
+
+subprocess.run(['bash', 'script.sh', is_debug_str])
+```
+
+这样在 shell 脚本中就可以直接检查这个字符串变量是否等于 `'true'` 或 `'false'` 了，如下所示：
+
+```python
+if [[ "$IS_DEBUG" == "true" ]]; then
+    # Do something for debug mode
+else
+    # Do something else for non-debug mode
+fi
+```
+
+### true & false 作为命令的作用
+
+既然不能直接将true & false作为命令用作控制流的条件，true和false作为命令有什么用处呢
+
+* 死循环
+
+  因为 `true` 命令总是返回退出状态码 0，它可以用来创建一个无限循环，直到被外部事件（如用户中断或信号）停止
+
+  ```shell
+  while true; do
+      # 执行一些任务...
+  done
+  ```
+
+* 占位符
+
+  当编写脚本时，如果想快速占位但还没决定具体的实现，可以使用 `true` 或 `false` 命令
+
+  ```shell
+  if some_condition; then
+      # TODO: 添加逻辑
+      true
+  else
+      # TODO: 或者添加这里的逻辑
+      false
+  fi
+  ```
+
+* 忽略命令失败
+
+  在某些情况下，可能想要确保脚本中的命令序列始终继续执行，即使其中一些命令失败。在这种情况下，可以利用 `true` 来避免脚本因为错误而停止
+
+  ```shell
+  command_that_might_fail || true
+  ```
+
+* 可靠地返回失败状态码
+
+  与 `true` 命令相反，`false` 命令可用于确保条件分支返回失败状态码。这有助于模拟错误状态或测试脚本的错误处理路径
+
+  ```shell
+  if some_failure_condition; then
+      false
+  else
+      # 正常操作
+  fi
+  ```
+
+* 复杂逻辑判断
+
+  在组合命令和测试逻辑时，`true` 和 `false` 命令也可以成为复杂逻辑表达式的一部分
+
+  ```shell
+  # 下面的命令将永远不会执行，因为 false 的返回值导致 if 测试结果为假
+  if false && some_other_command; then
+      echo "This will not print."
   fi
   ```
 

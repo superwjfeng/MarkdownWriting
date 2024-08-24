@@ -1213,6 +1213,8 @@ Docker中有镜像、容器、网络、volume、插件等对象
 
 * `docker rmi -f 镜像ide` 删除指定的镜像
 
+  注意：即使是已经EXITED的容器，即用 `docker ps` 看不到，但是用 `docker ps -a` 看得到的容器，也要先 `docker rm` 容器，然后才可以 `docker rmi` 删除对应的镜像
+
 * `docker save [OPTIONS] IMAGE [IMAGE...]`：将一个或多个镜像保存成一个 tar 归档文件
 
 * `docker load [OPTIONS]`：从一个 tar 归档文件中加载镜像到本地
@@ -1345,8 +1347,8 @@ $ docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 
 我们以下面这个命令来说明一下 `docker run` 的时候都发生了什么
 
-```shell
-docker run -i -t ubuntu /bin/bash
+```cmd
+$ docker run -i -t ubuntu /bin/bash
 ```
 
 当输入上面的命令时，发生了下面这些事
@@ -1359,32 +1361,34 @@ docker run -i -t ubuntu /bin/bash
 6. 当用户输入 `exit` 以终止 `/bin/bash` 命令时，容器停止但不被删除。用户可以再次启动它或将其删除
 
 ```cmd
-docker create [OPTIONS] IMAGE [COMMAND] [ARG...]
-docker start [OPTIONS] CONTAINER [CONTAINER...]
+$ docker create [OPTIONS] IMAGE [COMMAND] [ARG...]
+$ docker start [OPTIONS] CONTAINER [CONTAINER...]
 ```
 
-### 暂停、重启
+### 暂停、停止、重启
 
-```
-docker pause CONTAINER [CONTAINER...]
-docker unpause CONTAINER [CONTAINER...]
+```cmd
+$ docker pause CONTAINER [CONTAINER...]
+$ docker unpause CONTAINER [CONTAINER...]
+$ docker stop CONTAINER [CONTAINER...] # 停止容器的运行，状态变为EXITED
 ```
 
 ### 退出、删除容器
 
 ```cmd
- docker kill [OPTIONS] CONTAINER [CONTAINER...]
- docker rm [OPTIONS] CONTAINER [CONTAINER...]
- docker container prune [OPTIONS]
+$ docker kill [OPTIONS] CONTAINER [CONTAINER...]
+$ docker rm [OPTIONS] CONTAINER [CONTAINER...]
+$  docker container prune [OPTIONS]
 ```
 
 * 退出容器
 
   * exit 直接停止并退出容器
   * Ctrl+P+Q 容器不停止退出
+*  暂停容器
 * 删除容器 
 
-  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，若要强制删除，就用 `rm -f`
+  * `docker rm 容器id` 删除指定容器，不能删除正在运行的容器，需要先 `docker stop`。若要强制删除，就用 `rm -f`
   * 下面两个指令是具有一定危险性的
     * `docker rm -f $(docker ps -aq) ` 删除所有的容器
     * `docker container prune` 删除所有 stop 的容器
@@ -1503,9 +1507,11 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
   在初学的时候犯过的错误：把 Dockerfile 当成 Shell Script 来写用了cd，实际上对于跨文件层（即Dockerfile中的两条指令）来说cd没有意义。Docker采用分层存储来构建，所以不同行的命令是不同的容器，因此想要持久地更改目录，应该要用 `WORKDIR`
 
-* `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest
+* `COPY <src> <dest>`：把一个文件从主机的src拷贝到镜像文件系统的dest。有以下注意点
 
-  不能直接引用宿主机的绝对路径（如 `/mnt/data/docker_mount_files`）来复制文件到镜像内。Docker 构建只能访问发送给 Docker 守护进程作为构建上下文的那些文件和目录
+  1. 不能直接引用宿主机的绝对路径（如 `/mnt/data/docker_mount_files`）来复制文件到镜像内。Docker 构建只能访问发送给 Docker 守护进程作为构建上下文的那些文件和目录
+  2. 如果COPY的文件是一个软链接或者硬链接的话需要注意了，只有当指向的文件同样被COPY才可以
+  3. `docker build` 是一个静态的过程，它不会监视COPY源文件的变化。如果希望容器始终使用最新的文件，则需要通过挂载卷、run脚本等工具来实现
 
 * `ADD` 指令在 Dockerfile 中用于将文件、目录或远程文件 URL 的内容复制到镜像中的指定路径。与 `COPY` 指令相比，`ADD` 具有一些额外的功能：
 
