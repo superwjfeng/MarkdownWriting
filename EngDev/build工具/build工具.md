@@ -407,6 +407,7 @@ make是如何知道目标已经是最新的呢？根据文件的最近修改时�
 
   * 环境变量在 CMake 执行过程中具有全局范围（跨越 directory scope），并且它们永远不会被缓存
   * 环境变量的初始化是调用进程时的初始化。 CMake 可以访问并使用操作系统环境变量，但是 CMake 本身不会永久改变操作系统的环境变量。即环境变量只影响正在运行的 CMake 进程，而不影响整个系统环境。更改环境变量的值，不会写入调用进程，也不会被后续的构建或检测进程看到
+  * 形式是 `$ENV{<variable>}`
 
 * 缓存变量 Cache Variable：这些变量存储在`CMakeCache.txt`文件中，包含了项目配置和构建系统的相关信息。相当于一个全局变量。在同一个CMake工程中任何地方都可以使用。通过`set()`和`get()`等命令可以读取和修改这些变量
 
@@ -736,13 +737,31 @@ CMake变量拥有动态作用域，即每一个对变量的 `set()` 和 `unset()
 
 生成器表达式 Generator Expression 是一种特殊的语法，用于在生成构建系统配置文件时动态地生成和处理信息。这些表达式允许在不同的上下文中提供不同的信息，例如根据构建类型、目标平台或其他条件来生成不同的编译选项
 
-生成器表达式可以在CMake的各个命令中使用，如`target_compile_options()`、`target_link_libraries()`、`add_definitions()`等。它们通常包含在`$<`和`>`之间
+生成器表达式的粒度更细，这些选项只会影响给定的目标，不会影响全局范围或其他目标
+
+生成器表达式可以在CMake的各个命令中使用，如 `target_compile_options()`、`target_link_libraries()`、`add_definitions()` 等。它们的格式为 `$<...>`
 
 ```cmake
-$<$<类型:值>:为真时的表达式>
+\$<$<类型:值>:为真时的表达式>
 ```
 
+- `$<CONFIG:cfg>`：真如果当前配置为 `cfg`
+- `$<TARGET_PROPERTY:prop>`：获取指定目标的属性值
+- `$<STREQUAL:a,b>`：如果 `a` 和 `b` 字符串相等，则为真
+- `$<COMPILE_LANGUAGE:lang>`：真如果正在编译的语言是 `lang`
+- `$<BOOL:condition>`：如果 `condition` 非零/非空/TRUE，返回1，否则返回0
+- `$<AND:?[,?]...>`：当所有条件都为真时为真
+- `$<OR:?[,?]...>`：当任何条件为真时为真
+- `$<NOT:condition>`：如果条件为假，则为真
+- `$<CXX_COMPILER_ID:id>`：真如果 C++ 编译器的 ID 匹配 `id`
+
 ### 构建类型
+
+```cmake
+target_compile_options(<target> [BEFORE]
+                       <INTERFACE|PUBLIC|PRIVATE> [items1...]
+                       [<INTERFACE|PUBLIC|PRIVATE> [items2...] ...])
+```
 
 ```cmake
 target_compile_options(my_target PRIVATE
@@ -801,7 +820,7 @@ if也有 `break()` 和 `continue()`，效果和C语言的一样
 
 ### 条件判断表达式
 
-在条件语句中，可以使用一些条件判断表达式，比如 `EQUAL`、`LESS`、`GREATER` 等，用于比较变量或表达式的值
+CMake中没有 `=, >` 这种操作符。在条件语句中，可以使用一些条件判断表达式，比如 `EQUAL`、`LESS`、`GREATER` 等，用于比较变量或表达式的值
 
 ```cmake
 if (变量1 EQUAL 变量2)
@@ -939,6 +958,8 @@ set_target_properties(my_target PROPERTIES
 
 # CMake构建
 
+<img src="cmake工具链.jpg" width="70%">
+
 ## *CMake项目构建命令*
 
 ### 现代编译命令
@@ -1049,9 +1070,27 @@ $ sudo cmake --build build --target install
 2. 生成 generation：生成阶段是CMake根据配置阶段的结果，生成实际的构建文件的过程。这些构建文件通常是Makefile文件，但也可以是其他类型的构建文件，例如Ninja构建文件，或者Visual Studio项目文件，这取决于我们选择的生成器 generator
 3. 构建 build：使用构建工具（例如Make、Ninja或Visual Studio）根据生成的构建文件，编译源代码并链接生成目标文件的过程
 
-## *CMake Generator*
+`cmake-3.21.2-linux-x86_64/share/cmake-3.21/Modules` 中一些预定义的module会被Makefile Generator自动执行，下面我们介绍一些比较重要的module
 
-CMake Generator 是 CMake 工具的一个组件，用于控制如何生成构建系统的文件。简单来说，CMake 是一个跨平台的自动化构建系统，它使用  CMakeLists.txt 定义项目的构建过程。当运行 CMake 时它读取这些文件，并根据指定的生成器生成相应的构建系统文件
+* CMakeDetermineSystem.cmake：用于确定系统名称和版本
+* CMakeDetermineCompilerId.cmake：用于确定 C 和 C++ 编译器的标识符（如 GNU, Intel, MSVC 等）
+* CMakeDetermineCompilerABI.cmake：检测编译器的二进制接口（ABI）相关的信息
+* CMakeTestCCompiler.cmake & CMakeTestCXXCompiler.cmake：用于测试检测到的 C/C++ 编译器能否工作正常
+* CMakeDetermineCCompiler.cmake & CMakeDetermineCXXCompiler.cmake：确定并验证 C/C++ 编译器的路径和功能
+* CMakeSystemSpecificInformation.cmake：加载与目标系统相关的一些特定信息
+* CMakeDetermineLinker.cmake：确定链接器，这对于后续决定如何链接可执行文件和库非常重要
+* CMakeDetermineMakeProgram.cmake：寻找 `make` 程序或等效的构建工具
+* CMakeDetectOperatingSystem.cmake：引入了更详细的操作系统级别的检测
+* Platform/\*.cmake：平台特定的模块，例如 `Platform/Linux.cmake` 或 `Platform/Windows.cmake`，它们包含了针对不同平台的设置和修正
+
+### `CMakeDetermineSystem.cmake`
+
+1. 决定在哪个OS上运行
+2. 检测CMAKE_TOOLCHAIN_FILE是否有被设置，如果有的话就会设置相应的变量以保证工具链文件被包含在后续的构建过程中
+
+## *Makefile Generator*
+
+Makefile Generator 是 CMake 工具的核心组件，用于控制如何生成构建系统的文件。简单来说，CMake 是一个跨平台的自动化构建系统，它使用  CMakeLists.txt 定义项目的构建过程。当运行 CMake 时它读取这些文件，并根据指定的生成器生成相应的构建系统文件
 
 生成器决定了 CMake 生成哪种类型的构建文件。比如说若使用的是 Visual Studio，CMake 可以生成 Visual Studio 解决方案和项目文件；若使用的是 Make，它可以生成 Makefile。这意味着可以在一个项目中使用相同的 CMakeLists.txt 文件，并根据需要生成不同的构建系统文件
 
@@ -1325,9 +1364,9 @@ target_include_directories(<target> [SYSTEM] [AFTER|BEFORE]
   * `AFTER`：添加的路径将被追加到当前列表的末尾
   * `BEFORE`：添加的路径将插入到当前列表的开头
 * `<INTERFACE|PUBLIC|PRIVATE>`：指定添加的头文件路径的可见性。这是一个关键的部分，控制着这些路径是如何传递给依赖目标的。具体解释如下：
-  * `PUBLIC`：路径将传递给目标及其依赖项
-  * `PRIVATE`：路径仅适用于当前目标
-  * `INTERFACE`：路径将传递给依赖于当前目标的目标
+  * `PRIVATE`：选项只应用于指定的目标
+  * `INTERFACE`：选项应用于链接了此目标的其他目标
+  * `PUBLIC`：既应用于指定的目标，也应用于链接了此目标的其他目标
 * `[items1...]`、`[items2...]`等：指定要添加到头文件搜索路径的目录列表
 
 下面是一个例子

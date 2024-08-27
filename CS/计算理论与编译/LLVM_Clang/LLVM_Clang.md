@@ -524,6 +524,8 @@ LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LL
 
 这个变量会被同名的环境变量初始化（若存在的话）
 
+注意：因为`CMAKE_TOOLCHAIN_FILE` 的优先级很高，它会覆盖我们在 `CMakeLists.txt` 中给定的工具链。所以如果希望使用特定的编译器，应避免同时指定 `CMAKE_TOOLCHAIN_FILE` 和 `CMAKE_CXX_COMPILER`
+
 ### CMAKE_FIND_ROOT_PATH
 
 `CMAKE_FIND_ROOT_PATH` 的主要作用是为CMake提供一个或多个根目录，CMake将在这些目录下优先搜索各种依赖项、程序、库和头文件。这个变量特别有用于交叉编译场景，因为它允许开发者指定一个与宿主机系统隔离的搜索路径，避免与宿主机系统上的库和头文件混淆
@@ -2162,6 +2164,8 @@ addLibStdCxxIncludePaths(2参) -> addGCCLibStdCxxIncludePaths() -> addLibStdCXXI
 ```
 
 
+
+工具链文件，即使用的GNU库（自动搜索找到或者通过 `--gcc-toolchain` 指定）会被转换为 `-internal-isystem` 选项
 
 
 
@@ -4275,6 +4279,10 @@ Transformer 帮助用户简洁地指定此类规则，并轻松地在本地文�
 > The Support Library was originally referred to as the System Library, written by Reid Spencer who formulated the design based on similar work originating from the eXtensible Programming System (XPS). Several people helped with the effort; especially, Jeff Cohen and Henrik Bach on the Win32 port.
 >
 > Support Library 最初被称为 System Library，由 Reid Spencer 编写并制定设计，该设计基于起源于 eXtensible Programming System (XPS) 的类似工作。很多人帮助了这项工作；特别是 Jeff Cohen 和 Henrik Bach 在 Win32 端口上的努力
+
+### VirtualFileSystem
+
+`VritualFileSystem.cpp` 是LLVM的VFS建模
 
 ## *命令行选项解析*
 

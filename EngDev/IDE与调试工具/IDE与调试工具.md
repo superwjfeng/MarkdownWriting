@@ -240,6 +240,7 @@ gcc/g++编译出来的二进制程序默认是release模式，**要使用gdb调�
 * 查看变量的值
   * `print`（或 `p`）：查看变量的值，例如 `p variable_name`
   * `info locals`：查看当前作用域内的局部变量
+  * `info args`：查看当前调用函数的参数
   * 查看结构体/类的值：使用 `p *结构体指针` 直接查看结构体/类的整体信息
   * 查看数组
   * 监视断点可以持续监控
@@ -441,6 +442,23 @@ HelloWorld() # 创建并注册命令
 ```
 
 之后就可以在 GDB 中直接使用 `hello-world` 这个新定义的命令了
+
+# GDB原理
+
+## *架构*
+
+## *源代码搜索问题*
+
+工作中常常会出现发布机编译完代码要在开发机调试的情况，两台机器上的代码时一样的，但是源代码的位置可能放置的不同，那么在个人开发机上调试这样的程序就会找不到源代码
+
+No such file or directory
+
+[gdb调试解决找不到源代码的问题_gdb no source file named-CSDN博客](https://blog.csdn.net/albertsh/article/details/107437084)
+
+
+
+* `$cdir` the source file was compiled into object code 编译目录 compile directory，内嵌于目标文件中
+* `$cwd` current working directory 当前工作目录.
 
 # LLDB的使用
 

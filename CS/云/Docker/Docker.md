@@ -1438,6 +1438,15 @@ $  docker container prune [OPTIONS]
 
 3. 清理构建缓存
 
+   ```cmd
+   $ docker builder prune
+   ```
+
+   * `-a, -all` 清除所有build cache
+   * `--filter until=24H` 删除满足某些条件的build cache
+   * `-f, --force`
+   * `--keep-storage`
+
 下面的是一个大杀器，一定要谨慎使用它
 
 ```cmd

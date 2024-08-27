@@ -1042,9 +1042,12 @@ TARGET_DIR="$SCRIPT_DIR/../docker_mount_files"
 
 所有非环境变量的普通变量都是局部变量
 
-通过export可以将变量**递归地**传到 export 命令之后的所有子 Shell 中，所谓的递归就是指子 Shell 的子 Shell 们都可以拿到这个变量
+执行 export 的时候实际上做了两种操作
 
-export可以用来设置一个新的环境变量（增减环境变量），当然通过这个方法修改的环境变量会在重启shell后被重置，要想持久化需要修改shell的配置文件，比如bash的 `~/.bashrc`
+1. 设置变量的值，这对当前 Shell 和任何由它启动的子 Shell 都是可见的
+2. 将变量标记为 exported，即变量**递归地**传到 export 命令之后的所有子 Shell 中，这个被导出的变量会成为其环境的一部分。所谓的递归就是指子 Shell 的子 Shell 们都可以拿到这个变量
+
+export 可以用来设置一个新的环境变量（增减环境变量），当然通过这个方法修改的环境变量会在重启 Shell 后被重置，要想持久化需要修改 Shell 的配置文件，比如 bash 的 `~/.bashrc`
 
 ### Linux中Bash的配置文件组织
 
