@@ -899,6 +899,8 @@ print(info_str)
 mff_dir: /path/to/mff, proj_name: MyProject, case_list_file: cases.txt
 ```
 
+注意：f-string中如果要打印 `{}` 本身的话得套一层 `{}` 来转义
+
 ## *字典 & 集合*
 
 ### 字典和 `std::unordered_map` 的区别
