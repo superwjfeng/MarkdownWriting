@@ -1384,8 +1384,6 @@ Generic_GCC ToolChain的核心在于GCCInstallationDetector
 
 根据上面第三步的内容，如果指定了 `--gcc-toolchain`，就一定要把目录细化到 target-triple
 
-
-
 ## *其他平台（TDB）*
 
 ### Darwin
@@ -2370,7 +2368,7 @@ Clang使用的Parser是基于递归下降分析 recursive descent parser 的
 
 llvm-project/clang/tools/driver/cc1_main.cpp
 
-`cc1_main()` 负责初始化 CompilerInstance、DiagnosticIDs，并调用 `CreateFromArgs()` 构建 CompilerInvocation
+`cc1_main()` 负责初始化 CompilerInstance、DiagnosticIDs，并调用 `CreateFromArgs()` 构建 CompilerInvocation（`clang::CompilerInvocation` 是用于保存调用编译器所需数据的辅助类。这个类被设计用来表示编译器的抽象 “调用”，包括诸如包含路径、代码生成选项、警告标志等数据）
 
 1. `CreateFromArgs()` 内部会非常多的函数对参数进行解析，比如 -emit-obj
 
@@ -3995,11 +3993,11 @@ clang_visitChildren (CXCursor parent, CXCursorVisitor visitor, CXClientData clie
 
 [LibTooling — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/LibTooling.html)
 
-LibTooling 是用来构建可以单独进行 standalone build 的clang工具的库，它由 /llvm-project/clang/include/clang/Tooling/ 中的头文件和 llvm-project/clang/lib/Tooling 中的cpp文件组成
+LibTooling 是用来构建可以单独进行 standalone build 的clang工具的库，它由 `/llvm-project/clang/include/clang/Tooling/Tooling.h` 和 `llvm-project/clang/lib/Tooling/Tooling.cpp` 组成
 
 本质上LibTooling和Plugin都是对代码执行FrontendActions
 
-### 步骤
+### 基本大纲
 
 ```C++
 // Declares clang::SyntaxOnlyAction.
@@ -4037,15 +4035,7 @@ int main(int argc, const char **argv) {
 }
 ```
 
-1. Parse options
-
-   CommonOptionsParser
-
-
-
 ### ClangTool & ToolInvocation
-
-
 
 ClangTool 在多个文件上run FrontendAction，ToolInvocation 则是在一个 run 一个 FrontendAction
 
@@ -4057,36 +4047,24 @@ ClangTool(const CompilationDatabase &Compilations,
                                                     llvm::vfs::getRealFileSystem(),                             IntrusiveRefCntPtr<FileManager> Files = nullptr);
 ```
 
-必须要提供 CompilationDatabase 和 SoucePaths
+必须要提供 CompilationDatabase 和 SoucePaths，其中SourcePaths是一个ArrayRef，也就意味着可以给 LibTooling 工具一次性提供多个源文件进行操作
 
+重点介绍一下 `ClangTool::run()`。`run()` 的主要工作可以分为两部分
 
+1. 找到 `compile_commands.json`，为给定的source file读取其command
 
+2. 内部使用 ToolInvocation 主动触发FrontedAction 的执行
 
-
-Run 方法主动触发FrontedAction 的执行
-
-
-
-
-
-```C++
-ToolInvocation(std::vector<std::string> CommandLine,
-             std::unique_ptr<FrontendAction> FAction, FileManager *Files,
-             std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-                 std::make_shared<PCHContainerOperations>());
-```
-
-
+   ```C++
+   ToolInvocation(std::vector<std::string> CommandLine,
+                std::unique_ptr<FrontendAction> FAction, FileManager *Files,
+                std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+                    std::make_shared<PCHContainerOperations>());
+   ```
 
 ### ToolAction & FrontendActionFactory
 
 ToolAction 是处理`clang::CompilerInvocation`的接口
-
-
-
-`clang::CompilerInvocation` 是用于保存调用编译器所需数据的辅助类。这个类被设计用来表示编译器的抽象 “调用”，包括诸如包含路径、代码生成选项、警告标志等数据
-
-
 
 ### `runToolOnCode()` 快速测试
 
@@ -4106,8 +4084,6 @@ bool clang::tooling::runToolOnCode(std::unique_ptr< FrontendAction > ToolAction,
 * FileName 输入的源代码会在本地被映射的文件名
 * PCHContainerOps 初始化PCH
 * 正常执行返回true，否则返回false
-
-
 
 ### ArgumentsAdjuster
 
