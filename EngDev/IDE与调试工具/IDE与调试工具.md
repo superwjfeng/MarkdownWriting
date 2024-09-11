@@ -1229,6 +1229,14 @@ VS Code 中的设置结构是以 JSON 格式组织的，用于配置编辑器的
 
 这种组织结构允许你根据不同的层次和需求来配置 VS Code，使其适应不同的工作流和项目
 
+
+
+## *VS Code 中好用的设置*
+
+editor.guides.bracketpairs
+
+horizontal tab
+
 # VS Code开发C/C++
 
 ## *c_cpp_properties.json*

@@ -881,7 +881,7 @@ $ clang -ccc-print-phases main.cc
 
 4. Bind: Tool & Filename Selection
 
-   这个阶段和后面的Trasnlate一起将将Actions转化成真正的进程。Driver自上而下匹配，将Actioins分配给分配给Tools，ToolChain负责为每个Action选择合适的Tool，一旦选择了Tool，Driver就会与Tool交互，看它是否能够匹配更多的Action
+   这个阶段和后面的Trasnlate一起将将Actions转化成真正的进程。Driver自上而下匹配，将Actions分配给分配给Tools，ToolChain负责为每个Action选择合适的Tool，一旦选择了Tool，Driver就会与Tool交互，看它是否能够匹配更多的Action
 
    一旦所有的Action都选择了Tool，Driver就会决定如何连接工具（例如，使用进程内模块、管道、临时文件或用户提供的文件名）
 
@@ -5278,8 +5278,6 @@ llvm-tblgen
 
 
 
-
-
 ```tablegen
 // llvm_12/clang/include/clang/Driver/Options.td
 def version : Flag<["-"], "version">,
@@ -5292,6 +5290,4 @@ def v : Flag<["-"], "v">, Flags<[CC1Option, CoreOption]>,
 ```
 
 `Options.td` 中用到的字段，比如Flag，HelpText等定义在 `llvm_12/llvm/include/llvm/Option/OptParser.td` 中
-
-
 

@@ -921,6 +921,11 @@ Python的字典数据类型是和 `std::unordered_map` 一样是基于hash算法
 
   注意：`keys()` 返回的是一个不支持索引的 dict_keys，可以用 `list()` 转换为 list 使用
 
+* `[]`：和C++ STL的map一样，当通过赋值语句像这样 `dictionary[key] = value` 使用一个非嵌套的字典时，Python 的行为是：
+
+  - 如果 `key` 已经存在于字典中，则更新（覆盖）那个键的值。
+  - 如果 `key` 不存在于字典中，则在字典中创建一个新的键值对
+  
 * 字典的遍历
 
   ```python
@@ -2867,6 +2872,16 @@ import re
   ```
 
 ## *rich*
+
+## *gitpython*
+
+[GitPython Documentation — GitPython 3.1.43 documentation](https://gitpython.readthedocs.io/en/stable/)
+
+```cmd
+$ pip install gitpython
+```
+
+
 
 
 

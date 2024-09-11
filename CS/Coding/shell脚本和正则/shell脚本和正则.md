@@ -971,6 +971,15 @@ fi
 
 * `$@`：也代表命令中所有的参数，但是 `$@` 把每个参数区分对待，即形成一个集合或者数字
 
+* `$!`：最后一个在后台执行的命令的PID
+
+  ```shell
+  make -j$(nproc) &
+  MAKE_PID=$!
+  
+  kill $MAKE_PID
+  ```
+
 注意：shell中的 `$@` 和makefile script中的 `$@` 意义是不同的
 
 ### 短命名参数：`getopts()`

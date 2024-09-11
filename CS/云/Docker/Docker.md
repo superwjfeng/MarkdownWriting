@@ -1561,14 +1561,36 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
       CMD executable param1 param2
       ```
 
-* `ENTRYPOINT`
+* `ENTRYPOINT` 用于指定容器启动时要执行的命令。该指令的主要目的是设置容器的主进程，并且允许容器像应用程序一样运行
 
   * 如果 `CMD` 与 `ENTRYPOINT` 一起使用，则 `CMD` 中的参数会作为默认参数传递给 `ENTRYPOINT`
-  * 和CMD一样，同样有两种格式
+
+    ```dockerfile
+    ENTRYPOINT ["/usr/bin/java", "-jar", "/opt/app/app.jar"]
+    CMD ["--help"]
+    ```
+
+  * 和 `CMD` 一样，同样有两种格式
 
 * `LABEL`：以键值对的形式为镜像添加元数据
 
 * `ARG`：用于定义构建时的参数。这些参数也可以在构建 Docker 镜像时通过 `--build-arg` 标志进行传递
+
+### 踩坑：修改环境变量 & bashrc 不会被下一层继承
+
+```dockerfile
+RUN conda create --name mff-csa python=3.8.10 && \
+    conda run -n mff-csa pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    conda run -n mff-csa pip install -r /data/requirements.txt
+
+RUN conda init bash && source ~/.bashrc
+
+ENTRYPOINT [ "conda", "activate", "mff-csa" ]
+```
+
+ 当使用这个镜像后仍然会报 CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'. To initialize your shell, run 的错误，这说明第二个RUN没有被继承下来
+
+
 
 ### Build 命令
 
@@ -1976,8 +1998,8 @@ Docker context 的主要目的是让您可以快速切换 Docker 命令所操作
 
 创建一个新的 context 并设置为默认：
 
-```
-shell复制代码# 创建一个名为 "my-cloud-context" 的新 context，这里指定 docker daemon 的地址和端口
+```shell
+# 创建一个名为 "my-cloud-context" 的新 context，这里指定 docker daemon 的地址和端口
 docker context create my-cloud-context --docker "host=tcp://<cloud-server-ip>:2376"
 
 # 列出所有 contexts
@@ -1993,7 +2015,7 @@ docker ps
 docker context use default
 ```
 
-当您使用 `docker context use <context-name>` 切换上下文时，之后的所有 Docker 命令都将作用于该 context 指定的 Docker 守护进程。
+当使用 `docker context use <context-name>` 切换上下文时，之后的所有 Docker 命令都将作用于该 context 指定的 Docker 守护进程
 
 # Docker-python
 
