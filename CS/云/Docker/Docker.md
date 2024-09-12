@@ -1535,62 +1535,68 @@ Dockerfile的格式如上，它不是case-sensitive，但还是建议将指令�
 
 * `EXPOSE`：暴露容器的端口，使得可以从主机访问容器内的服务
 
-* `SHELL`：Linux-Docker 使用 `/bin/sh -c` 作为默认的 shell，Windows-Docker 则使用 `cmd /S /C` 作为默认的 shell。但是可以通过 `SHELL` 指令来指定使用其他的 shell。`-c` 表示把后面的字符串当作命令来执行，即当作一个脚本文件来执行
+* `SHELL`：Linux-Docker 使用 `/bin/sh -c` 作为默认的 shell，Windows-Docker 则使用 `cmd /S /C` 作为默认的 shell。但是可以通过 `SHELL` 指令来为 `RUN`、`ENTRYPOINT` 和 `CMD` 指令指定使用的 shell。`-c` 表示把后面的字符串当作命令来执行，即当作一个脚本文件来执行
 
   ```dockerfile
   SHELL ["/bin/bash", "-c"]
   ```
 
-* `CMD <command>`
-
-  * 用来定义当启动基于某个镜像的容器时的默认程序，这个命令只有在 `docker run` 时没有指定任何要运行的命令时才会执行，比如说command是一个bash的时候，这个CMD就无效了
-
-  * 每一个Dockerfile只能有一个CMD
-
-  * CMD有两种形式
-
-    * EXEC格式
-
-      ```dockerfile
-      CMD ["executable", "param1", "param2"]
-      ```
-
-    * Shell格式
-
-      ```dockerfile
-      CMD executable param1 param2
-      ```
-
-* `ENTRYPOINT` 用于指定容器启动时要执行的命令。该指令的主要目的是设置容器的主进程，并且允许容器像应用程序一样运行
-
-  * 如果 `CMD` 与 `ENTRYPOINT` 一起使用，则 `CMD` 中的参数会作为默认参数传递给 `ENTRYPOINT`
-
-    ```dockerfile
-    ENTRYPOINT ["/usr/bin/java", "-jar", "/opt/app/app.jar"]
-    CMD ["--help"]
-    ```
-
-  * 和 `CMD` 一样，同样有两种格式
-
 * `LABEL`：以键值对的形式为镜像添加元数据
 
 * `ARG`：用于定义构建时的参数。这些参数也可以在构建 Docker 镜像时通过 `--build-arg` 标志进行传递
 
-### 踩坑：修改环境变量 & bashrc 不会被下一层继承
+### `CMD` & `ENTRYPOINT`
 
-```dockerfile
-RUN conda create --name mff-csa python=3.8.10 && \
-    conda run -n mff-csa pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
-    conda run -n mff-csa pip install -r /data/requirements.txt
+`CWD` 和 `ENTRYPOINT` 是两个比较难用的命令，这里单独拿出来说一下
 
-RUN conda init bash && source ~/.bashrc
+[ENTRYPOINT 入口点 | Docker — 从入门到实践 (gitbook.io)](https://yeasy.gitbook.io/docker_practice/image/dockerfile/entrypoint)
 
-ENTRYPOINT [ "conda", "activate", "mff-csa" ]
+每个Dockerfile只能有一个 `CMD` 和一个 `ENTRYPOINT`
+
+ `CMD` 和 `ENTRYPOINT` 都有两种形式，下面以 `CMD` 为例
+
+* EXEC格式
+
+  ```dockerfile
+  CMD ["executable", "param1", "param2"]
+  ```
+
+* Shell格式
+
+  ```dockerfile
+  CMD executable param1 param2
+  ```
+
+`CMD` 用来定义当启动基于某个镜像的容器时的默认程序，这个命令只有在 `docker run` 时没有指定任何要运行的命令时才会执行，比如说当 `docker run` 的command参数是一个bash的时候，这个CMD就无效了
+
+当指定了 `ENTRYPOINT` 后，`CMD` 的含义就发生了改变，不再是直接的运行其命令，而是将 `CMD` 的内容作为参数传给 `ENTRYPOINT` 指令，换句话说如果 `CMD` 与 `ENTRYPOINT` 一起使用，则 `CMD` 中的参数会作为默认参数传递给 `ENTRYPOINT`
+
+```shell
+<ENTRYPOINT> "<CMD>"
 ```
 
- 当使用这个镜像后仍然会报 CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'. To initialize your shell, run 的错误，这说明第二个RUN没有被继承下来
+```dockerfile
+ENTRYPOINT ["/usr/bin/java", "-jar", "/opt/app/app.jar"]
+CMD ["--help"]
+```
 
+`ENTRYPOINT` 有两种使用场景
 
+1. 设置容器的主进程，允许容器像应用程序一样运行
+
+   ```dockerfile
+   FROM ubuntu:18.04
+   RUN apt-get update \
+       && apt-get install -y curl \
+       && rm -rf /var/lib/apt/lists/*
+   CMD [ "curl", "-s", "http://myip.ipip.net" ]
+   ```
+
+   如果此时用 `docker run container -i` 会报错，因为 `-i` 会覆盖掉 `curl -s http://myip.ipip.net`
+
+   将 CMD 改成 ENTRYPOINT 就对了
+
+2. 应用运行前的准备工作，将 `ENTRYPOINT` 设置为一个 shell script
 
 ### Build 命令
 

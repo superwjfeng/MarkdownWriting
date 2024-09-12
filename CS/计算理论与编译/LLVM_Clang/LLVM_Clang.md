@@ -522,6 +522,22 @@ LLVM的cross-compile 交叉编译是指在一种架构或操作系统上使用LL
 
 工具链文件包含了编译器、汇编器、链接器等工具的路径和其他相关设置。它告诉 CMake 使用哪些工具以及如何找到这些工具，还可能包括必要的编译器和链接器的选项
 
+比如说下面的
+
+```cmake
+set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+set(CMAKE_C_COMPILER "/usr/bin/gcc")
+set(CMAKE_AR "/usr/bin/ar")
+set(CMAKE_STRIP "/usr/bin/strip")
+set(CMAKE_LINKER "/usr/bin/ld")
+set(CMAKE_SYSTEM_PROCESSOR "x86_64")
+set(CMAKE_SYSTEM_NAME "Linux")
+set(CMAKE_CUDA_HOST_COMPILER "")
+set(CUDA_TOOLKIT_ROOT_DIR "")
+set(CUDA_TOOLKIT_TARGET_NAME "aarch64")
+set(CMAKE_CUDA_COMPILER "")
+```
+
 这个变量会被同名的环境变量初始化（若存在的话）
 
 注意：因为`CMAKE_TOOLCHAIN_FILE` 的优先级很高，它会覆盖我们在 `CMakeLists.txt` 中给定的工具链。所以如果希望使用特定的编译器，应避免同时指定 `CMAKE_TOOLCHAIN_FILE` 和 `CMAKE_CXX_COMPILER`
