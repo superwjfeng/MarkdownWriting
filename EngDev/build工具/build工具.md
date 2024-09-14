@@ -1501,7 +1501,7 @@ target_add_definitions(myapp PUBLIC -DMY_MACRO=1)
 
 CMake本身不提供任何搜索库的便捷方法，所有路径都应该由软件包的`<PackageName>Config.cmake`或`Find<PackageName>.cmake` 配置文件提供
 
-一般不用担心找不到的问题，因为一个合格的使用 CMake 构建的软件包都应该提供`<PackageName>Config.cmake`或`Find<PackageName>.cmake` 配置文件。找到了就会自动设置相关变量
+一般不用担心找不到的问题，因为一个合格的使用 CMake 构建的软件包都应该提供`<PackageName>Config.cmake`（CONFIG模式）或`Find<PackageName>.cmake`（MODULE模式） 配置文件。找到了就会自动设置相关变量
 
 find_package 有两种工作模式，这两种工作模式的不同决定了其搜索包路径的不同
 

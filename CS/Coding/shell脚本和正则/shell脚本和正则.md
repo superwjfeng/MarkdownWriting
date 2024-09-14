@@ -470,6 +470,94 @@ $ locate [选项] [模式]
 * `where` 和 `whence` 命令通常是特定shell的内建命令，具体取决于使用的shell。它们的主要目的是查找命令的位置，但它们的行为可能会因不同的shell而异
 * `whereis` 和 `which` 命令是通用的Linux命令，用于查找命令和文件的位置。`whereis` 还可以查找源代码和帮助页面文件。它们在绝大多数Linux发行版中都是可用的
 
+## *jq*
+
+`jq` 是一个轻量级且灵活的命令行JSON处理器。可以用它对JSON结构的数据进行读取、过滤、映射和转换等操作
+
+```cmd
+$ sudo apt-get install jq
+```
+
+### `jq` 是一个过滤器
+
+`jq` 表达式可以看作是筛选JSON数据的过滤器。通过管道 `|` 将JSON字符串或从文件中读取的JSON数据传递给`jq`，然后编写`jq`表达式来进行处理
+
+- `.`：返回整个JSON对象
+
+  ```cmd
+  $ echo '{"name": "John", "age": 31}' | jq '.'
+  {
+    "name": "John",
+    "age": 31
+  }
+  ```
+
+- `.foo`、`.foo.bar`：获取名为`foo`的字段或嵌套字段`bar`
+
+  ```cmd
+  $ echo '{"name": "John", "age": 31}' | jq '.name'
+  "John"
+  ```
+
+- `.[]`：展开数组中的所有元素
+
+  data.json 的内容为
+
+  ```json
+  [
+    {
+      "id": "1",
+      "name": "John Doe",
+      "email": "john@hotmail.com"
+    },
+    {
+      "id": "2",
+      "name": "Alex Strong",
+      "email": "as@yahoo.com"
+    }
+  ]
+  ```
+
+  ```cmd
+  $ jq '.[].name' data.json
+  "John Doe"
+  "Alex Strong"
+  ```
+
+- `.[index]`：获取数组中特定索引的元素
+
+  ```cmd
+  $ jq '.[1].name' data.json
+  "Alex Strong"
+  ```
+
+### 运行选项
+
+- `-r` 或 `--raw-output`：输出原生字符串，而不是JSON格式的字符串
+
+  ```cmd
+  $ jq '.[1].name' data.json
+  "Alex Strong"
+  $ jq '.[1].name' data.json -r
+  Alex Strong
+  ```
+
+- `-f /path/to/filter.jq`：从文件读取`jq` 表达式
+
+- `--arg name value`：向`jq` 脚本传递外部变量
+
+### 高级特性
+
+`jq` 支持高级功能，如条件、比较、管道（`jq` 内部管道，与shell管道不同）、函数等：
+
+- 管道：`jq 'filter1 | filter2'`，先通过`filter1`处理，然后把结果传递给`filter2`
+- 映射：`jq '.[] | .fieldName'`，处理数组时对每个元素应用过滤器
+- 条件：`jq 'if .field == "value" then .otherField else .anotherField end'`
+
+### 函数
+
+`jq 'map(select(.id == $ID))'`，选择`id`字段等于某值的所有对象
+
 ## *其他*
 
 ### cut
@@ -648,10 +736,6 @@ $ command | tee [选项] 文件...
    ```cmd
    $ command | tee -a output.txt
    ```
-
-
-
-* 
 
 # Shell
 
@@ -959,7 +1043,7 @@ fi
   echo ${10}
   ```
 
-* `${n}`：若给程序提供的参数多于 9 个，是没法访问第 10 个以及之后的参数的。 比方说当访问第 10 个参数的时候写成 `$10` 的时候，那么 Shell 实际上会替换$1 的值，然后在后面加上一个 0。比如要写成 **`${n}`** 的格式才行
+* `${n}`：若给程序提供的参数多于 9 个，是没法访问第 10 个以及之后的参数的。 比方说当访问第 10 个参数的时候写成 `$10` 的时候，那么 Shell 实际上会替换$1 的值，然后在后面加上一个 0。一定要写成 **`${n}`** 的格式才行
 
 * `$0`：Shell 会自动将程序名保存在特殊变量 `$0` 中
 

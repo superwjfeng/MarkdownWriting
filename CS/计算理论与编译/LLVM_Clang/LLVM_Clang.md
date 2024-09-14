@@ -53,11 +53,15 @@ LLVM 项目由一系列模块组成，包括前端、优化器和后端。以下
 
   Optional, you can use any other build tool supported by CMake.
 
-```C++
+```cmd
 $ sudo apt install -y gcc g++ git cmake ninja-build
 ```
 
-zlib 是一个库，没有命令行的命令
+zlib 是一个库，没有命令行的命令。zlib有一个坑，cmake用它的时候得用 `find_package(ZLIB REQUIRED)`，而不能用 `find_package(ZLIB REQUIRED CONFIG)`，因为 zlib 不提供CONFIG配置文件，因为它是一个较老的库，而且许多发行版只包括了 CMake 的模块文件（`FindZLIB.cmake`），这个文件使用的是“模块”模式
+
+```cmd
+$ cmake -B build -DZLIB_LIBRARY="/usr/lib/x86_64-linux-gnu/libz.so" -DZLIB_INCLUDE_DIR="/usr/include"
+```
 
 另外要编译LLVM需要host compiler， 即已经安装的GCC或LLVM，注意它们及其toolchain的版本是否满足条件（比如说string_view从GCC 7才开始提供）
 
@@ -3439,6 +3443,8 @@ hasArgument(1, anything()) // 显式地表明我们不在乎第二个参数是�
 
 [LLVM Programmer’s Manual — LLVM 19.0.0git documentation](https://llvm.org/docs/ProgrammersManual.html)
 
+[LLVM Programmer’s Manual — LLVM 20.0.0git documentation](https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task)
+
 ## *LLVM String*
 
 ### StringRef
@@ -5020,12 +5026,6 @@ $ clang-tidy -checks=... -fix my_file.cpp --
 * `Clang-Tidy`的某些功能可能依赖于你的Clang版本。
 
 `Clang-Tidy`是一个强大的工具，可以大大提高代码质量。然而，它最好与其他工具和实践（如代码审查、单元测试等）结合使用，以形成一个全面的代码质量保证策略
-
-
-
-
-
-
 
 # LLVM IR
 

@@ -65,7 +65,7 @@ YAML各个字段的意义可以参考：[YAML schema reference | Microsoft Learn
       # ...
   ```
 
-  dependsOn 如果未指定，则默认依赖于前面定义的所有阶段。可以被设置为显式地依赖某个阶段，或者设置为 `[]` 来表示当前阶段无需等待任何其他阶段
+  dependsOn 如果未指定，则默认依赖于前面定义的所有阶段。可以被设置为显式地依赖某个阶段，或者设置为 `[]` 来表示当前阶段无需等待任何其他阶段，即从头开始
 
 - strategy: 定义部署策略，例如canary, blue-green等
 
@@ -78,6 +78,50 @@ YAML各个字段的意义可以参考：[YAML schema reference | Microsoft Learn
     ```
 
     checkout 无法指定commit id，只能在想要用的commit id的基础上单拉一个分支
+
+### condition
+
+`condition`字段定义了执行某个任务、作业或阶段是否应当进行的条件。条件表达式使用Azure Pipelines特定的语法（一种DSL）编写，用于确定这些工作流组件在何种情况下会运行
+
+* 逻辑运算符
+
+  - `and`：所有条件必须为真
+
+  - `or`：至少一个条件为真
+
+  - `not`：条件为假
+
+* 函数
+
+  - `succeeded()`, `succeededOrFailed()`, `failed()`：根据上一个任务或作业的结果返回布尔值
+
+  - `eq()`, `ne()`：检查等于或不等于
+
+  - `startsWith()`, `endsWith()`：字符串开始或结束匹配
+
+  - `contains()`：字符串包含
+
+  - `in()`：值是否在给定的列表中
+
+* 变量：
+
+  * 用 `variables` 字段来设置变量
+
+    ```yaml
+    variables:
+      myVariable: value
+      anotherVariable: anotherValue
+    ```
+
+  * `variables['name']`：引用名为`name`的变量的值
+
+* 可用的上下文
+
+  - `Build.Reason`：触发构建的原因
+
+  - `Build.SourceBranch`：触发构建的分支
+
+  - `System.PullRequest.TargetBranch`：PR的目标分支
 
 
 # Jira
