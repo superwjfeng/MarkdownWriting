@@ -2091,17 +2091,17 @@ GAN优化的是JS散度
 
 从一个自然语言句子中识别、挑选关键字的过程称为 slot filling。slot filling 实际上是一个分类的问题，比如要将 "Beijing" 分类为 destination，把 "November 2nd" 分类为time of arrival。因此首先考虑用前向神经网络进行分类
 
-首先要将每个单词表示成一个vector进行输入，vectorization的方法是采用one-hot encoding，当然前提是要构建一个任务相关的词典，这种思想就是word2vec
+首先要将每个单词表示成一个 vector 进行输入，vectorization 的方法是采用 one-hot encoding，当然前提是要构建一个任务相关的词典，这种思想就是 word2vec
 
 <img src="word2vec.png" width="30%">
 
 ### 神经网络存在的问题
 
-对于上下文有关的自然语言需要需要判断其上下文，相当于要记住前面讲了什么，对于神经网络来说这是做不到的，神经网络对于同一个输入必然输出相同
+对于上下文有关的自然语言需要判断其上下文，相当于要记住前面讲了什么，对于神经网络来说这是做不到的，神经网络对于同一个输入必然输出相同
 
-因此可以通过memory来建模时序或者说上下文之间的依赖关系。隐层输出被存储在memory中，可以认为memory是另外的inputs
+因此可以通过 memory 来建模时序或者说上下文之间的依赖关系。隐层输出被存储在 memory 中，可以认为 memory 是另外的 inputs
 
-下图就是一个最简单的RNN Recurrent Neural Network 循环神经网络
+下图就是一个最简单的 RNN, Recurrent Neural Network 循环神经网络
 
 <img src="RNN_simplest.png" width="40%">
 
@@ -2165,9 +2165,9 @@ Understanding LSTM Networks: http://colah.github.io/posts/2015-08-Understanding-
 
 ### RNN训练梯度问题以及LSTM对此的改善
 
-RNN的训练比较困难，经常会出现极其不规则的loss曲线。原因在于使用的同一个权重 $W$ 的大量累乘以及激活函数会造成梯度爆炸或梯度消失
+RNN 的训练比较困难，经常会出现极其不规则的 loss 曲线。原因在于使用的同一个权重 $W$ 的大量累乘以及激活函数会造成梯度爆炸或梯度消失
 
-对于梯度爆炸通常都要采用梯度裁剪 gradient clipping 的方式来确保梯度的顺利传递，但对于梯度消失没有很好的应对方式，通常会造成训练缓慢。针对这个问题LSTM有很好的改善。
+对于梯度爆炸通常都要采用梯度裁剪 gradient clipping 的方式来确保梯度的顺利传递，但对于梯度消失没有很好的应对方式，通常会造成训练缓慢。针对这个问题LSTM有很好的改善
 
 但使用LSTM可以很好的训练，可以有效的抵抗梯度消失，forget gate有点像resnet。这是一种被称为peephole的机制，梯度可以通过 forgate gate（只要它开着）进行稳定的传递
 
@@ -2181,7 +2181,7 @@ LSTM通过3个门之间的搭配，可以做到既适应短记忆，也适应长
 
 * No Limination: Translation
 
-  <img src="RNN_Translation.png" width="60%">
+  <img src="RNN_Translation.png" width="60%"> 
 
 ## *Attention mechanism*
 
@@ -2189,21 +2189,29 @@ LSTM通过3个门之间的搭配，可以做到既适应短记忆，也适应长
 
 https://zhuanlan.zhihu.com/p/53036028
 
-在翻译问题中，我们希望在memory中的数据是带有注意力的，比如说翻译learning的时候，之前记忆中的machine其实影响没有那么大，我们希望output更多将注意力集中到learning而不是machine。以此来提高训练和识别的效率
+在翻译问题中，我们希望在 memory 中的数据是带有注意力的，比如说翻译 learning 的时候，之前记忆中的 machine 对于 learning 的翻译其实影响没有那么大，我们希望 output 更多将注意力集中到 learning 而不是 machine。以此来提高训练和识别的效率
 
 > **注意力机制**（英语：attention）是人工神经网络中一种模仿认知注意力的技术。这种机制可以增强神经网络输入数据中某些部分的权重，同时减弱其他部分的权重，以此将网络的关注点聚焦于数据中最重要的一小部分。数据中哪些部分比其他部分更重要取决于上下文。可以通过梯度下降法对注意力机制进行训练。-- wikipedia
 
 
 
+在 attention block 中不同的输入向量之间可以互相影响，通过相互传递信息来更新自己的值后输出
+
 原来的隐层除了给下一层做memory外，还指示了应该将注意力放到哪些输入
 
-$z_0$ 和 $z_1$ 都是学习到的参数，
+$z_0$ 和 $z_1$ 都是学习到的参数， 
+
+
+$$
+Attention(Q,K,V)=softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+$$
+
 
 # Transformer
 
 http://jalammar.github.io/illustrated-transformer/
 
-RNN中的attention效率不高，transfomer是一种更成熟的注意力模型，用来进行并行训练，提高效率。Transformer 在NLP、图像处理领域都取得了极为成功的应用
+RNN 中的 attention 效率不高，transfomer 是一种更成熟的注意力模型，用来进行并行训练，提高效率。Transformer 在NLP、图像处理领域都取得了极为成功的应用
 
 
 
