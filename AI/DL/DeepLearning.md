@@ -2083,7 +2083,7 @@ $$
 
 GAN优化的是JS散度
 
-# RNN and Attention
+# RNN & Attention
 
 ## *RNN引入*
 
@@ -2092,6 +2092,8 @@ GAN优化的是JS散度
 从一个自然语言句子中识别、挑选关键字的过程称为 slot filling。slot filling 实际上是一个分类的问题，比如要将 "Beijing" 分类为 destination，把 "November 2nd" 分类为time of arrival。因此首先考虑用前向神经网络进行分类
 
 首先要将每个单词表示成一个 vector 进行输入，vectorization 的方法是采用 one-hot encoding，当然前提是要构建一个任务相关的词典，这种思想就是 word2vec
+
+注意：其实单词这种翻译是不准确的，应该是一个 token，将一个 token 用向量表示的方法称为词嵌入 embedding a word into a vector
 
 <img src="word2vec.png" width="30%">
 
