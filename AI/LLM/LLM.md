@@ -22,6 +22,12 @@ Attention 模块每次只能处理特定数量的向量，这个数量称为 Con
 
 它组成了 Unembedding Matrix 解嵌入矩阵 $W_U$，它的每一行都应一个词库中的一个 token，列则是token的维度，即 50257*12288
 
+### Query & Key
+
+为了衡量每个 key & 每个 query 之间的匹配程度，要计算所有可能的 key-query pair 之间的点积
+
+点积得到的值代表每个 token 与更新其他词含义的相关程度，将每一列的所有点积相加然后经过 softmax 后就可以得到概率最高的下一个 token
+
 ### GPT-3权重参数总览
 
 

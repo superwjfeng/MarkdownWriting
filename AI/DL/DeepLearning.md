@@ -2205,9 +2205,22 @@ $z_0$ 和 $z_1$ 都是学习到的参数，
 
 
 $$
-Attention(Q,K,V)=softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+Attention(Q,K,V)=softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)
 $$
 
+Q 和 K 分别表示 query vector 和 key vector
+
+
+
+single attention head 单头注意力机制
+
+multi attention head 多头注意力机制：并行地进行单头注意力模块操作，每个头都有不同的 key, query & value matrix，便于GPU运算
+
+self-attention head 自注意力机制
+
+cross-attention head 交叉注意力机制：处理多种不同类型的数据，比如原文和正在被翻译出来的译文，或者是语音音频和正在被转录出来的文字
+
+自注意力机制和交叉注意力机制的训练非常类似，最大的区别就是交叉注意力机制的 key matrix 和 query matrix 作用域不同的数据集
 
 # Transformer
 
