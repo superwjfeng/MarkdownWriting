@@ -96,9 +96,9 @@ Debian 和 Ubuntu 使用 `update-alternatives` 系统来管理同一命令的多
 
   - `<link>`：这指的是由 `update-alternatives` 创建和管理的符号链接。通常这会是一个通用命令名（如 `/usr/bin/editor`），当用户运行该命令时，符号链接会指向用户选择的特定程序版本
   - `<name>`：这是替代群组的名称。所有提供类似功能的可替换项都会被分配同一个名称
-  - `<path>`：这是到真实的二进制执行文件或脚本的绝对路径。当这个替代项被选择为默认时，`<link>` 指向这个 `<path>`
-  - `<priority>`：这是一个整数值，用于在自动模式下决定哪个替代项成为默认项。具有最高优先级的替代项将被设置为默认项。
-  - `--slave <link> <name> <path>`：这是一个可选参数，允许你同时设置“从属”的链接。当主链接变化时，“从属”链接也会相应改变。例如，当你更新默认的编辑器时，你可能也想更新默认的手册页编辑器。
+  - `<path>`：到真实的二进制执行文件或脚本的绝对路径。当这个替代项被选择为默认时，`<link>` 指向这个 `<path>`
+  - `<priority>`：一个整数值，用于在自动模式下决定哪个替代项成为默认项。具有最高优先级的替代项将被设置为默认项
+  - `--slave <link> <name> <path>`：这是一个可选参数，允许你同时设置“从属”的链接。当主链接变化时，“从属”链接也会相应改变。例如，当更新默认的编辑器时，可能也想更新默认的手册页编辑器
 
   ```cmd
   $ sudo update-alternatives --install /usr/local/bin/gcc gcc /usr/bin/gcc 50
@@ -113,9 +113,12 @@ Debian 和 Ubuntu 使用 `update-alternatives` 系统来管理同一命令的多
 
 * config：显示和修改实际指向的候选命令，为在现有的命令链接选择一个作为系统默认
 
+
+注意：`update-alternatives` 所创建的符号仍然受到PATH搜索的影响，也就是说如果创建的符号所在的路径位于PATH的较后处，而前面的路径里有指向的一个版本，则 `update-alternatives` 不会生效
+
 ### 修改符号链接
 
-如果你不想使用 `update-alternatives`，也可以直接创建或修改 `/usr/bin` 中的符号链接指向你选择的 GCC 版本。请记住，在对 `/usr/bin` 下的文件进行操作前应非常小心，因为这可能会影响系统中其他程序的正常运行。例如：
+如果不想使用 `update-alternatives`，也可以直接创建或修改 `/usr/bin` 中的符号链接指向我们选择的 GCC 版本
 
 ```cmd
 $ sudo ln -sf /usr/local/gcc-9.2/bin/gcc /usr/bin/gcc

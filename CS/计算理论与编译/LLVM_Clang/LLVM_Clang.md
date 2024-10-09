@@ -4688,19 +4688,25 @@ LLVM-Style RTTI实际上是把编译成生成V-table的任务交给了用户自�
 
 
 
-# 错误、故障诊断 & 日志
+# Diagnostics
 
-## *Diagnostics*
+## *Clang 中的 linter & CSA工具的区别*
 
-诊断 diagnostics 是指编译过程中用于报告错误、警告、提示和注释的消息系统，它诊断是编译器与开发者进行交互的重要部分。这些消息会通知用户关于代码中潜在问题的具体信息，包括编译错误、未定义行为、优化信息或其他警示
+* Clang Diagnostics：如果一个检查非常通用，针对的是大多数情况下可能是程序错误（而不是风格或可读性问题）的代码模式，并且可以有效地实现，同时误报率极低，那么它可能很适合作为一个 Clang 的诊断信息。Clang 诊断是编译器在编译时提供的警告和错误消息，通常表示潜在的编程错误或违反了语言规范。例如，使用未初始化的变量、空指针解引用等
+* Clang Static Analyzer：如果检查需要进行某种控制流分析，那么它应该作为一个静态分析器检查来实现。Clang 静态分析器专注于发现程序中可能的运行时错误，比如内存泄漏、逻辑错误或其他复杂的程序bug，这些通常涉及多个代码路径和运行时状态的分析 
+* clang-tidy check：Clang-Tidy 检查是适用于 linter 风格的检查，与特定的编码风格相关，或者旨在改善代码可读性的检查。与编译器诊断或静态分析器相比，Clang-Tidy 更注重于代码质量和风格问题，如命名约定、代码简化、现代化重构建议等。Clang-Tidy 提供了更灵活的配置选项，允许开发者根据他们的项目需求启用或禁用特定的检查
 
-caret 脱字符（插入记号）`^`
+总结一下：Clang 诊断适用于几乎可以肯定是错误的情况；CSA 适合需要跟踪程序状态和控制流的复杂检查；而 clang-tidy 检查则更适合代码风格和可读性方面的改进
 
+## *诊断类的架构*
 
+诊断 clang diagnostics 是指编译过程中用于报告错误、警告、提示和注释的消息系统，它诊断是编译器与开发者进行交互的重要部分。这些消息会通知用户关于代码中潜在问题的具体信息，包括编译错误、未定义行为、优化信息或其他警示
 
-### 1. Diagnostic Engines
+诊断会用 caret 脱字符（插入记号）`^` 展示
 
-LLVM 提供了一个 `Diagnostic` 类，它是处理所有诊断信息的引擎。这个引擎记录了各种诊断信息，并且可以根据不同的严重性级别（如错误、警告）来分类消息。
+### Diagnostic Engines
+
+LLVM 提供了一个 `Diagnostic` 类，它是处理所有诊断信息的引擎。这个引擎记录了各种诊断信息，并且可以根据不同的严重性级别（如错误、警告）来分类消息
 
 ### 2. Diagnostic IDs and Categories
 
@@ -4714,10 +4720,12 @@ LLVM 提供了一个 `Diagnostic` 类，它是处理所有诊断信息的引擎�
 
 在 LLVM 中，诊断消息有几个严重性级别，包括：
 
-- `Error`: 表明一个严重问题，必须解决才能成功编译。
-- `Warning`: 表示可能的问题，建议用户检查和修复，但不会阻止编译过程。
-- `Note`: 提供额外的信息，通常与错误或警告相关。
-- `Remark`: 用于提供关于优化等特殊情况的详细信息。
+- Ignored
+- Note：提供额外的信息，通常与错误或警告相关
+- Remark：用于提供关于优化等特殊情况的详细信息
+- Warning：表示可能的问题，建议用户检查和修复，但不会阻止编译过程
+- Error：表明一个严重问题，必须解决才能成功编译
+- Fatal
 
 ### 5. Fix-Its
 
@@ -4737,8 +4745,8 @@ Clang 和其他基于 LLVM 的工具可以提供修复建议（Fix-Its），这�
 
 这是一个简单的例子，展示了如何在 LLVM 中发出一个诊断：
 
-```
-cpp复制代码#include "llvm/IR/DiagnosticInfo.h"
+```C++
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 
@@ -4907,7 +4915,175 @@ char MyCustomError::ID = 0;
 
 ## *log*
 
-# Clang Tools & Clang Plugin
+# clang-tidy
+
+clang-tidy 检查代码的风格、可维护性和一些潜在的错误。它包括对现代C++代码的检查、执行特定代码约定的检查，或者结合具体业务自定义代码规则
+
+## *源代码分析*
+
+clang-tidy 的源代码在 clang-tools-extra/clang-tidy 中，有下面的这些文件
+
+* ClangTidy
+* ClangTidyCheck
+* ClangTidyDiagnosticConsumer
+* ClangTidyForceLinker
+* ClangTidyModule
+* ClangTidyOptions
+* ClangTidyProfiling
+
+## *Check*
+
+### 指定检查项
+
+命令行中使用它来分析源代码文件。基本的命令行语法是：
+
+```cmd
+clang-tidy --checks='*' test.cpp -- -I ./src/ -x c++
+```
+
+`--` 后面的参数是传递给底层 Clang 前端的编译选项。比如 `-I/path/to/include` 是告诉 `clang-tidy` 在哪里查找头文件
+
+clang-tidy提供了许多可配置的 check，甚至还可以使用 CSA 的 check。要查看所有可用的检查项，可以参考 [clang-tidy - Clang-Tidy Checks — Extra Clang Tools 20.0.0git documentation (llvm.org)](https://clang.llvm.org/extra/clang-tidy/checks/list.html)。根据 prefix 可以分为下面的这些 modules
+
+- abseil-
+- altera-
+- android-
+- boost-
+- bugprone-：检测容易形成 bug 的写法
+- cert-
+- clang-analyzer-：checks of CSA
+- concurrency-：检查并行编程
+- cppcoreguidelines-：检测是否违反 cpp-core-guidelines
+- google-：检测是否违反 google code style
+- llvm-：检测是否违反 llvm code style
+- misc-：其它一些零碎的 check
+- mpi-：检测 MPI API 问题
+- modernize-：把 C++03 代码转换成 C++11代码，使用 C++11 新特性
+- performance-：检测 performance 相关问题
+- portability-：检测可移植性相关问题，但又不明确属于任何代码规范的
+- readability-：检测代码上相关问题，但又不明确属于任何代码规范的
+
+也可以使用下面的选项？（为什么只有一部分check？）
+
+```cmd
+$ clang-tidy -list-checks
+```
+
+要运行特定的检查项，可以使用`-checks=`选项，该选项指定了一个由正（没有前缀）和负（前缀为 `-`）通配符模式组成的逗号分隔列表。正通配符添加检查的子集，而负通配符则移除它们
+
+*  显示指定check，例如下面的选项指定只运行以`bugprone-`和`modernize-`开头的检查项
+
+  ```cmd
+  $ clang-tidy test.cpp -checks=-*,clang-analyzer-*,-clang-analyzer-cplusplus*
+  ```
+
+  上面指定了关闭所有的 checks，打开除 `clang-analyzer-cplusplus*` 之外的 clang-analyzer 
+
+* clang-tidy 可以使用 `.clang-tidy` 配置文件来控制哪些检查应该被启用或禁用。这个文件通常放在项目的根目录下。如果没有手动指定配置文件，clang-tidy 将会向上搜索文件系统，直到找到一个 `.clang-tidy` 文件或者达到文件系统的根目录
+
+  ```cmd
+  $ clang-tidy --checks='Checks' test.cpp -- -I ./src/ -x c++
+  ```
+
+  上面的 `Checks` 是指定 `.clang-tidy` 文件里的检查项
+
+  ```yaml
+  Checks:          '-*,modernize-*,clang-analyzer-*'
+  WarningsAsErrors: '*'
+  HeaderFilterRegex: ''
+  AnalyzeTemporaryDtors: false
+  FormatStyle:     'file'
+  CheckOptions:
+    - key:             modernize-use-auto.MinTypeNameLength
+      value:           '5'
+    - key:             modernize-pass-by-value.IncludeStyle
+      value:           llvm
+  ```
+
+### Dianostics
+
+`Clang-Tidy`支持一些检查的自动修复。要应用这些修复，可以使用`-fix`选项：
+
+```cmd
+$ clang-tidy -checks=... -fix my_file.cpp --
+```
+
+关闭对于用户不必要的诊断
+
+## *自定义check*
+
+`rename_check.py` 重命名一个已有的 check
+
+### 两种整合方法
+
+1. 新建checkers，将checkers和LLVM中的clang-tidy一起重新编译
+2. out-of-tree plugin：新建checkers，并将其编译成动态链接库，然后通过clang-tidy的 `-load`参 数加载plugin
+
+明显第二种方法更加灵活，但这里有个坑，clang-tidy 从LLVM 14版本才支持动态库外部插件的功能
+
+[Extra Clang Tools 14.0.0 Release Notes — Extra Clang Tools 14.0.0 documentation (llvm.org)](https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/ReleaseNotes.html#id2)
+
+> ### [Improvements to clang-tidy](https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/ReleaseNotes.html#id18)
+>
+> - Ignore warnings from macros defined in system headers, if not using the -system-headers flag.
+> - Added support for globbing in NOLINT* expressions, to simplify suppressing multiple warnings in the same line.
+> - Added support for NOLINTBEGIN … NOLINTEND comments to suppress Clang-Tidy warnings over multiple lines.
+> - Added support for external plugin checks with -load.
+
+### 编写 check
+
+`add_new_check.py` 自动化创建一个新 check 的骨架，它会做下面的工作更新 CMake 文件并且创建单元测试
+
+1. 创建
+2. 在一个**已存在的 module** 中注册 check
+
+### 创建一个新的 module
+
+clang-tidy 中 module 指的是一组相关的检查的集合，上面已经都列出来了。每个模块包含了一系列的 checks，这些检查可以是逻辑上相关的，或者是针对特定代码风格、编程实践或规则集的。模块允许用户轻松地启用或禁用一组相关检查
+
+### 向 check 传递选项
+
+### out-of-tree check plugins
+
+plugin 将会是一个独立的共享库
+
+使用 `-load` 来打开 check
+
+```cmd
+$ clang-tidy --checks=-*,my-explicit-constructor -list-checks -load myplugin.so
+```
+
+
+
+
+
+
+
+
+
+## *集成*
+
+### 集成至构建系统
+
+对于复杂的项目，直接在命令行中运行 clang-tidy 可能不太方便。在这种情况下，可以将 clang-tidy 集成到构建系统中。对于 CMake，可以通过设置`CMAKE_CXX_CLANG_TIDY`变量来实现：
+
+```cmake
+set(CMAKE_CXX_CLANG_TIDY clang-tidy;--checks=*;-header-filter=.*)
+```
+
+这样每次构建项目时，clang-tidy 都会自动运行
+
+### 集成至IDE
+
+[Clang-tidy IDE/Editor Integrations — Extra Clang Tools 20.0.0git documentation (llvm.org)](https://clang.llvm.org/extra/clang-tidy/Integrations.html)
+
+推荐直接使用clangd，它内部集成了clang-tidy
+
+### 集成至CI/CD
+
+# clangd
+
+# 其他Clang Tools & Clang Plugin
 
 [Overview — Clang 19.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/ClangTools.html)
 
@@ -4973,59 +5149,7 @@ llvm-project/clang/tools/clang-check/ClangCheck.cpp
 
 ### 源代码
 
-
-
-## *clang-tidy*
-
-### 基本用法
-
-命令行中使用它来分析源代码文件。基本的命令行语法是：
-
-```cmd
-$ clang-tidy [options] file [-- compile_options...]
-```
-
-### 检查控制
-
-`Clang-Tidy`提供了许多可配置的检查项。要查看所有可用的检查项，可以使用：
-
-```cmd
-$ clang-tidy -list-checks
-```
-
-要运行特定的检查项，可以使用`-checks=`选项，例如：
-
-```cmd
-$ clang-tidy -checks=bugprone-*,modernize-* my_file.cpp --
-```
-
-这将只运行以`bugprone-`和`modernize-`开头的检查项。
-
-### 集成至构建系统
-
-对于复杂的项目，直接在命令行中运行`Clang-Tidy`可能不太方便。在这种情况下，你可以将`Clang-Tidy`集成到你的构建系统中。例如，如果你使用的是CMake，可以通过设置`CMAKE_CXX_CLANG_TIDY`变量来实现：
-
-```cmake
-set(CMAKE_CXX_CLANG_TIDY clang-tidy;--checks=*;-header-filter=.*)
-```
-
-这样，每次你构建你的项目时，`Clang-Tidy`都会自动运行。
-
-### 自动修复
-
-`Clang-Tidy`支持一些检查的自动修复。要应用这些修复，可以使用`-fix`选项：
-
-```cmd
-$ clang-tidy -checks=... -fix my_file.cpp --
-```
-
-### 注意事项
-
-* 由于`Clang-Tidy`进行的是静态分析，它可能无法捕捉到所有的运行时错误。
-* 有些检查可能会产生误报，所以在应用任何自动修复之前，务必仔细检查。
-* `Clang-Tidy`的某些功能可能依赖于你的Clang版本。
-
-`Clang-Tidy`是一个强大的工具，可以大大提高代码质量。然而，它最好与其他工具和实践（如代码审查、单元测试等）结合使用，以形成一个全面的代码质量保证策略
+clang/tools/clang-format/ClangFormat.cpp
 
 # LLVM IR
 
