@@ -1,3 +1,7 @@
+```cmd
+$ du -h --max-depth=1 | sort -h
+```
+
 # 正则表达式
 
 ## *简介*

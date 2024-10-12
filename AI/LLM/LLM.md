@@ -64,6 +64,26 @@ GPT的API不允许选择大于2的T，这没有数学依据，只是一个人为
 
 模态 Modality 指的是数据或者信息的某种表现形式
 
-# LongChain
 
-system prompt 系统提示词
+
+
+
+
+
+
+
+Base LLM：基干预先做的文本训练数据来预测下一个 token
+
+Instruction Tuned LLM
+
+# LangChain
+
+[Introduction | 🦜️🔗 LangChain](https://python.langchain.com/docs/introduction/)
+
+[LangChain 介绍 | 🦜️🔗 Langchain](https://python.langchain.com.cn/docs/get_started/introduction)
+
+
+
+system prompt 系统提示词：指用户的输入，是用来给模型传递信息的一种方式
+
+parser 解析器：接收模型的输出，并将输出结果解析成更结构化的格式，以便用户可以对其进行后续操作
