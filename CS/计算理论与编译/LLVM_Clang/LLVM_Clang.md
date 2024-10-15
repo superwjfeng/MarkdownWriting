@@ -1451,8 +1451,8 @@ Generic_GCC ToolChain的核心在于GCCInstallationDetector
 实际上我们自己打包成的库也可以称为运行时库
 
 * GNU
-  * 标准库 libstdc++ 的头文件和库被安装在 `/usr/local/gcc-14.1.0/include/c++/14.1.0` 和
-  *  运行时库 libgcc.a / libgcc_s.so 被安装在 `/usr/local/gcc-14.1.0/lib64` 中
+  * 标准库 libstdc++ 的头文件和库被安装在 `/usr/local/include/c++/14.1.0` 和
+  *  运行时库 libgcc.a / libgcc_s.so 被安装在 `/usr/local/lib64` 中
 * LLVM
   * 标准库 libc++ 的头文件和库分别被默认安装在 `/usr/local/include/c++/v1` 和 `/usr/local/lib/x86_64-unknown-linux-gnu/c++` 中
   * 运行时库 compiler-rt，`libclang_rt*` 被默认安装在 `/usr/local/lib/clang/19/lib/x86_64-unknown-linux-gnu`
@@ -1635,6 +1635,10 @@ ABI包括了以下方面的规范：
 * libcxxrt
 
   `libcxxrt` 是另一个C++运行时类型库，是FreeBSD的C++标准库的一部分，但也可以在其他系统上使用。它提供了C++ ABI 的实现，主要用于动态类型识别和异常处理
+
+## *共享库 not found 问题*
+
+
 
 # Clang Basic
 

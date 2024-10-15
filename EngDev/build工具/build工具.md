@@ -1755,8 +1755,8 @@ get_filename_component(TOOLCHAIN_FILE_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH)
   * 若既有静态库也有动态库，则默认使用动态库；此时若想强制使用静态库，也可以用 `-staic` 来指定
 * 虽然在gcc编译的时候已经告诉了程序需要的动态库的地址，但对生成程序进行调用的时候它并不能找到动态库
   * 可以将库放到系统库中，但这会造成库污染，不要使用这种方法
-  * 可以将第三方动态库的地址放到库加载的搜索路径的环境变量下 `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH: pwd`，但这个环境变量在OS重启后会被重置为原来的内容
-  * 可以通过新增系统默认的配置文件来达到永久修改的目的：往 `/etc/ld.so.conf.d` 新建一个带有库地址的配置文件后再执行 `ldconfig` 令配置文件生效
+  * 可以将第三方动态库的地址放到库加载的搜索路径的环境变量下 `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH: pwd`，它的优先级高于 `/etc/ld.so.cache`。但这个环境变量在OS重启后会被重置为原来的内容
+  * 在 *链接.md* 中我们说过可以通过新增系统默认的配置文件来达到永久修改的目的：往 `/etc/ld.so.conf.d` 新建一个带有库地址的配置文件后再执行 `ldconfig` 令配置文件生效
   * 也可以在系统库 `/usr/lib64` 中建立一个指向第三库的软连接
 
 ```makefile
