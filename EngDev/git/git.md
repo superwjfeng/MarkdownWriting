@@ -463,7 +463,21 @@ git rm '*.log'
 
 ### 查看分支
 
-移动HEAD指针来指向不同的分支指针，分支指针再指向不同的commit ID。**分支指针都放在 `.git/refs` 下面**，分成了本地的heads和远端的remotes，还有打的tags
+移动HEAD指针来指向不同的分支指针，分支指针再指向不同的commit ID。**分支指针都放在 `.git/refs` 下面**，分成了本地的heads和远端的remotes（默认为origin），还有打的tags
+
+```cmd
+$ tree -L 2
+.
+├── branches
+├── ...
+└── refs
+    ├── heads   # 本地分支
+    ├── remotes # 远程分支
+        └── origin
+    └── tags
+```
+
+`refs/heads/` 目录下面只有已经在本地 checkout 或者显式创建的分支。远端仓库中可能存在许多其他分支，但直到我们与远端进行交互（如通过 `fetch`、`pull` 或 `push` 命令），这些分支并不会自动出现在本地 `refs/heads/` 目录中
 
 注意：在新建branch的时候是在当时的分支上进行了一次commit，即
 

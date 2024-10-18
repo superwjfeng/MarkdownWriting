@@ -1315,11 +1315,17 @@ LEGB 规则：Python以 L-E-G-B 的顺序依次寻找变量
 
 ## *匿名函数/lambda表达式*
 
-`lambda 参数: 表达式`
+`lambda arguments : expression`
 
-* lambda只是一个表达式,而不是一个代码块，函数体比def简单很多
-* 仅仅能在lambda表达式中封装有限的逻辑
-* lambda 函数拥有自己的命名空间
+- `arguments` 是传递给 `lambda` 函数的参数。它们可以是单个参数，也可以是用逗号分隔的多个参数
+- `expression` 是在函数调用时将被评估并返回其值的表达式
+
+```python
+add = lambda x, y: x + y
+print(add(5, 3))  # 输出: 8
+```
+
+定义了一个执行加法的 lambda 函数，并存储在变量 `add` 中
 
 ## *Stub File*
 
