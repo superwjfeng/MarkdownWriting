@@ -4966,6 +4966,7 @@ clang-tidy提供了许多可配置的 check，甚至还可以使用 CSA 的 chec
 - performance-：检测 performance 相关问题
 - portability-：检测可移植性相关问题，但又不明确属于任何代码规范的
 - readability-：检测代码上相关问题，但又不明确属于任何代码规范的
+- [Diagnostic flags in Clang — Clang 20.0.0git documentation (llvm.org)](https://clang.llvm.org/docs/DiagnosticsReference.html) 中的编译 warning 选项用 clang-diagnostic 开头，比如 clang-diagnostic-unused-but-set-variable。这些 check clang-tidy 无法关闭，因为 clang-tidy 无法干预编译选项
 
 也可以使用下面的选项？（为什么只有一部分check？）
 
@@ -5004,6 +5005,17 @@ $ clang-tidy -list-checks
       value:           llvm
   ```
 
+### 关闭 check
+
+用户可以关闭他们认为不必要的诊断
+
+用 `NOLINT`、`NOLINTNEXTLINE` 和 `NOLINTBEGIN` & `NOLINTEND` 这些注释来关闭。比如
+
+```C++
+// Silence all checks from the `google` module
+Foo(bool param); // NOLINT(google*)
+```
+
 ### Dianostics
 
 `Clang-Tidy`支持一些检查的自动修复。要应用这些修复，可以使用`-fix`选项：
@@ -5011,8 +5023,6 @@ $ clang-tidy -list-checks
 ```cmd
 $ clang-tidy -checks=... -fix my_file.cpp --
 ```
-
-关闭对于用户不必要的诊断
 
 ## *自定义check*
 
@@ -5049,21 +5059,46 @@ clang-tidy 中 module 指的是一组相关的检查的集合，上面已经都�
 
 ### out-of-tree check plugins
 
-plugin 将会是一个独立的共享库
-
-使用 `-load` 来打开 check
+plugin 将会是一个独立的共享库，使用 `--load` 来加载这个共享库（里面可能有多个 check），并在 `--check` 中打开我们需要的 check
 
 ```cmd
-$ clang-tidy --checks=-*,my-explicit-constructor -list-checks -load myplugin.so
+$ clang-tidy --checks=-*,my-explicit-constructor,our_check --load myplugin.so
 ```
 
+参考 [clang-tidy customized checker example | Xander's Wiki](https://xander.wiki/2024/01/21/clang-tidy customized checker example/)，cmake 文件大概如下
 
+```cmake
+cmake_minimum_required(VERSION 3.15)
+project(CppDiagModule)
 
+find_package(LLVM REQUIRED CONFIG)
+find_package(Clang REQUIRED CONFIG)
 
+include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(${CLANG_INCLUDE_DIRS})
 
+# set(CMAKE_CXX_FLAGS                "${CMAKE_CXX_FLAGS} -v -g") # verbose for debug
 
+add_definitions(${LLVM_DEFINITIONS})
 
+add_library(CppDiagModule SHARED
+  CppDiagTidyModule.cpp
+  TestNewCheckerCheck.cpp
+)
+```
 
+这里有个坑，不要再一次链接 Clang 的相关库，比如下面
+
+```cmake
+target_link_libraries(CppDiagModule PRIVATE clangASTMatchers clangTidy)
+```
+
+这将会造成重复链接的问题，但确实通过运行时错误的形式报出来的。可以参考这个 bug fix：https://discourse.llvm.org/t/bug-22543-new-lldb-fails-to-start-with-llvm-error-inconsistency-in-registered-commandline-options/35402
+
+```
+"clang-tidy: CommandLine Error: Option 'static-func-full-module-prefix' registered more than once!
+"LLVM ERROR: inconsistency in registered CommandLine options"
+```
 
 ## *集成*
 

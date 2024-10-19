@@ -820,6 +820,8 @@ multi-line string.'''
 
 ### 字符串函数
 
+Python的字符串操作十分强大
+
 字符串的常用基本操作有下面这些，更完整的可以看 https://www.liujiangblog.com/course/python/21
 
 * 用加号运算符 `+` 将两个字符串连接起来
@@ -838,7 +840,28 @@ multi-line string.'''
 
 * `lower()`：将字符串中的所有字母转换为小写
 
-* `strip()`：去除字符串两端的空白字符
+* `strip()`：去除字符串两端的空白字符，默认情况下，这些空白字符包括：
+
+  - 空格 `' '`
+  - 制表符 `'\t'`
+  - 换行符 `'\n'`
+  - 回车符 `'\r'`
+  - 垂直制表符 `'\v'`
+  - 换页符 `'\f'`
+
+  ```python
+  s = '   hello world \n'
+  clean_s = s.strip()
+  print(clean_s)  # 输出: 'hello world'
+  ```
+
+  `strip()` 也可以接受一个参数（字符串），该参数指定了要从字符串两端移除的字符集合。当提供这个参数时，函数会移除字符串两端所有出现在参数中的字符，直到遇到一个不在参数中的字符为止
+
+  ```python
+  s = '.#.#..hello world#..#.'
+  clean_s = s.strip('.')
+  print(clean_s)  # 输出: '#.#..hello world#..#'
+  ```
 
 * `split()`：将字符串拆分为子字符串列表，这个方法会根据指定的分隔符对原始字符串进行切割，并返回一个包含这些子字符串的列表
 
@@ -2911,6 +2934,30 @@ import re
   string = '12 drummers drumming, 11 pipers piping, 10 lords a-leaping'
   found_all = pattern.findall(string)
   ```
+
+### 捕获组
+
+```python
+import re
+
+line = '#include "example.h"'
+match = re.search('#include "(.*)"', line)
+if match:
+    print(match.group(1))  # 输出: example.h
+```
+
+以正则表达式 `'#include "(.*)"'` 为例：
+
+- `#include "`: 匹配字面上的 `#include "` 字符串
+- `(.*)`: 这是一个捕获组 capturing group，`.` 表示匹配除换行符 `\n` 之外的任何单个字符，`*` 表示匹配前面的字符零次或多次。所以 `.*` 可以匹配任意长度的字符串
+- `"`: 匹配字面上的双引号字符
+
+如果 `re.search` 在 `line` 中找到了匹配的内容，它会返回一个 `Match` 对象。否则，如果没有找到匹配项，则返回 `None`
+
+`match.group(1)` 调用的是这个 `Match` 对象的 `group` 方法，它用来获取正则表达式中定义的捕获组的匹配文本
+
+- `group(0)` 或 `group()` 将返回整个匹配的文本，即包括了 `#include "` 和闭合的双引号 `"`.
+- `group(1)` 将返回第一个捕获组的内容，也就是 `(.*)` 所匹配的部分，也就是说在这个例子中，它将返回 `#include "<filename>"` 中的 `<filename>` 部分（不包含双引号）
 
 ## *rich*
 
