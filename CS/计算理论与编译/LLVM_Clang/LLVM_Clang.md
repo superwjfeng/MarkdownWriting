@@ -3445,8 +3445,6 @@ hasArgument(1, anything()) // 显式地表明我们不在乎第二个参数是�
 
 # LLVM 中的数据结构
 
-[LLVM Programmer’s Manual — LLVM 19.0.0git documentation](https://llvm.org/docs/ProgrammersManual.html)
-
 [LLVM Programmer’s Manual — LLVM 20.0.0git documentation](https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task)
 
 ## *LLVM String*
@@ -4060,6 +4058,10 @@ int main(int argc, const char **argv) {
   return Tool.run(newFrontendActionFactory<clang::SyntaxOnlyAction>().get());
 }
 ```
+
+[[clang\] [Clang][Docs] use CommonOptionsParser::create instead of protected constructor on libTooling tutorial (NFC) (PR #70427) (mail-archive.com)](https://www.mail-archive.com/cfe-commits@lists.llvm.org/msg371868.html)
+
+虽然官方教程说可以使用CommonOptionsParser，但是从LLVM 14开始这里不能直接使用了，因为这个构造器被定义为了protected，要像上面这么使用 `create()` 得到
 
 ### ClangTool & ToolInvocation
 

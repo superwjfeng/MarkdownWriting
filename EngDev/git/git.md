@@ -828,7 +828,9 @@ git cherry-pick <commit-hash>
 
 ### 注意事项
 
-- 当执行 `cherry-pick` 时，可能会遇到冲突。此时，像处理普通合并冲突一样解决它们，然后继续完成 `cherry-pick` 操作。
+- 解决当执行 `cherry-pick` 时发生的冲突问题
+  1. 像处理普通合并冲突一样解决它们
+  2. `git cherry-pick --continue` 继续完成 `cherry-pick` 操作
 - `cherry-pick` 不是用来替代合并（`merge`）或变基（`rebase`）的。在选择使用它之前，请考虑版本控制策略是否真的需要这种类型的操作，因为它可以导致历史记录变得复杂
 
 ## *远程库*
