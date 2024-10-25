@@ -2028,6 +2028,57 @@ namespace fs = std::filesystem;
 * 对路径的操作
   * concatenation
 
+### path 对象的字符串操作
+
+首先 path 对象支持将 char array 和 string 对象隐式转换为 path
+
+进行路径相关计算时，`std::filesystem::path` 类重载了 `operator/` 用来连接路径，并且也重载了赋值（`operator=`）、加法（`operator+`）和加法赋值（`operator+=`）运算符来与字符串一起使用。以下是 `std::filesystem::path` 和 `std::string` 或 `char` 字面量之间如何运算的示例：
+
+* 使用 `operator/` 来连接路径
+
+  ````C++
+  fs::path p1 = "/mnt/data";
+  fs::path p2 = p1 / "test"; // 结果是 "/mnt/data/test"
+  ````
+
+  这里的 `operator/` 被重载，可以将一个 `fs::path` 对象与另一个 `fs::path` 对象、`std::string` 或 `const char*` 字面量相连
+
+* 使用 `operator+=` 和 `operator+` 进行字符串拼接
+
+  ```C++
+  fs::path p1 = "/mnt/data/";
+  p1 += "data"; // 等价于 p1 = p1 + "data"; 结果是 "/mnt/data/data"
+  ```
+
+  这里的 `operator+=` 和 `operator+` 允许你将 `std::string`、`const char*` 字面量或单个字符（`char`）追加到现有的 `fs::path`	 对象后面
+
+* 将 `std::filesystem::path` 转换为 `std::string`：使用 `path` 类的成员函数 `string()` 来执行此操作
+
+  ```C++
+  fs::path p = "/mnt/data/data";
+  std::string path_str = p.string(); // 将 fs::path 对象转换为 std::string
+  ```
+
+### 分隔符问题
+
+Python 的 os 库提供了 `os.sep` 来自适应平台的分隔符，同样的 `std::filesystem` 在 `std::filesystem::path` 类中提供了一个名为 `preferred_separator` 的静态成员变量。这个成员表示了当前操作系统首选的路径分隔符
+
+```C++
+// 打印当前平台的首选路径分隔符
+std::cout << "Preferred path separator: " << fs::path::preferred_separator << std::endl;
+```
+
+不过，当使用 `std::filesystem::path` 和重载的 `operator/` 来连接多个路径片段时，我们通常不需要直接处理路径分隔符，因为 `std::filesystem` 会自动为我们使用正确的分隔符。例如：
+
+```cpp
+fs::path p1 = "/mnt/data";
+fs::path p2 = p1 / "test"; // 自动使用首选分隔符
+```
+
+在这种情况下，即使代码中没有显式地写出分隔符，`std::filesystem` 库也会根据运行代码的操作系统自动插入正确的分隔符
+
+直接使用 `preferred_separator` 可能在手动构造路径字符串时有用，但如果可能的话，最好使用 `std::filesystem` 提供的功能来管理路径，以便更好地保证代码的可移植性和正确性
+
 ### 获取绝对路径 & 相对路径
 
 * `current_path()` 获取或设置当前工作目录，当输入一个路径时，就是变更到输入的路径
@@ -2058,6 +2109,31 @@ namespace fs = std::filesystem;
   * `proximate()` 当无法解析为相对路径时，它不会抛出异常。而是返回一个 `std::filesystem::path` 对象，该对象可能是原始的绝对路径，或者如果可能的话，是一个尽可能接近的相对路径
 
 * `fs::temp_directory_path()`：返回临时文件夹的路径
+
+* 路径正规化，filesystem 里有类似于 `os.normpath` 的接口，但用法相对来说更复杂
+
+  * `std::filesystem::canonical()`，注意：这个函数要求路径必须存在于文件系统中，因为它将解析到实际的物理路径。这可能会抛出异常，如果路径不存在或有其他问题
+
+    ```C++
+    try {
+        // 假定 '/tmp/example/../file.txt' 是实际存在的路径
+        fs::path p = "/tmp/example/../file.txt";
+        fs::path canonical_p = fs::canonical(p);
+        // canonical_p 现在是绝对的、标准化的路径，没有 '..' 或 '.' 或任何冗余分隔符
+    }
+    catch(const std::filesystem::filesystem_error& e) {
+        std::cerr << e.what() << '\n';
+    }
+    ```
+
+  * `std::filesystem::lexically_normal()`：不考虑文件系统上的实际路径（也就是说，不验证路径是否存在）
+
+    ```C++
+    fs::path p = "/tmp//example/./../file.txt";
+    fs::path normalized_p = p.lexically_normal();
+    // normalized_p 现在是 "/tmp/file.txt"
+    ```
+
 
 ### 目录操作
 

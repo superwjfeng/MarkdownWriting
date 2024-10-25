@@ -979,10 +979,31 @@ Python的字典数据类型是和 `std::unordered_map` 一样是基于hash算法
 
   注意：`keys()` 返回的是一个不支持索引的 dict_keys，可以用 `list()` 转换为 list 使用
 
-* `[]`：和C++ STL的map一样，当通过赋值语句像这样 `dictionary[key] = value` 使用一个非嵌套的字典时，Python 的行为是：
+* 字典键的访问
 
-  - 如果 `key` 已经存在于字典中，则更新（覆盖）那个键的值。
-  - 如果 `key` 不存在于字典中，则在字典中创建一个新的键值对
+  * dict
+  
+  * defaultdict
+  
+  * `[]`：和C++ STL的map一样，当通过赋值语句像这样 `dictionary[key] = value` 使用一个非嵌套的defaultdict时，它的行为是：
+  
+    * 如果 `key` 已经存在于字典中，则更新（覆盖）那个键的值
+    * 如果 `key` 不存在于字典中，则在字典中创建一个新的键值对
+  
+    ```python
+    >>> a = dict()
+    >>> a['3'] += 1
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+    KeyError: '3'
+    >>> from collections import defaultdict
+    >>> b = defaultdict(int)
+    >>> b['3'] += 1
+    >>> b['3']
+    1
+    >>> b['4']
+    0
+    ```
   
 * 字典的遍历
 
@@ -2038,9 +2059,17 @@ with expression as variable:
 假设有 `f=open(filename, mode)`
 
 * `f.read()`
+
+  读取整个文件，返回的是一个字符串，字符串包括文件中的所所有内容。若想要将每一行数据分离，即需要对每一行数据进行操作，此方法无效
+
 * `f.readline()` 会从文件中读取单独的一行。换行符为 '\n'。`f.readline()` 如果返回一个空字符串, 说明已经已经读取到最后一行
+
+* `f.readlines()`
+
 * `f.write()`
+
 * `f.tell()` 返回文件对象当前所处的位置, 它是从文件开头开始算起的字节数
+
 * `f.seek()` 改变文件指针当前的位置
 
 ## *os文件/目录方法*
