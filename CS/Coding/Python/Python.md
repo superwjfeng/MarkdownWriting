@@ -981,14 +981,43 @@ Python的字典数据类型是和 `std::unordered_map` 一样是基于hash算法
 
 * 字典键的访问
 
-  * dict
+  * dict：尝试获取或者修改一个不存在于普通字典中的键，Python 将会抛出 KeyError。避免 KeyError 的方法是
   
-  * defaultdict
+    * 使用 `get()` 获取字典键的值，该方法允许返回一个默认值而不是抛出 KeyError
   
-  * `[]`：和C++ STL的map一样，当通过赋值语句像这样 `dictionary[key] = value` 使用一个非嵌套的defaultdict时，它的行为是：
+      ```python
+      value = normal_dict.get('a', 0)  # 如果 'a' 不存在，返回0
+      ```
   
-    * 如果 `key` 已经存在于字典中，则更新（覆盖）那个键的值
-    * 如果 `key` 不存在于字典中，则在字典中创建一个新的键值对
+    * 在尝试读取或更新之前手动检查键是否存在
+  
+      ```python
+      if 'a' in normal_dict:
+          normal_dict['a'] += 1
+      else:
+          normal_dict['a'] = 1
+      ```
+  
+    * 使用 `setdefault` 方法，它会设置并返回指定键的值，如果键不存在，则首先设置为默认值
+  
+      ```python
+      normal_dict.setdefault('a', 0)
+      normal_dict['a'] += 1
+      ```
+  
+    * 捕获 `KeyError` 异常
+  
+      ```python
+      try:
+          normal_dict['a'] += 1
+      except KeyError:
+          normal_dict['a'] = 1
+      ```
+  
+  * defaultdict：和C++ STL的map一样，当通过赋值语句像这样 `dictionary[key] = value` 使用一个非嵌套的 defaultdict 时，它的行为是：
+  
+    * 如果 key 已经存在于字典中，则更新（覆盖）那个键的值
+    * 如果 key 不存在于字典中，则在字典中创建一个新的键值对
   
     ```python
     >>> a = dict()
