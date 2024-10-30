@@ -2,7 +2,7 @@
 
 ## *Baremetal 单机架构*
 
-### intro
+### intro`
 
 应用服务和数据库服务共用一台服务器
 
@@ -1378,7 +1378,7 @@ $ docker stop CONTAINER [CONTAINER...] # 停止容器的运行，状态变为EXI
 ```cmd
 $ docker kill [OPTIONS] CONTAINER [CONTAINER...]
 $ docker rm [OPTIONS] CONTAINER [CONTAINER...]
-$  docker container prune [OPTIONS]
+$ docker container prune [OPTIONS]
 ```
 
 * 退出容器
