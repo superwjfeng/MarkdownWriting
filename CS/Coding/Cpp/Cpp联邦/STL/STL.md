@@ -1903,20 +1903,20 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
 
 <img src="deque.png" width="40%">
 
-* deque每次既不是开一个节点，也不是进行realloc，而是开多个可以存多个数据的小buffer
-* Double ended queue 双端队列融合了vector和list的优点，既支持list的任意位置插入删除，又支持vector的下标随机访问
+* deque 每次既不是开一个节点，也不是进行 realloc，而是开多个可以存多个数据的小 buffer
+* Double ended queue 双端队列融合了 vector 和 list 的优点，既支持 list 的任意位置插入删除，又支持vector 的下标随机访问
 * 设计缺陷：
-  * 相比vector，`operator[]` 的计算稍显复杂，大量使用会导致性能下降
+  * 相比 vector，`operator[]` 的计算稍显复杂，大量使用会导致性能下降
   * 中间插入删除效率不高
   * 从底层角度看迭代器的设计非常复杂
 
     <img src="dequeIterator.png" width="75%">
 
-    * curr为当前数据
-    * first和last表示当前buffer的开始和结束
-    * node反向指向中控位置，方便遍历时找下一个buffer
+    * curr 为当前数据
+    * first 和 last 表示当前 buffer 的开始和结束
+    * node 反向指向中控位置，方便遍历时找下一个 buffer
 
-* 结论：相比vector和list，deque非常适合做头尾的插入删除，很适合去做stack和queue的默认适配容器；但如果是中间插入删除多用list，而随机访问多用vector
+* 结论：相比 vector 和 list，deque 非常适合做头尾的插入删除，很适合去做 stack 和 queue 的默认适配容器；但如果是中间插入删除多用 list，而随机访问多用 vector
 
 ## *stack & queue适配器*
 
