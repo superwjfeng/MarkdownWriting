@@ -790,6 +790,44 @@ https://www.liujiangblog.com/course/python/19
 * 删除某个元素（但可以删除整个元组）
 * 所有会对元组内部元素发生修改动作的方法。例如，元组没有 remove，append，pop 等方法
 
+### 元组解包 & `*` 操作符
+
+元组解包 Tuple Unpacking 是指将一个包含多个元素的元组分解成多个变量的过程
+
+Python 中 `*` 除了 [动态参数](#动态参数) 中的作用外，另外一个作用就是在元组解包。元组解包有三种形式
+
+1. 解包可迭代对象（如列表、元组等），将其元素作为单独的参数传递给函数
+
+   ```python
+   numbers = [1, 2, 3]
+   print(*numbers)  # 相当于 print(1, 2, 3)
+   
+   subtree = nx.DiGraph()
+   for edge in nx.edge_bfs(G, root): # returns a generator
+   	subtree.add_edge(*edge) # tuple unpacking
+   ```
+
+2. 赋值给多个变量的元组解包。注意：这种情况不要在元组前加 `*`，会自动拆包的
+
+   ```python
+   >>> my_tuple = (1, 2, 3, 4, 5)
+   >>> a, b, c, d, e = *my_tuple
+     File "<stdin>", line 1
+   SyntaxError: can't use starred expression here
+   >>> a, b, c, d, e = my_tuple
+   >>> print(a)
+   1
+   ```
+
+3. **扩展的迭代解包**：从 Python 3.5 开始，`*`也可以用于扩展的迭代解包（Extended Iterable Unpacking），其中可以在赋值操作时使用`*`来接收一个序列的多余元素
+
+   ```python
+   first, *middle, last = [1, 2, 3, 4, 5]
+   print(first)  # 输出 1
+   print(middle) # 输出 [2, 3, 4]
+   print(last)   # 输出 5
+   ```
+
 ### 元组的坑
 
 元组只保证它的一级子元素不可变，对于嵌套的元素内部，不保证不可变
@@ -1131,7 +1169,7 @@ s = {x for x in 'abracadabra' if x not in 'abc'}
 
 ### 元组推导式？
 
-所谓的元组推导式就是生成器 generator 对象
+所谓的元组推导式就是生成器 generator 对象，具体内容可以查看生成器部分
 
 ```python
 >>> g = (x * x for x in range(1, 10))
@@ -1202,13 +1240,40 @@ import networkx as nx
 
   当使用`add_edge()` 添加一条边时，如果指定的任何节点（无论是起点还是终点）此前并不存在于图`G`中，networkx 会自动创建这些节点
 
+  ```python
+  Graph.add_edge(u_of_edge, v_of_edge, **attr)
+  ```
+
+  The following all add the edge e=(1, 2) to graph G:
+
+  ```
+  >>> G = nx.Graph()  # or DiGraph, MultiGraph, MultiDiGraph, etc
+  >>> e = (1, 2)
+  >>> G.add_edge(1, 2)  # explicit two-node form
+  >>> G.add_edge(*e)  # single edge as tuple of two nodes
+  >>> G.add_edges_from([(1, 2)])  # add edges from iterable container
+  ```
+
+  Associate data to edges using keywords:
+
+  ```
+  >>> G.add_edge(1, 2, weight=3)
+  >>> G.add_edge(1, 3, weight=7, capacity=15, length=342.7)
+  ```
+
 * 权重
 
 * 从图中删除元素
 
 ### 查看图的性质
 
-
+* 整图的性质
+  * `info()` ：获取图的基本信息，包括节点数、边数等
+  * `nx.generate_adjlist(G)`：可以打印出图的邻接表，显示节点之间的连接关系
+* 节点的性质
+  * `in_degree()` 和 `out_degree()`：获取某个节点（返回一个int）或整图（返回一个含有 `(节点序号, 度)` tuple 的迭代器）的入度/出度
+  * `degree()` 用于获取无向图的度，同样可以获取一个节点或整图节点的度
+* 边的性质
 
 ### 图算法
 
@@ -1428,9 +1493,60 @@ ArgumentParser.add_argument(name or flags...[, action][, nargs][, const][, defau
 
 ## *迭代器 Iterator*
 
-和C++一样，Python中一般的数据结构list/tuple/string/dict/set/bytes都是可以迭代的数据类型，也可以为自定义类对象实现迭代器
+和C++一样，Python中一般的数据结构 list/tuple/string/dict/set/bytes 都是可以迭代的数据类型，也可以为自定义类对象实现迭代器
 
-### 与迭代器有关的内置函数
+### 实现迭代器协议的方法
+
+1. **`__iter__(self)`**
+   - 返回迭代器对象本身
+   - 通常用于 `for` 循环和其他需要迭代的场景中
+2. **`__next__(self)`**
+   - 返回容器的下一个元素
+   - 当没有更多元素时，应抛出 `StopIteration` 异常
+
+下面给出实现一个自定义迭代器的简单例子
+
+* Python 中的 for 循环和 C++11 的范围 for 一样，就是**直接调用可迭代对象的 `__iter__()` 得到一个迭代器对象，然后不断地调 `next()`**
+* 通过 collections 模块的 `iterable()` 函数来判断一个对象是否可以迭代
+
+```C++
+class Counter:
+    def __init__(self, low, high):
+        self.current = low
+        self.high = high
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current > self.high:
+            raise StopIteration
+        else:
+            self.current += 1
+            return self.current - 1
+
+# 创建迭代器
+counter = Counter(1, 3)
+
+# 使用迭代器
+for c in counter:
+    print(c)
+
+```
+
+### 通过内置函数来操作迭代器
+
+Python 还提供了一些内置函数3来生成和操作迭代器
+
+- `iter(object[, sentinel])`：获取一个可迭代对象的迭代器
+
+- `next(iterator[, default])`：调用迭代器的 `__next__()` 方法获取下一个元素
+
+- `range(start, stop[, step])`：返回一个范围内连续整数的迭代器
+
+  注意：range 是一个可迭代对象，而不是一个迭代器，可以看 [只实现 iter，不实现 next 有意义吗？](#只实现 iter，不实现 next 有意义吗？)
+
+下面是一个对内置对象使用迭代器方法的简单例子
 
 ```python
 >>> list1 = [1, 2, 3]
@@ -1449,17 +1565,15 @@ Traceback (most recent call last):
 StopIteration
 ```
 
-* **利用 `iter()` 创建迭代器对象，然后利用 `next()` 取下一个元素，直到没有元素跳StopIteration异常**
-* Python中的for循环和C++11的范围for一样，就是直接调用可迭代对象的 `__iter__()` 得到一个迭代器对象，然后不断地调 `next()`
-* 通过collections模块的 `iterable()` 函数来判断一个对象是否可以迭代
+**利用 `iter()` 创建迭代器对象，然后利用 `next()` 取下一个元素，直到没有元素跳StopIteration异常**
 
 ### 迭代器 Iterator 和可迭代 iterable 的区别
 
 <img src="iterable_iterator.png" width="65%">
 
-* **凡是可作用于for循环的对象就是可迭代类型**，因为for关键字会直接调用可迭代对象的 `__iter__()` 得到一个迭代器对象
+* **凡是可作用于 for 循环的对象就是可迭代类型**，因为 for 关键字会直接调用可迭代对象的 `__iter__()` 得到一个迭代器对象
 
-  * 可以通过`collections.abc`模块的`Iterable`类型判断是否是可迭代类型
+  * 可以通过 `collections.abc` 模块的 `Iterable` 类型判断是否是可迭代类型
 
     ```python
     >>> from collections.abc import Iterable
@@ -1473,13 +1587,120 @@ StopIteration
 
 * **凡是可作用于 `next()` 函数的对象都是迭代器类型**，因为 `next()` 会调用迭代器对象的 `__next__()` 函数
 
-* Python的数据结构对象 list、dict、str 等都是可迭代类型，而不是迭代器，因为它们可以用于for关键字迭代而不能作为 next 函数的对象
+* Python 的数据结构对象 list、dict、str 等都是可迭代类型，而不是迭代器，因为它们可以用于 for 关键字迭代而不能作为 next 函数的对象
+
+
+用 C++ 来类比一下，迭代器类型就是 C++的 `::iterator` 类，不过 C++ 可以直接这么取，不需要通过 `iter()` 才能获得迭代器对象，同时 C++ 可以直接通过 `++, --` 控制迭代器方向，并通过解引用获取下一个 value，而 Python 的迭代器对象则需要通过 `next()` 来获取预先设计好的 “下一个” value
+
+<img src="iterable_iterator_generator.png" width="80%">
+
+注意：迭代器 iterator 一定是可迭代类型 iterable，因为迭代器同时实现了 iter 和 next；可迭代类型则不一定是迭代器，因为可迭代类型只需要实现 iter，它可以像 range 一样里面再包其他的可迭代类型/迭代器
+
+### 只实现 iter，不实现 next 有意义吗？
+
+换句话说，只是一个可迭代类型，而不是一个迭代器有意义吗？
+
+`range` 本身并不是一个迭代器，而是一个可迭代对象 iterable
+
+当调用 `range()` 时，Python 不会立即创建一个列表，并把所有元素载入内存，而是返回一个 range 对象。这个对象会按需计算每个元素（类似于迭代器），但它并不符合迭代器协议，因为它没有实现 `__next__()` 方法。相反，`range` 实现了 `__iter__()` 方法来返回一个它管理的元素的迭代器，通过这些迭代器实际上会在迭代过程中按需生成值
+
+通过调用 `range()` 函数返回的对象的 `__iter__()` 方法，可以获取到一个真正意义上的迭代器。这个迭代器对象会遵循迭代器协议，实现 `__iter__()` 和 `__next__()` 方法
+
+下面是使用 range 的一个例子
+
+```python
+r = range(5)
+print(type(r))  # 输出: <class 'range'>
+
+# 获取 range 可迭代对象
+it = iter(r)
+print(type(it))  # 输出: <class 'range_iterator'>
+
+# 迭代 range 对象
+for num in r:
+    print(num)  # 输出: 0 1 2 3 4
+
+# 使用迭代器直接迭代
+while True:
+    try:
+        print(next(it))  # 输出: 0 1 2 3 4
+    except StopIteration:
+        break
+```
+
+也就是说，调用关系是
+
+```
+range -> range_iterator （虽然名字叫iterator，但是是一个 iterable）-> 容器内部真正的迭代器 iterator 
+```
+
+我们可以实现一个自己的 range
+
+```python
+class MyRange:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+    def __iter__(self):
+        return iter(range(self.start, self.end))
+
+# 使用 MyRange 类
+for number in MyRange(1, 4):
+    print(number)
+```
+
+### 迭代器 & 生成器的优势：懒加载
+
+一个很自然的问题是，干嘛要用？在笔者看来，有以下三个好处
+
+1. 和 C++ 一样的作用，同时创建多个迭代器 / 生成器对象，保存不同的遍历状态，方便遍历
+
+2. 按需加载（懒加载）节省内存，这个可能是最重要的作用
+
+   > 迭代器与列表的区别在于，构建迭代器的时候，不像列表把所有元素一次性加载到内存，而是以一种延迟计算（lazy evaluation）方式返回元素，这正是它的优点。比如列表中含有一千万个整数，需要占超过100M的内存，而迭代器只需要几十个字节的空间。因为它并没有把所有元素装载到内存中，而是等到调用next()方法的时候才返回该元素（按需调用 call by need 的方式，本质上 for 循环就是不断地调用迭代器的next()方法
+
+   由于生成器逐个地产生值，而不是一次性地将所有值加载到内存中，因此它们非常适合处理大型数据集。例如，对于处理大量数据的文件读取操作或海量日志分析，如果一次性将这些数据加载到内存可能会导致内存耗尽。生成器可以逐行读取数据，每次只处理一小部分内容
+
+   比如说我们要读一个很大的文件。一种常规的做法是
+
+   ``` python
+   def read_large_file_into_memory(file_name):
+       with open(file_name, 'r') as file:
+           # 读取整个文件到列表中，每个元素是一行
+           lines = file.readlines()
+       
+       # 返回去除了换行符的行列表
+       return [line.strip() for line in lines]
+   
+   # 使用普通函数处理每一行数据
+   lines = read_large_file_into_memory('large_log_file.log')
+   for line in lines:
+       process(line)  # 处理文件的每一行
+   ```
+
+   如果这是一个很大的文件的话肯定是不理想的，因为要一次性把整个文件保存到内存中
+
+   但是用生成器我们就可以读一行才加载一行
+
+   ```python
+   def read_large_file(file_name):
+       with open(file_name, 'r') as file:
+           for line in file:
+               yield line.strip()  # 移除行尾换行符并返回该行数据
+   
+   # 使用生成器处理每一行数据
+   for line in read_large_file('large_log_file.log'):
+       process(line)  # 处理文件的每一行
+   ```
+
+3. 表示无限序列：生成器可以表达无穷的数据流，如无限数列。这对于需要延伸到无限范围的算法或模拟实时数据流的应用程序来说非常有用
 
 ### 对不可迭代对象进行迭代的两种错误
 
 让自定义类成为一个迭代器，需要在类中实现魔法函数 `__iter__()` 和 `__next__()`
 
-* 当对不可迭代对象（或者说没有实现上面两个魔法函数的对象）运用for迭代的时候会报错
+* 当对不可迭代对象（或者说没有实现上面两个魔法函数的对象）运用 for 迭代的时候会报错
 
   ```python
   >>> class Foo:
@@ -1527,7 +1748,7 @@ class MyIterable(object):
 
 然后再为这个可迭代对象定制一个迭代器对象，里面要实现 `__next__()`
 
-但是Python语法规定迭代器自己本身就要是一个可迭代对象，因此还需要实现 `__iter__()`
+但是 Python 语法规定迭代器自己本身就要是一个可迭代对象，因此还需要实现 `__iter__()`
 
 ```python
 class MyIterator(object):
@@ -1542,9 +1763,62 @@ class MyIterator(object):
 
 ## *生成器 Generator*
 
-https://zhuanlan.zhihu.com/p/341439647
+### 生成器 & 迭代器的关系
 
-有时候在序列或集合内的元素个数非常巨大，若全部制造出来并加入内存，对计算机的压力是巨大的，深度学习对权重进行迭代计算就是一个典型的例子。生成器实现的功能就是可以中断性的间隔生成元素（比如一个mini-batch），这样就不必同时在内存中存在整个数据集合，比如整个dataset。从而节省了大量的空间
+生成器是迭代器的一种，但使用起来更简洁。使用 `yield` 语句可以轻松创建生成器，在每次迭代中产生一个值。当函数执行到 `yield` 时，它会返回一个值并暂停执行，直到再次被调用
+
+生成器有两种形式
+
+* 生成器函数 generator function：不用 return，用 yield 返回就属于生成器函数
+
+* 生成器表达式 generator expression
+
+  ```python
+  (expression for item in iterable if condition)
+  ```
+
+  ```python
+  # 创建一个生成器表达式，用于计算每个数的平方
+  squares = (x ** 2 for x in range(10))
+  
+  # `squares` 现在是一个生成器对象
+  print(squares)  # 输出: <generator object <genexpr> at ...>
+  
+  # 可以通过迭代来使用生成器，例如在 for 循环中
+  for square in squares:
+      print(square, end=' ')  # 输出: 0 1 4 9 16 25 36 49 64 81
+  ```
+
+  与列表推导相比，生成器表达式的主要优势在于：
+
+  - **内存效率**：生成器表达式不会一次性将所有元素加载到内存中。它们产生一个一个的元素，这意味着即使是对于非常大的数据集，它们也能保持低内存占用。
+  - **惰性求值**：元素会在需要的时候才生成，这允许表示无限长的序列，并且可以节省计算资源
+
+https://zhuanlan.zhihu.com/p/341439647 
+
+一个使用场景是：有时候在序列或集合内的元素个数非常巨大，若全部制造出来并加入内存，对计算机的压力是巨大的，深度学习对权重进行迭代计算就是一个典型的例子。生成器实现的功能就是可以中断性的间隔生成元素（比如一个mini-batch），这样就不必同时在内存中存在整个数据集合，比如整个dataset。从而节省了大量的空间
+
+函数被调用时会返回一个生成器对象。生成器其实是一种特殊的迭代器，一种更加精简高效的迭代器，它不需要像普通迭代器一样实现`__iter__()`和`__next__()`方法了，只需要一个`yield`关键字。因此在实际中一般都会直接实现生成器
+
+下图是 iterable vs. iterator vs. generator 的关系，来源：https://nvie.com/posts/iterators-vs-generators/
+
+<img src="iterable_iterator_generator.png" width="80%">
+
+下面是 i2dl Dataloader 的 `__iter__()` 的例子，用来实现 load 一个 batch
+
+```python
+class Dataloader:
+    # ...
+    def __iter__(self):
+        for index in indexes:
+            batch.append(self.dataset[index])
+            if len(batch) == self.batch_size:
+                yield batch_to_numpy(combine_batch_dicts(batch))
+                batch = []
+
+        if not self.drop_last and len(batch) > 0:  # when drop_last == False and len of remaining both ture, will enter
+            yield batch_to_numpy(combine_batch_dicts(batch))
+```
 
 ### 生成器的 `yield` 和普通 `return` 执行流的区别
 
@@ -1562,11 +1836,11 @@ for x in regular_foo():
     print(x)
 ```
 
-上面是一个常规的for循环，它的执行流是
+上面是一个常规的 for 循环，它的执行流是
 
-1. Run `rugular_foo()` 得到一个 `return_list`，要返回这个对象把它加载到内存中
-2. Return that list to the outer scope of the main function
-3. Run the for-loop on the returned list, and print all the numbers within, 1-by-1
+1. 调用 `rugular_foo()` 得到一个 `return_list`，要返回这个对象把它加载到内存中
+2. 将得到的 list 对象返回给 main 函数的 scope 中
+3. 迭代得到的 list 对象，并打印
 
 ```python
 # A generator
@@ -1580,41 +1854,64 @@ for x in my_generator():
     print(x)
 ```
 
-上面是一个generator，它的执行流是
+上面是一个 generator，它的执行流是
 
 <img src="generator_process.png">
 
-1. Enter the function for the first time, and run line-by-line until the yield statement
-2. The function's state, including the pointer to the executed line, is saved to the memory 保存yield之前的运行状态
-3. Yield the value of index (0) to the outer scope. Now x == 0.
-4. Print the value of x, 0
-5. Enter the function again, in the next iteration. **The most crucial notion**: we enter `my_generator()` again, but now, in comparison to the regular call of a function, the function state is reloaded from RAM, and we now stand on the line index += 1
-6. We start the second iteration of the while loop, and yield the value 1
-7. This loop continues, until the while loop within my_generator() finishes, and the function returns and finishes, i.e. it doesn't generate anything else.
+1. 首次进入函数，按行执行直到遇到 `yield` 语句
+2. 函数的状态被保存到内存中，包括已执行行的指针，用以保存 `yield` 之前的运行状态
+3. 将索引（0）的值通过 `yield` 返回给外部范围。此时 x == 0
+4. 打印 x 的值，即 0
+5. 再次进入函数进行下一次迭代。**最关键的概念**：我们再次进入 `my_generator()` 函数，但此时与常规函数调用不同，函数状态从 RAM 中重新加载，并且当前位置在 `index += 1` 这一行
+6. 开始 while 循环的第二次迭代，并产出值 1
+7. 持续这样的循环，直到 `my_generator()` 内部的 while 循环结束，函数返回并完成执行，即不再生成任何其他值
 
-### 生成器与迭代器的关系
+### 控制生成器的迭代
 
-函数被调用时会返回一个生成器对象。生成器其实是一种特殊的迭代器，一种更加精简高效的迭代器，它不需要像普通迭代器一样实现`__iter__()`和`__next__()`方法了，只需要一个`yield`关键字。因此在实际中一般都会直接实现生成器
+- `next(generator)`：获取生成器的下一个元素
 
-下图是 iterable vs. iterator vs. generator 的关系，来源：https://nvie.com/posts/iterators-vs-generators/
+- `send(value)`：发送一个值到生成器中。这个值会成为生成器中 `yield` 表达式的结果然后生成器继续执行，直到下一个 `yield` 表达式或者结束
 
-<img src="iterable_iterator_generator.png" width="65%">
+  当首次启动生成器时（即在生成器函数中的代码还未执行前），只能发送 `None`；否则会抛出 `TypeError` 异常。在生成器启动之后（即至少执行过一次 `next()`），可以发送非 `None` 的值
 
-下面是 i2dl Dataloader 的 `__iter__()` 的例子，用来实现 load 一个 batch
+  ```python
+  def my_generator():
+      received = yield 1
+      print(f'Received: {received}')
+      received = yield 2
+      print(f'Received: {received}')
+  
+  gen = my_generator()
+  
+  # 启动生成器
+  value = next(gen)  # 或者 value = gen.send(None)
+  print(value)  # 输出: 1
+  
+  # 给生成器发送值
+  value = gen.send('hello')
+  print(value)  # 输出: 2
+  ```
 
-```python
-class Dataloader:
-    # ...
-    def __iter__(self):
-        for index in indexes:
-            batch.append(self.dataset[index])
-            if len(batch) == self.batch_size:
-                yield batch_to_numpy(combine_batch_dicts(batch))
-                batch = []
+  在上面的例子中，第一次调用 `next(gen)` 后，生成器返回 1，并在 `yield 1` 处暂停。随后使用 `send('hello')` 继续执行，此时 `'hello'` 被赋值给 `received` 变量，并打印出来。然后生成器继续执行，直到遇到下一个 `yield`
 
-        if not self.drop_last and len(batch) > 0:  # when drop_last == False and len of remaining both ture, will enter
-            yield batch_to_numpy(combine_batch_dicts(batch))
-```
+- `throw(type[, value[, traceback]])`：向生成器中抛出一个异常，如果生成器没有捕获该异常，则迭代终止
+
+- `close()`：结束生成器的迭代，，使其在执行下一个 `yield` 表达式时抛出 `StopIteration` 异常。如果在生成器中有未完成的 `try`...`finally` 块，那么 `finally` 块将被执行
+
+  这实际上是告诉生成器不再需要产生值。尽管生成器函数通常会在抵达末尾自行停止，但 `close()` 方法允许在外部显式地停止生成器，特别是在有无限循环的生成器的情况下
+
+  ```python
+  gen = my_generator()
+  
+  print(next(gen))  # 输出: 1
+  
+  gen.close()  # 关闭生成器
+  
+  try:
+      print(next(gen))
+  except StopIteration as e:
+      print('Generator closed')  # 输出: Generator closed
+  ```
 
 ### 典型错误：在 nested function 中使用 yield
 
@@ -1636,9 +1933,9 @@ for x in dataloader:
     print(x)
 ````
 
-因为 yield 是从 `nexted_function` 里面返回到了调用的地方，而不是main，因此在return的时候仍然要返回所有数值，这和直接return是没有区别的
+因为 yield 是从 `nexted_function` 里面返回到了调用的地方，而不是 main，因此在 return 的时候仍然要返回所有数值，这和直接 return 是没有区别的
 
-甚至若连 `__iter__()` 中的return都不写的话，main得到的就只有None
+甚至若连 `__iter__()` 中的 return 都不写的话，main 得到的就只有 None
 
 ## *闭包 Closure*
 
