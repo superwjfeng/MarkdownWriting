@@ -124,6 +124,22 @@ YAML各个字段的意义可以参考：[YAML schema reference | Microsoft Learn
   - `System.PullRequest.TargetBranch`：PR的目标分支
 
 
+
+### 预定义变量
+
+* `System.AccessToken` 是一个特殊变量，它携带了正在运行的生成所使用的安全令牌
+* 代理变量
+* 生成变量
+  * `Build.SourceBranch`： 生成排队等待的触发存储库的分支
+  * `Build.SourceBranchName`：生成排队等待的触发存储库的分支名称
+  * `Build.Reason`
+    * `PullRequest`：生成已由需要生成的 Git 分支策略触发
+* 管道变量
+* 部署作业变量
+* 系统变量
+* 检查变量
+
+
 # Jira
 
 https://zhuanlan.zhihu.com/p/686629188
