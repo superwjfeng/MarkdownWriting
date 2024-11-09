@@ -2169,9 +2169,9 @@ unordered系列是单向迭代器（哈希桶是单列表）
 
       返回值 `pair::first` 指向新插入的元素的迭代器，`pair::second` 为 true 如果是新插入，为 false 如果 key 已经存在
 
-    * 返回类型是first为迭代器的pair是为 `operator[]` 准备的，否则就返回一个bool就可以了，没必要返回迭代器
+    * 返回类型是 first 为迭代器的 pair 是为 `operator[]` 准备的，否则就返回一个 bool 就可以了，没必要返回迭代器
 
-  * `size_type erase ( const key_type& k )` 返回删除的key对应的元素个数，因为 unorderd_map 不允许冗余，所以删除成功就是1，否则为0
+  * `size_type erase ( const key_type& k )` 返回删除的key对应的元素个数，因为 unorderd_map 不允许冗余，所以删除成功就是 1，否则为 0
 
 * Element access
 
