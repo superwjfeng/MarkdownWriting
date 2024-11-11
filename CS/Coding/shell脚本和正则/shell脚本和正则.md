@@ -441,8 +441,7 @@ $ locate [选项] [模式]
      $ whereis ls
      ```
 
-  上述命令将显示与 `ls`  命令相关的二进制、源代码和帮助页面文件的路径。
-     
+  上述命令将显示与 `ls`  命令相关的二进制、源代码和帮助页面文件的路径
 
 3. **`whence` 命令**：
 
@@ -454,8 +453,7 @@ $ locate [选项] [模式]
      $ whence ls
      ```
 
-  上述命令会显示 `ls` 命令的位置
-     
+	上述命令会显示 `ls` 命令的位置
 
 4. **`which` 命令**：
 
@@ -476,17 +474,19 @@ $ locate [选项] [模式]
 
 ## *jq*
 
-`jq` 是一个轻量级且灵活的命令行JSON处理器。可以用它对JSON结构的数据进行读取、过滤、映射和转换等操作
+jq 是一个轻量级且灵活的命令行 JSON 处理器。可以用它对 JSON 结构的数据进行读取、过滤、映射和转换等操作
 
 ```cmd
 $ sudo apt-get install jq
 ```
 
-### `jq` 是一个过滤器
+### jq  是一个过滤器
 
-`jq` 表达式可以看作是筛选JSON数据的过滤器。通过管道 `|` 将JSON字符串或从文件中读取的JSON数据传递给`jq`，然后编写`jq`表达式来进行处理
+jq 表达式可以看作是筛选 JSON 数据的过滤器。通过管道 `|` 将 JSON 字符串或从文件中读取的 JSON 数据传递给 jq，然后编写 jq 表达式来进行处理
 
-- `.`：返回整个JSON对象
+注意：给出的 json 模式一定要放在 `''` 里面，不然会解析不正确
+
+- `.`：返回整个顶层的 JSON 对象
 
   ```cmd
   $ echo '{"name": "John", "age": 31}' | jq '.'
@@ -494,9 +494,12 @@ $ sudo apt-get install jq
     "name": "John",
     "age": 31
   }
+  
+  $ echo '{"name": "John", "age": 31}' | jq '.name'
+  "John"
   ```
 
-- `.foo`、`.foo.bar`：获取名为`foo`的字段或嵌套字段`bar`
+- `.foo`、`.foo.bar`：获取名为 `foo` 的字段或嵌套字段 `bar`
 
   ```cmd
   $ echo '{"name": "John", "age": 31}' | jq '.name'
@@ -537,7 +540,7 @@ $ sudo apt-get install jq
 
 ### 运行选项
 
-- `-r` 或 `--raw-output`：输出原生字符串，而不是JSON格式的字符串
+- `-r` 或 `--raw-output`：输出原生字符串，而不是 JSON 格式的字符串
 
   ```cmd
   $ jq '.[1].name' data.json
@@ -548,13 +551,13 @@ $ sudo apt-get install jq
 
 - `-f /path/to/filter.jq`：从文件读取`jq` 表达式
 
-- `--arg name value`：向`jq` 脚本传递外部变量
+- `--arg name value`：向 jq 脚本传递外部变量，即在 jq 表达式中定义一个变量，并给这个变量赋值
 
 ### 高级特性
 
-`jq` 支持高级功能，如条件、比较、管道（`jq` 内部管道，与shell管道不同）、函数等：
+jq 支持高级功能，如条件、比较、管道（jq 内部管道，与 shell 管道不同）、函数等：
 
-- 管道：`jq 'filter1 | filter2'`，先通过`filter1`处理，然后把结果传递给`filter2`
+- 管道：`jq 'filter1 | filter2'`，先通过 filter1 处理，然后把结果传递给 filter2
 - 映射：`jq '.[] | .fieldName'`，处理数组时对每个元素应用过滤器
 - 条件：`jq 'if .field == "value" then .otherField else .anotherField end'`
 
@@ -1368,12 +1371,22 @@ $ echo "今天的日期是 $(date)"
 
 * 直接用 `if condition`。`if` 语句后面可以直接跟任何命令，包括复杂的管道命令
 
-* test命令：当测试条件有多个的时候，用Shell的test内置命令比较方便，它有两种形式
+* test 命令：当测试条件有多个的时候，用 Shell 的 test 内置命令比较方便，它有两种形式
 
   [Shell test 命令 | 菜鸟教程 (runoob.com)](https://www.runoob.com/linux/linux-shell-test.html)
-  
+
   * `if test condition`。用 `""` 将 condition括起来是一种良好的工程实践，确保了就算其值为空，test也能将其视为参数
-  *  `[ some_condtion ]` 等价于 test 命令，`if [ condition ]` 比较方便，`[]` 符号可理解为指向test命令的一个软链接，所以其用法可完全参照test。注意condition前后的空格、**`[]` 前后的空格不可少**，否则 shell 会将 `[condition]` 解释为一个字符串或者命令名而不是测试条件
+  *  `[ some_condtion ]` 等价于 test 命令，`if [ condition ]` 比较方便，`[]` 符号可理解为指向test命令的一个软链接，所以其用法可完全参照 test
+
+* 重要：`[ ... ]` 的书写格式
+
+  注意condition前后的空格、**`[]` 前后的空格不可少**，否则 shell 会将 `[condition]` 解释为一个字符串或者命令名而不是测试条件
+
+  ```shell
+  if [ -x "/path/to/file" ]; then
+      echo "The file exists and is executable."
+  fi
+  ```
 
 
   ``` shell
@@ -1382,7 +1395,7 @@ $ echo "今天的日期是 $(date)"
   [ ] #echo $? 空输出1
   ```
 
-和高级语言相反，shell script用0表示真，非0表示假，因为用的是返回状态作为判断条件。可以通过 `echo $?` 来查看上一条语句的退出码
+和高级语言相反，shell script 用 0 表示真，非 0 表示假，因为用的是返回状态作为判断条件。可以通过 `echo $?` 来查看上一条语句的退出码
 
 注意和高级语言不同：**test或 `[]` 是不可以测试管道命令的**
 
@@ -1397,7 +1410,7 @@ $ if who | grep "$user"; then echo x; fi     # 正确
 
 说实话这一块笔者仍然感到疑惑
 
-### 常用test的判断条件
+### 常用 test 的判断条件
 
 * 两个整数之间比较：-eq 等于 -ne 不等于 -lt 小于 -le 小于等于 -gt 大于 -ge 大于等于
 
@@ -1423,13 +1436,13 @@ $ if who | grep "$user"; then echo x; fi     # 正确
 
 ### `[[]]`
 
-`[[` 是Bash、Zsh等现代shell的关键字用于条件测试的增强版本，提供了更高级的字符串处理功能和算术比较功能。它是这些shell的内置元素，因此不遵循传统命令的解析规则
+`[[` 是 Bash、Zsh 等现代 shell 的关键字用于条件测试的增强版本，提供了更高级的字符串处理功能和算术比较功能。它是这些 shell 的内置元素，因此不遵循传统命令的解析规则
 
 - 它不会将变量中的特殊字符解释为通配符，除非你明确使用了模式匹配操作
 - 它在处理空格和特殊字符方面更加宽容，即使你忘记加引号，也不会像 `[ ]` 那样容易出错
 - 在 `[[ ]]` 中使用 `<` 和 `>` 进行字符串比较时，不会像 `[ ]` 那样需要转义它们，因为在 `[ ]` 中 `<` 和 `>` 被解释为重定向操作符
 
-`[[` 不是POSIX标准的一部分，因此它在非bash/ksh/zsh等shell中可能不可用。如果需要脚本具有跨shell兼容性，尤其是在Dash、POSIX sh等更加限制性的shell中运行，应当使用 `[`
+`[[` 不是POSIX标准的一部分，因此它在非 bash/ksh/zsh 等 shell 中可能不可用。如果需要脚本具有跨 shell 兼容性，尤其是在 Dash、POSIX sh 等更加限制性的 shell 中运行，应当使用 `[`
 
 ### 特殊情况：字符串的比较
 

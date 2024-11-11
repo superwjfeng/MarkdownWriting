@@ -1829,7 +1829,14 @@ ADD_LIBRARY(hello_static STATIC ${LIBHELLO_SRC})
 
 解决方法是使用 SET_TARGET_PROPERTIES 来设置输出的名称，对于动态库，还可以用来指定动态库版本和 API 版本
 
-### Win的特殊流程
+### 指定库的输出目录
+
+```cmake
+set(LIBRARY_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/../lib")
+file(MAKE_DIRECTORY ${LIBRARY_OUTPUT_PATH}) # 确保输出目录存在
+```
+
+### Win 的特殊流程
 
 当使用Win中的VS配合MSVC编译时，流程和用gcc不太一样
 

@@ -4986,9 +4986,18 @@ $ clang-tidy -list-checks
 
   上面指定了关闭所有的 checks，打开除 `clang-analyzer-cplusplus*` 之外的 clang-analyzer 
 
-* clang-tidy 可以使用 `.clang-tidy` 配置文件来控制哪些检查应该被启用或禁用。这个文件通常放在项目的根目录下。如果没有手动指定配置文件，clang-tidy 将会向上搜索文件系统，直到找到一个 `.clang-tidy` 文件或者达到文件系统的根目录
+*  使用 `.clang-tidy` 文件指定，见下
 
-  ```cmd
+
+ 可以用 `clang-tidy --dump-config` 来检查当前工程中有哪些 check 是开启检查的
+
+### `.clang-tidy` 配置文件
+
+clang-tidy 可以使用 `.clang-tidy` 配置文件来控制哪些检查应该被启用或禁用，找到这个文件的方式有两种
+
+* 这个文件通常放在项目的根目录下。如果没有手动指定配置文件，clang-tidy 将会向上搜索文件系统，直到找到一个 `.clang-tidy` 文件或者达到文件系统的根目录
+
+  ```shell
   $ clang-tidy --checks='Checks' test.cpp -- -I ./src/ -x c++
   ```
 
@@ -5006,6 +5015,48 @@ $ clang-tidy -list-checks
     - key:             modernize-pass-by-value.IncludeStyle
       value:           llvm
   ```
+
+* 命令行中用选项 `--config-file` 来指定
+
+  ```shell
+  clang-tidy -config-file=/path/to/.clang-tidy -p compile_commands.json test_clang.cpp
+  ```
+
+clang-tidy 是用 yaml 格式书写的，它支持的所有字段如下
+
+- **CheckOptions**：用于定义特定检查的键值对配置。这就像给每一个检查传递参数，来定制它们的行为。例如：
+
+  ```yaml
+  CheckOptions:
+    readability-magic-numbers.IgnoredIntegerValues: '1;2;3'
+    modernize-use-nullptr.NullMacros: 'NULL'
+  ```
+
+- **Checks**：指定要启用或禁用的检查列表。可以使用通配符 `*` 和 `-` 来分别表示全部检查和排除检查。与命令行中的 `--checks` 选项相同
+
+- **ExcludeHeaderFilterRegex**：类似 `HeaderFilterRegex`, 但指定要从检查中排除的头文件的正则表达式
+
+- **ExtraArgs**：提供额外命令行参数给 clang-tidy，它们会被添加到编译命令的末尾。例如增加 include 路径或者定义宏
+
+- **ExtraArgsBefore**：这些参数会被添加到编译命令的开始处，通常用于 `-D` 定义等
+
+- **FormatStyle**：指定使用哪种代码格式风格。这可能是内置的风格（比如 `llvm` 或 `google`），也可以是基于 `.clang-format` 文件的自定义风格
+
+- **HeaderFileExtensions**：指定一组文件扩展名，如果诊断消息来源于这些扩展名的文件，就认为该文件是头文件
+
+- **HeaderFilterRegex**：一个正则表达式，用来决定哪些头文件的警告将被含在输出中。这对于只关心项目特定部分的用户很有用
+
+- **ImplementationFileExtensions**：指定一组文件扩展名，如果诊断消息来源于这些扩展名的文件，就认为该文件是实现文件
+
+- **InheritParentConfig**：若设置为 `true`，当前目录下的 `.clang-tidy` 配置会继承父目录下 `.clang-tidy` 的配置，并在此基础上应用本地配置
+
+- **SystemHeaders**：指定是否展示来自系统头文件的警告
+
+- **UseColor**：决定 clang-tidy 在其输出中是否使用颜色
+
+- **User**：指定运行 clang-tidy 的用户名称或邮箱，这可能用于在 TODO() 注释等场合插入正确的用户名
+
+- **WarningsAsErrors**：将选定的或所有警告当作错误处理。这可以迫使开发者解决所有 clang-tidy 显示的问题
 
 ### 关闭 check
 

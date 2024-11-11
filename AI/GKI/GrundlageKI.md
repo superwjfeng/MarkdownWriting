@@ -150,9 +150,9 @@
 
 * 和BFS的区别
   * 因为是权图，可以使用代价函数 $f(n) = g(n)$，表示从起点到当前点的移动代价
-  * 使用**优先级队列**作为容器，将有最小path cost的节点放在队头，通过这个优先级队列保证达到目标节点的时候路径一定是最短的
+  * 使用**优先级队列**作为容器，将有最小 path cost 的节点放在队头，通过这个优先级队列保证达到目标节点的时候路径一定是最短的
   * **所有被放入 `expolored` 队列的节点一定都满足最短路径**
-  * BFS在第一次遇到目标节点时就进行Goal test并返回Solution，且不会将目标节点加入 `frontier`。但UCS会将目标节点加入 `frontier`，且UCS的Goal test不是在第一次遇到目标时就进行，而是在选到目标要进行expansion加入 `frontier` 前才进行，因为有可能存在其他optimal routes，这样做就可以验证所有到目标的路径，并且选出Path-cost最小的那一条路径返回solution
+  * BFS 在第一次遇到目标节点时就进行 goal test 并返回 solution，且不会将目标节点加入 `frontier`。但 UCS 会将目标节点加入 `frontier`，且 UCS 的 goal test 不是在第一次遇到目标时就进行，而是在选到目标要进行 expansion 加入 `frontier` 前才进行，因为有可能存在其他 optimal routes，这样做就可以验证所有到目标的路径，并且选出 path-cost 最小的那一条路径返回 solution
   * **若UCS的path cost是unitary cost，即所有的path cost都相同时，UCS=BFS**
 * Performance of UCS
   * The cost $C^*$ of the optimal solution and the minimum step-cost $\varepsilon$
@@ -161,7 +161,7 @@
   * 最坏情况是当目标所在的分支的cost都非常大，而其他的分支都是 $\varepsilon$ ，此时时间复杂度和空间复杂度都等于 $(b-1)+(b-1)b+(b-1)b^2+\cdots+(b-1)b^{(C^*/\varepsilon)}=\mathcal{O}(b^{1+(C^*/\varepsilon)})$
 * 可以得到最优路径，但仍然是BFS，速度较慢
 
-Dijkstra算法的C++实现可以看数据结构与算法.md
+Dijkstra算法的C++实现可以看 *数据结构算法及其实践.md*
 
 ### 深度优先算法 DFS
 
