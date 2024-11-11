@@ -843,30 +843,30 @@ a > b # a 大于 b
 
 ### sort
 
-* sort：在原容器上排序，**默认升序**，可以通过仿函数自定义
+* sort：在原容器上排序，**默认升序（`std::less`）**，可以通过仿函数自定义
 
   ```cpp
   template <class RandomAccessIterator> void sort (RandomAccessIterator first, RandomAccessIterator last);
   template <class RandomAccessIterator, class Compare> void sort (RandomAccessIterator first, RandomAccessIterator last, Compare comp);
   ```
 
-  * sort要使用随机迭代器，也就是vector、array、deque那种支持***O(1)***随机访问的迭代器
+  * sort 要使用随机迭代器，也就是 vector、array、deque 那种支持 ***O(1)*** 随机访问的迭代器
 
-  * sort的底层是不稳定快排（事件复杂度 ***O(NlogN)***），也就是说若有相同的元素，sort不保证不改变它们原来的顺序，若要保证稳定性需要用 `stable_sort`
+  * sort 的底层是不稳定快排（事件复杂度 ***O(NlogN)***），也就是说若有相同的元素，sort 不保证不改变它们原来的顺序，若要保证稳定性需要用 `stable_sort`
 
-  * sort在排序时需要交换容器中元素的存储位置。此时若容器中存储的是自定义的类对象，则该类的内部必须提供移动构造函数和移动赋值运算符
+  * sort 在排序时需要交换容器中元素的存储位置。此时若容器中存储的是自定义的类对象，则该类的内部必须提供移动构造函数和移动赋值运算符
 
   * 关于 Compare 这个可调用对象，下面是 `std::less` 和 `std::greater` 两个最常用的仿函数
 
-    如果 Compare 返回的是 true，那么第一个参数应该放在第二个参数之前，所以 `std::greater` 时排降序
+    如果 Compare 返回的是 true，那么第一个参数应该放在第二个参数之前，所以 `std::greater` 是排降序
 
     ```c++
-    template <class T> struct less : binary_function <T,T,bool> {
-      bool operator() (const T& x, const T& y) const {return x<y;}
+    template <class T> struct less : binary_function <T, T, bool> {
+      bool operator() (const T& x, const T& y) const { return x < y; }
     };
     
-    template <class T> struct greater : binary_function <T,T,bool> {
-      bool operator() (const T& x, const T& y) const {return x>y;}
+    template <class T> struct greater : binary_function <T, T, bool> {
+      bool operator() (const T& x, const T& y) const { return x > y; }
     };
     ```
 
@@ -875,7 +875,7 @@ a > b # a 大于 b
 * `partial_sort(first, middle, last)`
 
   * 从 `[first,last)` 范围内，筛选出 `middle-first` 个最小的元素并排序存放在 `[first，middle)` 区间中
-  * `partial_sort_copy`：范围排序并copy放到新的里
+  * `partial_sort_copy`：范围排序并 copy 放到新的里
 
 * `is_sorted(first, last)`：判断 `[first, last)` 范围内是否已经排好序，默认检测是否按升序排序
 
@@ -897,9 +897,9 @@ a > b # a 大于 b
 
   时间复杂度：***O(N)***
 
-* random_shuffle：使用STL默认的随机数生成器对指定范围进行随机排列
+* random_shuffle：使用 STL 默认的随机数生成器对指定范围进行随机排列
 
-  在C++14及以后的版本中，`std::random_shuffle` 已经被标记为已弃用，推荐使用 `std::shuffle`
+  在 C++14 及以后的版本中，`std::random_shuffle` 已经被标记为已弃用，推荐使用 `std::shuffle`
 
 ### 其他
 
