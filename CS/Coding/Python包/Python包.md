@@ -269,6 +269,8 @@ Logger 的继承关系会对 logging 的使用产生一些微妙的影响
 
 无参的 `getLogger()` 获取到的是 root logger，logger 的名字本身就反映了 logger 的继承关系，它通过 `.` 来分隔父 logger 和子 logger，可以存在很多层 `.`
 
+<img src="LoggerTree.drawio.png" width="70%">
+
 [听风小筑 - python logging继承关系 (lisongmin.github.io)](https://lisongmin.github.io/python-logging-inherit/)
 
 作为日志模块树的一个节点，将该事件往根部传递，所有处于传递路径（该 logger `->` parent logger `-> … ->` root logger）上的所有 logger 节点添加的所有 Handler 都会相应该事件。当然，通过设置 logger 的 `propagate = False` 或者没有 parent logger 可以阻止事件传播
