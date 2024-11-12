@@ -654,6 +654,8 @@ else:
     statement_block_3
 ```
 
+注意：Python 中是灭有 else if 的写法的，必须使用 elif
+
 ### 循环
 
 * for循环
@@ -2685,7 +2687,7 @@ Subprocess模块开发之前，标准库已有大量用于执行系统级别命�
 
 <img src="subprocess模块.png">
 
-### run方法
+### run 方法
 
 Popen 是 subprocess 的核心，子进程的创建和管理都靠它处理
 
@@ -2716,6 +2718,42 @@ subprocess.run(args, *, stdin=None, input=None, stdout=None, stderr=None,
 run 方法调用方式返回 CompletedProcess 实例，和直接 Popen 差不多，实现是一样的，实际也是调用 Popen。Popen相比于run方法提供了更精细的控制
 
 run 和 popen最大的区别在于：run方法是阻塞调用，会一直等待命令执行完成或失败；popen是非阻塞调用，执行之后立刻返回，结果通过返回对象获取
+
+### 结束程序
+
+1. `exit()` 函数: `exit()` 是一个内置函数，当调用时将抛出一个 `SystemExit` 异常，因此它会退出当前正在运行的程序。这个函数主要应该在交互式解释器中使用
+
+   ```python
+   exit()  # 在交互式解释器中退出
+   ```
+
+2. `sys.exit()` 函数: `sys.exit()` 函数同样抛出 `SystemExit` 异常，并且允许你退出程序并提供一个可选的退出状态码，它通常用于程序文件
+
+   ```python
+   import sys
+   
+   sys.exit()        # 退出程序，退出状态为 0（默认）
+   sys.exit(0)       # 显式地以状态 0 退出（表示成功）
+   sys.exit(1)       # 退出程序，指定退出状态 1（通常表示失败）
+   ```
+
+3. 抛出 `SystemExit` 异常: 直接抛出 `SystemExit` 异常也会导致程序退出
+
+   ```python
+   raise SystemExit
+   ```
+
+4. `os._exit()` 函数: 模块 `os` 提供了 `_exit()` 函数，直接终止进程，不会抛出异常，也不会执行任何清理操作（例如关闭文件），因此它比 `sys.exit()` 更加粗暴。它接收一个退出状态码作为参数
+
+   ```python
+   import os
+   
+   os._exit(0)  # 立即退出程序，状态为 0
+   ```
+
+注意：尽管 `exit()` 和 `sys.exit()` 功能相似，但 `sys.exit()` 通常在脚本和程序中使用，因为 `exit()` 主要是为 Python 解释器设计的。另外，`sys.exit()` 可以通过 `try...except` 结构捕获 `SystemExit` 异常进行处理，而 `os._exit()` 由于不抛出异常，无法被捕获处理
+
+最后，选择哪种方式取决于具体场景和希望程序如何结束。**在大多数情况下，推荐使用 `sys.exit(ErrorCode)` 来退出程序**
 
 ## *线程*
 
@@ -3120,97 +3158,7 @@ Python shell不能直接执行shell命令，需要借助sys；IPython通过 `!` 
 
 # 常用的Python工具包
 
-关于conda和pip的使用可以看 *包管理工具.md*
-
-## *logging*
-
-[日志指南 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/howto/logging.html)
-
-[logging --- Python 的日志记录工具 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/library/logging.html#)
-
-Python内置的日志模块`logging`是一个非常灵活的系统，它可以帮用户跟踪应用程序中发生的事件。日志消息可以记录到文件、sys.stderr、由Socket传输，或者以其他方式处理
-
-<img src="logging.webp">
-
-### 基本配置
-
-在开始记录之前，需要进行一些基本配置。这可以通过调用`logging.basicConfig()`来完成
-
- 
-
-此函数应当在其他线程启动之前从主线程被调用
-
-```python
-import logging
-
-def basicConfig(*, filename: Optional[StrPath]=..., filemode: str=..., format: str=..., datefmt: Optional[str]=..., style: str=..., level: Optional[_Level]=..., stream: Optional[IO[str]]=..., handlers: Optional[Iterable[Handler]]=...) -> None  # 设置日志级别
-
-logging.basicConfig(filename='example.log'， format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
-```
-
-
-
-
-
-
-
-日志级别按照严重性递增的顺序分为：DEBUG, INFO, WARNING, ERROR, 和 CRITICAL。**设置了特定的日志级别后，该级别及以上的日志消息才会被输出**
-
-```python
-logging.debug('This is a debug message')
-logging.info('This is an info message')
-logging.warning('This is a warning message')
-logging.error('This is an error message')
-logging.critical('This is a critical message')
-```
-
-### File Handler
-
-logging 模块提供了多种类型的处理器（handlers），这些处理器确定日志消息的最终输出方式。可以将一个或多个处理器与日志器（logger）关联，以便以不同的方式记录同一条日志信息。以下是一些常见的handler类
-
-* StreamHandler 将日志消息发送到指定的流，如果没有指定，则默认为 `sys.stderr`。用于将日志输出到控制台
-* FileHandler 把日志消息写入到一个文件中。它需要文件名作为参数
-* RotatingFileHandler 类似于 FileHandler，但可以管理文件大小。当文件达到一定大小后，它会自动“滚动”，即关闭当前文件，并打开一个新文件继续记录
-* TimedRotatingFileHandler 根据时间自动滚动日志文件，例如每天或每小时创建一个新的日志文件
-* HTTPHandler 发送日志消息到一个HTTP服务器，使用GET或POST方法
-* NullHandler 不执行任何操作。它通常用于库的开发者，以避免在用户没有配置日志时抛出错误
-
-### 日志重定向
-
-默认情况下，日志消息都是输出到标准输出（即屏幕）。但是，也可以很容易地将它们重定向到一个文件
-
-### 日志记录器对象
-
-如果应用程序比较复杂，可能需要对日志进行更细致的控制。这时候就需要创建日志记录器(Logger)对象：
-
-```python
-logger = logging.getLogger('example_logger')
-logger.setLevel(logging.DEBUG)
-
-# 创建一个handler，用于写入日志文件
-fh = logging.FileHandler('example.log')
-
-# 再创建一个handler，用于将日志输出到控制台
-ch = logging.StreamHandler()
-
-# 定义handler的输出格式
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-
-# 给logger添加handler
-logger.addHandler(fh)
-logger.addHandler(ch)
-
-# 记录一条日志
-logger.debug('This is a debug message')
-```
-
-在上面的代码中，我们创建了一个日志记录器对象，并给它添加了两个处理程序：一个将日志消息写入文件，另一个将它们发送到标准输出。每个处理程序都可以有自己的日志级别和格式
-
-### Formatter
-
-Formatter 格式器对象负责将一个 LogRecord 转换为可供人类或外部系统解读的输出字符串
+关于 conda 和 pip 的使用可以看 *包管理工具.md*
 
 ## *JSON & Pickle*
 

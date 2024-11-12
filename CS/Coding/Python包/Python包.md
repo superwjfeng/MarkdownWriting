@@ -172,6 +172,256 @@ class FooAction(argparse.Action):
 - 限制参数的选择范围 (`choices=[...]`)
 - 支持变长参数列表 ( `nargs='+'` 或 `'*'` 等)
 
+# logging
+
+[日志指南 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/howto/logging.html)
+
+[logging --- Python 的日志记录工具 — Python 3.12.3 文档](https://docs.python.org/zh-cn/3/library/logging.html#)
+
+Python 内置的日志模块`logging`是一个非常灵活的系统，它可以帮用户跟踪应用程序中发生的事件。日志消息可以记录到文件、sys.stderr、由 Socket 传输，或者以其他方式处理
+
+## *架构 & 五大模块*
+
+<img src="logging.webp">
+
+logging 框架可以分为四个大部分
+
+* Logger：Logger 提供了应用程序可直接使用的接口来发送日志消息（警告、错误、信息等）
+* Handler：Handler 负责将日志消息（创建于 Logger）发送到指定的目的地。目的地可以是控制台（stdout 或 stderr），文件、HTTP 服务器或者是许多其他支持的目的地。每个 Logger 可以附加多个 Handler，这意味着可以将同一个日志消息发送到多个目的地
+* Filter：Filter 可以提供更细粒度的日志消息控制，可以基于日志记录的具体内容做出决策，确定是否要传递给特定的 Handler
+* Formatter：Formatter 定义了最终日志输出的布局。可以通过 Formatter 明确定义日志格式，包括时间戳、日志级别、消息文本等
+* LogRecord
+
+下面会对这五个模块进行更详细的介绍
+
+### 快速基本配置
+
+如果对 logging 的要求不高，可以通过调用 `logging.basicConfig()` 来快速完成日志配置，它用于一次性配置日志系统的基本行为
+
+注意：`logging.basicConfig()` 只会对 root Logger 产生影响，并且仅当根 Logger 尚未被配置时才会运行，这意味着此函数应当在其他线程启动之前从主线程被调用
+
+```python
+import logging
+
+def basicConfig(*, filename: Optional[StrPath]=..., filemode: str=..., format: str=..., datefmt: Optional[str]=..., style: str=..., level: Optional[_Level]=..., stream: Optional[IO[str]]=..., handlers: Optional[Iterable[Handler]]=...) -> None  # 设置日志级别
+
+logging.basicConfig(filename='example.log'， format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+```
+
+### Prelude: Put All Parts Together
+
+如果应用程序比较复杂，可能需要对日志进行更细致的控制。下面是一个如何使用各部分的简要代码
+
+```python
+logger = logging.getLogger('example_logger')
+logger.setLevel(logging.DEBUG)
+
+# 创建一个handler，用于写入日志文件
+fh = logging.FileHandler('example.log')
+
+# 再创建一个handler，用于将日志输出到控制台
+ch = logging.StreamHandler()
+
+# 定义handler的输出格式
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+# 给logger添加handler
+logger.addHandler(fh)
+logger.addHandler(ch)
+
+# 记录一条日志
+logger.debug('This is a debug message')
+```
+
+在上面的代码中，我们创建了一个日志记录器对象，并给它添加了两个处理程序：一个将日志消息写入文件，另一个将它们发送到标准输出。每个处理程序都可以有自己的日志级别和格式
+
+## *Logger*
+
+### 获取一个 Logger
+
+Loggers 是 logging 直接暴露给用户的使用接口，它被设计为单例，也就是说每个 Logger 的名称都指向一个唯一的 Logger 实例。通过 `getLogger()` 来获取一个 logger
+
+```python
+import logging
+logger = logging.getLogger('my_logger')
+```
+
+### 日志级别
+
+通过 Logger 暴露出来的 `debug()`、`info()` 等接口来写入不同等级的 log
+
+日志级别按照严重性递增的顺序分为：DEBUG, INFO, **WARNING (Default)**, ERROR, 和 CRITICAL。**设置了特定的日志级别后，该级别及以上的日志消息才会被输出**
+
+```python
+# 这里直接调用 debug 接口，使用的是 root logger
+logging.debug('This is a debug message')
+logging.info('This is an info message')
+logging.warning('This is a warning message') # default level
+logging.error('This is an error message')
+logging.critical('This is a critical message')
+```
+
+### Logger 的继承关系
+
+Logger 的继承关系会对 logging 的使用产生一些微妙的影响
+
+无参的 `getLogger()` 获取到的是 root logger，logger 的名字本身就反映了 logger 的继承关系，它通过 `.` 来分隔父 logger 和子 logger，可以存在很多层 `.`
+
+[听风小筑 - python logging继承关系 (lisongmin.github.io)](https://lisongmin.github.io/python-logging-inherit/)
+
+作为日志模块树的一个节点，将该事件往根部传递，所有处于传递路径（该 logger `->` parent logger `-> … ->` root logger）上的所有 logger 节点添加的所有 Handler 都会相应该事件。当然，通过设置 logger 的 `propagate = False` 或者没有 parent logger 可以阻止事件传播
+
+## *File Handler*
+
+logging 模块提供了多种类型的处理器（handlers），这些处理器确定日志消息的最终输出方式。可以将一个或多个处理器与日志器（logger）关联，以便以不同的方式记录同一条日志信息。以下是一些常见的 handler 类
+
+### 控制台重定向
+
+默认情况下，日志消息都是输出到标准输出
+
+StreamHandler 将日志消息发送到指定的流，如果没有指定，则默认为 `sys.stderr`。用于将日志输出到控制台
+
+### 日志重定向
+
+* FileHandler 把日志消息写入到一个文件中。它需要文件名作为参数
+* RotatingFileHandler 按照文件大小轮转日志。类似于 FileHandler，但可以管理文件大小。当文件达到一定大小后，它会自动滚动，即关闭当前文件，并打开一个新文件继续记录
+* TimedRotatingFileHandler 根据时间自动滚动日志文件，例如每天或每小时创建一个新的日志文件
+
+### 网络重定向
+
+HTTPHandler 发送日志消息到一个 HTTP 服务器，使用 GET 或 POST 方法
+
+### 自定义重定向
+
+NullHandler 不执行任何操作。它通常用于库的开发者，以避免在用户没有配置日志时抛出错误
+
+如果以上提供的 Handler 不满足需求，可以创建一个自定义的 `Handler` 类来处理日志消息。例如，你可能想要将日志记录到数据库或调用某个 Web API
+
+```python
+class CustomHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        # 将 log_entry 发送到你的目的地，比如数据库或 Web API
+
+custom_handler = CustomHandler()
+custom_handler.setFormatter(formatter)
+
+logger.addHandler(custom_handler)
+
+logger.error('This will be processed by a custom handler')
+```
+
+## *Filters*
+
+Filter 可以提供细粒度的控制，允许你基于日志记录本身的属性来决定是否要输出某条日志信息。这意味着用户可以根据日志记录的级别、消息文本内容或自定义字段来包含或排除特定的日志条目
+
+### 使用内置 Filter
+
+### 自定义 Filter
+
+可以创建更复杂的 Filter，比如根据日志消息的内容或添加到日志记录中的自定义属性来进行过滤
+
+```python
+class CustomAttributeFilter(logging.Filter):
+    def filter(self, record):
+        # 只接受具有特定 attribute 或值的日志记录
+        if hasattr(record, 'custom_attribute'):
+            return record.custom_attribute == 'expected_value'
+        return False
+
+# 在应用过滤器之前，需要确保日志记录包含自定义属性
+class CustomLogger(logging.Logger):
+    def __init__(self, name, level=logging.NOTSET):
+        super().__init__(name, level)
+
+    def log(self, level, msg, *args, **kwargs):
+        if 'custom_attribute' in kwargs:
+            self.custom_attribute = kwargs.pop('custom_attribute')
+        super().log(level, msg, *args, **kwargs)
+        
+logging.setLoggerClass(CustomLogger)
+logger = logging.getLogger('my_custom_logger')
+
+handler = logging.StreamHandler()
+handler.addFilter(CustomAttributeFilter())
+logger.addHandler(handler)
+
+logger.log(logging.INFO, 'This will not be logged', custom_attribute='unexpected_value')
+logger.log(logging.INFO, 'This will be logged', custom_attribute='expected_value')
+```
+
+## *Formatters*
+
+Formatter 格式器对象负责将一个 LogRecord 转换为可供人类或外部系统解读的输出字符串
+
+### 使用内置 Formatter
+
+`Formatter` 的构造函数接受一个格式化字符串，该字符串定义了日志输出的格式。这里是一些常用的格式化字段：
+
+- `%(name)s`: Logger 的名字
+- `%(levelno)s`: 数字形式的日志级别（如 10, 20, 30, ...）
+- `%(levelname)s`: 文本形式的日志级别（如 'DEBUG', 'INFO', ...）
+- `%(pathname)s`: 调用日志记录函数的源文件的全路径
+- `%(filename)s`: pathname 的文件名部分
+- `%(module)s`: 调用日志记录函数的模块名
+- `%(lineno)d`: 调用日志记录函数的源代码行号
+- `%(funcName)s`: 调用日志记录函数的函数名
+- `%(created)f`: 时间戳，即 `time.time()` 的结果
+- `%(asctime)s`: 字符串形式的创建时间，它由 `datefmt` 参数指定的格式决定，默认为 “%Y-%m-%d %H:%M:%S,ms”
+- `%(msecs)d`: 毫秒部分
+- `%(message)s`: 日志消息
+
+### 自定义 Formatter
+
+需要继承自 `logging.Formatter` 并重写其 `format()` 方法。在这个方法中，可以定义自己的日志格式化逻辑
+
+以下是创建自定义 Formatter 的步骤：
+
+1. 继承 `logging.Formatter` 类
+2. 重写 `format()` 方法以实现自定义的格式化
+3. 在 `format()` 方法内部，你可以访问 `LogRecord` 对象来获取所有的日志记录详情
+4. 返回一个格式化字符串
+
+```python
+import logging
+
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        # 创建自定义格式化信息
+        # 你可以访问 LogRecord 的属性，例如：record.name, record.levelno, record.msg 等
+        
+        # 例如，我们会将消息转换成大写，并添加一个自定义前缀
+        custom_format = f"Custom Log - {record.levelname}: {record.msg.upper()}"
+        
+        # 如果需要默认格式化行为，可以先调用父类的 format 方法
+        # original_format = super().format(record)
+        
+        # 然后添加或修改原始格式化内容
+        # custom_format = f"{original_format} - Customized"
+        
+        return custom_format
+
+# 配置 Logger 和 Handler
+logger = logging.getLogger('my_custom_logger')
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+
+# 使用自定义 Formatter
+formatter = CustomFormatter()
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+
+# 记录日志
+logger.info('This is an info message')
+```
+
+## *LogRecord*
+
+### 使用日志配置文件
+
 # SymPy
 
 [SymPy 1.13.1 documentation](https://docs.sympy.org/latest/index.html)
