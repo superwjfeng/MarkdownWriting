@@ -2,7 +2,24 @@
 
 
 
-# Python虚拟环境 & 包管理器
+# Python 虚拟环境 & 包管理器
+
+## *安装 Python*
+
+Mac 用 Brew install，Linux 用相应的包管理器就可以了
+
+### Win 安装 Python
+
+[Python Releases for Windows | Python.org](https://www.python.org/downloads/windows/)
+
+特别要注意勾上`Add Python 3.x to PATH`，然后点“Install Now”即可完成安装
+
+### py 启动器
+
+另外在 Win terminal 中是用 `py` 启动器命令启动 Python，这是一个由 Python 官方为 Windows 用户提供的工具。而不是像 Mac 或 Linux 的 `python` 或 `python3`
+
+1. Python 启动器 `py` 允许在系统上安装有多个 Python 版本时，轻松地选择要使用的版本。可以通过像 `py -2` 或 `py -3` 这样的命令来分别启动 Python 2.x 或 Python 3.x。还可以使用更具体的版本号，如 `py -3.7` 来启动 Python 3.7
+2. **避免冲突**：Windows 系统中通常不会将 `python` 或 `python3` 作为命令添加到环境变量 PATH 中。原因之一是为了避免与其他软件或系统自带的脚本发生命名冲突。例如，在某些版本的 Windows 上，当 `python` 命令不存在时，执行 `python` 命令可能会被重定向到 Microsoft Store 来提示用户安装 Python
 
 ## *pip*
 
@@ -1064,7 +1081,7 @@ Python的字典数据类型是和 `std::unordered_map` 一样是基于hash算法
 
 * 字典键的访问
 
-  * dict：尝试获取或者修改一个不存在于普通字典中的键，Python 将会抛出 KeyError。避免 KeyError 的方法是
+  * dict：当尝试对字典中一个不存在的键**赋值**的时候，不会报 KeyError，而是直接创建这个 pair，但是若尝试**获取或者修改**一个不存在于普通字典中的键，Python 将会抛出 KeyError。避免 KeyError 的方法是
   
     * 使用 `get()` 获取字典键的值，该方法允许返回一个默认值而不是抛出 KeyError
   
@@ -1097,47 +1114,47 @@ Python的字典数据类型是和 `std::unordered_map` 一样是基于hash算法
           normal_dict['a'] = 1
       ```
   
-  * defaultdict：和C++ STL的map一样，当通过赋值语句像这样 `dictionary[key] = value` 使用一个非嵌套的 defaultdict 时，它的行为是：
-  
-    * 如果 key 已经存在于字典中，则更新（覆盖）那个键的值
-    * 如果 key 不存在于字典中，则在字典中创建一个新的键值对
-  
     ```python
-    >>> a = dict()
-    >>> a['3'] += 1
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-    KeyError: '3'
-    >>> from collections import defaultdict
-    >>> b = defaultdict(int)
-    >>> b['3'] += 1
-    >>> b['3']
-    1
-    >>> b['4']
-    0
+    dic = {'Name': 'Jack', 'Age': 7, 'Class': 'First'}
+    
+    # 1  直接遍历字典获取键，根据键取值
+    for key in dic:
+        print(key, dic[key])
+    
+    # 2  利用items方法获取键值，速度很慢，少用！
+    for key,value in dic.items():
+        print(key,value)
+    
+    #3  利用keys方法获取键
+    for key in dic.keys():
+        print(key, dic[key])
+    
+    #4  利用values方法获取值，但无法获取对应的键
+    for value in dic.values():
+        print(value)
     ```
   
-* 字典的遍历
-
-  ```python
-  dic = {'Name': 'Jack', 'Age': 7, 'Class': 'First'}
+  * defaultdict 的行为类似于 C++ 的 unordered_map，即其主要特点是提供了一个默认值，用于在尝试访问字典中不存在的键时自动生成默认条目。这是它与常规字典 `dict` 的主要区别。当使用一个非嵌套的 defaultdict 时，它的行为是：
   
-  # 1  直接遍历字典获取键，根据键取值
-  for key in dic:
-      print(key, dic[key])
+    * 当访问一个不存在的键时，`defaultdict` 会自动为该键创建条目，并将其值设置为通过调用在初始化 `defaultdict` 对象时提供的默认工厂函数得到的值。
+    * 默认工厂函数在 `defaultdict` 被创建时作为第一个参数给出，例如：`defaultdict(list)` 将会对每个不存在的键创建一个新的空列表作为默认值字典的遍历
   
-  # 2  利用items方法获取键值，速度很慢，少用！
-  for key,value in dic.items():
-      print(key,value)
-  
-  #3  利用keys方法获取键
-  for key in dic.keys():
-      print(key, dic[key])
-  
-  #4  利用values方法获取值，但无法获取对应的键。
-  for value in dic.values():
-      print(value)
-  ```
+    ```python
+    from collections import defaultdict
+    
+    # 使用普通的 dict
+    d = {}
+    print(d.get('key', 'default'))  # 输出: default
+    # d['key']  # 这会抛出 KeyError，因为 'key' 不存在
+    
+    # 使用 defaultdict
+    dd = defaultdict(lambda: 'default')
+    print(dd['key'])  # 输出: default
+    # 因为 'key' 不存在，defaultdict 调用提供的 lambda 函数生成默认值 'default'
+    
+    # 再次访问同一个键，可以看到它已经被设置了默认值
+    print(dd['key'])  # 输出: default
+    ```
 
 ### 集合
 
@@ -1158,13 +1175,13 @@ https://www.liujiangblog.com/course/python/24
 * `remove(key)`
 * `pop()`
 
-## *推导式 Comprehension*
+## *推导式*
 
-推导式是Python语言特有的一种语法糖，可以写出较为精简的代码
+推导式 omprehension 是 Python 语言特有的一种语法糖，可以写出较为精简的代码
 
 ### 列表推导式
 
-在C++中生成一个存储1-9的平方vector的思路是
+在 C++ 中生成一个存储 1-9 的平方 vector 的思路是
 
 ```cpp
 vector<int> v = {}
@@ -1173,7 +1190,7 @@ for (int i = 1; i < 10; i++) {
 }
 ```
 
-但是在Python中生成这样的一个list可以用一行代码完成，即
+但是在 Python 中生成这样的一个 list 可以用一行代码完成，即
 
 ```python
 >>>lis = [x * x for x in range(1, 10)]
@@ -1212,7 +1229,7 @@ dic = {x: x**2 for x in (2, 4, 6)}
 s = {x for x in 'abracadabra' if x not in 'abc'}
 ```
 
-### 元组推导式？
+### 元组推导式
 
 所谓的元组推导式就是生成器 generator 对象，具体内容可以查看生成器部分
 
@@ -1483,21 +1500,6 @@ LEGB 规则：Python以 L-E-G-B 的顺序依次寻找变量
 * 全局作用域 Global scope：定义在函数外部的变量拥有局部作用域
 * 内置作用域 Built-in scope： 包含了内建的变量/关键字等，最后才会被搜索
 
-### `global` 和 `nonlocal` 关键字
-
-* global 可以在任何地方指定当前变量使用外部的全局变量
-
-  ```python
-  a = 10
-  b = 6
-  def fun():
-      global a 
-      a = 2 # 这里的a就是上面的a，修改了全局a的值
-      b = 4 # 局部变量b，和外面的b灭有关系
-  ```
-
-* nonlocal 和 global 的区别在于作用范围仅对于**所在子函数的上一层函数**中拥有的局部变量，必须在上层函数中已经定义过，且非全局变量，否则报错
-
 ### 代码块的作用域
 
 在 Python 中，for 循环中定义的变量在循环结束后依然可以访问，因为 Python 中的作用域规则与 C++ 不同。这意味着即使变量是在 for 循环内部被首次赋值的，循环完成后仍然可以在外部使用这些变量
@@ -1521,7 +1523,91 @@ print(f"The maximum value in the list is: {max_value}")
 print(f"The minimum value in the list is: {min_value}")
 ```
 
+## *Python 的全局 & 局部变量陷阱*
 
+### 赋值导致局部化
+
+首先要明确一个概念**赋值导致局部化**：函数内的变量是否是局部变量的决定是在编译时（或者说定义时）做出的，而不是在运行时。当定义一个函数时，Python 解释器会扫描函数体内的所有语句来决定每个变量的作用域
+
+如果在函数内对一个变量进行了赋值操作，即使在赋值之前已经有同名的全局变量存在，Python 也会将它视作一个新的局部变量
+
+比如说下面这个错误的闭包
+
+```python
+def outer(arg):
+    temp = 10
+    def inner():
+        _sum = temp + arg
+        temp += 1   # 在内函数中尝试改变temp的值
+        print('_sum = ', _sum)
+        return _sum
+    return inner
+```
+
+在执行 `_sum = temp + arg` 时，如果函数内部存在对 `temp` 的赋值语句（如 `temp += 1`），Python 解释器会认为 `temp` 是一个局部变量，即使它在之前并没有被显式定义
+
+当 Python 函数被定义时，解释器扫描函数的代码块，并确定哪些变量是局部的。如果在函数中给一个变量赋值了，那么该变量就被认为是局部变量，除非使用了 `global` 或 `nonlocal` 关键字声明其作用域。这意味着，就算 `temp` 在 `temp += 1` 行下面，仍然会影响到上面的 `_sum = temp + arg` 行
+
+由于函数定义时 `temp` 被视为局部变量，并且在 `_sum = temp + arg` 这一行尝试读取 `temp`，但是在这一行执行时，`temp` 还没有在局部作用域中被赋予任何值。因此，当尝试计算 `_sum = temp + arg` 时，Python 解释器抛出 `UnboundLocalError`，因为它找不到局部变量 `temp` 的值
+
+再举一个例子
+
+```python
+var = 'global'
+>>> my_func()
+>>> print(var)
+global
+>>> def my_func():
+...     print(var)
+...     var = 'locally_changed'
+...
+>>> var = 'global'
+>>> my_func()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "<stdin>", line 2, in my_func
+UnboundLocalError: cannot access local variable 'var' where it is not associated with a value
+```
+
+上面的代码中，my_func 中的 var 也是因为在第二行被赋值了，所以被视作一个局部变量了，所以在第一行访问 var 的时候就报了未定义的错误
+
+### `global` 和 `nonlocal` 关键字
+
+* global 可以在任何地方指定当前变量使用外部的全局变量
+
+  ```python
+  a = 10
+  b = 6
+  def fun():
+      global a 
+      a = 2 # 这里的a就是上面的a，修改了全局a的值
+      b = 4 # 局部变量b，和外面的b灭有关系
+  ```
+
+  Python 中，一个函数可以未经 global 声明地任意读取全局数据，但要赋值修改时必须符合如下条件之一：
+
+  1. 全局变量使用 global 声明
+  2. 全局变量是可变类型数据
+
+  但是也存在例外 [python基础： 深入理解 python 中的赋值、引用、拷贝、作用域 | DRA&PHO (draapho.github.io)](https://draapho.github.io/2016/11/21/1618-python-variable/)
+
+* nonlocal 和 global 的区别在于 nonlocal 是用于嵌套作用域的，即作用范围仅对于**所在子函数的上一层函数**中拥有的局部变量，必须在上层函数中已经定义过，且非全局变量，否则报错
+
+  一个典型的使用场景是修正上面的闭包
+
+  ```python
+  def outer(arg):
+      temp = 10
+      def inner():
+          nonlocal temp  # 使用 nonlocal 声明 temp 来自外部作用域
+          _sum = temp + arg
+          temp += 1
+          print('_sum = ', _sum)
+          return _sum
+      return inner	
+  ```
+
+### 默认参数陷阱
 
 ## *匿名函数/lambda表达式*
 
@@ -1539,7 +1625,7 @@ print(add(5, 3))  # 输出: 8
 
 ## *Stub File*
 
-上面提到了Python3.6 中引入了type hint
+上面提到了Python3.6 中引入了 type hint
 
 Stub file 存根文件，即通过第三方文件`.pyi`文件，定义函数参数类型与返回值类型
 
@@ -2009,11 +2095,20 @@ for x in dataloader:
 
 ## *闭包 Closure*
 
+闭包概念是理解装饰器的基础，所以要先看闭包部分
+
 ### 闭包的概念
 
-因为Python一切皆对象，所以可以在函数内再定义函数，因为函数也是一个类，所以是相当于定义了一个内部类
+因为 Python 一切皆对象，所以可以在函数内再定义函数，因为函数也是一个类，所以是相当于定义了一个内部类
 
-在一个外函数中定义了一个内函数，内函数里运用了外函数的临时变量，并且外函数的返回值是内函数的引用。这样就构成了一个闭包
+要创建一个闭包，需要满足以下几个条件
+
+* 在一个外函数中定义了一个内函数，内函数里引用了外函数的临时变量
+* 外函数的返回值是内函数的引用 / 指针（C++ 的说法）
+
+这种程序结构的主要作用是：使得函数中的局部变量可以常驻内存，即使在函数返回之后（函数生命期结束后）。在这个意义上它的作用与 C++ 中的 static 静态变量类似，当然不完全相同
+
+### 例子
 
 ```python
 # outer是外部函数 a和b都是外函数的临时变量
@@ -2021,11 +2116,11 @@ def outer(a):
     b = 10
     # inner是内函数
     def inner():
-        print(a+b) # 在内函数中 用到了外函数的临时变量
+        print(a + b) # 在内函数中 用到了外函数的临时变量
     return inner # 外函数的返回值是内函数的引用
 ```
 
-call outer函数的结果如下：
+call outer 函数的结果如下：
 
 ```python
 >>> demo = outer(5)
@@ -2038,21 +2133,107 @@ call outer函数的结果如下：
 17
 ```
 
-`outer(5)` 是call了一次outer函数，返回了一个inner函数对象给demo，可以看到输入demo的时候显示是一个函数对象inner
+`outer(5)` 是 call 了一次 outer 函数，返回了一个 inner 函数对象给 demo，可以看到输入 demo 的时候显示是一个函数对象 inner
 
-然后call函数对象demo，也就是call inner的时候，就可以得到返回值17
+然后 call 函数对象 demo，也就是 call inner 的时候，就可以得到返回值 17
+
+从中我们可以看出闭包的一个重要执行顺序性质是：**外函数指针被创建时，内函数未被执行，直到使用函数指针调用内函数才会被执行**
 
 ### 外函数把临时变量绑定给内函数
 
-但这里有个很明显的问题，当outer调用完毕后，它的临时变量 `b = 10` 应该被系统回收了，可是显然 `demo()` 能得到返回值就说明这个临时变量没有被销毁
+但这里有个很明显的问题，当 outer 调用完毕后，它的临时变量 `b = 10` 应该被系统回收了，可是显然 `demo()` 能得到返回值就说明这个临时变量没有被销毁
 
 一般情况下函数调用后确实会进行资源回收，可闭包是一个例外。一旦外部函数发现自己的临时变量在将来可能会被内部函数用到时，就会把外函数的临时变量交给内函数来管理
 
 注意：每次调用外函数，都返回不同的实例对象的引用，他们的功能是一样的，但是它们实际上不是同一个函数对象，比如demo和demo2就是两个函数对象
 
-### 在闭包中内函数修改外函数的局部变量
+### 闭包参数
+
+* 闭包参数放在外函数
+
+  ```python
+  def outer(arg):
+      temp = 10
+      def inner():
+          nonlocal  temp  #用nonlocal声明变量，表示要到上一层变量空间寻找该变量
+          _sum = temp + arg
+          temp += 1   #此处修改temp的值，不会报错
+          print('_sum = ', _sum)
+          return _sum
+      return inner
+  
+  f = outer(2)
+  x = f()
+  print('x = ', x) # 12
+  x = f()
+  print('x = ', x) # 13
+  ```
+
+  因为参数在创建函数指针时传入，那么该参数在之后的调用中都会保持原值
+
+* 闭包参数放在内函数
+
+  ```python
+  def outer():
+      temp = 10
+      def inner(arg):
+          _sum = temp + arg
+          print('_sum = ', _sum)
+          return _sum
+      return inner
+  
+  f = outer()
+  x = f(2) # 12
+  print('x = ', x)
+  x = f(5) # 15
+  print('x = ', x)
+  ```
+
+* 内外函数都有
+
+  ```python
+  def outer(prefix):
+      def inner(suffix):  # suffix 是内部函数的参数
+          print(prefix + ":" + suffix)  # 内部函数既使用外部函数的参数，也使用自己的参数
+      return inner
+  
+  closure = outer("Error")
+  closure("404 Not Found")  # 输出: Error:404 Not Found
+  ```
+
+  在这个示例中，外部函数 `outer` 接受一个参数 `prefix`，而内部函数 `inner` 接受另一个参数 `suffix`。当 `outer` 被调用并传入 `prefix` 时，它返回闭包 `inner`，后者在调用时需要一个 `suffix` 参数。闭包记住了 `prefix` 变量，并且每次调用闭包时都可以接收新的 `suffix` 值来生成输出
+
+### 闭包陷阱
+
+* 在闭包中内函数修改外函数的局部变量：在[Python 的全局 & 局部变量陷阱](#Python 的全局 & 局部变量陷阱)已经举过一个闭包的例子了，要使用 nonlocal 来声明内函数的局部变量
+* 使用闭包时，不要返回任何循环变量或后续会发生变化的变量
 
 ### 闭包的作用
+
+* 闭包常被用于创建具有私有变量的函数，这些私有变量无法从外部直接访问，只能通过闭包提供的方法访问。这类似于面向对象编程中的封装
+
+  例如，可以使用闭包来创建计数器、工厂函数等
+
+  ```python
+  def create_counter():
+      count = 0
+  
+      def counter():
+          nonlocal count
+          count += 1
+          return count
+  
+      return counter
+  
+  counterA = create_counter()
+  print(counterA())  # 输出: 1
+  print(counterA())  # 输出: 2
+  
+  counterB = create_counter()
+  print(counterB())  # 输出: 1
+  ```
+
+  每次调用 `create_counter` 时，都会创建一个新的闭包实例，其中的 `count` 变量是独立的。`counterA` 和 `counterB` 每个都有自己的私有 `count`，并且相互之间不会产生影响
 
 * 装饰器
 
@@ -2060,13 +2241,27 @@ call outer函数的结果如下：
 
 类是可以通过继承来扩展类的功能的，但是若想要扩展函数的功能改怎么办呢？利用基于开放封闭原则的闭包来扩展函数
 
+[彻底理解Python中的闭包和装饰器（下） - MidoQ - 博客园 (cnblogs.com)](https://www.cnblogs.com/midoq/p/16961810.html)
+
 ### 装饰器原理
+
+装饰器的作用是在不修改函数定义的前提下增加现有函数的功能，比如打印函数名称、计算函数运行时间等。装饰器的本质是一个闭包
 
 <img src="装饰器规则.png">
 
-### 被修饰函数参数
+我们可以认为装饰器的 `@` 语法实际上就是闭包调用的语法糖，即它等价为
 
-### 修饰函数参数
+```python
+outer = outer(f1)
+outer()
+```
+
+如果把函数看作一个黑盒模型，那么被修饰的函数的功能可以分为输入（参数）和输出（返回值），为了使被修饰的函数的性质保持不变，必须保持这两部分不变
+
+* 函数参数不变：**装饰器必须接收一个函数引用的变量，并在闭包中调用且只调用一次**
+* 函数返回值不变：**装饰器的内函数必须返回原函数的返回值**
+
+### 给外层函数使用的参数
 
 # 类
 
@@ -2344,7 +2539,7 @@ concrete_class = ConcreteClass()
 concrete_class.my_method()  # 输出: 实现了接口中的my_method
 ```
 
-如果创建了一个`MyInterface`的子类但没有实现所有的抽象方法，Python解释器将不允许实例化该子类。这就迫使任何继承自`MyInterface`的子类提供`my_method`方法的具体实现
+如果创建了一个 `MyInterface` 的子类但没有实现所有的抽象方法，Python 解释器将不允许实例化该子类。这就迫使任何继承自 `MyInterface` 的子类提供`my_method`方法的具体实现
 
 ## *Property decorator*
 
@@ -2383,7 +2578,7 @@ del obj.age #Delete
 * 写一个同名方法，并添加 `@xxx.setter`（xxx表示和修饰方法一样的名字）装饰器，这相当于编写了一个set方法，提供赋值功能
 * 再写一个同名的方法，并添加 `@xxx.deleter` 修饰器，这相当于写了一个删除功能
 
-还可以定义只读属性，也就是只定义getter方法，不定义setter方法就是一个只读属性
+还可以定义只读属性，也就是只定义 getter 方法，不定义 setter 方法就是一个只读属性
 
 ### property 函数
 
@@ -2402,6 +2597,41 @@ def People():
 ```
 
 除了装饰器外，还可以使用Python内置的builtins模块中的property函数来设置
+
+## *特殊类*
+
+### 枚举类
+
+枚举在 Python 中是通过标准库中的 `enum` 模块实现的
+
+创建一个枚举很简单，只需继承自 `Enum` 类，并为其添加一些类属性即可
+
+```python
+class Color(Enum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+```
+
+枚举成员有两个主要的属性：`name` 和 `value`。`name` 属性返回成员的名称，`value` 属性返回成员的值
+
+```python
+print(favorite_color.name)  # 输出: 'RED'
+print(favorite_color.value)  # 输出: 1
+```
+
+如果不关心枚举成员的具体数值，可以使用 `auto()` 函数自动为其分配值
+
+```python
+from enum import auto
+
+class Color(Enum):
+    RED = auto()
+    GREEN = auto()
+    BLUE = auto()
+```
+
+Python的枚举提供了大量的定制化方法，例如可以限制枚举的修改，或者创建值相同的别名。此外，还有其他类型的枚举，如 `IntEnum`, `Flag`, `IntFlag` 等，它们提供了额外的功能
 
 # IO
 
@@ -2674,6 +2904,68 @@ conn.close()
 ## *urllib*
 
 ## *ssl*
+
+# Web 开发
+
+## *WSGI*
+
+Web Server Gateway Interface, WSGI，是 Python 社区制定的一个 Web 服务器与应用程序或框架之间的标准接口。WSGI 旨在为 Python 应用提供一种简单且通用的机制，以促进 Web 应用和多种 Web 服务器之间的移植性
+
+在 WSGI 出现之前，Python 的 Web 应用通常依赖于特定的 Web 服务器软件，这意味着不同的Web应用和框架很难在不同的服务器之间进行移植。WSGI 的推出解决了这个问题，它定义了一个清晰的规范，使得任何遵循 WSGI 的 Web 应用都能够在任何支持 WSGI 的 Web 服务器上运行
+
+WSGI 提供了一种标准化的方式让 Web 应用和 Web 服务器进行通信，这意味着：
+
+- 开发人员可以选择他们喜欢的任何 WSGI 兼容的 Web 框架来编写应用，如 Flask、Django 等
+- 当需要部署时，可以选择最佳的服务器软件（如 Gunicorn、uWSGI、Apache mod_wsgi 等），而无需修改应用代码
+
+### 组件
+
+WSGI 规范主要定义了两方面的内容：
+
+1. **WSGI 服务器**（或“网关”）：负责处理原始的 HTTP 请求、解析环境信息以及组装输入数据并传递给应用程序
+2. **WSGI 应用程序**：是一个可调用对象（通常是一个函数或者一个类实例），它接收两个参数，一个表示环境信息的字典 `environ`，以及一个可调用的响应开始函数 `start_response`。应用程序使用这些信息来构建 HTTP 响应
+
+### WSGI 应用示例
+
+Python 内置了一个叫做 wsgiref 的 WSGI 服务器模块，它是用纯 Python 编写的 WSGI 服务器的参考实现。所谓参考实现是指该实现完全符合 WSGI 标准，但是不考虑任何运行效率，仅供开发和测试使用
+
+下面是一个非常基础的 WSGI 应用示例：
+
+```python
+# hello.py
+
+def application(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/html')])
+    return [b'<h1>Hello, web!</h1>']
+```
+
+```python
+# server.py
+# 从wsgiref模块导入:
+from wsgiref.simple_server import make_server
+# 导入我们自己编写的application函数:
+from hello import application
+
+# 创建一个服务器，IP地址为空，端口是8000，处理函数是application:
+httpd = make_server('', 8000, application)
+print('Serving HTTP on port 8000...')
+# 开始监听HTTP请求:
+httpd.serve_forever()
+```
+
+在这个示例中，`application` 函数就是一个 WSGI 应用。该函数接收两个参数：`environ` 字典包含了请求的所有信息，而 `start_response` 是一个回调函数，用来发送响应状态和响应头。最后返回的是一个响应体的字节串列表
+
+### WSGI 中间件
+
+WSGI 还允许开发者创建中间件，即可以同时充当服务器和应用程序的组件。中间件可以处理请求、响应或者两者，然后将其传递给下一个 WSGI 组件。
+
+例如，一个中间件可能会处理身份验证、日志记录、请求/响应修改等任务
+
+## *Flask 框架*
+
+用 Python 开发一个 Web 框架十分容易，所以 Python 有上百个开源的 Web 框架
+
+[Flask 入门教程 (helloflask.com)](https://tutorial.helloflask.com/)
 
 # 进程 & 线程 & 协程
 
@@ -3240,14 +3532,14 @@ print(json_string)
 
 ### Pickle 包
 
-Python的pickle和json一样，两者都有dumps、dump、loads、load四个API
+Python 的 pickle 和 json 一样，两者都有 dumps、dump、loads、load 四个API
 
-* json包用于字符串和Python数据类型间进行转换
-* pickle用于Python特有的类型和Python的数据类型间进行转换
+* json 包用于字符串和 Python 数据类型间进行转换
+* pickle 用于 Python 特有的类型和 Python 的数据类型间进行转换
 
-json是可以在不同语言之间交换数据的，而pickle只在Python之间下使用
+json 是可以在不同语言之间交换数据的，而 pickle 只在 Python 之间下使用
 
-json只能序列化最基本的数据类型，而pickle可以序列化所有的数据类型，包括类、函数都可以序列化
+json 只能序列化最基本的数据类型，而 pickle 可以序列化所有的数据类型，包括类、函数都可以序列化
 
 https://blog.csdn.net/ITBigGod/article/details/86477083
 
@@ -3255,7 +3547,7 @@ https://blog.csdn.net/ITBigGod/article/details/86477083
 
 用 `pickle.load()` 进行序列化 serializing or pickling 和 `pickle.dump()` 进行反序列化 de-serializing or unpickling
 
-下面的例子是i2dl中的MemoryImageFolderDataset类，用于将不大的Dataset放到内存中，来加快IO速度
+下面的例子是 i2dl 中的 MemoryImageFolderDataset 类，用于将不大的 Dataset 放到内存中，来加快 IO 速度
 
 ```python
 with open(os.path.join(self.root_path, 'cifar10.pckl'), 'rb') as f:
