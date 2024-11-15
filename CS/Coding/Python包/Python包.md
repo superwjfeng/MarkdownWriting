@@ -877,3 +877,10 @@ RuntimeWarning: More than 20 figures have been opened. Figures created through t
 `pygraphviz` 是一个用于调用 Graphviz 图形可视化软件的功能的 Python 接口。Graphviz 是一款强大的图形绘制工具，它可以将结构化信息转换为图形表示，如有向图和无向图
 
 通过调用 Graphviz 的布局算法（比如 dot、neato、twopi、circo、fdp 等）
+
+# Ploty
+
+Plotly 是一个多功能的图形库，用于创建交云动式和高质量的绘图。它可以用于 web、移动和桌面应用程序。Plotly 支持多种编程语言，包括 Python、R、Matlab、Node.js 和更多。对于 Python 开发者来说，Plotly 提供了一个名为 `plotly.py` 的库，这个库不仅可以创建丰富的静态图表，还可以创建交互式图表，并且可以嵌入到网页中
+
+# 飞书
+

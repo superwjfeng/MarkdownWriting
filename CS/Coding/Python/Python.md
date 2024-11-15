@@ -2247,7 +2247,26 @@ call outer 函数的结果如下：
 
 装饰器的作用是在不修改函数定义的前提下增加现有函数的功能，比如打印函数名称、计算函数运行时间等。装饰器的本质是一个闭包
 
-<img src="装饰器规则.png">
+<img src="装饰器.drawio.png">
+
+```python
+>>> def outer(func):
+...     def inner():
+...         print("认证成功")
+...         result = func()
+...         print("日志添加成功")
+...         return result
+...     return inner
+...
+>>> @outer
+... def f1():
+...     print("业务部门1数据接口")
+...
+>>> f1()
+认证成功
+业务部门1数据接口
+日志添加成功
+```
 
 我们可以认为装饰器的 `@` 语法实际上就是闭包调用的语法糖，即它等价为
 
@@ -2957,15 +2976,87 @@ httpd.serve_forever()
 
 ### WSGI 中间件
 
-WSGI 还允许开发者创建中间件，即可以同时充当服务器和应用程序的组件。中间件可以处理请求、响应或者两者，然后将其传递给下一个 WSGI 组件。
+WSGI 还允许开发者创建中间件，即可以同时充当服务器和应用程序的组件。中间件可以处理请求、响应或者两者，然后将其传递给下一个 WSGI 组件
 
 例如，一个中间件可能会处理身份验证、日志记录、请求/响应修改等任务
 
+### WSGI 工具库
+
+WSGI 工具库提供了用于开发符合 WSGI 标准的 web 应用的工具和功能。工具库中可能包括：
+
+- Request 和 Response 对象封装：简化了 HTTP 请求和响应的处理
+- 中间件组件：在请求/响应流程中提供钩子用于执行额外的逻辑，如会话管理、认证等
+- 服务启动和管理：帮助开发者启动 WSGI 应用，并与多种 web 服务器集成
+- 实用工具函数：例如 URL 路由解析、模板渲染、表单数据处理等
+
+一些流行的 WSGI 工具库包括 Werkzeug（作为 Flask 的基础组件）和 WebOb 等
+
 ## *Flask 框架*
 
-用 Python 开发一个 Web 框架十分容易，所以 Python 有上百个开源的 Web 框架
+用 Python 开发一个 Web 框架十分容易，所以 Python 有上百个开源的 Web 框架。这章我们介绍一个很常用的 Python 微框架 Flask
 
 [Flask 入门教程 (helloflask.com)](https://tutorial.helloflask.com/)
+
+```cmd
+$ pip3 install flask
+```
+
+### 路由装饰器
+
+```python
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return 'Hello, World!'
+
+@app.route('/hello/<name>')
+def hello(name):
+    # 使用渲染模板返回个性化的问候信息
+    return render_template('hello.html', name=name)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+上面的代码创建了一个最简单的 Flask 应用。我们使用 `app.route()` 装饰器告诉 Flask，当用户访问应用的根 URL（即 `'/'`）时，应该调用 `index` 函数，并返回 `'Hello, World!'` 字符串。这个字符串会显示在用户的浏览器中
+
+* 通过 `Flask()` 构造器返回 WSGI 句柄对象
+* Flask 通过 Python 装饰器 `@app.route()` 内部自动地把某个 URL 和视图函数给关联起来。每个视图函数返回的内容可以是 HTML 页面，也可以是其他类型的响应。这种映射关系定义了 Flask 应用的路由
+
+`@app.route` 可以接收多个参数
+
+- **rule**：这是与装饰器关联的 URL 规则（即路径）。例如：`@app.route('/about')` 会将函数映射到网站的 `/about` 路径上
+- **methods**：这是一个列表，用来指定视图函数可以响应的 HTTP 方法（如 `GET`, `POST`, `PUT`, `DELETE` 等）。**默认情况下，路由只会响应 `GET` 请求**。如果想处理其他类型的请求，需要相应地设置这个列表。例如：`@app.route('/submit', methods=['POST'])` 表明 `submit` 函数将响应 POST 请求
+- **endpoint**：Flask 内部使用端点（endpoint）名字来唯一地标识一个视图函数，如果不显式地指定，Flask 默认使用视图函数的名称作为端点名
+- **strict_slashes**：如果设置为 `False`，对于同一个路由，Flask 将不区分末尾斜杠的有无。例如，`/about` 和 `/about/` 会被认为是相同的路径
+- **redirect_to**：如果设置了这个参数，访问这个路由会立即重定向到提供的地址
+- **defaults**：可以为视图函数的参数提供默认值。这在创建 URL 中包含可选参数时非常有用
+- **subdomain**：指定该路由仅适用于特定的子域。这允许同一应用为不同的子域提供不同的视图函数
+- **host**：类似于 `subdomain`，但它允许你为整个主机名指定路由
+- **provide_automatic_options**：是否自动添加 `OPTIONS` HTTP 方法作为视图函数支持的方法之一。默认情况下，Flask 会自动管理
+
+### View Functions
+
+视图函数 view functions 是 Flask 应用中的一个核心概念，它用于响应 requests，即它是**与特定 URL 规则关联的函数**。当访问与该函数关联的 URL 时，Flask 将执行视图函数，并将其返回值作为响应发送给客户端。视图函数负责处理 HTTP 请求并根据请求内容生成相应的 HTTP 响应
+
+在一个典型的 Flask 应用中，视图函数通常会做以下几件事：
+
+1. 获取 HTTP 请求信息：通过 `flask.request` 对象获取请求方法、表单数据、查询参数、cookies 等
+2. 执行业务逻辑：处理数据、执行计算或者与数据库交互等操作
+3. 返回响应：返回字符串、生成 HTML 页面，或者使用 `jsonify` 返回 JSON 数据，以及设置状态码、重定向、设置 cookies 等
+
+### `flask.requests`
+
+`flask.request` 是 Flask 框架中代表当前请求的对象，它封装了客户端发出的 HTTP 请求的内容。每当一个请求到达 Flask 应用时，Flask 会创建一个 `request` 对象，其中包含了这个 HTTP 请求的所有信息。这个对象只在函数处理请求的过程中有效，它是上下文局部的，这意味着可以在不同的线程中安全地访问相同的请求
+
+[flask.Request — Flask API](https://tedboy.github.io/flask/generated/generated/flask.Request.html)
+
+## *Dash*
+
+Dash 是一个开源的 Python web 应用框架，专门为创建交互式的 web 分析应用程序而设计。它是由 Plotly 公司开发的，并建立在 Flask、Plotly.js 和 React.js 之上。Dash 旨在使数据科学家和分析师能够轻松地构建具有复杂用户界面（UI）元素的数据可视化界面，而无需深入了解前端技术
 
 # 进程 & 线程 & 协程
 

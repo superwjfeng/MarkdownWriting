@@ -244,6 +244,55 @@ int main() {
 
 虽然C++11非受限联合体的引入表明了C++委员会对C++灵活性的坚持，但union仍然用的不多。且C++17之后大部分情况都可以用 `std::variant` 来代替联合体
 
+### variant (17)
+
+C++17 引入的 `std::variant` 是一种类型安全的联合体。一个 `std::variant` 可以存储其构造函数中指定的任何类型的单个值，但在任何给定时间点上只能持有这些类型中的一个。这使得 `std::variant` 成为处理那些可能需要存储不同类型数据的情况的理想选择
+
+
+
+
+
+业务场景：有多个数据对象本身是互斥的
+
+
+
+[C++中std::variant用法详解-腾讯云开发者社区-腾讯云](https://cloud.tencent.com/developer/article/2414270)
+
+使用 `std::variant` 的优点包括：
+
+1. **类型安全：** 与传统的联合体不同，`std::variant` 在处理其持有的值时提供了类型安全性。它能够确保对当前持有的值进行正确的操作，并且如果使用不当，编译器可以产生错误
+2. **自动内存管理：** `std::variant` 自动管理分配给它持有的值的内存。当从一种类型变为另一种类型时，旧的值会被销毁，新的值将在 `variant` 分配的空间中构造
+3. **访问控制：** 提供了标准化的方法来访问和修改其中的值。例如，通过 `std::get` 和 `std::visit` 函数
+4. **异常安全：** 如果类型的构造函数抛出异常，`std::variant` 将保持处于有效状态（比如，对于之前成功设置的值）
+
+下面是 `std::variant` 的一个简单示例：
+
+```c++
+#include <iostream>
+#include <variant>
+#include <string>
+
+int main() {
+    std::variant<int, float, std::string> v;
+
+    v = 20;
+    std::cout << std::get<int>(v) << std::endl; // 正确使用 std::get 访问值
+
+    v = "Hello, Variant!";
+    std::cout << std::get<std::string>(v) << std::endl; // 更改并访问另一种类型的值
+
+    // 使用 std::visit 来访问值，无需事先知道持有的具体类型
+    std::visit([](auto&& arg){ std::cout << arg << std::endl; }, v);
+
+    // 错误的使用将导致异常抛出，因为当前持有的是 string 型
+    // std::cout << std::get<int>(v) << std::endl;
+
+    return 0;
+}
+```
+
+在实际应用程序中，`std::variant` 可以用于表示可以安全地由多种类型之一表示的值，或者当你需要跟踪一个值可能的多种类型时使用。这对于需要处理不确定类型数据或在某个阶段可以是几种类型之一的情况特别有用。例如，解析器、状态机或任何需要处理多态性但不想使用继承的场景
+
 ## *枚举*
 
 ### 弱枚举类型的弊端
