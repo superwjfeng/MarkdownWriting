@@ -185,8 +185,8 @@ Standard Template Library 标准模板库是C++标准库 `std` 的重要组成�
 
 * 序列容器
   * vector
-    * vector是动态开辟的数组，它在堆中分配连续的内容。记录了尾部的地址，所以尾插、尾删很快，在中间和开始处添加、删除元素操作需要挪动数据，若数据是结构或类，那么移动的同时还会进行构造和析构操作，所以在中间或头上的操作性能不高
-    * vecotr在给出索引（即下标）时对任何元素的访问都是***O(1)***，所以**vector常用来保存需要经常进行随机访问的内容，井且不需要经常对中间元素进行添加、删除操作**
+    * vector 是动态开辟的数组，它在堆中分配连续的内容。记录了尾部的地址，所以尾插、尾删很快，在中间和开始处添加、删除元素操作需要挪动数据，若数据是结构或类，那么移动的同时还会进行构造和析构操作，所以在中间或头上的操作性能不高
+    * vector 在给出索引（即下标）时对任何元素的访问都是***O(1)***，所以**vector常用来保存需要经常进行随机访问的内容，井且不需要经常对中间元素进行添加、删除操作**
   * string：string和vector一样也是一个动态开辟数组，但它里面只放了char，是C++对字符串的封装，实现了很多字符串的操作接口，用起来很方便
   * list
     * list是一个允许常数时间插入和删除的顺序容器，支持双向迭代器
@@ -1756,9 +1756,9 @@ List是一个允许常数时间插入和删除的顺序容器，支持双向迭�
 
 * `remove`
 
-* `sort` 排升序：属于list的sort和algorithm库中的sort的区别在于list的空间不连续，而algorithm的适用对象是连续空间，不能用于list。这是因为algorithm的底层qsort需要实现三数取中法。**list的sort底层是MergeSort**，而且list的归并不需要额外的空间了
+* `sort` 排升序：属于 list 的 sort 和 algorithm 库中的 sort 的区别在于 list 的空间不连续，而 algorithm 的适用对象是连续空间，不能用于 list。这是因为algorithm 的底层 qsort 需要实现三数取中法。**list 的 sort 底层是 MergeSort**，而且 list 的归并不需要额外的空间了
 
-* list排序 VS vector排序：大量数据的排序vector效率远高于list，虽然 MergeSort 和 qsort 的效率都是***O(NlogN)***，但是vector的随机访问提供了巨大优势。**不要使用列表排序！**
+* list 排序 vs. vector 排序：大量数据的排序 vector 效率远高于 list，虽然 MergeSort 和 qsort 的效率都是***O(NlogN)***，但是 vector 的随机访问提供了巨大优势。**不要使用列表排序！**
 
 ### list的insert迭代器不失效，erase迭代器仍然失效
 
@@ -1899,12 +1899,14 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
 
 # stack & queue
 
-## *deque容器*
+## *deque 容器*
 
 <img src="deque.png" width="40%">
 
-* deque 每次既不是开一个节点，也不是进行 realloc，而是开多个可以存多个数据的小 buffer
-* Double ended queue 双端队列融合了 vector 和 list 的优点，既支持 list 的任意位置插入删除，又支持vector 的下标随机访问
+* Double ended queue 这种数据结构的设计理念是支持双端队列操作，即队头、队尾的插入 & 删除
+
+  * 双端队列融合了 vector 和 list 的优点，既支持 list 的任意位置插入删除，又支持 vector 的下标随机访问
+
 * 设计缺陷：
   * 相比 vector，`operator[]` 的计算稍显复杂，大量使用会导致性能下降
   * 中间插入删除效率不高
@@ -1912,6 +1914,7 @@ list的实现重点在于迭代器，因为list的迭代器不像vector是每一
 
     <img src="dequeIterator.png" width="75%">
 
+    * deque 每次既不是开一个节点，也不是进行 realloc，而是开多个可以存多个数据的小 buffer
     * curr 为当前数据
     * first 和 last 表示当前 buffer 的开始和结束
     * node 反向指向中控位置，方便遍历时找下一个 buffer
@@ -1945,9 +1948,9 @@ template <class T, class Container = vector<T>,
 ```
 
 * `priority_queue` 可以实现最大值/最小值在队头，通过建堆来实现
-* 仿函数Compare默认为`std::less`，注意⚠️：**此时是大数优先（大根堆），即默认降序**，这和 `std::sort` 用 `std::less` 排升序反过来了。T要支持 `operator<()std::greateroperator>()`
+* 仿函数 Compare 默认为`std::less`，注意⚠️：**此时是大数优先（大根堆），即默认降序**，这和 `std::sort` 用 `std::less` 排升序反过来了。T 要支持 `operator<()std::greateroperator>()`
 * 虽然 `priority_queue` 的底层是堆，但用它复用的容器来控制下标
-* `priority_queue` 的默认容器为vector，这是因为要进行大量的下标随机访问，用deque或list都不好
+* `priority_queue` 的默认容器为 vector，这是因为要进行大量的下标随机访问，用 deque 或 list 都不好
 
 ### 重要接口
 
@@ -2171,7 +2174,7 @@ unordered系列是单向迭代器（哈希桶是单列表）
 
     * 返回类型是 first 为迭代器的 pair 是为 `operator[]` 准备的，否则就返回一个 bool 就可以了，没必要返回迭代器
 
-  * `size_type erase ( const key_type& k )` 返回删除的key对应的元素个数，因为 unorderd_map 不允许冗余，所以删除成功就是 1，否则为 0
+  * `size_type erase ( const key_type& k )` 返回删除的 key 对应的元素个数，因为 unorderd_map 不允许冗余，所以删除成功就是 1，否则为 0
 
 * Element access
 
@@ -2179,9 +2182,9 @@ unordered系列是单向迭代器（哈希桶是单列表）
 
     * 给一个 key，若能找到符合的 key，返回 val&：相当于查找+修改 val 的功能
 
-    * 若没有符合的，就**插入默认构造生成的新 pair**，即 `pair(key, V())`，并返回val&，其中 value 会被初始化，比如 int 类型被初始化0，string 被初始化空串。相当于插入+修改的功能
+    * 若没有符合的，就**插入默认构造生成的新 pair**，即 `pair(key, V())`，并返回 val&，其中 value 会被初始化，比如 int 类型被初始化 0，string 被初始化空串。相当于插入+修改的功能
 
-    * 底层是利用insert实现的
+    * 底层是利用 insert 实现的
 
       ```c++
       V& operator[](const K& key) {
@@ -3015,30 +3018,32 @@ string regex_replace(string str, regex regx, string replacestr);
 
 ## *随机数*
 
+关于随机数的详细概念可以看 *Probability.md*
+
 ### rand & srand
 
-C++11之前使用的是C库函数 rand 和 srand
+C++11 之前使用的是 C 库函数 rand 和 srand
 
 * rand
 
-  * rand 函数用于生成伪随机整数。它返回一个介于0和 RAND_MAX 之间的整数值，通常情况下 RAND_MAX 的值为32767，但可以根据实现的不同而有所变化
+  * `rand()` 用于生成伪随机整数。它返回一个介于 0 和 RAND_MAX 之间的整数值，通常情况下 RAND_MAX 的值为 32767，但可以根据实现的不同而有所变化
 
     ```C
     int rand(void);
     ```
 
-  * 使用  rand 函数时，通常需要结合  srand 函数来初始化随机数生成器的种子。如果不显式初始化种子，rand 将使用默认的种子（通常是基于系统时间的），这会导致在每次程序运行时生成不同的伪随机数序列
+  * 使用 `rand()` 时，通常需要结合  `srand()` 来初始化随机数生成器的种子。如果不显式初始化种子，rand 将使用默认的种子（通常是基于系统时间的），这会导致在每次程序运行时生成不同的伪随机数序列
 
-* Srand 用于设置随机数生成器的种子值，影响后续通过 `rand` 函数生成的伪随机数序列。伪随机数是通过数学算法生成的，看起来像是随机的，但实际上是可预测的，因为它们的生成是基于种子值的
+* srand 用于设置随机数生成器的种子值，影响后续通过 rand 生成的伪随机数序列。伪随机数是通过数学算法生成的，看起来像是随机的，但实际上是可预测的，因为它们的生成是基于种子值的
 
-  注意：rand 函数生成的伪随机数序列是基于随机数生成器的初始状态（种子值）以及生成算法来确定的。在随机数生成器内部，根据这个种子值进行一系列的状态转换和计算，所以虽然每次使用相同的种子值调用 srand，函数生成的随机数序列仍然可以看作是随机的
+  注意：rand 生成的伪随机数序列是基于随机数生成器的初始状态（种子值）以及生成算法来确定的。在随机数生成器内部，根据这个种子值进行一系列的状态转换和计算，所以虽然每次使用相同的种子值调用 srand，函数生成的随机数序列仍然可以看作是随机的
 
   ```c++
   void srand(unsigned int seed);
   srand(time(NULL)); // 使用当前时间作为种子值
   ```
 
-一旦使用 `srand` 设置了种子值，接下来使用 `rand` 函数将生成基于该种子的伪随机数。例如：
+一旦使用 srand 设置了种子值，接下来使用 rand 将生成基于该种子的伪随机数。例如：
 
 ```C
 srand(42); // 设置种子值为42
@@ -3054,28 +3059,72 @@ int random_number = rand(); // 生成伪随机数
 
 ### 随机数引擎和分布
 
-C标准库的rand只提供int类型的随机数，实际中是大量需要随机浮点数的。程序员为了从随机int数得到随机float数，会试图转换 rand生成的随机数的范围、类型或分布，而这常常会引入非随机性
+C 标准库的 rand 只提供 int 类型的随机数，实际中是大量需要随机浮点数的。程序员为了从随机 int 数得到随机 float 数，会试图转换 rand 生成的随机数的范围、类型或分布，而这常常会引入非随机性
 
-C++11标准定义在头文件 `<random>` 中的随机数库通过一组协作的类来解决这些问题
+C++11 标准定义在头文件 `<random>` 中的随机数库通过一组协作的类来解决这些问题，该库包括下面这些组件
 
 * 随机数引擎类 random-number engines：生成随机 unsigned 整数序列
-* 随机数分布类 random-number distribution：使用引擎返回服从特定概率分布的随机数
+  * `std::default_random_engine`：这是一个预定义的随机数引擎，其具体类型依赖于实现，但通常会映射到某个特定的引擎
+  * `std::mt19937`：一个基于 Mersenne Twister 算法的 32 位随机数引擎
+  * `std::mt19937_64`：一个基于 Mersenne Twister 算法的 64 位版本
+  * `std::minstd_rand`：一个基于最小标准生成器的引擎
+  * `std::ranlux24_base`, `std::ranlux48_base`: 基于 RANLUX 算法的随机数引擎
+  * `std::knuth_b`：基于 Knuth shuffle 算法的随机数生成器
+  * `std::random_device`：这不是一个真正的随机数引擎，而是一个产生非确定性随机数的设备，可以用来为随机数引擎提供种子
 
-```c++
-Engine e;            // 默认构造函数；使用该引擎类型默认的种子
-Engine e(s)          // 使用鏊型值s作为种子
-e.seed(s)            // 使用种子s重置引擎的状态
-e.min()              // 此引擎可生成的最小值和最大值
-e.max()
-Engine::result_type  // 此引擎生成的 unsigned 整型类型
-e.discard(u)         // 将引擎推进u步：u的类型为 unsigned long long
+* 随机数分布类 random-number distribution：使用引擎返回服从特定概率分布的随机数
+  * 均匀分布
+    * `std::uniform_int_distribution`: 生成一个指定范围内均匀分布的整数值
+    * `std::uniform_real_distribution`: 生成一个指定范围内均匀分布的浮点值
+
+  * 正态分布
+    * `std::normal_distribution`: 生成服从正态（高斯）分布的浮点数
+    * `std::lognormal_distribution`: 生成服从对数正态（高斯）分布的浮点数
+
+  * 离散分布
+    * `std::binomial_distribution`: 生成二项分布的随机数
+    * `std::poisson_distribution`: 生成泊松分布的随机数
+    * `std::exponential_distribution`: 生成指数分布的随机数
+
+* 随机数适配器 random-numer adaptor：允许调整引擎行为，如 `discard_block` 等适配器
+
+### `std::mt19937` 伪随机数生成数
+
+`std::mt19937` 是一个基于 Mersenne Twister 算法的伪随机数生成器 (PRNG) 类，它在 C++ 标准库中被定义在 `<random>` 头文件中。这个算法由 Makoto Matsumoto 和 Takuji Nishimura 在 1997 年开发，'mt' 指的是 Mersenne Twister，而 '19937' 表示该算法用到了一个特别选取的素数，即 219937−1219937−1
+
+Mersenne Twister 算法产生高质量的 32 位随机数，并且具有以下特点：
+
+- 非常高的周期性：周期长度为 219937−1219937−1，这是一个非常大的数，确保了在实际应用中可以生成大量的不重复的随机数序列
+- 高维度的均匀分布：对于多达 623 维的空间，该算法能够产生均匀分布的随机数
+- 快速且内存高效：相较于其他类型的 PRNG，Mersenne Twister 有着较快的生成速度和合理的内存使用
+
+下面展示如何在 C++ 中使用 `std::mt19937`：
+
+```C++
+#include <random>
+#include <iostream>
+
+int main() {
+    // 初始化随机数生成器
+    std::random_device rd; // 非确定性随机数生成器，用于获得种子
+    std::mt19937 gen(rd()); // 以 random_device 的输出作为种子初始化 mt19937
+
+    // 定义要生成的随机数的范围
+    std::uniform_int_distribution<> dis(1, 6); // 假设我们想模拟掷骰子
+
+    // 生成和打印一些随机数
+    for (int n = 0; n < 10; ++n) {
+        std::cout << dis(gen) << ' ';
+    }
+    std::cout << '\n';
+
+    return 0;
+}
 ```
 
-### 其他随机数分布
+上述代码首先创建了一个 `std::random_device` 实例来生成一个真正的随机数作为种子值（如果系统支持），然后使用这个种子值初始化 `std::mt19937` 实例。之后，通过与 `std::uniform_int_distribution` 联合使用，生成了一系列仿佛是从公平的六面骰子上获取的随机数。
 
-
-
-
+尽管 `std::mt19937` 产生的是伪随机数，但是由于其周期极长和统计上的均匀分布特性，使得它在许多应用场景，如模拟、游戏编程、密码学和科学计算中都非常适用。对于需要更高安全性的随机数，比如加密密钥生成，应该使用专门设计的密码学安全的随机数生成器
 
 # range（20）
 
