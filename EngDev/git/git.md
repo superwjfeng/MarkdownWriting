@@ -795,7 +795,7 @@ cherry-pick 就如其名字所述，将某个分支的某几个需要的commit p
 基础命令格式如下：
 
 ```cmd
-git cherry-pick <commit-hash>
+git cherry-pick <commit-hash1> <commit-hash2> <commit-hash3>
 ```
 
 其中 `<commit-hash>` 是想要pick并应用到当前分支的那个提交的哈希值

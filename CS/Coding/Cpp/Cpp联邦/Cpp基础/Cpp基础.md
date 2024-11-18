@@ -512,7 +512,7 @@ double *dp = static_cast<double*>(p); //规范使用void*转换
 
 `static_cast` 是一种**相对安全**的类型转换运算符，它可以将一种类型转换为另一种类型。`static_cast` 可以执行隐式类型转换，例如将整数类型转换为浮点类型，也可以执行显式类型转换，例如将指针类型转换为整数类型。`static_cast` 进行类型转换时会执行一些类型检查和转换，以确保类型转换是合法的
 
-* 任何具有明确定义的类型转换，只要不包含底层 const，都可以使用 `static_cast`
+* 任何具有明确定义的类型转换（意思是类要支持类型转换重载），只要不包含底层 const，都可以使用 `static_cast`
 * 任意空指针转换都可以用 `void *` 做媒介
 * **存在继承的但没有多态的类**之间的类型转换：派生转基类 上行 derived-to-base 是允许的，但反过来下行 base-to-derived 是不允许的，因为编译器无法自动确定如何构造一个派生类对象，因为基类对象可能不包含派生类的所有数据成员，也不调用派生类的构造函数。这可能导致未定义行为，例如访问未初始化的成员或调用未定义的行为
 * 存在继承的但没有多态的类指针/引用之间的转换是可以转的：上行可以，下行是不安全的，用派生类的指针可以看到的范围大于等于基类的指针，可能会造成危险的越界。不是很理解为什么编译器为什么不和上一条对象转换一样直接把这个下行给禁止了，据说是因为运行时检查会有开销，静态情况下无法判断类继承情况，所以提供了这种方式让开发人员自己斟酌使用
@@ -862,9 +862,150 @@ class Example {
 
 在上面的代码中，`Empty` 是一个空类。由于 `e` 被声明时使用了 `[[no_unique_address]]` 属性，如果编译器选择应用此优化，那么 `Example` 类的实例可能不会为 `e` 分配额外的存储空间，而是与 `value` 共享地址
 
+## *极值表示*
+
+### C 语言
+
+C标准库还提供了一系列宏定义来直接表示固定大小的整数类型的极值。对于标准整数类型的极值通常定义在 `<limits.h>` 头文件中，而对于固定宽度的整数类型（例如 `int32_t`）的极值，则定义在 `<stdint.h>` 中 （在 C++ 中是 `<cstdint>`）中，且只适用于固定宽度的整数类型
+
+**使用这些极值时需注意，极值定义依赖于编译器、系统和所使用的C标准版本，因此最好直接查看特定环境中的 `<limits.h>` 和 `<stdint.h>` 文件以获取确切的值**
+
+* 标准整数类型极值 (`<limits.h>`)
+
+  - `CHAR_BIT` - 字符型位数
+  - `SCHAR_MIN` - `signed char` 的最小值
+  - `SCHAR_MAX` - `signed char` 的最大值
+  - `UCHAR_MAX` - `unsigned char` 的最大值
+  - `CHAR_MIN` - 如果 `char` 是有符号的，则等于 `SCHAR_MIN`，否则为 0
+  - `CHAR_MAX` - 如果 `char` 是有符号的，则等于 `SCHAR_MAX`，否则等于 `UCHAR_MAX`
+  - `MB_LEN_MAX` - 多字节字符中的最大字节数
+  - `SHRT_MIN` - `short int` 的最小值
+  - `SHRT_MAX` - `short int` 的最大值
+  - `USHRT_MAX` - `unsigned short int` 的最大值
+  - `INT_MIN` - `int` 的最小值
+  - `INT_MAX` - `int` 的最大值
+  - `UINT_MAX` - `unsigned int` 的最大值
+  - `LONG_MIN` - `long int` 的最小值
+  - `LONG_MAX` - `long int` 的最大值
+  - `ULONG_MAX` - `unsigned long int` 的最大值
+  - `LLONG_MIN` - `long long int` 的最小值（C99起）
+  - `LLONG_MAX` - `long long int` 的最大值（C99起）
+  - `ULLONG_MAX` - `unsigned long long int` 的最大值（C99起）
+
+* 固定宽度整数类型极值 (`<stdint.h>`)
+
+    - `INT8_MIN` - `int8_t` 的最小值
+
+    - `INT16_MIN` - `int16_t` 的最小值
+
+    - `INT32_MIN` - `int32_t` 的最小值
+
+    - `INT64_MIN` - `int64_t` 的最小值（假设支持C99或更新的标准）
+
+    - `INT8_MAX` - `int8_t` 的最大值
+
+    - `INT16_MAX` - `int16_t` 的最大值
+
+    - `INT32_MAX` - `int32_t` 的最大值
+
+    - `INT64_MAX` - `int64_t` 的最大值（假设支持C99或更新的标准）
+
+    - `UINT8_MAX` - `uint8_t` 的最大值
+
+    - `UINT16_MAX` - `uint16_t` 的最大值
+
+    - `UINT32_MAX` - `uint32_t` 的最大值
+
+    - `UINT64_MAX` - `uint64_t` 的最大值（假设支持C99或更新的标准）
+
+* 浮点数的极值定义在 `<float.h>` 头文件中。这些极值提供了关于 `float`、`double` 和 `long double` 类型的信息
+
+  * `FLT_MAX`: `float` 类型能表示的最大正数
+  * `FLT_MIN`: `float` 类型能表示的最小正数（即最小的正规数）
+  * `DBL_MAX`: `double` 类型能表示的最大正数
+  * `DBL_MIN`: `double` 类型能表示的最小正数（即最小的正规数）
+  * `LDBL_MAX`: `long double` 类型能表示的最大正数
+  * `LDBL_MIN`: `long double` 类型能表示的最小正数（即最小的正规数）
+
+  除了最大和最小值外，`<float.h>` 还定义了其他与浮点数精度有关的极值：
+
+  - `FLT_EPSILON`: `float` 类型的浮点数可以区分的最小差异
+  - `DBL_EPSILON`: `double` 类型的浮点数可以区分的最小差异
+  - `LDBL_EPSILON`: `long double` 类型的浮点数可以区分的最小差异
+
+  以及用于表示精度的宏：
+
+  - `FLT_DIG`: `float` 类型的十进制位数精度
+  - `DBL_DIG`: `double` 类型的十进制位数精度
+  - `LDBL_DIG`: `long double` 类型的十进制位数精度
+
+  还有与浮点数表示法相关的值：
+
+  - `FLT_RADIX`: 表示所有浮点类型的基数，通常是 2
+  - `FLT_MANT_DIG`: `float` 类型的尾数位数
+  - `DBL_MANT_DIG`: `double` 类型的尾数位数
+  - `LDBL_MANT_DIG`: `long double` 类型的尾数位数
+
+  和表示指数范围的宏：
+
+  - `FLT_MIN_EXP`: `float` 类型的最小二进制指数
+  - `DBL_MIN_EXP`: `double` 类型的最小二进制指数
+  - `LDBL_MIN_EXP`: `long double` 类型的最小二进制指数
+  - `FLT_MAX_EXP`: `float` 类型的最大二进制指数
+  - `DBL_MAX_EXP`: `double` 类型的最大二进制指数
+  - `LDBL_MAX_EXP`: `long double` 类型的最大二进制指数
+
+### numeric_limits
+
+头文件 `<limits>` 中 定义了 `std::numeric_limits` 这个 C++ 标准库中的模板类，用于提供关于基本数值类型（如整型、浮点型）极限信息。通过这个模板类，我们可以访问某个数值类型的各种属性，例如最大值、最小值、位数等
+
+下面是一些 `std::numeric_limits<T>` 模板类提供的常用静态成员函数和特性：
+
+- `max()`: 返回该类型可能的最大值
+- `min()`: 对于整数类型，返回可能的最小值；对于浮点类型，返回大于零的最小正规数
+- `lowest()`: 返回浮点类型可能的最小值（负的最大值）
+- `epsilon()`: 返回该浮点类型可以区分的最小差异。对于浮点数 ( a ) 和 ( b )，如果 ( |a - b| < \epsilon )，则它们可能被认为是相等的
+- `round_error()`: 返回因舍入而产生的最大可能误差
+- `infinity()`: 仅对浮点类型有效，返回表示无穷大的值
+- `quiet_NaN()`: 仅对浮点类型有效，返回一个 "安静" 的非数字（NaN）值
+- `signaling_NaN()`: 仅对浮点类型有效，返回一个 "发信号" 的非数字（NaN）值
+- `denorm_min()`: 返回浮点类型中最小的非正规化值
+- `is_signed`: 如果类型是有符号类型，则为 `true`；否则为 `false`
+- `is_integer`: 如果类型是整数类型，则为 `true`；否则为 `false`
+- `is_exact`: 如果类型不包含任何舍入误差，则为 `true`；通常只有整数类型满足此条件
+- `digits`: 表示类型的基数进制中的有效数字位数。对于二进制类型，就是能够表示的二进制位数
+- `digits10`: 可以无损转换为十进制并回到原类型而不损失精度的最大数字位数
+- `radix`: 表示数值类型的基数。对于所有的标准浮点类型，基数是 2
+
+```C++
+#include <limits>
+#include <iostream>
+
+int main() {
+    std::cout << "Max int: " << std::numeric_limits<int>::max() << "\n";
+    std::cout << "Min int: " << std::numeric_limits<int>::min() << "\n";
+    std::cout << "Max double: " << std::numeric_limits<double>::max() << "\n";
+    std::cout << "Lowest double: " << std::numeric_limits<double>::lowest() << "\n";
+    std::cout << "Epsilon double: " << std::numeric_limits<double>::epsilon() << "\n";
+    std::cout << "Infinity double: " << std::numeric_limits<double>::infinity() << "\n";
+
+    return 0;
+}
+```
+
+## *`std::ratio`*
+
+`std::ratio` 是 C++ 标准库中的一个类模板，它表示了一个编译时常量的有理数（即分数），由两个 `std::intmax_t` 类型的编译时常量表示。其中，第一个常量是分子 numerator，第二个常量是分母 denominator。`std::ratio` 提供了一种类型安全且精确的方式来处理和传递比例值
+
+```c++
+template< std::intmax_t Num, std::intmax_t Denom = 1 > class ratio;
+```
+
+`std::ratio` 定义在头文件 `<ratio>` 中，并属于 `<chrono>` 库的一部分（见 *C++并发编程.md*），这使得它经常与时间量度相关的类型联合使用。不过，`std::ratio` 也可以独立用于其他需要精确固定比率的场合
+
 # 基本语法更新
 
-## *mutable关键字*
+## *mutable 关键字*
 
 `mutable` 关键字是C++引入的修饰符，它主要用于放宽常量成员函数（即const成员函数）内部对某个特定成员变量的修改限制
 

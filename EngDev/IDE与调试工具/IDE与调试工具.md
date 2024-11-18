@@ -52,15 +52,21 @@ sdf 和 ipch文件与VS提供的智能感知、代码恢复、团队本地仓库
 
 ## *IntelliSence*
 
-IntelliSense 是一项由 Microsoft 开发的智能代码补全和代码提示功能，旨在提高开发人员在集成开发环境（IDE）中编写代码的效率和准确性。它在多个 Microsoft IDE（如 Visual Studio、Visual Studio Code）和其他编辑器中得到广泛支持。
+IntelliSense 是一项由 Microsoft 开发的智能代码补全和代码提示功能，旨在提高开发人员在 IDE 中编写代码的效率和准确性。它在多个 Microsoft IDE（如 Visual Studio、Visual Studio Code）和其他编辑器中得到广泛支持
 
-IntelliSense 使用静态代码分析、语义分析和用户输入上下文来为开发人员提供有关代码的实时信息和建议。它的主要功能包括：
+IntelliSense 使用静态代码分析、语义分析和用户输入上下文来为开发人员提供有关代码的实时信息和建议
 
-1. 代码自动补全：IntelliSense 会根据正在输入的代码上下文，提供相关的代码补全选项。它可以自动完成代码片段、类、函数、变量等，并显示对应的参数列表和函数签名。
-2. 代码导航：IntelliSense 可以帮助开发人员快速浏览代码库，并提供与代码相关的导航功能。这包括跳转到定义、查看函数调用层次结构、查找引用等。
-3. 实时错误检查：IntelliSense 可以在代码编写过程中进行实时的语法和语义错误检查，并显示相应的错误和警告。这样可以帮助开发人员及早发现和修复问题，提高代码质量。
-4. 文档注释：IntelliSense 可以显示与代码相关的文档注释、函数说明和参数描述，使开发人员能够更好地理解代码的含义和使用方式。
-5. 提示和上下文帮助：IntelliSense 可以根据用户输入的上下文，提供有关可用选项的提示和帮助。它可以显示函数签名、参数类型、属性和方法列表等信息，以便开发人员更准确地编写代码
+[vscode - 环境准备 - 修改缓存路径_vscode缓存路径修改-CSDN博客](https://blog.csdn.net/qazw9600/article/details/133788814)
+
+IntelliSense 大致原理是：预编译头文件，会生成一些缓存文件。因此 IntelliSence 随着项目的扩大会产生很多缓存，占据大量空间，要么定期删除，要么给缓存文件放个位置
+
+vscode setting中没有提供配置方式，网上大部分都是通过修改快捷方式属性中目标实现更改，如： [操作方法](https://blog.csdn.net/weixin_44205779/article/details/132298257)
+
+### 缓存文件的默认存放位置
+
+* Linux：`$XDG_CACHE_HOME/vscode-cpptools/`，若未定义 XDG_CACHE_HOME，则为 `$HOME/.cache/vscode-cpptools/`
+* Mac：`$HOME/Library/Caches/vscode-cpptools/`
+* Win：`%LocalAppData%/Microsoft/vscode-cpptools`
 
 ## *VS远程开发*
 
@@ -1237,7 +1243,7 @@ editor.guides.bracketpairs
 
 horizontal tab
 
-# VS Code开发C/C++
+# VS Code开发 C/C++
 
 ## *c_cpp_properties.json*
 
@@ -1364,9 +1370,13 @@ CMake工具不会用到VS的build和debug系统（即tasks.json和launch.json）
 
 当然如果想要用tasks.json来使用CMake也是可以的
 
-# 开发VS Code插件
+# 开发 VS Code 插件
 
 
+
+# VS Code Debug
+
+### IntelliSence 缓存文件的坑
 
 
 
