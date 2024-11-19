@@ -244,13 +244,35 @@ int main() {
 
 虽然C++11非受限联合体的引入表明了C++委员会对C++灵活性的坚持，但union仍然用的不多。且C++17之后大部分情况都可以用 `std::variant` 来代替联合体
 
-### variant (17)
+## *variant (17)*
 
-C++17 引入的 `std::variant` 是一种类型安全的联合体。一个 `std::variant` 可以存储其构造函数中指定的任何类型的单个值，但在任何给定时间点上只能持有这些类型中的一个。这使得 `std::variant` 成为处理那些可能需要存储不同类型数据的情况的理想选择
+C++17 引入的 `std::variant` 是一种类型安全的联合体，它放在 `<variant>` 中。一个 `std::variant` 可以存储其构造函数中指定的任何类型的单个值，但在任何给定时间点上只能持有这些类型中的一个。这使得 `std::variant` 成为处理那些可能需要存储不同类型数据的情况的理想选择
 
+```c++
+std::variant<int, float, std::string> v;
+```
 
+这个 `v` 可以存储 `int`、`float` 或者 `std::string` 类型的值，但在任何给定时刻只能存储其中一种类型的值
 
+### API
 
+* `std::get()`
+  - 使用 `std::get<T>(v)` 可以获取 `std::variant` 对象 `v` 中存储的类型为 `T` 的值。如果当前存储的类型不是 `T`，则会抛出 `std::bad_variant_access` 异常
+  - 使用 `std::get<size_t>(v)` 可以按索引获取存储的值（索引从零开始，对应模板参数列表中的类型顺序）
+* `std::visit()`
+  - 用来访问 `std::variant` 中的值，需要提供一个可调用对象（如函数、lambda 表达式或重载了 `operator()` 的类/结构体实例），`std::visit` 会调用该对象，并传递 `std::variant` 当前存储的值作为参数
+* `std::holds_alternative()`
+  - 通过 `std::holds_alternative<T>(v)` 可以检查 `std::variant` 对象 `v` 是否当前存储的是类型 `T` 的值
+* `std::index()`
+  - 成员函数 `v.index()` 返回当前存储的值的索引
+* 赋值操作
+  - 可以直接给 `std::variant` 赋值，它会存储相应的类型并更新其状态
+* `emplace()`
+  - `emplace<Index>(args...)` 允许直接在 `variant` 中构造新值，`Index` 是想要构造的类型在模板参数列表中的位置，`args...` 是构造该类型所需的参数
+* `std::monostate()`
+  - 如果需要一个“空”的 `std::variant`，可以使用特殊类型 `std::monostate` 作为其模板参数之一，它充当了默认构造的占位符
+
+### 结合访问者模式使用
 
 业务场景：有多个数据对象本身是互斥的
 
