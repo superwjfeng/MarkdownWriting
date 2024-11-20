@@ -765,7 +765,7 @@ STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 
 
   > Returns an iterator to the first element in the range [first,last) that compares equal to val. If no such element is found, the function returns last.
 
-* `find_if`：和find相比多了一个用于判断的一元谓词仿函数
+* `find_if`：和 find 相比多了一个用于判断的一元谓词仿函数
 
   ```C++
   template <class InputIterator, class UnaryPredicate>
@@ -870,7 +870,11 @@ a > b # a 大于 b
     };
     ```
 
-    注意⚠️：Compare 可调用类型必须满足严格弱序 strict weak ordering，比如只能是 `<` ，不能是 `<=`
+    Compare 可调用对象的要求是
+    
+    * 参数类型：Compare 应该能够接受两个参数，这两个参数的类型应该与容器中元素的类型或者可以从元素类型隐式转换而来的类型相匹配
+    * 返回值类型：Compare 应当返回一个布尔值，通常是 bool 类型。返回值表示第一个参数是否“小于”第二个参数，即如果返回 true（因为默认升序），则意味着第一个参数应被视为比第二个参数小，在查找最大元素时将不会选择它
+    * **一致性**：Compare 可调用类型必须满足严格弱序 strict weak ordering，比如只能是 `<` ，不能是 `<=`
 
 * `partial_sort(first, middle, last)`
 
@@ -918,7 +922,11 @@ a > b # a 大于 b
 
 ## *STL中 `std::sort` 的实现*
 
+[知无涯之std::sort源码剖析](https://feihu.me/blog/2014/sgi-std-sort/#递归深度阈值)
+
 ### 实现逻辑
+
+`std::sort` 并不是某一种排序算法的实现，它是集百家之长，结合了多种排序算法优点的一种复合算法。具体的来说，这种算法叫做 Introspective Sorting 内省式排序，其思想来自于 [Introspective Sorting and Selection Algorithms | Request PDF](https://www.researchgate.net/publication/2476873_Introspective_Sorting_and_Selection_Algorithms) 这篇论文
 
 `std::sort` 当数据量大时用的就是快排，分段归并排序。一旦分段后的数据量小于某个门槛，为避免QuickSort快排的递归调用带来过大的额外负荷，就改用**Insertion Sort插入排序**。如果递归层次过深，还会改用**HeapSort堆排序**
 
@@ -989,7 +997,7 @@ https://stackoverflow.com/questions/3221812/how-to-sum-up-elements-of-a-c-vector
 
   注意⚠️：init 不仅仅指定了返回的 sum 的初始，还有它的数据类型。比方说计算一个 `vector<double>`，但是我们给的 init 是一个 int，那么返回的也是 int
 
-  accumulate不仅仅可以用来求和，也可以通过 `binary_op` 这个函数对象来定义对两个值进行操作的其他规则，这使得`accumulate`函数可以进行不同类型的累积操作，例如求和、乘积、取最大值、取最小值等
+  accumulate 不仅仅可以用来求和，也可以通过 `binary_op` 这个可调用对象来定义对两个值进行操作的其他规则，这使得 accumulate 可以进行不同类型的累积操作，例如求和、乘积、取最大值、取最小值等
 
   ```c++
   #include <iostream>
@@ -1028,7 +1036,7 @@ https://stackoverflow.com/questions/3221812/how-to-sum-up-elements-of-a-c-vector
 
 ## *intro*
 
-为什么不说allocator是内存配置器而说它是空间配置器呢？这是因为空间配置器的配置不一定是内存，其实也可以是硬盘或者其他辅助存储介质
+为什么不说 allocator 是内存配置器而说它是空间配置器呢？这是因为空间配置器的配置不一定是内存，其实也可以是硬盘或者其他辅助存储介质
 
 ### SGI-STL空间配置器偏离STL标准
 
@@ -1954,7 +1962,7 @@ template <class T, class Container = vector<T>,
 
 ### 重要接口
 
-如前所述，stack、queue、priority_queue 是没有遍历功能的，所以也就没有迭代器、insert这些借口
+如前所述，stack、queue、priority_queue 是没有遍历功能的，所以也就没有迭代器、insert 这些接口
 
 这三种容器适配器都有
 

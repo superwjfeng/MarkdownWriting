@@ -279,17 +279,11 @@ Flask 确保每个线程只处理一个请求，因此 `current_app` 和 `reques
 
 ## *HTTP 进阶*
 
-### Ajax 异步请求
-
 # 模板
 
+前端模板是指在客户端浏览器中使用的模板引擎进行页面渲染的技术。它们使得开发者能够将数据和HTML模板结合起来生成最终的HTML内容，这通常会在用户与网页交互时动态地进行
 
-
-本章展示的是 Jinja2 模板引擎
-
-
-
-Jinja2 是一个非常流行的模板引擎 template engine，用于 Python 编程语言。它提供了一种表达式和控制结构来动态地生成 HTML 或其他标记语言文档。Jinja2 的语法非常类似于 Python
+本章展示的是 Jinja2 模板引擎。Jinja2 是一个非常流行的模板引擎 template engine，用于 Python 编程语言。它提供了一种表达式和控制结构来动态地生成 HTML 或其他标记语言文档。Jinja2 的语法非常类似于 Python
 
 ### 分隔符
 
@@ -404,7 +398,7 @@ Jinja2 里没有函数，用宏可以用于定义可以重用的模板片段
 
 ### block
 
-块（blocks）是可以在子模板中重写的部分，这些块在父模板中被定义，并可以在子模板中填充。例如，在 `base.html` 中
+**块 block 是可以在子模板中重写的部分**，这些块在父模板中被定义，并可以在子模板中填充。一般命名为 `base.html`
 
 ```jinja2
 <title>{% block title %}Default Page Title{% endblock %}</title>
@@ -415,6 +409,8 @@ Jinja2 里没有函数，用宏可以用于定义可以重用的模板片段
 ```jinja2
 {% block title %}Page Title{% endblock %}
 ```
+
+注意：`{% block block_name %}` 是 Jinja2 模板标记语法的一部分，用于定义一个名为 `block_name` 的块，它可以被继承模板重写。这里的 `block_name` 只是一个块名，并不是说必须对应 HTML 的某个现存元素（比如说如果块名叫做 title 并不是对应着 HTML 中的 `<title>` 元素）。开发者可以自由地选择任何合适的名字来命名 Jinja2 模板中的块，**但是必须保证这个名字是全局唯一的**，否则会冲突
 
 ### extends
 
