@@ -1601,7 +1601,7 @@ vector的空间是会随着存储数据的变化而重新分配空间，从而�
 
     <img src="迭代器失效问题3.png" width="60%">
 
-  * 修正：**每次insert/erase之后要更新迭代器（`++`），STL规定了erase/insert要返回删除/插入位置的下一个位置迭代器**
+  * 修正：**每次 insert/erase 之后要更新迭代器（`++`），STL规定了 erase/insert 要返回删除/插入位置的下一个位置迭代器**
 
     ```cpp
     // STL规定了erase要返回删除位置的下一个位置迭代器
