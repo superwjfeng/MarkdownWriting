@@ -1956,8 +1956,27 @@ template <class T, class Container = vector<T>,
 ```
 
 * `priority_queue` 可以实现最大值/最小值在队头，通过建堆来实现
+
 * 仿函数 Compare 默认为`std::less`，注意⚠️：**此时是大数优先（大根堆），即默认降序**，这和 `std::sort` 用 `std::less` 排升序反过来了。T 要支持 `operator<()std::greateroperator>()`
+
+  注意这里要传入的 Compare 是一个**类型**，自定义的时候可以实现一个类，也可以实现一个 lambda，但是要用 decltype 给出
+
+  ```c++
+  struct myComparison{
+      bool operator()(pair<int,int>&p1,pair<int,int>&p2){
+          return p1.second>p2.second;
+      }
+  };
+  priority_queue<pair<int, int>, vector<pair<int, int>>, myComparison> pq;
+  
+  // or
+  
+  auto MyComparison = [](const pair<int, int>& a, const pair<int, int>& b){ return a.second > b.second; };
+  priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(MyComparison)> pq;
+  ```
+
 * 虽然 `priority_queue` 的底层是堆，但用它复用的容器来控制下标
+
 * `priority_queue` 的默认容器为 vector，这是因为要进行大量的下标随机访问，用 deque 或 list 都不好
 
 ### 重要接口
@@ -1974,7 +1993,7 @@ template <class T, class Container = vector<T>,
 * 获取元素
   * queue：`front()` 获取队头元素，`back()` 获取队尾元素
   * stack：`top()` 获取栈顶元素
-  * priority_queue：`top()` 获取堆顶元素
+  * priority_queue：`top()` 获取堆顶元素，记住优先级队列底层是堆，这个命名也就合理了
 
 # map & set
 

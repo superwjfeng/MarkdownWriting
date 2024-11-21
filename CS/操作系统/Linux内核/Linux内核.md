@@ -939,7 +939,7 @@ long do_fork(unsigned long clone_flags, // 创建进程的标识位集合
 * stack_start是用户栈的栈顶起始地址
 * regs是一个指向寄存器集合的指针，其中以原始形式保存了调用参数。该参数使用的数据类型是特定于体系结构的struct pt_regs，其中按照系统调用执行时寄存器在内核栈上的存储顺序，保存了所有的寄存器
 * stack_size是用户栈的大小，该参数通常是不必要的，一般默认设置为0即可
-* parent_tidptr和child_tidptr是指向用户空间中地址的两个指针，分别指向父、子进程的PID。NPTL的线程实现需要这两个参数
+* parent_tidptr 和 child_tidptr 是指向用户空间中地址的两个指针，分别指向父、子进程的 PID。NPTL 的线程实现需要这两个参数
 
 不同的fork变体主要是通过标志集合区分。在大多数体系结构上，典型的fork调用的实现方式与IA-32处理器相同
 
