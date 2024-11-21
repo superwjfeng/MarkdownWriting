@@ -2212,7 +2212,7 @@ Q 和 K 分别表示 query vector 和 key vector
 
 
 
-single attention head 单头注意力机制
+single attention head 单头注意力机制 
 
 multi attention head 多头注意力机制：并行地进行单头注意力模块操作，每个头都有不同的 key, query & value matrix，便于GPU运算
 
@@ -2238,3 +2238,4 @@ Multi-head attention：在考虑一个字的时候考虑它对其他字的依赖
 
 ## *MAE*
 
+​                                            
