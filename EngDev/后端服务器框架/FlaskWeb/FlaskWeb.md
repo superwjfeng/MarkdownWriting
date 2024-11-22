@@ -162,11 +162,9 @@ if __name__ == '__main__':
 
 ### render_template
 
-`render_template` 是一个函数，通常用于 Python 的 Flask web 框架中。它用于将你的 HTML 模板文件与后端的 Python 数据结合起来，并生成最终的 HTML 响应内容发送给客户端（比如用户的浏览器）。
+`render_template()` 是一个 Flask 提供的位于 `flask` 模块中的函数。它用于将**已有的** HTML 模板文件（比如 Jinja2 模板）与后端的 Python 数据结合起来，填充其中的动态内容，并返回渲染好的 HTML 字符串，并生成最终的 HTML 响应内容发送给客户端（比如用户的浏览器）
 
-在 Flask 应用程序中，`render_template` 函数位于 `flask` 模块中，负责读取模板文件（通常是 Jinja2 模板），填充其中的动态内容，并返回渲染好的 HTML 字符串。这样可以使得在服务器端创建动态网页变得简单。
-
-使用 `render_template` 时，通常会提供模板的名字和需要传递给模板的任何参数作为关键字参数。例如：
+使用 `render_template()` 时，通常会提供模板的名字和需要传递给模板的的任意数量的任何参数作为关键字参数，参数的名字是我们在 Python 中定义好的，这样模板中才能使用。例如下面例子中的参数 name 是我们自己取的，模板中就用 name 去取它
 
 ```python
 from flask import Flask, render_template
@@ -176,15 +174,26 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     user_name = "Visitor"
-    return render_template('index.html', name=user_name)
+    list_items = list()
+    return render_template('index.html', name=user_name, list_items=list_items)
 
 if __name__ == '__main__':
     app.run(debug=True)
 ```
 
-在上述例子中，`'index.html'` 是存放在 Flask 应用的 `templates/` 目录下的模板文件。`render_template` 会渲染此模板，并使用 `user_name` 变量的值替换模板中相应的占位符。最终返回的是经过渲染的 HTML 页面，其内容是基于 `index.html` 模板并插入了 "Visitor" 作为用户名的结果
+```jinja2
+<!-- 使用 name 变量 -->
+<title>Hello {{ name }}</title>
 
+<!-- 遍历 list_items 变量 -->
+<ul>
+    {% for item in list_items %}
+        <li>{{ item }}</li>
+    {% endfor %}
+</ul>
+```
 
+在上述例子中，`'index.html'` 是存放在 Flask 应用的 `templates/` 目录下的模板文件。`render_template()` 会渲染此模板，并使用 `user_name` 变量的值替换模板中相应的占位符。最终返回的是经过渲染的 HTML 页面，其内容是基于 `index.html` 模板并插入了 "Visitor" 作为用户名的结果
 
 ## *Flask Cli*
 

@@ -21,7 +21,7 @@ $$
 
 ### 引入非线形 Non-linearlity 应对线形不可分
 
-$y|\boldsymbol{x}\sim Ber\left(\sigma(\boldsymbol{w}^T\boldsymbol{x})\right)$ 只能应对线形可分的数据，对于类似XOR这种线形不可分的数据集需要进入非线形来解决
+$y|\boldsymbol{x}\sim Ber\left(\sigma(\boldsymbol{w}^T\boldsymbol{x})\right)$ 只能应对线形可分的数据，对于类似 XOR 这种线形不可分的数据集需要进入非线形来解决
 $$
 f(\boldsymbol{x},\boldsymbol{w})=\sigma\left(w_0+\sum\limits_{j=1}^{M-1}{w_j\phi_j(\boldsymbol{x})}\right)=\sigma\left(\boldsymbol{w}^T\phi(\boldsymbol{x})\right)\label{logisticRegression}
 $$
@@ -92,7 +92,7 @@ $$
 
 Universal approximation theorem 通用近似定理：有一个输入层、一个通过激活函数输出的输出层和一个隐层的两层MLP，若隐层节点数足够大，那么该MLP可以模仿任意的函数，这种NN被称为 Wide-Hidden-Layer
 
-理论上2层感知机就足够构建计算机
+理论上 2 层感知机就足够构建计算机
 
 但实际中往往会增加神经网络的深度，而不是单层的宽度，主要有以下两方面的原因
 
