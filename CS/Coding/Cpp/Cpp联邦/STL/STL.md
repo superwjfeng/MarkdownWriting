@@ -823,7 +823,7 @@ STL常用算法 `<algorithm><functional><numeric>` - 本羊已老矣的文章 - 
 
 https://blog.csdn.net/River_Lethe/article/details/78618788
 
-Strict Weak Ordering 严格弱序关系是在STL容器比较器用于定义元素之间顺序关系的一种特定形式的弱序关系。严格弱序关系具有以下特征：
+Strict Weak Ordering 严格弱序关系是在 STL 容器比较器用于定义元素之间顺序关系的一种特定形式的弱序关系。严格弱序关系具有以下特征：
 
 1. **传递性 Transitivity**：如果 A 在 B 之前，B 在 C 之前，那么 A 必须在 C 之前
 2. **对称性 Symmetry**：如果元素 A 可以与元素 B 进行比较，那么元素 B 也可以与元素 A 进行比较，并且它们之间的结果应该相反。也就说**两个元素不能同时严格弱序于对方**
@@ -834,9 +834,9 @@ Strict Weak Ordering 严格弱序关系是在STL容器比较器用于定义元�
 为什么要使用严格弱序，而不是弱序？主要是因为弱序 `<=` 无法判断两个元素是否相等
 
 ```
-a < b # a 小于 b
-a > b # a 大于 b
-!(a < b) && !(b < a) # a == b
+a < b // a 小于 b
+a > b // a 大于 b
+!(a < b) && !(b < a) // a == b
 ```
 
 如果我们用 `<=` 的话，此时 `!(a <= b) && !(b <= a) == false` 左右都会返回 true，最后返回的就永远都是 false，也就是说没办法判断两个元素相等了 
@@ -852,14 +852,16 @@ a > b # a 大于 b
 
   * sort 要使用随机迭代器，也就是 vector、array、deque 那种支持 ***O(1)*** 随机访问的迭代器
 
-  * sort 的底层是不稳定快排（事件复杂度 ***O(NlogN)***），也就是说若有相同的元素，sort 不保证不改变它们原来的顺序，若要保证稳定性需要用 `stable_sort`
+  * sort 的底层是不稳定快排（事件复杂度 ***O(NlogN)***），也就是说若有相同的元素，sort 不保证不改变它们原来的顺序，若要保证稳定性需要用 `stable_sort()`
 
   * sort 在排序时需要交换容器中元素的存储位置。此时若容器中存储的是自定义的类对象，则该类的内部必须提供移动构造函数和移动赋值运算符
 
   * 关于 Compare 这个可调用对象，下面是 `std::less` 和 `std::greater` 两个最常用的仿函数
 
-    如果 Compare 返回的是 true，那么第一个参数应该放在第二个参数之前，所以 `std::greater` 是排降序
+    如果写的是一个 struct / class 类型，要加括号后才是一个可调用对象。如果是 lambda，那它本来就是一个可调用对象了，直接给名字就可以
 
+    如果 Compare 返回的是 true，那么第一个参数应该放在第二个参数之前，所以 `std::greater` 是排降序
+    
     ```c++
     template <class T> struct less : binary_function <T, T, bool> {
       bool operator() (const T& x, const T& y) const { return x < y; }
@@ -869,7 +871,7 @@ a > b # a 大于 b
       bool operator() (const T& x, const T& y) const { return x > y; }
     };
     ```
-
+    
     Compare 可调用对象的要求是
     
     * 参数类型：Compare 应该能够接受两个参数，这两个参数的类型应该与容器中元素的类型或者可以从元素类型隐式转换而来的类型相匹配
@@ -928,7 +930,11 @@ a > b # a 大于 b
 
 `std::sort` 并不是某一种排序算法的实现，它是集百家之长，结合了多种排序算法优点的一种复合算法。具体的来说，这种算法叫做 Introspective Sorting 内省式排序，其思想来自于 [Introspective Sorting and Selection Algorithms | Request PDF](https://www.researchgate.net/publication/2476873_Introspective_Sorting_and_Selection_Algorithms) 这篇论文
 
-`std::sort` 当数据量大时用的就是快排，分段归并排序。一旦分段后的数据量小于某个门槛，为避免QuickSort快排的递归调用带来过大的额外负荷，就改用**Insertion Sort插入排序**。如果递归层次过深，还会改用**HeapSort堆排序**
+我们在 *数据结构算法及其实践.md* 讨论过插入排序和堆排序对快速排序的改良作用
+
+- 在数据量很大时采用正常的快速排序，此时效率为 ***O(NlogN)***
+- 一旦分段后的数据量小于某个阈值，就改用插入排序，因为此时这个分段是基本有序的，这时效率可达 ***O(N)***
+- 在递归过程中，如果递归层次过深，分割行为有恶化倾向时，它能够自动侦测出来，使用堆排序来处理，在此情况下，使其效率维持在堆排序的 ***O(NlogN)***，但这又比一开始使用堆排序好
 
 ### 代码阅读
 
@@ -1959,7 +1965,7 @@ template <class T, class Container = vector<T>,
 
 * 仿函数 Compare 默认为`std::less`，注意⚠️：**此时是大数优先（大根堆），即默认降序**，这和 `std::sort` 用 `std::less` 排升序反过来了。T 要支持 `operator<()std::greateroperator>()`
 
-  注意这里要传入的 Compare 是一个**类型**，自定义的时候可以实现一个类，也可以实现一个 lambda，但是要用 decltype 给出
+  注意这里要和 `sdt::sort` 的第三个函数参数需要一个可调用对象不同，这里传入的是模板参数，即 Compare 是一个**类型**而不是对象，自定义的时候可以实现一个 struct / class，这个时候当然直接给类型名就可以了。也可以实现一个 lambda，但是因为我们无法获取 lambda 的具体类型，所以要用 decltype 推导给出
 
   ```c++
   struct myComparison{
@@ -1971,7 +1977,7 @@ template <class T, class Container = vector<T>,
   
   // or
   
-  auto MyComparison = [](const pair<int, int>& a, const pair<int, int>& b){ return a.second > b.second; };
+  auto MyComparison = [](const pair<int, int>& a, const pair<int, int>& b) { return a.second > b.second; };
   priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(MyComparison)> pq;
   ```
 
