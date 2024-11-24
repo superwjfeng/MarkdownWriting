@@ -1466,12 +1466,15 @@ class optional {
 
 * 在元模板编程中的作用
 
-
 ## *结构化绑定（17）*
+
+[C++一分钟之-C++17特性：结构化绑定-阿里云开发者社区](https://developer.aliyun.com/article/1548323?spm=a2c6h.12873639.article_relatearticle.d_article_relatearticle_5.113c464cy0DfUR&scm=20140722.ID_community@@article@@1548323._.ID_community@@article@@1548323-OR_rec-V_1-RL_community@@article@@721543)
+
+结构化绑定 structured binding 允许开发者从一个聚合类型（如元组、结构体或数组）中一次性解包并初始化多个变量。这简化了数据的获取和使用方法，并使代码更加简洁易读
 
 ### 多个返回值的场景
 
-结构化绑定 structured binding
+
 
 ### 结构化绑定的类型
 

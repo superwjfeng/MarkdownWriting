@@ -735,7 +735,7 @@ $$
 
 正定性定义：
 
->一个 $n\times n$ 的**实对称矩阵** $\boldsymbol{M}$ 是正定的，当且仅当所有的非零实洗漱向量 $\boldsymbol{z}$，都有 $\boldsymbol{z}^T\boldsymbol{M}\boldsymbol{z}>0$
+>一个 $n\times n$ 的**实对称矩阵** $\boldsymbol{M}$ 是正定的，当且仅当所有的非零实数向量 $\boldsymbol{z}$，都有 $\boldsymbol{z}^T\boldsymbol{M}\boldsymbol{z}>0$
 
 对称矩阵就是正规矩阵在实数域的子集。因此可以看到，正定矩阵从定义上就是一类特殊的**对称矩阵**，没有对称，“正定”便无从谈起
 

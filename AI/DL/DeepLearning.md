@@ -4,6 +4,8 @@
 
 ## *多层感知机*
 
+多层感知机 Multilayer Perceptron, MLP 的另一个名字叫做深度前馈神经网络 Deep Feedforward Neural Network。**前馈一词指的是数据在网络中的流向**：数据从输入层开始，通过一个或多个隐藏层进行处理，最后到达输出层得到结果。在这个过程中，信息只在一个方向上流动，即从输入到输出。与之相对的是[循环神经网络 RNN](#RNN & Attention)，其中的信息可以在网络内部形成闭环
+
 ### Logistic Regression 回顾
 
 关于感知机的部分可以回顾 *统计机器学习.md* - 线形分类的硬分类部分
@@ -57,7 +59,7 @@ $$
 
 单层感知机指的是**激活函数使用了阶跃函数的单层网络**；而多层神经网络指的激活函数使用了sigmoid等平滑的激活函数的多层网络
 
-## *神经网络*
+## *激活函数引入非线性*
 
 ### Deepen the NN
 
@@ -71,23 +73,6 @@ $$
 
 上面的结构称全连接神经网络 Fully-connected (feed-forward) Neural Network
 
-### 常用的激活函数
-
-激活函数 Activation Function 决定了如何来激活输入信号的总和
-
-**激活函数必须要是是用非线形函数**，否则线形函数的叠加仍然是线形的，那么加深神经网络的层数就失去了意义
-
-* Sigmoid $\frac{1}{1+\exp{(-x)}}$
-* Tanh $\tanh{x}$
-* ReLU $\max{(0,x)}$
-* Leaky ReLU $\max{(0.1x,x)}$
-* PReLU $\max{(\alpha x,x)}$，$\alpha$ 是通过学习得到的
-* ELU $\left\{\begin{array}{cc}x,&x\geq0\\\alpha(\exp{(x)}-1),&x<0\end{array}\right.$
-* Swish $x\cdot\sigma(x)$
-* Maxout $\max{\left(w_1^Tx+b_1,w_2^Tx+b_2\right)}$：Maxout是通过分段线性函数来拟合所有可能的凸函数来作为激活函数的，但是由于线性函数是可学习，所以实际上是可以学出来的激活函数。具体操作是对所有线性取最大，也就是把若干直线的交点作为分段的边界，然后每一段取最大
-
-激活函数的具体前向传播和反向传播实现以及它们的优缺点可以看[激活函数层实现](#ActivationFunc)
-
 ### Universal approximation theorem
 
 Universal approximation theorem 通用近似定理：有一个输入层、一个通过激活函数输出的输出层和一个隐层的两层MLP，若隐层节点数足够大，那么该MLP可以模仿任意的函数，这种NN被称为 Wide-Hidden-Layer
@@ -96,8 +81,88 @@ Universal approximation theorem 通用近似定理：有一个输入层、一个
 
 但实际中往往会增加神经网络的深度，而不是单层的宽度，主要有以下两方面的原因
 
-* 理论方面：若 Hidden Layer 少，则当模拟复杂函数时单层的节点数要很多；增加层数可以显著减少节点数和参数量
+* 理论方面：若 Hidden Layer 少，则当模拟复杂函数时单层的节点数要很多；增加层数可以显著减少节点数和参数量  
 * Practical reason: Deeper networks (with some additional tricks) often train faster and generalize better
+
+### 经典的激活函数的缺点
+
+激活函数 activation function 决定了如何来激活输入信号的总和
+
+**激活函数必须要是是用非线形函数**，否则线形函数的叠加仍然是线形的，那么加深神经网络的层数就失去了意义
+
+这些经典的激活函数有一些缺点
+
+* Sigmoid
+
+  <img src="Sigmoid.png">
+  $$
+  \frac{1}{1+\exp{(-x)}}
+  $$
+
+  * 梯度消失 vanishing gradient：当输入的绝对值较大时，Sigmoid 函数的梯度接近于 0，这会导致在反向传播过程中梯度几乎不更新，使得网络难以学习
+  * 非零中心化输出 non-zero centered：Sigmoid 函数的输出均为正值（`(0, 1)` 区间），即它的均值为 0.5，这会导致后一层的神经元的输入是非零中心化的，所有的神经元在反向传播过程中计算得到的梯度将会只有正方向或只有负方向，这会导致权重更新时发生 Z 字形震荡，从而影响优化过程中的效率
+  * 计算成本较高：指数运算相比于其他操作更加耗时
+
+* Tanh $\tanh{x}$
+
+  <img src="tanh.png" width="30%">
+
+  * 梯度消失：与 Sigmoid 函数类似，Tanh 函数在输入的绝对值较大时也会出现梯度消失的问题
+  * 尽管 Tanh 函数是零中心化的，它解决了 Sigmoid 函数非零中心化输出的问题，但在某些情况下依然难以避免梯度消失问题
+
+* ReLU $\max{(0,x)}$
+
+  * 死亡ReLU dying ReLU：当输入小于 0 时，ReLU 函数的梯度为 0。如果一个神经元的权重在训练过程中被调整为只接收到负值，那么这个神经元将永远不会被激活
+  * 非零中心化输出：ReLU的输出要么是0，要么是正值，这也造成了输出的非零中心化
+
+
+激活函数的具体前向传播和反向传播实现以及它们的优缺点可以看[激活函数层实现](#激活函数层的实现)
+
+### 一个好的激活函数应该具有的性质
+
+* 非线性 nonlinearity：由于深度学习模型的表达能力依赖于非线性，一个好的激活函数应当引入非线性因素，这样多层网络才能够映射复杂的函数并解决非线性问题
+* 可微性 differentiable：激活函数需要在大部分区域内可微，以便能使用基于梯度的优化算法来训练神经网络
+* 单调性 monotonic：当激活函数是单调的，随着输入的增加其输出也单调增加（或单调减少），可以帮助梯度下降算法更稳定地收敛
+* 近似恒等初始化（Approximate Identity for Small Values）：对于接近零的小输入值，激活函数如果能有接近线性的行为，可以帮助训练过程早期更快地开始收敛
+* 计算效率 computational efficiency：在实践中，激活函数需要足够高效，以便可以快速计算并减少训练和推理的时间
+* 饱和区限制 limited saturation：如果激活函数在其域的大部分区域内都处于饱和状态（即导数接近 0），这可能导致梯度消失问题。因此，限制饱和区域有助于缓解这个问题
+* 输出范围 output range：有界的激活函数（如 Sigmoid 和 Tanh）可以归一化输出，但也可能导致梯度消失。无界的激活函数（如 ReLU）不会有饱和问题，但可能会导致梯度爆炸。选择哪种类型通常取决于特定的应用和网络架构
+* 参数自适应 parameterization：一些激活函数包含可训练的参数，这可以通过学习来适应数据的特定性质
+* 斜坡连续 slope continuity：至少在某些区域内，连续或平滑变化的梯度可以提供稳定的优化路径
+
+### 改进的激活函数
+
+鉴于上面说的经典激活函数的缺点，实际中做出了如下改进
+
+* Leaky ReLU $\max{(0.1x,x)}$：修改了 ReLU 的定义，允许小的梯度当输入为负值时流过，避免了死亡ReLU问题
+
+* Parametric ReLU, PReLU $\max{(\alpha x,x)}$：类似于 Leaky ReLU，但是参数 $\alpha$ 是通过学习得到的
+
+* Exponential Linear Unit, ELU
+
+  <img src="ELU.png">
+  $$
+  \left\{\begin{array}{cc}x,&x\geq0\\\alpha(\exp{(x)}-1),&x<0\end{array}\right.
+  $$
+
+* Scaled ELU, SELU：Scaled 就是给 ELU 都乘上一个 $\lambda$
+
+  <img src="SELU.png">
+  $$
+  \left\{\begin{array}{cc}\lambda x,&x\geq0\\\lambda\alpha(\exp{(x)}-1),&x<0\end{array}\right.
+  $$
+
+* Swish $x\cdot\sigma(\beta x)$：其中 $\sigma$ 是 Sigmoid 函数，而 $\beta$ 是一个可学习的参数或固定值。Swish 函数旨在结合 Sigmoid 和 ReLU 函数的优点
+
+  <img src="swish.png" width="50%">
+
+* Maxout
+  $$
+  \max{\left(w_1^Tx+b_1,w_2^Tx+b_2\right)}
+  $$
+  本质上 Maxout 可以看做 ReLU 的泛化版本，因为如果一套 w,b 全都是 0 的话，那么就是普通的 ReLU。Maxout 可以克服 ReLU 的缺点，但是参数数目翻倍
+
+  Maxout是通过分段线性函数来拟合所有可能的凸函数来作为激活函数的，但是由于线性函数是可学习，所以实际上是可以学出来的激活函数。具体操作是对所有线性取最大，也就是把若干直线的交点作为分段的边界，然后每一段取最大
 
 ### 样例：一个三层网络
 
@@ -776,9 +841,27 @@ $$
 * 一个向量对一个向量的微分关系是一个矩阵。可以把一个向量拆分为两个维度的标量，一个标量关于一个向量是一个向量，那么两个维度就是一个矩阵了
 * 或者也可以用Kronecker积张量扩展的角度来看待
 
-## <span id="ActivationFunc">*激活函数层的实现*</span>
+## *梯度消失 & 梯度爆炸*
 
-### Sigmoid层
+### 梯度消失
+
+梯度消失 vanishing gradient：当神经网络层数较多时，进行反向传播会连乘多个小于 1 的梯度，从而在到达输入层时梯度越来越小。如果这些梯度非常小，以至于接近于零，那么输入层附近的权重将几乎不会更新。因此模型难以进行学习（学习到与输入数据直接相关的特征）
+
+<img src="梯度消失.png" width="50%">
+
+### 梯度爆炸
+
+梯度爆炸与梯度消失恰恰相反，是指在网络反向传播过程中，梯度随着层数增加而迅速增大。当连乘多个大于 1 的梯度时，梯度可能变得非常大，在极端情况下，会导致溢出，出现 NaN 值。以至于造成数值溢出或者使得权重更新过于激进，导致网络无法收敛
+
+梯度爆炸通常在循环神经网络（RNNs）中更为常见，特别是当处理长序列数据时，因为梯度必须通过时间回溯到很远的过去
+
+### 梯度弥散
+
+梯度弥散 gradient diffusion 是一个更一般化的术语，描述了梯度信息在传递过程中由于种种原因被削弱或失真的现象。梯度消失和梯度爆炸可以看作是梯度弥散的两种特殊情形。梯度弥散可能会导致训练缓慢或完全停滞，因为它影响了参数的有效更新
+
+## *激活函数层的实现*
+
+###  Sigmoid层
 
 <img src="Sigmoid计算图.png">
 
@@ -1044,19 +1127,30 @@ $$
 
 ## *Initialization*
 
-### 全0初始化/常值初始化
+### 全 0 初始化/常值初始化
 
 对于两个神经元，若它的输入和权值完全相同，那么它的输出也必然相同，此时也就失去了学习的可能性
 
-前向传播的结果是一样的，反向梯度传递结果也是一样的。此时相当于是产生了对称失效 Symmetry breaking，即所有的神经元退化成了一个神经元，也就没有了学习的功能
+前向传播的结果是一样的，反向梯度传递结果也是一样的。这会导致神经网络失去对称性破坏 symmetry breaking 的能力，此时相当于是产生了对称失效 symmet，即所有的神经元退化成了一个神经元，也就没有了学习的功能
 
-逻辑回归可以全零初始化的原因是它没有隐藏层，也不需要利用反向传播，直接普通的SGD就可以了
+具体地来说：当我们使用相同的常数值（比如 0 或其他任何常数）来初始化神经网络中所有权重时，我们实际上是在每一层创建了一组完全相同的神经元。这意味着，对于给定层中的任意两个神经元，它们具有完全相同的初始权重和偏置
+
+现在，如果把一个输入向量传递给这样一层，由于每个神经元的权重和偏置都是相同的，它们也会对相同的输入产生相同的输出。换句话说，无论输入数据如何，所有神经元的输出都将是一样的，因为它们执行的是相同的计算
+
+逻辑回归可以全零初始化的原因是它没有隐藏层，也不需要利用反向传播，直接普通的 SGD 就可以了
+
+### 随机初始化
+
+权重初始化为小的随机数的问题在于
+
+* 如果权重太大，可能导致激活函数进入饱和区，从而引起梯度消失或爆炸问题
+* 如果权重太小，信号可能在每层间传递时逐渐消失
 
 ### 正态随机初始化
 
-向一个5层神经网络传入随机生成的输入数据，每层的神经元都是100个，激活函数使用sigmoid
+向一个 5 层神经网络传入随机生成的输入数据，每层的神经元都是 100 个，激活函数使用 sigmoid
 
-<img src="Sigmoid.png">
+下面的实验会说明正态随机初始化的效果受到正态方差和使用的激活函数的影响很大，会导致展现出明显的梯度喜好，从而导致学习能力受损
 
 ```python
 input_data = np.random.randn(1000, 100)  # 1000个数据
@@ -1085,99 +1179,101 @@ for i, a in activations.items():
 plt.show()
 ```
 
-* 当权值为0均值1方差的正态分布时
+* 当权值为 0 均值 1 方差的正态分布时
 
   <img src="ex1.png">
 
   * 注意：实现仅进行了一次权值初始化和前向传播，就已经出现了这种明显的偏好，那么在多次的迭代后必然是不可能进行正常地学习的
-  * 因为使用的是sigmoid函数，权值很容易向0或1移动，此时的梯度都会趋向于0，这个问题称为梯度消失 Gradient vanishing。当使用饱和激活函数，如sigmoid的时候，越深层的神经网络越有可能会出现这个问题，以下是对梯度消失的可能解决方法
+  * 因为使用的是 sigmoid 函数，权值很容易向 0 或 1 移动，此时的梯度都会趋向于 0，即出现梯度消失。当使用饱和激活函数，如 sigmoid 的时候，越深层的神经网络越有可能会出现这个问题，以下是对梯度消失的可能解决方法
     * 改网络结构，e.g. 使用 Batch Normalization，效果见下
     
-    * 换激活函数，如tanh，效果见下
+    * 换激活函数，如 tanh，效果见下
     
     * Gradient Clipping 梯度裁剪
     
 
-* 当权值为0均值0.01方差的正态分布时
+* 当权值为 0 均值 0.01 方差的正态分布时
 
   <img src="ex2.png">
 
-  * 直观上想，权值本身的分布就局限在0附近，根据sigmoid的图像有，激活值必然会全部偏向在0.5附近
-  * 各层的激活值的分布都要求有适当的广度，这是因为通过在各层间传递多样性的数据，神经网络可以进行高效的学习
+  * 直观上想，权值本身的分布就局限在 0 附近，根据 sigmoid 的图像有，激活值必然会全部偏向在0.5附近
+  * **各层的激活值的分布都要求有适当的广度**，这是因为通过在各层间传递多样性的数据，神经网络可以进行高效的学习
   * 若一开始就传递的是有所偏好的权值设置，那么就会出现梯度消失或者表现力首先的问题，导致神经网络无法正常学习
 
 ### Xavier Glorot Initialization
 
-Goal：核心思想是使层的输出数据的方差与其输入数据的方差相等。下面 $n$ 是输入的神经元数
+Goal：**核心思想是使层的输出数据的方差与其输入数据的方差相等**。下面 $n$ 是输入的神经元数
 $$
 Var(\boldsymbol{s})=Var\left(\sum\limits_{i}^{n}{w_ix_i}\right)=\sum\limits_{i}^{n}{Var\left(w_ix_i\right)}\\\sum\limits_{i}^{n}{\left[\underbrace{E\left(w_i^2\right)}_{0}Var(x_i)+Var(w_i)\underbrace{E\left(x_i^2\right)}_{0}+Var(x_i)Var(w_i)\right]}\\=\sum\limits_{i}^{n}{Var(x_i)Var(w_i)}=n\left[Var(x_i)Var(w_i)\right]=Var(\boldsymbol{x})\Rightarrow n\cdot Var(\boldsymbol{w})=1\Rightarrow Var(\boldsymbol{w})=\frac{1}{n}
 $$
 规律：为了使各层的激活值呈现出具有相同广度的分布，推导的结论是若前一层的节点数为 $n$，则初始化值使用标准差为 $1/\sqrt{n}$ 的正态分布进行权值初始化
 
-使用Xavier初始化值后，前一层的节点越多，要设定为目标节点的初始值的权重尺度就越小
+使用 Xavier 初始化值后，前一层的节点越多，要设定为目标节点的初始值的权重尺度就越小
 
 <img src="Xavier_ex.png">
 
-可以看到激活函数呈现了比之前更有广度的分布，所以sigmoid函数的表现力不受限，有望进行更高效的学习
+可以看到激活函数呈现了比之前更有广度的分布，所以 sigmoid 函数的表现力不受限，有望进行更高效的学习
 
-针对后几层的分布广度仍然不够高的情况，我们可以考虑使用tanh作为激活函数，用做激活函数的函数最好具有关于原点对称的性质
+针对后几层的分布广度仍然不够高的情况，我们可以考虑使用 tanh 作为激活函数，用做激活函数的函数最好具有关于原点对称的性质
 
 <img src="tanh.png" width="30%">
 
-当使用了tanh的结果如下，可以发现激活值的广度很好，后几层的激活值集中在tanh的中心附近
+当使用了 tanh 的结果如下，可以发现激活值的广度很好，后几层的激活值集中在 tanh 的中心附近
 
 <img src="tanh_ex.png">
 
-### ReLU的权值初始化：何初始化
+### ReLU 的权值初始化：何初始化
 
-Xavier初始值是以激活函数是线形函数为前提而提出的，因为sigmoid和tanh函数左右对称，且中央附近可以被视作为线形函数，所以使用使用Xavier
+Xavier 初始值是以激活函数是线形函数为前提而提出的，因为 sigmoid 和 tanh 函数左右对称，且中央附近可以被视作为线形函数，所以使用 Xavier
 
-担当激活函数使用ReLU时，一般推荐使用何初始化：若前一层的节点数为 $n$，则初始化值使用标准差为 $\sqrt{2/n}$ 的正态分布进行权值初始化
+担当激活函数使用 ReLU 或 ReLU 变体的时候，一般推荐使用何初始化：若前一层的节点数为 $n$，则初始化值使用标准差为 $\sqrt{2/n}$ 的正态分布进行权值初始化
 
 ## *Batch Normalization*
 
-### BN层引入
+### BN 层引入
 
-初始化策略告诉我们，当初始化权重满足一定的mean和variance的时候，能够使激活值有一定广度，从而有效促进顺利的梯度回传、改善学习效果，因此我们可以考虑强制性地去调整激活值，使其服从一定的分布，这种思想就是在 *Sergey Ioffe and Christian Szegedy, "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift", ICML 2015* 被提出的 Batch Normalization 思想。它主要有三个好处
+初始化策略告诉我们，当初始化权重满足一定的 mean 和 variance 的时候（即 0 均值 1 方差的数据白化 data whitening 状态），能够使激活值有一定广度，从而有效促进顺利的梯度回传、改善学习效果，因此我们可以考虑**强制性地去调整激活值，使其服从一定的分布**，这种思想就是在 *Sergey Ioffe and Christian Szegedy, "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift", ICML 2015* 被提出的 Batch Normalization 批（量）归一化思想。它主要有三个好处
 
 * 可以使学习快速进行
-* 不那么依赖初始值
-* 抑制过拟合，从而降低dropout等的必要性
+* 不那么依赖权重初始值，即提高初始化权重不敏感性
+* 抑制过拟合，从而降低 dropout 等的必要性
 
 <img src="BatchNormalization.png" width="65%">
 
-因为要调整的是激活值，所以**BN层一般处于affine和激活函数之间**，但是也有研究表明放在激活函数层后面也有效果，但一般都是放在前面
+因为要调整的是激活值，所以 **BN 层一般处于 affine 和激活函数之间**，但是也有研究表明放在激活函数层后面也有效果，但一般都是放在前面
 
-### BN的过程
+### BN 的过程
 
-* 以一个mini-Batch $\boldsymbol{x}_{N\times D}$ 为单位，对其正规化
+* 以一个 mini-Batch $\boldsymbol{x}_{N\times D}$ 为单位，对其正规化
   $$
   \mu_j=\frac{1}{N}\sum\limits_{i=1}^{N}{x_{i.j}},\ \sigma_j^2=\frac{1}{N}\sum\limits_{i=1}^{N}{\left(x_{i.j}-\mu_j\right)^2}\\\hat{x}_{i,j}=\frac{x_{i,j}-\mu_j}{\sqrt{\sigma_j^2+\varepsilon}}
   $$
 
-* 强制使激活值服从0均值1方差可能会使某些layer的表现力受损（实际上若所有的参数都服从0均值1方差的正态分布是学不到东西的），因此对标准化后的数据进行缩放和平移变换来提高其灵活度。相当于让模型自己去学习是否需要标准化，以及多大程度。**其中 $\gamma,\beta$ 是需要学习的参数**
+* 强制使激活值服从 0 均值 1 方差可能会使某些 layer 的表现力受损（实际上若所有的参数都服从 0 均值 1 方差的正态分布是学不到东西的），因此对标准化后的数据进行缩放和平移变换来提高其灵活度。相当于让模型自己去学习是否需要标准化，以及多大程度。**其中 $\gamma,\beta$ 是需要学习的参数**
   $$
   y_{i,j}=\gamma_j\hat{x}_{i,j}+\beta_j
   $$
+  
+* 
 
-需要区分BN在train和test时的区别。BN/Batch Norm中的滑动平均/移动平均/Moving Average https://zhuanlan.zhihu.com/p/507782626
+需要区分 BN 在 train 和 test 时的区别。BN/Batch Norm 中的滑动平均/移动平均/Moving Average https://zhuanlan.zhihu.com/p/507782626
 
-* train：计算每一个mini-Batch的均值和方差
+* train：计算每一个 mini-Batch 的均值和方差
 
-* test：将train过程中每一个mini-Batch的均值和方差通过滑动平均值法保存下来（相当于利用了所有 train samples 的信息），然后对所有train datab标准化。所以最后一旦整个训练阶段完成，BN层中的所有参数也就固定下来，然后直接用于test。下式中 $\beta_m$ 为超参数 momentum
+* test：将 train 过程中每一个 mini-Batch 的均值和方差通过滑动平均值法保存下来（相当于利用了所有 train samples 的信息），然后对所有 train data 标准化。所以最后一旦整个训练阶段完成，BN 层中的所有参数也就固定下来，然后直接用于 test。下式中 $\beta_m$ 为超参数 momentum
   $$
   Var_{running}=\beta_m\cdot Var_{running}+(1-\beta_m)\cdot Var_{running}\\\mu_{running}=\beta_m\cdot\mu_{running}+(1-\beta_m)\cdot\mu_{running}
   $$
 
   > Testing: Compute mean and variance by running an exponentially weighted averaged across **mini-bathces**. -- i2dl
 
-### BN在FC和CNN中的区别
+### FC、CNN 和 RNN 中的不同 BN
 
-* 对FC做BN，BN是处于FC和激活函数之间，以图片为例，它是将图片fallten之后对所有channels整体做BN。假设输入为 $\boldsymbol{X}_{N\times D}\boldsymbol{W}_{D\times M}$，那么BN的参数是 $2\cdot M$，即每一个output neuron都有两个BN的参数，它是对每一个batch进行计算得到的
-* 对CNN做BN，比如PyTorch中的 `BatchNorm2d`，对每一个channel都要做BN
-  * BN层的参数有多少？每一个channel都有2个参数，即缩放因子 $\gamma,\beta$，因此 $\#parameters=2\cdot\#channels$ 
-  * CNN的BN也被称为 spatial batchnormalization
-* Layer Normalization 用于RNN
+* 对 FC 做 BN，BN 是处于 FC 和激活函数之间，以上面的图片为例，它是将输入数据矩阵 fallten 之后对所有 channels 整体做 BN。假设输入为 $\boldsymbol{X}_{N\times D}\boldsymbol{W}_{D\times M}$，那么 BN 的参数是 $2\cdot M$，即每一个 output neuron 都有两个 BN 的参数，它是对每一个 batch 进行计算得到的
+* 对 CNN 做 BN，比如 PyTorch 中的 `BatchNorm2d`，由于卷积操作具有保持空间信息的特性，所以要对每一个 channel 都要做 BN
+  * BN 层的参数有多少？每一个 channel 都有 2 个参数，即缩放因子 $\gamma,\beta$，因此 $\#parameters=2\cdot\#channels$ 
+  * CNN 的 BN 也被称为 spatial BN，因为 BN 在 CNN 中是对每个通道独立执行的，并且会保留空间上的均值和方差一致性
+* [Layer Normalization](#Layer Normalizaiotn) 用于 RNN
 
 ### 前向传播
 
@@ -1288,17 +1384,17 @@ def batchnorm_backward(dout, cache):
 
 ### 权值衰减 weight decay 和L2正则化的区别
 
-L2正则=Weight Decay？并不是这样 - yymWater的文章 - 知乎 https://zhuanlan.zhihu.com/p/40814046
+L2 正则=Weight Decay？并不是这样 - yymWater的文章 - 知乎 https://zhuanlan.zhihu.com/p/40814046
 
-权值衰减和L2正则化是不同的，虽然目的都是对大权重项进行惩罚来减轻过拟合，但权值衰减使用与optimizer更新权重的时候的，L2正则化则直接是添加到L2 loss中的
+权值衰减和 L2 正则化是不同的，虽然目的都是对大权重项进行惩罚来减轻过拟合，但权值衰减是用于 optimizer 更新权重的时候的，L2 正则化则直接是添加到 L2 loss 中的
 
-对于SGD with momentum这类固定动量的优化方法，weight decay和L2正则化是等价的，假设有w.r.t $W$ 的优化目标函数 $J$，证明如下
+对于 SGD with momentum 这类固定动量的优化方法，weight decay 和 L2 正则化是等价的，假设有w.r.t $W$ 的优化目标函数 $J$，证明如下
 $$
 Object\ Func:\ J+\frac{1}{2}\lambda\sum\limits_i{w_i^2}\\Update\ parameters:\ \boldsymbol{W}\leftarrow\boldsymbol{W}-\eta\nabla_{\boldsymbol{w}}\left(J+\frac{1}{2}\lambda\sum\limits_i{w_i^2}\right)\\\leftarrow\boldsymbol{W}-\eta\nabla_{\boldsymbol{w}}J-\eta\lambda\boldsymbol{W}=\left(1-\eta\lambda\right)\boldsymbol{W}-\eta\nabla_{\boldsymbol{w}}J
 $$
 上式中的 $\eta$ 为学习率，$\lambda$ 是正则强度，正则项前面的系数 $\frac{1}{2}$ 是人为给定的，为了求导后的系数为1
 
-但是对于Rmpspro或Adam这类自适应的优化方法，二者就不等价了
+但是对于 RMSProp 或 Adam 这类自适应的优化方法，二者就不等价了
 
 ## *Dropout 随机失活*
 
@@ -1384,32 +1480,67 @@ https://zhuanlan.zhihu.com/p/65974369
 
 <img src="early_stopping.png">
 
-# CNN & DL
+# CNN
 
-## *卷积层*
+## *Intro*
 
 ### FC/Affine 存在的问题
 
-* FC是把数据flatten之后进行操作，无法提取到图像的空间特征信息
-* 图像的尺寸一般都很大，FC操作 computational expensive
+* FC 是把数据 flatten 之后进行操作，**无法提取到图像、语音等的空间特征信息**
+* 图像的尺寸一般都很大，FC 操作 computational expensive
 * 优化变得很困难
 
-### 卷积操作
+### 卷积的基本概念
 
-将卷积层的输入输出称为特征图 Feature map
+卷积操作笔者在 DSP 中有学过，卷积定义为两个连续/离散函数 f 和 g 的积分/求和运算，从而用来模拟一个系统对输入信号的响应，或者用来平滑、去噪等
+$$
+\text{Continuous: }(f * g)(t) = \int_{-\infty}^{\infty} f(\tau) g(t - \tau) d\tau\\\text{Discrete: }(f * g)[n] = \sum_{m=-\infty}^{\infty} f[m] g[n - m]
+$$
+但是和 DSP 中的卷积操作不同，DL 中的卷积操作不需要将卷积核翻转，CNN 中实际上计算的是数学上的互相关，对于 DL 来说，这种差异通常不重要，因为卷积核的权重是学习得到的，不管是翻转还是不翻转，网络可以通过学习调整权重来捕获特征
 
-和DSP中的卷积操作不同，DL中的卷积操作不需要将卷积核翻转，实际上计算的是相关
+在深度学习中，特别是在卷积神经网络 Convolutional Neural Network, CNN 里，卷积操作通常被用于图像数据。这里的卷积是离散卷积，即用**卷积核中的权重和输入的特征图做内积（逐个元素相乘再求和）**
+
+<img src="卷积示例.gif">
+
+上图是一个二维卷积，它的卷积大小为 3、步幅为 1
+
+一些具体的概念如下：
+
+* **卷积核 Filter or Kernel**：在处理图像时，我们使用小的、权重固定的网格作为卷积核，这个网格通常是一个2D矩阵，并与图像的一个小区域进行数值上的运算
+* **滑动窗口 Sliding Window**：卷积核会在整个输入图像上滑动。每次滑动都对应一个局部区域，卷积核将与该局部区域内的像素值进行逐元素相乘后求和的操作
+* **特征图 Feature Map**：将卷积层的输入输出称为特征图。卷积操作的结果是生成了一个新的 2D 矩阵，这个矩阵通常称为特征图或激活图。特征图展示了输入图像中某些特定特征的空间分布
+
+通过卷积操作，网络能够学习到图像中的低级特征（如边缘、角点、纹理等），随着网络层数的加深，能够进一步组合这些低级特征去捕捉更高级的抽象特征（如物体的各个部分）。不同的卷积核能够捕捉不同的特征，因此在实际应用中，一个层会有多个卷积核，从而在单一层中就能捕捉到多种特征
+
+### CNN 的主要层
+
+* 输入层，对数据去均值，做 data augmentation 等工作
+* 卷积层 CONV，局部关联抽取 feature
+* 激励层，非线性变化（也就是常说的激活函数）
+* 池化层 POOL，下采样
+* 全连接层 FC，增加模型非线性
+* BN层，缓解梯度弥散
+
+## *卷积层*
+
+### 卷积运算
 
 * 卷积核不仅具有高度和宽度，还具有深度，即通道数 channel，即尺寸为 $C\times H\times W$。卷积核的通道数要和输入数组的深度一样
-* 卷积核参数不仅包括核中存储的权值，还包括一个偏置值，filter中的weight和bias是需要学习的
 
-<img src="卷积操作.png" width="45%">
+* 卷积核参数不仅包括核中存储的权值 weight，还包括一个偏置值 bias，filter 中的 weight 和 bias 是需要学习的
 
-* 将卷积核展成一个5x5x3的向量，同时将其覆盖的图像区域按相同的展开方式展成5x5x3的向量
-* 计算两者的点乘
-* 在点乘的结果上加上偏移量
+* 举个例子
+
+  <img src="卷积操作.png" width="45%">
+
+  * 将卷积核展成一个 5x5x3 的向量，同时将其覆盖的图像区域按相同的展开方式展成 5x5x3 的向量
+  * 计算两者的点乘
+  * 在点乘的结果上加上偏移量
+
 
 ### 多卷积核
+
+CNN的**卷积核通道数** = **卷积输入层的通道数**；CNN的卷积输出层通道数 = 卷积核的个数
 
 <img src="多卷积核卷积.png" width="45%">
 
@@ -1421,7 +1552,7 @@ https://zhuanlan.zhihu.com/p/65974369
 
 卷积过程中，有时需要通过**填充 padding**来调整输出的大小，减少信息的损失量，有时也要在卷积时通过设置的**步长 Stride **来压缩一部分信息
 
-* v填充：CNN中最常使用的是零值填充
+* 填充：CNN 中最常使用的是零值填充
   * Valid：不进行任何处理，只使用原始图像，不允许卷积核超出原始图像边界
   * Same：进行填充，允许卷积核超出原始图像边界，并使得卷积后结果的大小与原来的一致
   * Full
@@ -1445,25 +1576,56 @@ W_2=\frac{W_1-F+2P}{S}+1\\H_2=\frac{H_1-F+2P}{S}+1\\C_2=K
 $$
 所设定的超参数值必须使 $\frac{W_1-F+2P}{S}$ 和 $\frac{H_1-F+2P}{S}$ 分别可以除尽。当输出大小无法除尽时，需要差错处理
 
-注意：Channel 和 Depth 不是一个概念，对于 Conv2d而言，只需要指定卷积核的长宽。用一个2D的卷积核去卷积一个channel>1的特征图组，相当于将这个卷积核复制#特征图份，然后将卷积结果叠加起来生成一个特征图（卷积结果），若想要生成多个特征图（即输出channel>1），就需要指定多个2D卷积核，#输出特征图=#卷积核
+注意：Channel 和 Depth 不是一个概念，对于 Conv2d 而言，只需要指定卷积核的长宽。用一个 2D 的卷积核去卷积一个 `#channel>1` 的特征图组，相当于将这个卷积核复制#特征图份，然后将卷积结果叠加起来生成一个特征图（卷积结果），若想要生成多个特征图（即输出 `channel>1`），就需要指定多个2D卷积核，#输出特征图=#卷积核
 
 一个Conv2d层有多少参数？$\#parameters=F\times F\times C_1\times C_2\times+Bias$
 
-### 感受野 Receptive field
+## *感受野 & 空洞卷积*
 
-感受野用来表示网络内部的不同位置的神经元对原图像的感受范围的大小，它的大小只和kernel size有关系
+### 感受野
+
+感受野 receptive field 用来表示网络内部的不同位置的神经元对**原图像**的感受范围的大小，它的大小只和 kernel size有关系
 
 <img src="ReceptiveField.jpg">
 
-一般都是用2个 3\*3 kernel 来代替一个 5\*5 kernle，3个 3\*3 kernel来代替一个 7\*7 kernel
+一般都是用 2 个 3\*3 kernel 来代替一个 5\*5 kernel，3 个 3\*3 kernel 来代替一个 7\*7 kernel
 
-小kernel的优势：多个小kernel串联和一个大kernel的感受野是相同的，多个小kernel可以提取到更细节的feature，非线形更高，这对VGG有着很大的启发
+小 kernel 的优势：多个小 kernel 串联和一个大 kernel 的感受野是相同的，多个 小kernel 可以提取到更细节的 feature，非线形更高，这对 VGG 有着很大的启发
+
+### 空洞卷积
+
+[总结-空洞卷积(Dilated/Atrous Convolution) - 知乎](https://zhuanlan.zhihu.com/p/50369448)
+
+空洞卷积 atrous convolution 又称为扩张卷积 dilated convolution，是一种特殊类型的卷积操作，它在卷积核中引入了空洞（holes，即增加了间隔），用以增大卷积核的感受野。通过这种方式，空洞卷积能够在不增加参数数量和计算量的情况下，捕获更广泛的上下文信息
+
+先介绍一个概念**空洞率 dilation rate**：空洞卷积中，卷积核元素之间的空间距离。传统卷积操作的空洞率为 1，意味着没有间隔
+
+假设我们使用一个 3x3 的卷积核进行空洞卷积，并且设定空洞率为 2。那么在执行卷积操作时，卷积核不再是紧凑地覆盖输入特征图上的 3x3 区域，而是每个方向跳过一个像素（"空洞"），实际上覆盖了 5x5 的区域，但仍然只有 3x3 个权重参数
+
+这里是一个简单的示例：
+
+```
+0 0 1 0 0
+0 0 0 0 0
+1 0 2 0 1    <- 3x3空洞卷积核，空洞率为2
+0 0 0 0 0
+0 0 1 0 0
+```
+
+注意：卷积核的中心位置是 2，周围是 1 和 0，0 表示卷积中的“空洞”。此卷积核在一个 5x5 的区域内应用，但只有 9 个非零参数
+
+空洞卷积主要用于以下领域：
+
+- **语义分割**：在语义分割任务中，需要网络输出与输入图像同样高分辨率的分类结果。空洞卷积可以帮助模型在没有池化层的情况下获得较大的有效感受野
+- 不同的感受野可以获取到多尺度信息，多尺度信息在视觉任务中很重要
+- **时间序列数据处理**：在时间序列或信号处理中，空洞卷积可以帮助模型捕获长范围的上下文依赖
+- **音频生成和处理**：在生成模型，如 WaveNet 中，空洞卷积被用来处理音频数据，以捕获不同时间尺度上的音频信号特征
 
 ## *池化层*
 
-### 池化操作 Pooling
+### 池化操作
 
-池化的作用：对每一个特征响应图独立进行，降低特征响应图组中每个特征响应图的宽度和高度，减少后续卷积层的参数的数量，降低计算资源耗费，进而控制过拟合
+池化 pooling 的作用：对每一个特征响应图独立进行，降低特征响应图组中每个特征响应图的宽度和高度，减少后续卷积层的参数的数量，降低计算资源耗费，进而控制过拟合
 
 池化操作：对特征响应图某个区域进行池化就是在该区域上指定一个值来代表整个区域
 $$
@@ -1484,7 +1646,7 @@ https://zhuanlan.zhihu.com/p/258604402
 
 * 没有要学习的参数
 * 通道数不发生变化
-* 对微小的位置变化鲁棒
+* 有助于引入空间不变性，即能够让网络对输入数据中的小的位移或变形保持鲁棒性
 
 ## *加深网络*
 
@@ -1579,7 +1741,7 @@ $$
 
 ## *DL的高速化*
 
-# DL在视觉方面的应用
+# DL 在视觉方面的应用
 
 分类任务在之前已经介绍过了，分类任务是整图级别的分类问题，即给整张图片打标签
 
@@ -2085,7 +2247,7 @@ GAN优化的是JS散度
 
 # RNN & Attention
 
-## *RNN引入*
+## *RNN 引入*
 
 ### 自然语言处理
 
@@ -2109,7 +2271,9 @@ GAN优化的是JS散度
 
 > RNN是**一种使用序列数据或时序数据的人工神经网络**。 这些深度学习算法常用于序数或时间问题，如语言翻译、自然语言处理(nlp)、语音识别、图像字幕等；它们包含在一些流行的应用中，比如Siri、语音搜索和Google Translate。-- wikipedia
 
-## *RNN及其变种*
+之所以叫做循环神经网络是因为一个序列的输出与前面的输出也有关，具体的表现形式为网络会对前面的信息进行记忆并应用于当前输出的计算中，即隐藏层之间的节点不再是无连接而是有连接的，并且隐藏层的输入不仅包括输入层的输出还包括上一时刻隐藏层的输出
+
+## *RNN 及其变种*
 
 ### Elman network & Jordan network
 
@@ -2125,23 +2289,47 @@ GAN优化的是JS散度
 
 <img src="双向RNN.png" width="60%">
 
+## *Layer Normalizaiotn*
+
+Layer Normalization 层归一化是由 Jimmy Lei Ba、Jamie Ryan Kiros 和 Geoffrey E. Hinton 在2016年提出的一种归一化技术。它与 BN 有相似之处，但是主要区别在于 Layer Normalization 并不依赖于小批量中其他样本的统计数据，而是对单个样本的所有激活进行归一化。这使得 Layer Normalization 在处理变长输入，以及不能保证每次都有固定小批量大小的场景（如强化学习或在线学习）中尤为有用
+
+LN 与 BN 的主要区别在于归一化所沿着的维度不同。BN 沿着小批量的维度（即不同样本）和空间维度（对于 CNN 中的特征图）进行归一化，而 LN 则沿着特征维度（即同一样本内的所有神经元）进行归一化。这就意味着 LN 的性能不受小批量大小的影响，而 BN 可能受到影响
+
+### 操作步骤
+
+LN 通常在网络的每个隐藏层内部进行，其基本步骤包括：
+
+1. **计算均值和方差**：对于每个样本，在特定层内部计算某个时刻所有神经元响应的均值和方差。如果考虑一个有 H 个神经元的隐藏层，对于单个样本，该层的输出可以表示为一个 H 维向量 $\mathbf{h}$。LN 将计算 $\mathbf{h}$ 中所有元素的均值 $\mu$ 和方差 $\sigma^2$
+
+2. **规范化**：利用计算得到的均值和方差，对样本的每个神经元输出执行规范化操作：
+   $$
+   \hat{\mathbf{h}} = \frac{\mathbf{h} - \mu}{\sqrt{\sigma^2 + \epsilon}}
+   $$
+   其中，$\epsilon$ 是一个很小的常数，防止分母为零
+
+3. **缩放和位移**：类似于 BN，LN 也引入了两个可学习的参数  $\gamma$ 缩放因子和 $\beta$ 位移因子，来恢复归一化可能会丢失的表达能力：
+   $$
+   y = \gamma \hat{\mathbf{h}} + \beta
+   $$
+   这里的 y 是 LN 后层的输出
+
 ## *LSTM*
 
 ### LSTM 介绍
 
-普通的RNN对于依赖的时间跨度非常长的序列的效果不好，为了解决这个问题，提出了LSTM结构
+普通的 RNN 对于依赖的时间跨度非常长的序列的效果不好，为了解决这个问题，提出了 LSTM 结构
 
 >Long Short-Term Memory，LSTM 是一种循环神经网络，论文首次发表于1997年。由于独特的设计结构，LSTM适合于处理和预测时间序列中**间隔和延迟非常长**的重要事件。
 >
 >LSTM的表现通常比时间循环神经网络及隐马尔科夫模型（HMM）更好，比如用在不分段连续手写识别上2。2009年，用LSTM构建的人工神经网络模型赢得过ICDAR手写识别比赛冠军。LSTM还普遍用于自主语音识别，2013年运用TIMIT自然演讲数据库达成17.7%错误率的纪录。作为非线性模型，LSTM可作为复杂的非线性单元用于构造更大型深度神经网络。-- wikipedia
 
-### LSTM结构
+### LSTM 结构
 
 Understanding LSTM Networks: http://colah.github.io/posts/2015-08-Understanding-LSTMs/
 
 <img src="LSTM.jpg" width=50%>
 
-3个门信号，上图中输入的序列 $x^t$ 和 hidden state $h_{t-1}$ 要喂给3个gate来训练gate。图中的 $\sigma$ 决定是否激活门，它可以是简单的sigmoid函数，也可以是复杂的神经网络。hidden state 的激活使用tanh函数，输出一个 $[-1,1]$ 的值。C cell state 相当于是 memory
+3 个门信号，上图中输入的序列 $x^t$ 和 hidden state $h_{t-1}$ 要喂给 3 个 gate 来训练 gate。图中的 $\sigma$ 决定是否激活门，它可以是简单的 sigmoid 函数，也可以是复杂的神经网络。hidden state 的激活使用 tanh 函数，输出一个 $[-1,1]$ 的值。C cell state 相当于是 memory
 
 * Forget gate
   $$
@@ -2163,19 +2351,22 @@ Understanding LSTM Networks: http://colah.github.io/posts/2015-08-Understanding-
   o_t=\sigma\left(W_o\left[h_{t-1},x_t\right]+b_o\right)\ or\ f_o=\sigma\left(W_oh_{t-1}+U_ox_t+b_o\right)\\h_t=o_t\times\tanh{\left(C_t\right)}
   $$
 
-一般指的RNN都是LSTM神经元。虽然LSTM的效果很好，但也有缺陷：参数扩大了4倍
+一般指的 RNN 都是 LSTM 神经元。虽然 LSTM 的效果很好，但也有缺陷：参数扩大了 4 倍
 
-### RNN训练梯度问题以及LSTM对此的改善
+### RNN 训练梯度问题以及 LSTM 对此的改善
 
 RNN 的训练比较困难，经常会出现极其不规则的 loss 曲线。原因在于使用的同一个权重 $W$ 的大量累乘以及激活函数会造成梯度爆炸或梯度消失
 
-对于梯度爆炸通常都要采用梯度裁剪 gradient clipping 的方式来确保梯度的顺利传递，但对于梯度消失没有很好的应对方式，通常会造成训练缓慢。针对这个问题LSTM有很好的改善
+* 对于梯度爆炸通常都要采用梯度裁剪 / 梯度截断 gradient clipping 的方式来确保梯度的顺利传递，即检查误差梯度的值是否超过阈值，如果超过就截断梯度，将梯度设置为阈值
+* 但对于梯度消失没有很好的应对方式，通常会造成训练缓慢。针对这个问题 LSTM 有很好的改善
 
-但使用LSTM可以很好的训练，可以有效的抵抗梯度消失，forget gate有点像resnet。这是一种被称为peephole的机制，梯度可以通过 forgate gate（只要它开着）进行稳定的传递
+<img src="梯度裁剪.png" width="40%">
 
-LSTM通过3个门之间的搭配，可以做到既适应短记忆，也适应长记忆，这也是它名字的来源。而普通RNN由于网络规模的限制只能有短记忆
+但使用 LSTM 可以很好的训练，可以有效的抵抗梯度消失，forget gate 有点像 resnet。这是一种被称为 peephole 的机制，梯度可以通过 forgate gate（只要它开着）进行稳定的传递
 
-### *LSTM的其他应用*
+LSTM 通过 3 个门之间的搭配，可以做到既适应短记忆，也适应长记忆，这也是它名字的来源。而普通 RNN 由于网络规模的限制只能有短记忆
+
+### *LSTM 的其他应用*
 
 * Many to one: Sentiment anaysis 情绪分析
 
