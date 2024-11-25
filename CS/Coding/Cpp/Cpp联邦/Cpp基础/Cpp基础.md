@@ -3274,10 +3274,10 @@ unique_ptr<T>& operator=(unique_ptr<T>& ap) = delete; //禁止生成默认赋值
 
 ### `std::share_ptr` 的部分接口
 
-* `make_shared<T>(args)` 返回一个shared_ptr，指向一个动态分配的类型为T的对象，使用args来初始化此对象
+* `make_shared<T>(args)` 返回一个 shared_ptr，指向一个动态分配的类型为 T 的对象，使用 args 来初始化此对象
 * `shared_ptr<T> p(q)` 拷贝 `shared_ptr q`，会递增管理资源的计数器
-* `p = q` 赋值，递减p计数器，递增q计数器，若p计数器为0，则释放其原来指向的资源
-* `unique()` 若计数器数目为1返回true，否则返回false
+* `p = q` 赋值，递减 p 计数器，递增 q 计数器，若 p 计数器为 0，则释放其原来指向的资源
+* `unique()` 若计数器数目为 1 返回 true，否则返回 false
 * `use_count()` 返回计数器数目，可能会很慢，一般用于调试
 * `reset()`
   * 有参，重新指定智能指针所管理的对象
@@ -3533,7 +3533,7 @@ void test_shared_ptr2() {
 
 可以认为在默认情况下 `std::unique_ptr` 和裸指针有着有着相同的尺寸。`std::unique_ptr` 独享一份资源，不允许拷贝，只允许移动
 
-### unique_ptr作为工厂函数的返回值类型
+### unique_ptr 作为工厂函数的返回值类型
 
 <img src="工厂函数.drawio.png" width="60%">
 
@@ -3633,7 +3633,7 @@ template <typename... Ts> auto makeInvestment3(Ts &&...params) {}
 
 `std::shared_ptr` 比正常指针大一倍，因为里面有两个指针，一个是指向管理的堆上的T类型的对象的指针，另一个指针是指向堆上的控制块的指针
 
-从上面的结构图也可以看出自定义删除器是不会增加 `std::shared_ptr` 的大小的，删除器的size只会影响在堆上的控制块的大小。这点与 `std::unique_ptr` 不同，自定义删除器是 unique_ptr 的一部分
+从上面的结构图也可以看出自定义删除器是不会增加 `std::shared_ptr` 的大小的，删除器的 size 只会影响在堆上的控制块的大小。这点与 `std::unique_ptr` 不同，自定义删除器是 unique_ptr 的一部分
 
 ### 引用计数机制的性能影响
 
@@ -3649,9 +3649,9 @@ template <typename... Ts> auto makeInvestment3(Ts &&...params) {}
 
 ### `std::shared_ptr` 多控制块引起类浅拷贝问题
 
-从上面的结构图可以看出，堆上的T类型对象和控制块是一一对应的关系（并没有说他们的存放地址是相连的）。但如果2个控制块与同一个T类型对象关联到一块，那么大概率会有多次释放的风险
+从上面的结构图可以看出，堆上的 T 类型对象和控制块是一一对应的关系（并没有说他们的存放地址是相连的）。但如果2个控制块与同一个 T 类型对象关联到一块，那么大概率会有多次释放的风险
 
-结论是无论一个T类型对象有多少个shared_ptr指向它，都应该只有一个控制块
+结论是无论一个 T 类型对象有多少个 shared_ptr 指向它，都应该只有一个控制块
 
 ```c++
 class A { /**/ };
@@ -3663,7 +3663,7 @@ class A { /**/ };
 // ... 程序崩溃
 ```
 
-因为控制块会在向 shared_ptr 的构造函数中传入一个裸指针创建，上面的控制块创建了两回，指向同一个A对象，所以出了作用域后两次析构程序崩溃了
+因为控制块会在向 shared_ptr 的构造函数中传入一个裸指针创建，上面的控制块创建了两回，指向同一个 A 对象，所以出了作用域后两次析构程序崩溃了
 
 修改的方法就是用 shared_ptr 的拷贝构造
 

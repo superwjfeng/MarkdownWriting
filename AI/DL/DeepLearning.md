@@ -1446,9 +1446,9 @@ def dropout_backward(dout, cache):
     return dx
 ```
 
-### Dropout的一些问题
+### Dropout 的一些问题
 
-* Dropout和BN一起使用的时候会产生方差偏移 variance shift，对网络的能力有损伤。https://zhuanlan.zhihu.com/p/61725100
+* Dropout 和 BN 一起使用的时候会产生方差偏移 variance shift，对网络的能力有损伤。https://zhuanlan.zhihu.com/p/61725100
 
   > 当网络从训练转为测试时，Dropout 可以通过其随机失活保留率（即 p）来缩放响应，并在学习中改变神经元的方差，而 BN 仍然维持 X 的统计滑动方差。这种方差不匹配可能导致数值不稳定（见下图中的红色曲线）。而随着网络越来越深，最终预测的数值偏差可能会累计，从而降低系统的性能。简单起见，作者们将这一现象命名为「方差偏移」。
 
@@ -2079,9 +2079,9 @@ class TwoLayerNet(pl.LightningModule):
 
 ## *生成式模型介绍*
 
-生成模型的目标都差不多，GAN和VAE一样，都希望从总的训练样本分布中采样并生成新的数据。但问题在于这个总体分布维度高而且非常复杂，难以直接实现
+生成模型的目标都差不多，GAN 和 VAE 一样，都希望从总的训练样本分布中采样并生成新的数据。但问题在于这个总体分布维度高而且非常复杂，难以直接实现
 
-解决方法：对一个简单的分布采样，比如正态分布或均匀分布，然后学习一种映射将其变换到训练样本分布，VAE和GAN都是这种思想
+解决方法：对一个简单的分布采样，比如正态分布或均匀分布，然后学习一种映射将其变换到训练样本分布，GAN 和 VAE 都是这种思想
 
 ### 生成模型的应用
 
@@ -2108,47 +2108,47 @@ class TwoLayerNet(pl.LightningModule):
 
 ### Autoencoder作为生成模型的困境
 
-在统计机器学习.md中已经提过了关于用autoencoder作为生成模型来生成图片的内容。那么为什么还要继续引入VAE呢？
+在 *统计机器学习.md* 中已经提过了关于用 autoencoder 作为生成模型来生成图片的内容。那么为什么还要继续引入 VAE 呢？
 
 <img src="Autoencoder缺乏泛化能力.png" width="35%">
 
-以上图为例，autoencoder没办法像人类一样拥有泛化能力，即不能通过decoder来生成中间的盈凸月🌔
+以上图为例，autoencode r没办法像人类一样拥有泛化能力，即不能通过 decoder 来生成中间的盈凸月🌔
 
-### VAE的设计
+### VAE 的设计
 
-VAE的详解：https://zhuanlan.zhihu.com/p/34998569
+VAE 的详解：https://zhuanlan.zhihu.com/p/34998569
 
 <img src="VAE.png" width="60%">
 
-原来的autoencoder经过编码器后会生成一个feature $z$，但是经过VAE的编码器生成了一个多维高斯分布（看需要的输出是几维，并且得到的多维高斯的 $\Sigma$ 为对角矩阵，即不同维度的数据之间没有相关性，即朴素贝叶斯思想）的特征值，即它的均值 $m$ 和方差 $\sigma$ 以及从数据中学习到的噪声 $e$，并且要给方差做一次自然指数运算来保证它是正的。因此中间的feature为
+原来的 autoencoder 经过编码器后会生成一个 feature $z$，但是经过 VAE 的编码器生成了一个多维高斯分布（看需要的输出是几维，并且得到的多维高斯的 $\Sigma$ 为对角矩阵，即不同维度的数据之间没有相关性，即朴素贝叶斯思想）的特征值，即它的均值 $m$ 和方差 $\sigma$ 以及从数据中学习到的噪声 $e$，并且要给方差做一次自然指数运算来保证它是正的。因此中间的 feature 为
 $$
 c=m+\exp{\left(\sigma\right)}\cdot e\triangleq\hat{m}+\hat{\sigma}\cdot e
 $$
 要生成图像的是从之前编码器里得到的正态分布中采样，然后输出
 
-学习的误差不仅要最小化原来autoencoder里的 $L^2$ 重构误差，也要最小化下面这个式子，其中 $\left(m_i\right)^2$ 相当于是 $L^2$ 正则化
+学习的误差不仅要最小化原来 autoencoder 里的 $L^2$ 重构误差，也要最小化下面这个式子，其中 $\left(m_i\right)^2$ 相当于是 $L^2$ 正则化
 $$
 \sum\limits_{i=1}^{dim}{\left(\exp{\left(\sigma_i\right)}-\left(1+\sigma_i\right)+\underbrace{\left(m_i\right)^2}_{Regularizer}\right)}
 $$
 为什么要最小化这个式子，我们可以看看 ${\color{blue}\exp{\left(\sigma_i\right)}}-{\color{red}\left(1+\sigma_i\right)}$ 的图像。在途中蓝色线为指数函数，而红色线为直线，而它们的差值为绿色直线，可以明显看出，当 $\sigma_i=0$ 时取到最小差值。之所以取这个点的目的是为了让 $\hat{\sigma}=\exp{\left(\sigma_i\right)}=1$
 
-这个优化目标相当于是要尽量让得到的带噪声的编码 $c$ 尽量服从0均值，1方差的正态分布。若我们不想得到正态分布的编码，也可以修改上面的误差函数让它符合我们需要的自定义的分布，比如均匀分布
+这个优化目标相当于是要尽量让得到的带噪声的编码 $c$ 尽量服从 0 均值，1 方差的正态分布。若我们不想得到正态分布的编码，也可以修改上面的误差函数让它符合我们需要的自定义的分布，比如均匀分布
 
 <img src="VAE最小化目标的几何意义.png" width="30%">
 
-### VAE的效果
+### VAE 的效果
 
 <img src="VAE生成效果.png" width="35%">
 
 此时在中间的采样点，因为通过噪声训练和正态分布采样，因此中间的点大概率是既学过满月🌕也学过🌓，因此可以组合产生盈凸月🌔
 
-### VAE的GMM采样
+### VAE 的 GMM 采样
 
 <img src="VAE高斯采样.png" width="40%">
 
-GMM模型是先采样得到某个整数，再从这个整数对应的高斯分布中去采样数据。如果直接用GMM去拟合所有的数据是不行的，因为数据量太大，最后得到的模型会非常大
+GMM 模型是先采样得到某个整数，再从这个整数对应的高斯分布中去采样数据。如果直接用 GMM 去拟合所有的数据是不行的，因为数据量太大，最后得到的模型会非常大
 
-VAE的思想是GMM推广到无限高斯组件，但它是用无限个高斯组件来逼近真实分布。在经过编码器后，得到了一个服从0均值，1方差的 $z\sim\mathcal{N}(0,1)$，然后再经过神经网络学习得到每个 $z$ 所对应的高斯组件的特征值 $\mu,\sigma$
+VAE 的思想是 GMM 推广到无限高斯组件，但它是用无限个高斯组件来逼近真实分布。在经过编码器后，得到了一个服从 0 均值，1 方差的 $z\sim\mathcal{N}(0,1)$，然后再经过神经网络学习得到每个 $z$ 所对应的高斯组件的特征值 $\mu,\sigma$
 $$
 z\sim\mathcal{N}(0,1)\xrightarrow{采样}x|z\sim\mathcal{N}\left(\mu(z),\sigma(z)\right)\xrightarrow{采样}x(生成的图片)
 $$
@@ -2171,7 +2171,7 @@ $$
 $$
 \log{P(x)}=\int_z{q(z|x)\log{P(x)}dz}=\int_z{q(z|x)\log{\frac{P(z,x)}{P(z|x)}}dz}=\int_z{q(z|x)\log{\frac{P(z,x)q(z|x)}{q(z|x)P(z|x)}}dz}\\=\int_z{q(z|x)\log{\frac{P(z,x)}{q(z|x)}}dz}+\underbrace{\int_z{q(z|x)\log{\frac{q(z|x)}{P(z|x)}}dz}}_{KL\left(q\left(z|x\right)||P\left(z|x\right)\right)\geq0}\geq\underbrace{\int_z{q(z|x)\log{\frac{P(x|z)P(z)}{q(z|x)}}dz}}_{Lower\ bound\ L_b}
 $$
-将MLE目标转换为了最大化下边界 $L_b$ ，对其再做一些恒等变换来方便求解
+将 MLE 目标转换为了最大化下边界 $L_b$ ，对其再做一些恒等变换来方便求解
 $$
 \max{L_b}=\int_z{q(z|x)\log{\frac{P(x|z)P(z)}{q(z|x)}}dz}=\underbrace{\int_z{q(z|x)\log{\frac{P(z)}{q(z|x)}}dz}}_{Loss1:\ \min{-KL\left(q(z|x)||P(z)\right)}}+\underbrace{\int_z{q(z|x)\log{P(x|z)}dz}}_{Loss2:\ \max{\lVert x-\hat{x}\rVert^2}}
 $$
@@ -2192,26 +2192,27 @@ $$
 
 ## *GAN 生成对抗网络*
 
-### 生成网络和判别网络
+### 生成器 vs. 判别器
 
 <img src="GAN结构.png" width="70%">
 
-生成网络 generator network：其实就是autoencoder中的encoder，因为autoencoder中经常是encoder和decoder成对使用的，所以叫做encoder，GAN里叫做generator network。它希望能够产生尽量真实的图片，进而骗过判别器
+生成对抗网络 Generative Adversarial Networks, GANs 是一种由 Ian Goodfellow 于 2014 年提出的深度学习模型，它通过让两个神经网络相互博弈的方式来生成新的、与训练数据类似的数据
 
-判别网络 discriminator network：希望能够准确的区分真假图片
+* 生成网络 generator network：其实就是 autoencoder 中的 encoder，因为 autoencoder 中经常是 encoder 和 decoder 成对使用的，所以叫做 encoder，GAN 里叫做 generator network。它希望能够产生尽量真实的图片，进而骗过判别器
+* 判别网络 discriminator network：希望能够准确的区分真假图片
 
 ### minimax 联合训练目标
 
-minimax objective function
+GANs 的训练通常涉及一个最小-最大问题，即优化一个 minimax objective function，其中判别器试图最大化准确识别真伪样本的概率（即最大化分类的对数似然），而生成器试图最小化判别器识别其产生样本为假的概率（即最小化对数似然）
 $$
 \min\limits_{\theta_g}{\max\limits_{\theta_d}{\left\{\mathbb{E}_{x\sim p_{data}}\left[\log{D_{\theta_d}(x)}\right]+\mathbb{E}_{z\sim p(z)}\left[\log{\left(1-D_{\theta_d}\left(G_{\theta_g}(z)\right)\right)}\right]\right\}}}\label{minimax}
 $$
 上式中 $D_{\theta_d}(x)$ 是判别器对真实样本 $x$ 的打分，$\mathbb{E}_{x\sim p_{data}}$ 是真实数据打分的期望；$D_{\theta_d}\left(G_{\theta_g}(z)\right)$ 是判别器对生成样本 $G(z)$ 的打分，$\mathbb{E}_{z\sim p(z)}$ 是生成数据打分的期望，$z$ 是一个随机采样得到的噪声（一般假设 $z$ 为高斯分布采样得到），用来喂给生成器来产生数据
 
-* max阶段固定 $\theta_g$，训练的是判别器
+* max 阶段固定 $\theta_g$，训练的是判别器
   * 里面max函数的含义是，我们希望的训练结果是判别器给真实样本的打分越高越好，而判别器给生成样本的打分越低越好（因为要最大化，就要让后面 $\log$ 里的值越大越好，也就是让 $D(G(z))$ 越小越好）
   * 判别器 $\theta_d$ 希望最大化目标函数，使得 $D(x)$ 接近于1（真实样本），而 $D(G(z))$ 接近于0（假样本）
-* min阶段固定 $\theta_d$，训练的是生成器
+* min 阶段固定 $\theta_d$，训练的是生成器
   * 外面的min函数的含义是，让式子最小化，就要让后面 $\log$ 里的值越小越好，也就是让 $D(G(z))$ 越大越好
   * 生成器 $\theta_g$ 希望最小化目标函数，使得 $D(G(z))$ 尽量接近于1，即希望判别器认为生成器产生的图像 $G(z)$ 为真实图片
 
@@ -2329,24 +2330,24 @@ Understanding LSTM Networks: http://colah.github.io/posts/2015-08-Understanding-
 
 <img src="LSTM.jpg" width=50%>
 
-3 个门信号，上图中输入的序列 $x^t$ 和 hidden state $h_{t-1}$ 要喂给 3 个 gate 来训练 gate。图中的 $\sigma$ 决定是否激活门，它可以是简单的 sigmoid 函数，也可以是复杂的神经网络。hidden state 的激活使用 tanh 函数，输出一个 $[-1,1]$ 的值。C cell state 相当于是 memory
+3 个门信号 forget、input 和 output，上图中输入的序列 $x^t$ 和 hidden state $h_{t-1}$ 要喂给 3 个 gate 来训练 gate。图中的 $\sigma$ 决定是否激活门，它可以是简单的 sigmoid 函数，也可以是复杂的神经网络。hidden state 的激活使用 tanh 函数，输出一个 $[-1,1]$ 的值。C cell state 相当于是 memory
 
-* Forget gate
+* forget gate
   $$
   f_t=\sigma\left(W_f\left[h_{t-1},x_t\right]+b_f\right)\ or\ f_t=\sigma\left(W_fh_{t-1}+U_fx_t+b_i\right)
   $$
 
-* 输入数据通过input gate $i_t$ 来控制是否接受数据
+* 输入数据通过 input gate $i_t$ 来控制是否接受数据
   $$
   i_t=\sigma\left(W_i\left[h_{t-1},x_t\right]+b_i\right)\ or\ i_t=\sigma\left(W_ih_{t-1}+U_ix_t+b_i\right)\\\tilde{C}_{t}=\tanh{\left(W_C\left[h_{t-1},x_t\right]+b_C\right)}
   $$
 
-* Update C (memory)：通过forget gate $f_t$ 来控制是否将上个时序的相关数据写入memory，最后更新的memory是当前时刻被激活后的input $i_t\times\tilde{C}$ 和上一时刻的memory $f_t\times C_{t-1}$ 的结合
+* update C (memory)：通过 forget gate $f_t$ 来控制是否将上个时序的相关数据写入 memory，最后更新的 memory 是当前时刻被激活后的 input $i_t\times\tilde{C}$ 和上一时刻的 memory $f_t\times C_{t-1}$ 的结合
   $$
   C_t=f_t\times C_{t-1}+i_t\times\tilde{C}
   $$
 
-* 通过output gate $o_t$ 来控制输出hidden state的值，即信号 $h_t$
+* 通过 output gate $o_t$ 来控制输出 hidden state 的值，即信号 $h_t$
   $$
   o_t=\sigma\left(W_o\left[h_{t-1},x_t\right]+b_o\right)\ or\ f_o=\sigma\left(W_oh_{t-1}+U_ox_t+b_o\right)\\h_t=o_t\times\tanh{\left(C_t\right)}
   $$
@@ -2365,6 +2366,12 @@ RNN 的训练比较困难，经常会出现极其不规则的 loss 曲线。原�
 但使用 LSTM 可以很好的训练，可以有效的抵抗梯度消失，forget gate 有点像 resnet。这是一种被称为 peephole 的机制，梯度可以通过 forgate gate（只要它开着）进行稳定的传递
 
 LSTM 通过 3 个门之间的搭配，可以做到既适应短记忆，也适应长记忆，这也是它名字的来源。而普通 RNN 由于网络规模的限制只能有短记忆
+
+## *LSTM 变种*
+
+### GRU
+
+Gated Recurrent Units, GRU 是直接将 hidden state 传给下一个单元
 
 ### *LSTM 的其他应用*
 
@@ -2386,14 +2393,28 @@ https://zhuanlan.zhihu.com/p/53036028
 
 > **注意力机制**（英语：attention）是人工神经网络中一种模仿认知注意力的技术。这种机制可以增强神经网络输入数据中某些部分的权重，同时减弱其他部分的权重，以此将网络的关注点聚焦于数据中最重要的一小部分。数据中哪些部分比其他部分更重要取决于上下文。可以通过梯度下降法对注意力机制进行训练。-- wikipedia
 
+在一个典型的序列处理任务中，比如机器翻译，attention 机制使得模型在生成每个输出时，都会对输入序列的不同部分赋予不同的权重，即“注意”到最相关的输入部分
 
+### 工作原理
 
-在 attention block 中不同的输入向量之间可以互相影响，通过相互传递信息来更新自己的值后输出
+在 attention block 中不同的输入向量之间可以互相影响，通过相互传递信息来更新自己的值后输出。原来的隐层除了给下一层做 memory 外，还指示了应该将注意力放到哪些输入
 
-原来的隐层除了给下一层做memory外，还指示了应该将注意力放到哪些输入
+以下是 attention 机制的一般工作流程：
 
-$z_0$ 和 $z_1$ 都是学习到的参数， 
+<img src="Attention的一般流程.webp">
 
+1. **计算注意力得分**：首先，模型通过一个可学习的函数计算查询（query，当前需要翻译的部分）、键（key，输入序列中的各个部分）之间的相似度或关系得分
+2. **得分转换成权重**：然后，通常使用 softmax 函数将这些得分归一化为权重，确保所有权重之和为 1
+3. **加权求和**：根据得到的权重对值（value，输入序列中的实际内容）进行加权求和，得到加权平均的上下文表示（context vector）
+4. **生成输出**：最使用该上下文表示加上之前的状态，生成当前步骤的输出
+
+### Scaled Dot-product Attention
+
+[第三章：注意力机制 · Transformers快速入门](https://transformers.run/c1/attention/)
+
+虽然 Attention 有许多种实现方式，但是最常见的还是 Scaled Dot-product Attention
+
+<img src="ScaledDotproductAttention.png" width="30%">
 
 $$
 Attention(Q,K,V)=softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)
@@ -2401,27 +2422,102 @@ $$
 
 Q 和 K 分别表示 query vector 和 key vector
 
+### attention 的类型
 
-
-single attention head 单头注意力机制 
-
-multi attention head 多头注意力机制：并行地进行单头注意力模块操作，每个头都有不同的 key, query & value matrix，便于GPU运算
-
-self-attention head 自注意力机制
-
-cross-attention head 交叉注意力机制：处理多种不同类型的数据，比如原文和正在被翻译出来的译文，或者是语音音频和正在被转录出来的文字
+* 模型结构
+  * single attention head 单头注意力机制 
+  * multi attention head 多头注意力机制：并行地进行单头注意力模块操作，每个头都有不同的 key, query & value matrix，便于 GPU 运算
+* 所用信息
+  * self-attention head 自注意力机制，允许序列中的位置以一种自指涉方式相互“注意”。Transformer 架构就广泛采用了这种机制
+  * cross-attention head 交叉注意力机制：处理多种不同类型的数据，比如原文和正在被翻译出来的译文，或者是语音音频和正在被转录出来的文字
+* 计算区域
+  * Soft Attention：在时间步骤上连续、可微分的，可以使用标准的反向传播进行训练，但计算成本较高
+  * Hard Attention：只关注一个时间步骤，不是所有时间步都参与计算，计算成本较低，但由于选取过程是离散的，需要使用强化学习等特殊技术来训练
 
 自注意力机制和交叉注意力机制的训练非常类似，最大的区别就是交叉注意力机制的 key matrix 和 query matrix 作用域不同的数据集
+
+### 多头注意力
+
+<img src="多头注意力.png" width="30%">
+
+
+
+### 自注意力
+
+
 
 # Transformer
 
 http://jalammar.github.io/illustrated-transformer/
 
-RNN 中的 attention 效率不高，transfomer 是一种更成熟的注意力模型，用来进行并行训练，提高效率。Transformer 在NLP、图像处理领域都取得了极为成功的应用
+RNN 中的 attention 效率不高，transfomer 是一种基于 self-attention 的更成熟的注意力模型，用来进行并行训练，提高效率。Transformer 由 Vaswani 等人在 2017 年的论文《Attention Is All You Need》中提出，它在NLP、图像处理领域都取得了极为成功的应用
+
+**自注意力机制**：Transformer 完全放弃了之前常见的循环神经网络（RNNs）和卷积神经网络（CNNs），转而采用自注意力机制。这使得模型能够直接计算序列内任意两个位置之间的关系，从而有效捕获长距离依赖问题。
+
+**多头注意力**：通过对输入数据的不同子空间并行应用自注意力机制（在考虑一个字的时候考虑它对其他字的依赖性，也就是考虑上下文），模型可以同时学习到数据的多种不同的表示，增强了模型的表达能力。
+
+## *Transformer 家族*
+
+[第二章：Transformer 模型 · Transformers快速入门](https://transformers.run/c1/transformer/)
+
+2017 年 Google 在《Attention Is All You Need》中提出了 Transformer 结构用于序列标注，在翻译任务上超过了之前最优秀的循环神经网络模型；与此同时，Fast AI 在《Universal Language Model Fine-tuning for Text Classification》中提出了一种名为 ULMFiT 的迁移学习方法，将在大规模数据上预训练好的 LSTM 模型迁移用于文本分类，只用很少的标注数据就达到了最佳性能。 这些具有开创性的工作促成了两个著名 Transformer 模型的出现： 
+
+* GPT (the Generative Pretrained Transformer)
+*  BERT (Bidirectional Encoder Representations from Transformers)
+
+虽然新的 Transformer 模型层出不穷，它们采用不同的预训练目标在不同的数据集上进行训练，但是依然可以按模型结构将它们大致分为三类：
+
+- **纯 Encoder 模型**（例如 BERT），又称自编码 (auto-encoding) Transformer 模型
+- **纯 Decoder 模型**（例如 GPT），又称自回归 (auto-regressive) Transformer 模型
+- **Encoder-Decoder 模型**（例如 BART、T5），又称 Seq2Seq (sequence-to-sequence) Transformer 模型
+
+### Transformer 的基本结构
+
+Transformer 模型由编码器（Encoder）和解码器（Decoder）两部分组成，每部分由若干相同的层叠加而成
+
+- **Encoder**：负责理解输入文本，为每个输入构造对应的语义表示（语义特征）
+- **Decoder**：负责生成输出，使用 Encoder 输出的语义表示结合其他输入来生成目标序列
+
+<img src="Transformer的两大部分.png" width="25%">
+
+这两个模块可以根据任务的需求而单独使用：
+
+- **纯 Encoder 模型**：适用于只需要理解输入语义的任务，例如句子分类、命名实体识别
+- **纯 Decoder 模型**：适用于生成式任务，例如文本生成
+- **Encoder-Decoder 模型** 或 **Seq2Seq 模型**：适用于需要基于输入的生成式任务，例如翻译、摘要
+
+### Transformer & RNN, CNN 的区别
+
+## *Transformer 结构详解*
+
+Transformer的基本原理是使用自注意力机制来捕获输入序列中任意两个位置之间的依赖关系，并通过编码器和解码器的堆叠来提高表达能力
+
+<img src="transformer结构.jpeg" width="60%">
+
+### 编码器
+
+编码器由多个编码层组成，每个层都有两个子层：
+
+1. **多头自注意力机制**：允许模型同时关注输入序列的不同位置
+2. **前馈全连接神经网络**：在多头自注意力层之后，每个位置的输出会馈送到一个前馈神经网络中
+
+此外，每个子层都包括了残差连接和层标准化（Layer Normalization），这些都是堆叠在子层的输出上的
+
+### 解码器
+
+解码器也由多个解码层组成，每层有以下三个子层：
+
+1. **多头自注意力机制**：与编码器类似，但在处理当前位置或更靠后位置时使用掩码（masking）来保证预测只依赖于已知输出
+2. **编码器-解码器注意力**：解码器的第二个子层，它允许解码器关注编码器所有层的输出
+3. **前馈全连接神经网络**：与编码器中的全连接层相同
+
+同样，在这些子层之后也有残差连接和层标准化
 
 
 
-Multi-head attention：在考虑一个字的时候考虑它对其他字的依赖性，也就是考虑上下文
+### 为什么使用 LN？
+
+Transformer 模型的设计目标之一是利用现代硬件的并行性能。LN 可以在小批量甚至单个样本上独立计算，这与 Transformer 架构对有效并行性的要求相契合
 
 ## *Non-Local模块*
 
