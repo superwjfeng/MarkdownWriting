@@ -804,7 +804,7 @@ git cherry-pick <commit-hash1> <commit-hash2> <commit-hash3>
 
 - `-n` 或 `--no-commit`：应用更改但不自动创建提交。这允许你在继续操作（比如合并多个提交）之前编辑更改
 - `-e` 或 `--edit`：在提交的过程中允许编辑提交信息
-- `-x`：在提交信息中追加一行，说明这个提交是通过 `cherry-pick` 操作来的
+- **`-x`**：在提交信息中追加一行，说明这个提交是通过 `cherry-pick` 操作来的
 - `-s` 或 `--signoff`：为提交添加签名，即添加一行 "Signed-off-by:"
 - `-m <parent-number>` 或 `--mainline <parent-number>`：在拾取一个合并提交时，你必须指定主线，即应该考虑的父提交线路
 
