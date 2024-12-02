@@ -2282,7 +2282,7 @@ outer()
 
 ### 给外层函数使用的参数
 
-# 类
+# 面向对象
 
 ## *类基础*
 
@@ -2701,17 +2701,56 @@ with expression as variable:
 
 在上面的例子中`open()` 函数返回了一个文件对象，这个对象作为上下文管理器用来保证无论如何都能安全地关闭文件。当进入`with`代码块时，文件会被打开，并且`file`变量会引用这个文件对象。当离开`with`代码块时，无论是正常退出还是因为异常而退出，`__exit__`方法会被调用，此时文件会被自动关闭
 
-### File方法
-
-假设有 `f=open(filename, mode)`
+### 几种文件读取方法的对比
 
 * `f.read()`
 
+  ```python
+  with open('testRead.txt', 'r', encoding='UTF-8') as f1:
+      results = f1.read()
+      print(results)
+  ```
+
   读取整个文件，返回的是一个字符串，字符串包括文件中的所所有内容。若想要将每一行数据分离，即需要对每一行数据进行操作，此方法无效
+
+  `read()` 是最快的，当然其功能最简单，在很多情况下不能满足需求
 
 * `f.readline()` 会从文件中读取单独的一行。换行符为 '\n'。`f.readline()` 如果返回一个空字符串, 说明已经已经读取到最后一行
 
+  ```python
+  with open('testRead.txt', 'r', encoding='UTF-8') as f2:
+      line = f2.readline()
+      while line is not None and line != '':
+          print(line)
+          line = f2.readline()
+  ```
+
+  每次只读取文件的一行，内存占用低
+
 * `f.readlines()`
+
+  ```python
+  with open('testRead.txt', 'r', encoding='UTF-8') as f3:
+      lines = f3.readlines()    # 接收数据
+      for line in lines:     # 遍历数据
+          print(line)
+  ```
+
+  不推荐用于大文件，因为它会一次性将整个文件内容读取到内存中；对于小文件来说很快，因为只进行了一次磁盘 IO 操作
+
+* 使用文件对象迭代
+
+  ```python
+  with open('file.txt', 'r') as file:
+      for line in file:
+          # 处理每一行...
+  ```
+
+  直接对文件对象进行迭代，逐行读取。推荐用于任何大小的文件。Python会为文件内容创建一个迭代器，并且一次只处理一行数据，所以内存占用少。这种方法类似于 `readline()`
+
+### 其他 File 方法
+
+假设有 `f=open(filename, mode)`
 
 * `f.write()`
 
@@ -2841,94 +2880,7 @@ shutil (shell utilities) 模块提供了一系列对文件和文件集合进行�
 
 ## *sys库*
 
-# 网络编程
-
-## *socket*
-
-`socket` 库提供了基本的 BSD 套接字接口。它是 Python 网络编程的底层库，支持 TCP 和 UDP 协议，并允许你实现客户端和服务器应用程序。
-
-```python
-import socket
-
-# 创建一个 socket 对象
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# 连接到服务器
-s.connect(('example.com', 80))
-
-# 发送数据
-s.sendall(b'GET / HTTP/1.1\r\nHost: example.com\r\n\r\n')
-
-# 接收响应数据
-data = s.recv(1024)
-
-print(data.decode())
-
-# 关闭连接
-s.close()
-```
-
-
-
-## *http*
-
-### Server
-
-`http.server` 模块可以用来快速创建一个简易的 HTTP 服务器。这通常用于测试或本地开发阶段，而不推荐在生产环境中使用
-
-```python
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b'Hello, World!')
-
-if __name__ == '__main__':
-    httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
-    print("Serving at port 8000")
-    httpd.serve_forever()
-```
-
-### Cient
-
-`http.client` 是一个用于 HTTP 客户端的库，它提供了一些类和方法来发送 HTTP 请求和接收 HTTP 响应
-
-```python
-import http.client
-
-# 创建一个 HTTPConnection 对象
-conn = http.client.HTTPSConnection("www.example.com")
-
-# 发送 GET 请求
-conn.request("GET", "/")
-
-# 获取响应
-resp = conn.getresponse()
-print(resp.status, resp.reason)
-
-# 读取响应内容
-data = resp.read()
-print(data)
-
-# 关闭连接
-conn.close()
-```
-
-
-
-## *urllib*
-
-## *ssl*
-
-# Web 开发
-
-见 *Flask.md*
-
-# 进程 & 线程 & 协程
+# 并发
 
 ## *进程*
 
@@ -3093,6 +3045,93 @@ multiprocessing库的出现很大程度上是为了弥补thread库因为GIL而�
 5. Python3.7 使用async def + await的方式定义协程
 6. 此后asyncio模块更加完善和稳定，对底层的API进行的封装和扩展
 7. Python将于3.10版本中移除以yield from的方式定义协程
+
+# 网络编程
+
+## *socket*
+
+`socket` 库提供了基本的 BSD 套接字接口。它是 Python 网络编程的底层库，支持 TCP 和 UDP 协议，并允许你实现客户端和服务器应用程序。
+
+```python
+import socket
+
+# 创建一个 socket 对象
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 连接到服务器
+s.connect(('example.com', 80))
+
+# 发送数据
+s.sendall(b'GET / HTTP/1.1\r\nHost: example.com\r\n\r\n')
+
+# 接收响应数据
+data = s.recv(1024)
+
+print(data.decode())
+
+# 关闭连接
+s.close()
+```
+
+
+
+## *http*
+
+### Server
+
+`http.server` 模块可以用来快速创建一个简易的 HTTP 服务器。这通常用于测试或本地开发阶段，而不推荐在生产环境中使用
+
+```python
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'Hello, World!')
+
+if __name__ == '__main__':
+    httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
+    print("Serving at port 8000")
+    httpd.serve_forever()
+```
+
+### Cient
+
+`http.client` 是一个用于 HTTP 客户端的库，它提供了一些类和方法来发送 HTTP 请求和接收 HTTP 响应
+
+```python
+import http.client
+
+# 创建一个 HTTPConnection 对象
+conn = http.client.HTTPSConnection("www.example.com")
+
+# 发送 GET 请求
+conn.request("GET", "/")
+
+# 获取响应
+resp = conn.getresponse()
+print(resp.status, resp.reason)
+
+# 读取响应内容
+data = resp.read()
+print(data)
+
+# 关闭连接
+conn.close()
+```
+
+
+
+## *urllib*
+
+## *ssl*
+
+# Web 开发
+
+见 *Flask.md*
 
 # 调用程序
 
@@ -3290,7 +3329,7 @@ C = ffi.dlopen("example.so")
 result = C.some_function(10)
 ```
 
-# 异常和垃圾回收
+# 异常 & 垃圾回收
 
 ## *异常*
 

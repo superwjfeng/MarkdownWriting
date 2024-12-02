@@ -525,9 +525,9 @@ git checkout <欲复制文件所在的文件> -- <文件或目录>
 
 ## *stash*
 
-### stash暂存文件的情景
+### stash 暂存文件的情景
 
-stash暂存未commit的内容：临时保存（或“暂存”）当前工作目录和索引（即暂存区）的修改状态，以便可以在一个干净的工作基础上切换分支或者做其他操作。这是一个非常有用的工具，尤其是当不想通过提交就保存当前进度的时候。比如说下面的场景
+stash 暂存未 commit 的内容：临时保存（或“暂存”）当前工作目录和索引（即暂存区）的修改状态，以便可以在一个干净的工作基础上切换分支或者做其他操作。这是一个非常有用的工具，尤其是当不想通过提交就保存当前进度的时候。比如说下面的场景
 
 * 当我们在本地修改了代码，然后想使用git pull下拉远程代码，为了避免冲突，可以使用git stash存储本地的修改
 * 当我们在开发分支修改了代码，但是还不想commit，此时项目的某个分支上有一个bug需要立马去解决，可以使用git stash保存本
@@ -597,15 +597,15 @@ reset (commit) [file]    NO      YES     NO        YES
 checkout (commit) [file] NO      YES     YES       NO
 ```
 
-head一列中的REF表示该命令移动了HEAD指向的分支引用所指向的位置，而HEAD则表示只移动了HEAD自身，NO则表示不会移动HEAD或HEAD指向的分支。 wd safe (workdir safe) 一列中，YES表示不会覆盖在workspace的修改，NO代表会覆盖在workspace的修改
+head 一列中的 REF 表示该命令移动了 HEAD 指向的分支引用所指向的位置，而 HEAD 则表示只移动了 HEAD 自身，NO 则表示不会移动 HEAD 或 HEAD 指向的分支。 wd safe (workdir safe) 一列中，YES 表示不会覆盖在 workspace 的修改，NO 代表会覆盖在 workspace 的修改
 
 * reset
 
-  * `git reset [--soft | --mixed | --hard]`：三个不同的参数实际上就决定上面checkout运行到那个步骤。**当不指定branch的时候，默认是 `HEAD^`，即上一次comimt**
+  * `git reset [--soft | --mixed | --hard] [target_branch]`：三个不同的参数实际上就决定上面 checkout 运行到那个步骤。**当不指定 branch 的时候，默认是 `HEAD^`，即上一次 commit**
 
-    * `--soft`：只移动HEAD，对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
+    * `--soft`：只移动 HEAD，对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
     * `--mixed`：为**默认选项**，使用时可以不用带该参数。该参数将暂存区的内容退回为指定提交版本内容，工作区文件保持不变
-    * `--hard`：将暂存区与工作区都退回到指定版本。**切记工作区有修改过的，但未提交的代码时不要用这个命令**，因为工作区会回滚，没有commit的代码就再也找不回了，所以使用该参数前一定要慎重
+    * `--hard`：将暂存区与工作区都退回到指定版本。**切记工作区有修改过的，但未提交的代码时不要用这个命令**，因为工作区会回滚，没有 commit 的代码就再也找不回了，所以使用该参数前一定要慎重。**用之前记得先 stash**
 
     ```
     working index HEAD target         working index HEAD
@@ -889,7 +889,7 @@ $ git fetch upstream
 
 ### Detached HEAD
 
-当用户在 Git 中切换到一个特定的commit，而不是分支时， HEAD 引用会进入 detached HEAD 状态。这种状态下的提交可能会更加容易丢失，因此在进行任何修改之前，应谨慎考虑并理解当前所处的状态
+当用户在 Git 中切换到一个特定的 commit，而不是分支时， HEAD 引用会进入 detached HEAD 状态。这种状态下的提交可能会更加容易丢失，因此在进行任何修改之前，应谨慎考虑并理解当前所处的状态
 
 在 detached HEAD 状态下，HEAD 直接指向一个具体的提交，而不是一个具名的分支。这意味着当前不再位于任何分支的最新提交上
 
