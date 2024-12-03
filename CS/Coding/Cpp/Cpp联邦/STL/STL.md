@@ -2845,7 +2845,50 @@ SSO, Small String, Optimization
 
 [C++中std::string的COW及SSO实现 | 高明飞的博客 (gaomf.cn)](https://gaomf.cn/2017/07/26/Cpp_string_COW_SSO/)
 
-## *string_view (17)*
+## *视图类型*
+
+视图 view 类型是一种编程语言中的数据抽象，它**提供了对某些底层数据的引用或访问接口，但并不拥有这些数据的所有权和控制权（也就是说只能读，不能写）**。在C++中，视图类型以非拥有、轻量级的方式提供对其他数据结构内容的访问。视图类型主要用于表示和操作数据，而不需要复制或者转移数据的所有权
+
+* 非拥有 non-owning：视图类型只访问底层数据，但不控制其生命周期。底层数据的创建和销毁由其他部分负责，因此使用视图类型时需要确保底层数据在视图的整个生命周期内是有效的
+* 轻量级 lightweight：视图类型通常设计得很小，仅包含足够的信息来访问和操作底层数据（如指针和长度）。它们可以高效地按值传递，而不会引起大量的内存复制
+
+### string_view (17)
+
+`std::string_view` 是 C++17 标准中引入的一个非常有用的工具类，它提供了对字符串数据的轻量级、非拥有（non-owning）视图。这个类设计用来高效地传递和访问字符串，而不涉及字符串副本的创建或者内存的分配。这使得 string_view 成为处理字符串时一个非常有吸引力的替代品，尤其是在性能敏感的场合
+
+- string_view 提供了与 `std::string` 类似的接口来执行字符串操作，如查找 (`find`), 子串 (`substr`), 比较 (`compare`) 等操作，而不改变原始数据
+- 它可以透明地用于接受 `std::string` 参数的函数，因为 string_view 可以从 `std::string` 隐式构造
+
+string_view 主要用于
+
+- 在不需要修改字符串内容、只需读取或检查字符串时，string_view 可以省去不必要的字符串复制，从而提供更好的性能
+- 特别在函数参数传递时，如果使用 string_view 替代 `const std::string&`，可以避免潜在的字符串内存分配和复制开销
+
+```c++
+#include <iostream>
+#include <string_view>
+
+void print(std::string_view sv) {
+    std::cout << sv << std::endl;
+}
+
+int main() {
+    const char* cstr = "Hello, World!";
+    std::string str = "Hello, String!";
+    
+    // 使用 string_view 打印 C 风格字符串
+    print(cstr);
+    
+    // 使用 string_view 打印 std::string
+    print(str);
+    
+    return 0;
+}
+```
+
+### span (20)
+
+`std::span` 是 C++20 标准中引入的一个模板类，它提供了对一个连续序列的元素的非拥有型引用，并且这个序列可以是数组、`std::vector`、`std::array` 或其他任何连续存储的数据结构
 
 # 其他数据结构
 
