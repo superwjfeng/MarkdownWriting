@@ -5491,9 +5491,21 @@ LLDB 的使用可以看 *IDE与调试工具.md*
 
 [TableGen Overview — LLVM 19.0.0git documentation](https://llvm.org/docs/TableGen/index.html)
 
-TableGen 是 LLVM 项目用来定义和生成各种数据表和程序结构的一种工具。这些 `.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
+[1 TableGen Programmer’s Reference — LLVM 20.0.0git documentation](https://llvm.org/docs/TableGen/ProgRef.html)
 
-TableGen 工具被 LLVM、Clang 和 MLIR 使用，**其本质是一个 parser，将输入的 `.td` 文件转化为特定的数据结构后再输出为易于阅读的 cpp 代码**（一般是一个 `.inc` 文件）。但是它们的使用目标有所不同
+TableGen 是 LLVM 项目用来定义和生成各种数据结构（或者更专业的说就是特定领域的信息记录 records of domain-specific information）的一种工具。这些 `.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
+
+1. 应当把 TableGen DSL 视为一种 C++ 语言的变体，尽管能看到 `def` 这样的 Python 关键词
+2. `.td` 文件仅仅用于记录，不要把后端的功能和前端的实体绑定起来，不同的后端可能对同样的数据有非常不同的解释
+3. 虽然 TableGen 声称自己是一种声明式语言，但是仅有涉及 **field 之间** 的交叉引用时，才是按照依赖顺序处理的，其他场合都可以认为代码是顺序执行的
+
+> `.td` 这个后缀意思是 "target (machine) description"，这对于 `llvm-tblgen` 是非常有意义的，但对其他后端则显得不太合理，我想这也是一个历史问题，否则可能叫 `.tg` 似乎更加合理
+
+**TableGen 本质是一个 parser，将输入的 `.td` 文件转化为特定的数据结构后再输出为易于阅读的 cpp 代码**（一般是一个 `.inc` 文件）
+
+### TableGen 后端
+
+TableGen 也分为前后端，后端分别被 LLVM、Clang、LLDB 和 MLIR 使用
 
 - LLVM
   - **生成寄存器描述**：TableGen可用于定义处理器的寄存器类、寄存器别名以及其他与寄存器相关的属性
@@ -5502,21 +5514,39 @@ TableGen 工具被 LLVM、Clang 和 MLIR 使用，**其本质是一个 parser，
   - **调度信息**：给出CPU的管线模型和指令的延迟，调度算法需要此信息来进行指令重排序以提高性能
 
 - Clang 生成诊断信息
+- LLDB
 - MLIR  定义operation
 
-### TableGen语言（DSL）
+### 数据类型
+
+- bit：表示布尔类型，可取值为 0 或 1
+- int：表示 64 位整数。比如：1、-2
+- string：表示任意长度的字符串
+- dag：表示可嵌套的有向无环图（Directed Acyclic Graph, DAG）。DAG 的节点由一个运算符、零个或多个参数（或操作数）组成。节点中的运算符必须是一个实例化的记录。DAG 的大小等于参数的数量
+- `bits<n>`：表示大小为 `n` 的比特数组（数组中的每个元素占用一个比特）。**注意：** 比特数组中索引为 0 的元素位于最右侧。比如：`bits<2> val = { 1, 0 }`，表示十进制整数 2
+- `list<type>`：表示元素数据类型为 `type` 的列表。列表元素的下标从 0 开始
+- `ClassID`：表示抽象记录的名称
+
+### 定义 class & record
 
 [StormQ's Blog (csstormq.github.io)](https://csstormq.github.io/blog/LLVM 之后端篇（1）：零基础快速入门 TableGen)
 
-- **class**: 类似于 C++ 中的类，用于定义一组字段和它们默认值的集合
-- **record**: 类的实例，可以设置或覆盖类中定义的字段值
-- **field**: 存储在类或记录中的值，可以是字符串、整数、布尔值、列表或者是其他记录的引用
+- class：类似于 C++ 中的类，用于定义一组字段和它们默认值的集合
 
+  可选带有一个 `<>` 包围的**模板参数列表**，可选带有一个**基类列表**，也可选带有一个 `{//stmts}` 型的 **init-body**
 
+  * 基类列表：基类列表用于进行继承，且 tablegen 允许多继承，在实例化过程中，基类的 init-body 会先于子类执行
+  * 模板参数列表：每个 class 的模板参数中会有一个隐含的 `NAME` 参数，这个参数会在 class 被**实例化**时传入。使用模板参数的 `<>` 符号也额外强调了实参值都是 constexpr
+  * init-body：类似于构造函数，主要是下面几种句子
+    * `defvar a = b;` 用于定义局部变量，它支持类型推导 defvar 创建的值不允许被修改 defvar 初始化时不能引用 field
+    * `Type var_name = init_value;` 用于进行 field-def，它将会创建一个新的 filed，并用 init_value 初始化。注意：这种形式的 stmt 只能作为 filed-def 使用，所以不会出现在其他 scope 中
+    * `let c = d;` 用于修改已经存在的 field
 
+- def 关键词用于实例化 class
 
+  class 的实例一般被称为 **concrete record**，不要和官方的 ProgRef 还把 class 称作的 **abstract record** 搞混了
 
-`def` 关键词用于实例化 class
+  如果 def 时没有给出名字，那么这将创建一个匿名 record，匿名 record 虽然可以被后端读取到，但是一般约定后端不对匿名 record 做任何处理
 
 ### `.td` 文件内容
 
