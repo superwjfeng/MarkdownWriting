@@ -3061,11 +3061,11 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 
 <img src="AST_Action.png">
 
-1. `ClangTool::run` 传入ToolAction，Action作为一个我们自定义的执行动作
+1. `ClangTool::run` 传入ToolAction，Action 作为一个我们自定义的执行动作
 
-2. 定义一个自己的类MyFrontendAction，继承自FrontendAction，代表需要执行的操作（如果是AST操作的话，一般直接直接ASTFrontendAction，它会自动执行 `ExcuteaAction()`）
+2. 定义一个自己的类 MyFrontendAction，继承自 FrontendAction，代表需要执行的操作（如果是AST操作的话，一般直接直接 ASTFrontendAction，它会自动执行 `ExcuteaAction()`）
 
-3. 在自己的类MyFrontendAction中override一些FrontendAction需要重新定义的方法，其中 `CreateASTConsumer()` 是为实现自定义操作必须要override的一个方法
+3. 在自己的类 MyFrontendAction 中 override 一些 FrontendAction 需要重新定义的方法，其中 `CreateASTConsumer()` 是为实现自定义操作必须要 override 的一个方法
 
    ```C++
    class FindNamedClassAction : public clang::ASTFrontendAction {
@@ -3077,7 +3077,7 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
    };
    ```
 
-4. 定义一个自己的类MyASTConsumer，继承自ASTConsumer，以此来使用一些已有的遍历功能。一般来说必须要实现的是 `HandleTranslationUnit()` 来获取最重要的translation unit，另外的比如 `HandleTopLevelDecl()` 实现从上到下的遍历
+4. 定义一个自己的类 MyASTConsumer，继承自 ASTConsumer，以此来使用一些已有的遍历功能。一般来说必须要实现的是 `HandleTranslationUnit()` 来获取最重要的 translation unit，另外的比如 `HandleTopLevelDecl()` 实现从上到下的遍历
 
    ```C++
    class FindNamedClassConsumer : public clang::ASTConsumer {
@@ -3315,7 +3315,7 @@ set print-matcher true
 enable output     dump
 ```
 
-### 创造一个新的Matcher
+### 创造一个新的 Matcher
 
 具体步骤为
 
@@ -4262,8 +4262,8 @@ Plugin 插件 是一种软件组件，可以添加到一个已经存在的计算
 
 加载插件时，可以在调用Clang时使用 `-Xclang` 参数，后跟 `-load` 和插件文件的路径。例如：
 
-```
-sh复制代码clang -Xclang -load -Xclang /path/to/plugin.so your_source_file.c
+```cmd
+$ clang -Xclang -load -Xclang /path/to/plugin.so your_source_file.c
 ```
 
 这会导致Clang在处理你的源文件时加载并运行该插件。
