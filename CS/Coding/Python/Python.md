@@ -3633,6 +3633,38 @@ if match:
 - `group(0)` 或 `group()` 将返回整个匹配的文本，即包括了 `#include "` 和闭合的双引号 `"`.
 - `group(1)` 将返回第一个捕获组的内容，也就是 `(.*)` 所匹配的部分，也就是说在这个例子中，它将返回 `#include "<filename>"` 中的 `<filename>` 部分（不包含双引号）
 
+### 原生字符串
+
+原生字符串（raw string）是 Python 中的一种字符串字面量，它通过在字符串前面加上前缀 `r` 或 `R` 来表示。使用原生字符串时，反斜杠 `\` 不会被当作特殊字符处理，这意味着不需要对反斜杠进行转义。原生字符串常用于正则表达式和文件路径等场景，因为这些场合经常会出现需要使用到反斜杠
+
+例如，在普通的字符串字面量中，如果想要表示一个文件路径，需要对每个反斜杠进行双重转义，因为在普通字符串中 `\` 有特殊的含义，比如 `\n` 表示换行符：
+
+```python
+# 普通字符串中的文件路径
+file_path = "C:\\Users\\username\\folder"
+```
+
+但是如果使用原生字符串，则不需要对 `\` 进行转义：
+
+```python
+# 原生字符串中的文件路径
+file_path = r"C:\Users\username\folder"
+```
+
+相同地，在编写正则表达式时，原生字符串可以让我们更直观地书写模式，避免了由于转义造成的混淆：
+
+```python
+import re
+
+# 使用原生字符串定义正则表达式
+pattern = re.compile(r"\bword\b")
+
+# 在普通字符串中，需要对反斜杠进行转义
+pattern = re.compile("\\bword\\b")
+```
+
+在上面的例子中，`\b` 表示单词边界，如果不使用原生字符串，那么需要写成 `\\b` 才能正确传递给 `re.compile` 函数。使用原生字符串，只需要写成 `\b`，更简洁也更容易理解
+
 ## *rich*
 
 ## *gitpython*
@@ -3697,4 +3729,32 @@ $ yapf --style='{based_on_style: facebook, indent_width: 2}' -i detector.py
 ```
 
 预定义风格：google, yapf, pep8 (default), facebook
+
+类似于 `.clang-format` 文件用于 clang-format，在使用 yapf 时，可以创建一个命名为 `.style.yapf` 的文件，放在项目的根目录下或者任何父目录中，yapf 会递归向上搜索这个文件并应用它的配置
+
+`.style.yapf` 文件中的配置格式通常如下所示：
+
+```
+[style]
+based_on_style = facebook
+indent_width = 2
+```
+
+当运行 yapf 命令时，它会自动查找并应用这个配置文件。如果有一个已经存在的样式配置，并且想要保存为全局配置或特定项目的配置，只需将其内容移动到 `.style.yapf` 文件即可
+
+此外也可以指定一个自定义的配置文件路径，通过命令行中的 `--style` 选项直接传递给 yapf
+
+```cmd
+$ yapf --style=/path/to/your/configfile -i runner_cm_graph_builder.py
+```
+
+命令行中提供的任何参数将会覆盖配置文件中的设置
+
+如果没有在命令行中指定样式，也没有提供 `.style.yapf` 文件，那么 `yapf` 将使用默认的 PEP 8 样式进行格式化
+
+批量格式化
+
+```cmd
+$ find /path/to/directory -name '*.py' -exec yapf --style='{based_on_style: facebook, indent_width: 2}' -i '{}' +
+```
 
