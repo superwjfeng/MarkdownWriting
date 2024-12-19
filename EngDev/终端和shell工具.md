@@ -117,7 +117,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
   . $PROFILE
   ```
 
-### Nerd font
+## *Nerd font*
 
 [Nerd Fonts - Iconic font aggregator, glyphs/icons collection, & fonts patcher](https://www.nerdfonts.com/#home)
 
@@ -129,6 +129,22 @@ Nerd Fonts 是一个开源项目，提供了一系列字体，专门设计用于
 
 推荐 ComicShannsMono
 
+### Win
+
 win中添加字体的方式是将下载的字体解压缩后右键安装即可
+
+### Linux
+
+1. **解压缩字体文件**：假设下载了 FiraCode.zip，使用以下命令解压
+
+   ```cmd
+   $ unzip FiraCode.zip -d ~/.local/share/fonts
+   ```
+
+2. **刷新字体缓存**：解压后刷新字体缓存，以便系统识别新安装的字体
+
+   ```cmd
+   $ fc-cache -fv
+   ```
 
 ## *tmux*
