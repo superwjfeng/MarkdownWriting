@@ -182,6 +182,14 @@ TensorFlow、MindSpore 都同时支持动态图和静态图两种模式，而 Py
 * **同步**：顺序执行任务，当前任务执行完后会等待后续任务执行情况，任务之间需要等待、协调运行
 * **异步**：当前任务完成后，不需要等待后续任务的执行情况，可继续执行当前任务下一轮迭代。并且可以进一步并行化
 
+
+
+# ONNX
+
+[Introduction to ONNX - ONNX 1.18.0 documentation](https://onnx.ai/onnx/intro/index.html)
+
+ONNX, Open Neural Network Exchange
+
 # 编程接口
 
 <img src="AI框架的发展.drawio.png">

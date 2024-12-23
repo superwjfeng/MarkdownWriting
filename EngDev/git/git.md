@@ -1094,3 +1094,131 @@ git checkout
 ```
 
 在这里，`<repository-url>`是要克隆的仓库URL，`<repository-name>`是仓库名称，而`<path1> <path2> ...`是在仓库中感兴趣的路径。使用稀疏检出后，只有设置的路径会被检出到工作目录中
+
+## *Git LFS*
+
+Git LFS（Large File Storage）是一种 Git 扩展，旨在处理和管理 Git 仓库中的大文件。Git LFS 通过替换大文件在仓库中存储的方式，使得用户可以利用 Git 的版本控制系统，同时避免因大文件而导致的仓库性能问题
+
+### 操作
+
+* Git LFS 需要单独安装
+
+  ```cmd
+  $ git lfs install
+  ```
+
+* 跟踪大文件
+
+  ```cmd
+  $ git lfs track "*.psd"
+  ```
+  
+  track 命令实际上是修改了仓库中的`.gitattributes`文件，将该文件add添加到暂存区
+
+* 查看已设定的规则
+
+  ```cmd
+  $ git lfs track # 不带任何参数，用于查看 .gitattributes 中已设定的规则
+  *.psd filter=lfs diff=lfs merge=lfs -text
+  ```
+
+  1. **`\*.psd`**：这个模式用于匹配所有 `.psd` 文件，表示接下来的属性配置都将应用于仓库中的这些文件
+
+  2. **`filter=lfs`**：表示使用 Git Large File Storage (LFS) 来管理 `.psd` 文件
+
+  3. **`diff=lfs`**：指示 Git 使用 LFS 的差异化工具来处理 `.psd` 文件的变化
+
+     因为 `.psd` 文件是二进制文件，标准的文本差异化工具不适合。因此，指定 `diff=lfs` 确保对这些文件的比较采用适当的处理机制
+
+  4. **`merge=lfs`**：这个设置指示 Git 在合并这些文件时使用 LFS 的方法
+
+     对于二进制文件，合并通常是困难的，所以需要一种特殊的策略。`merge=lfs` 表示 LFS 有其处理机制来管理这些文件更改的合并
+
+  5. **`-text`**：这个选项明确指定 `.psd` 文件不是文本文件，以防止 Git 自动对其进行行尾处理（CRLF/LF 转换）
+
+     对于二进制文件，任何形式的行尾转换都是有害的，因为这会更改文件的内容，从而导致文件损坏
+
+* 提交文件的操作和普通文件的 git 是一样的
+
+* pull 大文件
+
+  ```cmd
+  $ git lfs pull
+  ```
+
+### 原理
+
+Git LFS 文件需要在一个支持 LFS 的存储服务中，默认使用 GitHub, GitLab 等平台提供的 LFS 支持；但也可以使用自建的 LFS 服务器
+
+Git LFS 的基本原理是将大文件的实际内容存储在一个专门的远程服务器上，同时在 Git 仓库中**只存储指向这些大文件的指针**。这种方法有效地解决了 Git 在处理大文件或大量二进制文件时遇到的性能问题
+
+<img src="GitLFSPush.png">
+
+<img src="GitLFSPull.png">
+
+# Repo
+
+repo 工具是 Android 开源项目（AOSP）中广泛使用的版本控制命令行工具
+
+repo 可以同时管理多个 Git 仓库，它通过一个名为 `manifest` 的 XML 文件定义了项目的仓库布局
+
+- repo 的操作是基于 Git 的，许多底层操作仍然直接使用 Git 命令
+- 创建和管理 manifest 是复用 repo 工具的核心，因为它定义了项目的整体结构
+
+## *操作*
+
+1. 初始化
+
+   需要一个 manifest 文件，它是一个 XML 文件，用于定义项目中的各个 Git 仓库及它们的结构。假设这个文件托管在某个仓库中，首先需要初始化该项目
+
+   ```cmd
+   $ mkdir myproject
+   $ cd myproject
+   $ repo init -u <manifest-repo-url> -b <branch-name>
+   ```
+
+2. 同步所有子项目的代码
+
+   ```cmd
+   $ repo sync
+   ```
+
+3. 创建并切换分支
+
+   ```cmd
+   $ repo start mybranch --all
+   ```
+
+4. 查看当前状态
+
+   ```cmd
+   $ repo status
+   ```
+
+5. 上传变更
+
+   ```cmd
+   $ repo upload
+   ```
+
+### manifest
+
+repo 是基于 manifest 文件来定义多个 Git 仓库的布局和结构的。Manifest 可能对目录结构进行了调整，包括指定了每个子项目的本地路径和分支
+
+```xml
+<manifest>
+    <remote name="origin" fetch="https://example.com/git/" />
+    <default remote="origin" revision="main" sync-j="4" />
+
+    <project name="project-a" path="src/project-a" />
+    <project name="project-b" path="src/project-b" revision="feature-branch" />
+    <project name="libraries/lib-x" path="libs/lib-x" revision="v1.0" />
+
+    <include name="additional-projects.xml" />
+</manifest>
+```
+
+- `remote` 元素指定了项目代码从哪个远程仓库获取
+- `default` 元素指定如果项目没有单独配置，则默认使用的分支和远程
+- `project` 元素定义各个子项目的具体配置，包括在本地的路径和分支等
+- `include` 元素允许将其他 manifest 文件纳入当前的配置中，实现配置的复用和组织
