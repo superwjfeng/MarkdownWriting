@@ -2989,7 +2989,7 @@ int main(int argc, char *argv[]) {
 ```
 
 ```cmd
-$ clang -Xclang -ast-dump -fsyntax-only test.cc
+    $ clang -Xclang -ast-dump -fsyntax-only test.cc
 ```
 
 - `-Xclang`：这个选项后面跟随的参数会直接传递给 Clang 的前端而不是驱动程序。Clang 驱动程序负责处理用户级别的编译选项，并将它们转化为针对各种工具（例如前端、汇编器和链接器）的实际命令行参数。使用 `-Xclang` 可以直接向 Clang 前端发送指令
