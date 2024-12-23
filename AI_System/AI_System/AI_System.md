@@ -188,7 +188,13 @@ TensorFlow、MindSpore 都同时支持动态图和静态图两种模式，而 Py
 
 [Introduction to ONNX - ONNX 1.18.0 documentation](https://onnx.ai/onnx/intro/index.html)
 
-ONNX, Open Neural Network Exchange
+ONNX, Open Neural Network Exchange 是一个开源的深度学习模型格式，旨在促进不同深度学习框架之间的互操作性。它由多家公司联合发起，包括微软和 Facebook，并得到了广泛的行业支持。ONNX 的主要目标是解决模型在不同框架和工具之间迁移的问题，使得模型的开发、训练和部署更加灵活和便利
+
+ONNX 模型格式是基于 Protobuf 的
+
+ONNX 模型是利用计算图来表示的
+
+ONNX 标准化了一组常用的算子
 
 # 编程接口
 
