@@ -525,9 +525,9 @@ git checkout <欲复制文件所在的文件> -- <文件或目录>
 
 ## *stash*
 
-### stash暂存文件的情景
+### stash 暂存文件的情景
 
-stash暂存未commit的内容：临时保存（或“暂存”）当前工作目录和索引（即暂存区）的修改状态，以便可以在一个干净的工作基础上切换分支或者做其他操作。这是一个非常有用的工具，尤其是当不想通过提交就保存当前进度的时候。比如说下面的场景
+stash 暂存未 commit 的内容：临时保存（或“暂存”）当前工作目录和索引（即暂存区）的修改状态，以便可以在一个干净的工作基础上切换分支或者做其他操作。这是一个非常有用的工具，尤其是当不想通过提交就保存当前进度的时候。比如说下面的场景
 
 * 当我们在本地修改了代码，然后想使用git pull下拉远程代码，为了避免冲突，可以使用git stash存储本地的修改
 * 当我们在开发分支修改了代码，但是还不想commit，此时项目的某个分支上有一个bug需要立马去解决，可以使用git stash保存本
@@ -597,15 +597,15 @@ reset (commit) [file]    NO      YES     NO        YES
 checkout (commit) [file] NO      YES     YES       NO
 ```
 
-head一列中的REF表示该命令移动了HEAD指向的分支引用所指向的位置，而HEAD则表示只移动了HEAD自身，NO则表示不会移动HEAD或HEAD指向的分支。 wd safe (workdir safe) 一列中，YES表示不会覆盖在workspace的修改，NO代表会覆盖在workspace的修改
+head 一列中的 REF 表示该命令移动了 HEAD 指向的分支引用所指向的位置，而 HEAD 则表示只移动了 HEAD 自身，NO 则表示不会移动 HEAD 或 HEAD 指向的分支。 wd safe (workdir safe) 一列中，YES 表示不会覆盖在 workspace 的修改，NO 代表会覆盖在 workspace 的修改
 
 * reset
 
-  * `git reset [--soft | --mixed | --hard]`：三个不同的参数实际上就决定上面checkout运行到那个步骤。**当不指定branch的时候，默认是 `HEAD^`，即上一次comimt**
+  * `git reset [--soft | --mixed | --hard] [target_branch]`：三个不同的参数实际上就决定上面 checkout 运行到那个步骤。**当不指定 branch 的时候，默认是 `HEAD^`，即上一次 commit**
 
-    * `--soft`：只移动HEAD，对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
+    * `--soft`：只移动 HEAD，对于工作区和暂存区的内容都不变，只是将版本库回退到某个指定版本
     * `--mixed`：为**默认选项**，使用时可以不用带该参数。该参数将暂存区的内容退回为指定提交版本内容，工作区文件保持不变
-    * `--hard`：将暂存区与工作区都退回到指定版本。**切记工作区有修改过的，但未提交的代码时不要用这个命令**，因为工作区会回滚，没有commit的代码就再也找不回了，所以使用该参数前一定要慎重
+    * `--hard`：将暂存区与工作区都退回到指定版本。**切记工作区有修改过的，但未提交的代码时不要用这个命令**，因为工作区会回滚，没有 commit 的代码就再也找不回了，所以使用该参数前一定要慎重。**用之前记得先 stash**
 
     ```
     working index HEAD target         working index HEAD
@@ -804,7 +804,7 @@ git cherry-pick <commit-hash1> <commit-hash2> <commit-hash3>
 
 - `-n` 或 `--no-commit`：应用更改但不自动创建提交。这允许你在继续操作（比如合并多个提交）之前编辑更改
 - `-e` 或 `--edit`：在提交的过程中允许编辑提交信息
-- `-x`：在提交信息中追加一行，说明这个提交是通过 `cherry-pick` 操作来的
+- **`-x`**：在提交信息中追加一行，说明这个提交是通过 `cherry-pick` 操作来的
 - `-s` 或 `--signoff`：为提交添加签名，即添加一行 "Signed-off-by:"
 - `-m <parent-number>` 或 `--mainline <parent-number>`：在拾取一个合并提交时，你必须指定主线，即应该考虑的父提交线路
 
@@ -889,7 +889,7 @@ $ git fetch upstream
 
 ### Detached HEAD
 
-当用户在 Git 中切换到一个特定的commit，而不是分支时， HEAD 引用会进入 detached HEAD 状态。这种状态下的提交可能会更加容易丢失，因此在进行任何修改之前，应谨慎考虑并理解当前所处的状态
+当用户在 Git 中切换到一个特定的 commit，而不是分支时， HEAD 引用会进入 detached HEAD 状态。这种状态下的提交可能会更加容易丢失，因此在进行任何修改之前，应谨慎考虑并理解当前所处的状态
 
 在 detached HEAD 状态下，HEAD 直接指向一个具体的提交，而不是一个具名的分支。这意味着当前不再位于任何分支的最新提交上
 
@@ -1094,3 +1094,131 @@ git checkout
 ```
 
 在这里，`<repository-url>`是要克隆的仓库URL，`<repository-name>`是仓库名称，而`<path1> <path2> ...`是在仓库中感兴趣的路径。使用稀疏检出后，只有设置的路径会被检出到工作目录中
+
+## *Git LFS*
+
+Git LFS（Large File Storage）是一种 Git 扩展，旨在处理和管理 Git 仓库中的大文件。Git LFS 通过替换大文件在仓库中存储的方式，使得用户可以利用 Git 的版本控制系统，同时避免因大文件而导致的仓库性能问题
+
+### 操作
+
+* Git LFS 需要单独安装
+
+  ```cmd
+  $ git lfs install
+  ```
+
+* 跟踪大文件
+
+  ```cmd
+  $ git lfs track "*.psd"
+  ```
+  
+  track 命令实际上是修改了仓库中的`.gitattributes`文件，将该文件add添加到暂存区
+
+* 查看已设定的规则
+
+  ```cmd
+  $ git lfs track # 不带任何参数，用于查看 .gitattributes 中已设定的规则
+  *.psd filter=lfs diff=lfs merge=lfs -text
+  ```
+
+  1. **`\*.psd`**：这个模式用于匹配所有 `.psd` 文件，表示接下来的属性配置都将应用于仓库中的这些文件
+
+  2. **`filter=lfs`**：表示使用 Git Large File Storage (LFS) 来管理 `.psd` 文件
+
+  3. **`diff=lfs`**：指示 Git 使用 LFS 的差异化工具来处理 `.psd` 文件的变化
+
+     因为 `.psd` 文件是二进制文件，标准的文本差异化工具不适合。因此，指定 `diff=lfs` 确保对这些文件的比较采用适当的处理机制
+
+  4. **`merge=lfs`**：这个设置指示 Git 在合并这些文件时使用 LFS 的方法
+
+     对于二进制文件，合并通常是困难的，所以需要一种特殊的策略。`merge=lfs` 表示 LFS 有其处理机制来管理这些文件更改的合并
+
+  5. **`-text`**：这个选项明确指定 `.psd` 文件不是文本文件，以防止 Git 自动对其进行行尾处理（CRLF/LF 转换）
+
+     对于二进制文件，任何形式的行尾转换都是有害的，因为这会更改文件的内容，从而导致文件损坏
+
+* 提交文件的操作和普通文件的 git 是一样的
+
+* pull 大文件
+
+  ```cmd
+  $ git lfs pull
+  ```
+
+### 原理
+
+Git LFS 文件需要在一个支持 LFS 的存储服务中，默认使用 GitHub, GitLab 等平台提供的 LFS 支持；但也可以使用自建的 LFS 服务器
+
+Git LFS 的基本原理是将大文件的实际内容存储在一个专门的远程服务器上，同时在 Git 仓库中**只存储指向这些大文件的指针**。这种方法有效地解决了 Git 在处理大文件或大量二进制文件时遇到的性能问题
+
+<img src="GitLFSPush.png">
+
+<img src="GitLFSPull.png">
+
+# Repo
+
+repo 工具是 Android 开源项目（AOSP）中广泛使用的版本控制命令行工具
+
+repo 可以同时管理多个 Git 仓库，它通过一个名为 `manifest` 的 XML 文件定义了项目的仓库布局
+
+- repo 的操作是基于 Git 的，许多底层操作仍然直接使用 Git 命令
+- 创建和管理 manifest 是复用 repo 工具的核心，因为它定义了项目的整体结构
+
+## *操作*
+
+1. 初始化
+
+   需要一个 manifest 文件，它是一个 XML 文件，用于定义项目中的各个 Git 仓库及它们的结构。假设这个文件托管在某个仓库中，首先需要初始化该项目
+
+   ```cmd
+   $ mkdir myproject
+   $ cd myproject
+   $ repo init -u <manifest-repo-url> -b <branch-name>
+   ```
+
+2. 同步所有子项目的代码
+
+   ```cmd
+   $ repo sync
+   ```
+
+3. 创建并切换分支
+
+   ```cmd
+   $ repo start mybranch --all
+   ```
+
+4. 查看当前状态
+
+   ```cmd
+   $ repo status
+   ```
+
+5. 上传变更
+
+   ```cmd
+   $ repo upload
+   ```
+
+### manifest
+
+repo 是基于 manifest 文件来定义多个 Git 仓库的布局和结构的。Manifest 可能对目录结构进行了调整，包括指定了每个子项目的本地路径和分支
+
+```xml
+<manifest>
+    <remote name="origin" fetch="https://example.com/git/" />
+    <default remote="origin" revision="main" sync-j="4" />
+
+    <project name="project-a" path="src/project-a" />
+    <project name="project-b" path="src/project-b" revision="feature-branch" />
+    <project name="libraries/lib-x" path="libs/lib-x" revision="v1.0" />
+
+    <include name="additional-projects.xml" />
+</manifest>
+```
+
+- `remote` 元素指定了项目代码从哪个远程仓库获取
+- `default` 元素指定如果项目没有单独配置，则默认使用的分支和远程
+- `project` 元素定义各个子项目的具体配置，包括在本地的路径和分支等
+- `include` 元素允许将其他 manifest 文件纳入当前的配置中，实现配置的复用和组织

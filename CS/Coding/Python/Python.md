@@ -2282,7 +2282,7 @@ outer()
 
 ### 给外层函数使用的参数
 
-# 类
+# 面向对象
 
 ## *类基础*
 
@@ -2701,17 +2701,56 @@ with expression as variable:
 
 在上面的例子中`open()` 函数返回了一个文件对象，这个对象作为上下文管理器用来保证无论如何都能安全地关闭文件。当进入`with`代码块时，文件会被打开，并且`file`变量会引用这个文件对象。当离开`with`代码块时，无论是正常退出还是因为异常而退出，`__exit__`方法会被调用，此时文件会被自动关闭
 
-### File方法
-
-假设有 `f=open(filename, mode)`
+### 几种文件读取方法的对比
 
 * `f.read()`
 
+  ```python
+  with open('testRead.txt', 'r', encoding='UTF-8') as f1:
+      results = f1.read()
+      print(results)
+  ```
+
   读取整个文件，返回的是一个字符串，字符串包括文件中的所所有内容。若想要将每一行数据分离，即需要对每一行数据进行操作，此方法无效
+
+  `read()` 是最快的，当然其功能最简单，在很多情况下不能满足需求
 
 * `f.readline()` 会从文件中读取单独的一行。换行符为 '\n'。`f.readline()` 如果返回一个空字符串, 说明已经已经读取到最后一行
 
+  ```python
+  with open('testRead.txt', 'r', encoding='UTF-8') as f2:
+      line = f2.readline()
+      while line is not None and line != '':
+          print(line)
+          line = f2.readline()
+  ```
+
+  每次只读取文件的一行，内存占用低
+
 * `f.readlines()`
+
+  ```python
+  with open('testRead.txt', 'r', encoding='UTF-8') as f3:
+      lines = f3.readlines()    # 接收数据
+      for line in lines:     # 遍历数据
+          print(line)
+  ```
+
+  不推荐用于大文件，因为它会一次性将整个文件内容读取到内存中；对于小文件来说很快，因为只进行了一次磁盘 IO 操作
+
+* 使用文件对象迭代
+
+  ```python
+  with open('file.txt', 'r') as file:
+      for line in file:
+          # 处理每一行...
+  ```
+
+  直接对文件对象进行迭代，逐行读取。推荐用于任何大小的文件。Python会为文件内容创建一个迭代器，并且一次只处理一行数据，所以内存占用少。这种方法类似于 `readline()`
+
+### 其他 File 方法
+
+假设有 `f=open(filename, mode)`
 
 * `f.write()`
 
@@ -2841,94 +2880,7 @@ shutil (shell utilities) 模块提供了一系列对文件和文件集合进行�
 
 ## *sys库*
 
-# 网络编程
-
-## *socket*
-
-`socket` 库提供了基本的 BSD 套接字接口。它是 Python 网络编程的底层库，支持 TCP 和 UDP 协议，并允许你实现客户端和服务器应用程序。
-
-```python
-import socket
-
-# 创建一个 socket 对象
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# 连接到服务器
-s.connect(('example.com', 80))
-
-# 发送数据
-s.sendall(b'GET / HTTP/1.1\r\nHost: example.com\r\n\r\n')
-
-# 接收响应数据
-data = s.recv(1024)
-
-print(data.decode())
-
-# 关闭连接
-s.close()
-```
-
-
-
-## *http*
-
-### Server
-
-`http.server` 模块可以用来快速创建一个简易的 HTTP 服务器。这通常用于测试或本地开发阶段，而不推荐在生产环境中使用
-
-```python
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b'Hello, World!')
-
-if __name__ == '__main__':
-    httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
-    print("Serving at port 8000")
-    httpd.serve_forever()
-```
-
-### Cient
-
-`http.client` 是一个用于 HTTP 客户端的库，它提供了一些类和方法来发送 HTTP 请求和接收 HTTP 响应
-
-```python
-import http.client
-
-# 创建一个 HTTPConnection 对象
-conn = http.client.HTTPSConnection("www.example.com")
-
-# 发送 GET 请求
-conn.request("GET", "/")
-
-# 获取响应
-resp = conn.getresponse()
-print(resp.status, resp.reason)
-
-# 读取响应内容
-data = resp.read()
-print(data)
-
-# 关闭连接
-conn.close()
-```
-
-
-
-## *urllib*
-
-## *ssl*
-
-# Web 开发
-
-见 *Flask.md*
-
-# 进程 & 线程 & 协程
+# 并发
 
 ## *进程*
 
@@ -3093,6 +3045,93 @@ multiprocessing库的出现很大程度上是为了弥补thread库因为GIL而�
 5. Python3.7 使用async def + await的方式定义协程
 6. 此后asyncio模块更加完善和稳定，对底层的API进行的封装和扩展
 7. Python将于3.10版本中移除以yield from的方式定义协程
+
+# 网络编程
+
+## *socket*
+
+`socket` 库提供了基本的 BSD 套接字接口。它是 Python 网络编程的底层库，支持 TCP 和 UDP 协议，并允许你实现客户端和服务器应用程序。
+
+```python
+import socket
+
+# 创建一个 socket 对象
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# 连接到服务器
+s.connect(('example.com', 80))
+
+# 发送数据
+s.sendall(b'GET / HTTP/1.1\r\nHost: example.com\r\n\r\n')
+
+# 接收响应数据
+data = s.recv(1024)
+
+print(data.decode())
+
+# 关闭连接
+s.close()
+```
+
+
+
+## *http*
+
+### Server
+
+`http.server` 模块可以用来快速创建一个简易的 HTTP 服务器。这通常用于测试或本地开发阶段，而不推荐在生产环境中使用
+
+```python
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'Hello, World!')
+
+if __name__ == '__main__':
+    httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
+    print("Serving at port 8000")
+    httpd.serve_forever()
+```
+
+### Cient
+
+`http.client` 是一个用于 HTTP 客户端的库，它提供了一些类和方法来发送 HTTP 请求和接收 HTTP 响应
+
+```python
+import http.client
+
+# 创建一个 HTTPConnection 对象
+conn = http.client.HTTPSConnection("www.example.com")
+
+# 发送 GET 请求
+conn.request("GET", "/")
+
+# 获取响应
+resp = conn.getresponse()
+print(resp.status, resp.reason)
+
+# 读取响应内容
+data = resp.read()
+print(data)
+
+# 关闭连接
+conn.close()
+```
+
+
+
+## *urllib*
+
+## *ssl*
+
+# Web 开发
+
+见 *Flask.md*
 
 # 调用程序
 
@@ -3290,7 +3329,7 @@ C = ffi.dlopen("example.so")
 result = C.some_function(10)
 ```
 
-# 异常和垃圾回收
+# 异常 & 垃圾回收
 
 ## *异常*
 
@@ -3594,6 +3633,38 @@ if match:
 - `group(0)` 或 `group()` 将返回整个匹配的文本，即包括了 `#include "` 和闭合的双引号 `"`.
 - `group(1)` 将返回第一个捕获组的内容，也就是 `(.*)` 所匹配的部分，也就是说在这个例子中，它将返回 `#include "<filename>"` 中的 `<filename>` 部分（不包含双引号）
 
+### 原生字符串
+
+原生字符串（raw string）是 Python 中的一种字符串字面量，它通过在字符串前面加上前缀 `r` 或 `R` 来表示。使用原生字符串时，反斜杠 `\` 不会被当作特殊字符处理，这意味着不需要对反斜杠进行转义。原生字符串常用于正则表达式和文件路径等场景，因为这些场合经常会出现需要使用到反斜杠
+
+例如，在普通的字符串字面量中，如果想要表示一个文件路径，需要对每个反斜杠进行双重转义，因为在普通字符串中 `\` 有特殊的含义，比如 `\n` 表示换行符：
+
+```python
+# 普通字符串中的文件路径
+file_path = "C:\\Users\\username\\folder"
+```
+
+但是如果使用原生字符串，则不需要对 `\` 进行转义：
+
+```python
+# 原生字符串中的文件路径
+file_path = r"C:\Users\username\folder"
+```
+
+相同地，在编写正则表达式时，原生字符串可以让我们更直观地书写模式，避免了由于转义造成的混淆：
+
+```python
+import re
+
+# 使用原生字符串定义正则表达式
+pattern = re.compile(r"\bword\b")
+
+# 在普通字符串中，需要对反斜杠进行转义
+pattern = re.compile("\\bword\\b")
+```
+
+在上面的例子中，`\b` 表示单词边界，如果不使用原生字符串，那么需要写成 `\\b` 才能正确传递给 `re.compile` 函数。使用原生字符串，只需要写成 `\b`，更简洁也更容易理解
+
 ## *rich*
 
 ## *gitpython*
@@ -3658,4 +3729,32 @@ $ yapf --style='{based_on_style: facebook, indent_width: 2}' -i detector.py
 ```
 
 预定义风格：google, yapf, pep8 (default), facebook
+
+类似于 `.clang-format` 文件用于 clang-format，在使用 yapf 时，可以创建一个命名为 `.style.yapf` 的文件，放在项目的根目录下或者任何父目录中，yapf 会递归向上搜索这个文件并应用它的配置
+
+`.style.yapf` 文件中的配置格式通常如下所示：
+
+```
+[style]
+based_on_style = facebook
+indent_width = 2
+```
+
+当运行 yapf 命令时，它会自动查找并应用这个配置文件。如果有一个已经存在的样式配置，并且想要保存为全局配置或特定项目的配置，只需将其内容移动到 `.style.yapf` 文件即可
+
+此外也可以指定一个自定义的配置文件路径，通过命令行中的 `--style` 选项直接传递给 yapf
+
+```cmd
+$ yapf --style=/path/to/your/configfile -i runner_cm_graph_builder.py
+```
+
+命令行中提供的任何参数将会覆盖配置文件中的设置
+
+如果没有在命令行中指定样式，也没有提供 `.style.yapf` 文件，那么 `yapf` 将使用默认的 PEP 8 样式进行格式化
+
+批量格式化
+
+```cmd
+$ find /path/to/directory -name '*.py' -exec yapf --style='{based_on_style: facebook, indent_width: 2}' -i '{}' +
+```
 

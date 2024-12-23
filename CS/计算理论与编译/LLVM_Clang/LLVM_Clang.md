@@ -18,7 +18,7 @@ LLVM, Low Level Virtual Machine 是一个开源的编译器基础设施项目，
 >
 > 而在这之前，Apple公司一直使用GCC作为编译器，后来GCC对Objective-C的语言特性支持一直不够，Apple自己开发的GCC模块又很难得到GCC委员会的合并，所以老乔不开心。等到Chris Lattner毕业时，Apple就把他招入靡下，去开发自己的编译器，所以LLVM最初受到了Apple的大力支持。
 >
-> 最初时，LLVM的前端是GCC，后来Apple还是立志自己开发了一套Clang出来把GCC取代了，不过现在带有Dragon Egg的GCC还是可以生成LLVM IR，也同样可以取代Clang的功能，我们也可以开发自己的前端，和LLVM后端配合起来，实现我们自定义的编程语言的编译器。
+> 最初时，LLVM的前端是GCC，后来Apple还是立志自己开发了一套Clangqu出来把GCC取代了，不过现在带有Dragon Egg的GCC还是可以生成LLVM IR，也同样可以取代Clang的功能，我们也可以开发自己的前端，和LLVM后端配合起来，实现我们自定义的编程语言的编译器。
 >
 > 原文链接：https://blog.csdn.net/RuanJian_GC/article/details/132031490
 
@@ -2958,7 +2958,7 @@ Clang的AST节点的最顶级类 Decl、Stmt 和 Type 被建模为没有公共�
 * NestedNameSpecifier
 * QualType
 
-### AST Type的实现
+### AST Type 的实现
 
 Clang AST 中的类型主要由两个核心类组成：`clang::Type`和`clang::QualType`
 
@@ -3061,11 +3061,11 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
 
 <img src="AST_Action.png">
 
-1. `ClangTool::run` 传入ToolAction，Action作为一个我们自定义的执行动作
+1. `ClangTool::run` 传入ToolAction，Action 作为一个我们自定义的执行动作
 
-2. 定义一个自己的类MyFrontendAction，继承自FrontendAction，代表需要执行的操作（如果是AST操作的话，一般直接直接ASTFrontendAction，它会自动执行 `ExcuteaAction()`）
+2. 定义一个自己的类 MyFrontendAction，继承自 FrontendAction，代表需要执行的操作（如果是AST操作的话，一般直接直接 ASTFrontendAction，它会自动执行 `ExcuteaAction()`）
 
-3. 在自己的类MyFrontendAction中override一些FrontendAction需要重新定义的方法，其中 `CreateASTConsumer()` 是为实现自定义操作必须要override的一个方法
+3. 在自己的类 MyFrontendAction 中 override 一些 FrontendAction 需要重新定义的方法，其中 `CreateASTConsumer()` 是为实现自定义操作必须要 override 的一个方法
 
    ```C++
    class FindNamedClassAction : public clang::ASTFrontendAction {
@@ -3077,7 +3077,7 @@ Clang 主要提供了 2 种对 AST 进行访问的类：`RecursiveASTVisitor` �
    };
    ```
 
-4. 定义一个自己的类MyASTConsumer，继承自ASTConsumer，以此来使用一些已有的遍历功能。一般来说必须要实现的是 `HandleTranslationUnit()` 来获取最重要的translation unit，另外的比如 `HandleTopLevelDecl()` 实现从上到下的遍历
+4. 定义一个自己的类 MyASTConsumer，继承自 ASTConsumer，以此来使用一些已有的遍历功能。一般来说必须要实现的是 `HandleTranslationUnit()` 来获取最重要的 translation unit，另外的比如 `HandleTopLevelDecl()` 实现从上到下的遍历
 
    ```C++
    class FindNamedClassConsumer : public clang::ASTConsumer {
@@ -3315,7 +3315,7 @@ set print-matcher true
 enable output     dump
 ```
 
-### 创造一个新的Matcher
+### 创造一个新的 Matcher
 
 具体步骤为
 
@@ -3453,9 +3453,11 @@ hasArgument(1, anything()) // 显式地表明我们不在乎第二个参数是�
 
 llvm-project/llvm/include/llvm/ADT/StringRef.h
 
-StringRef 用于提供对字符串（通常是字符数组）的const引用。与标准库中的 `std::string` 类相比，StringRef 不会复制字符串数据，它只是引用已经存在的字符串。这使得 StringRef 能够在不涉及内存分配和复制的情况下高效地操作字符串
+StringRef 用于提供对字符串（通常是字符数组）的 **const 引用**。与标准库中的 `std::string` 类相比，StringRef 不会复制字符串数据，它只是引用已经存在的字符串。这使得 StringRef 能够在不涉及内存分配和复制的情况下高效地操作字符串
 
-`StringRef` 的典型用法示例：
+实际上 StringRef 和 C++17 引入的 `std::string_view` 的设计思路是一样的，但 StringRef 在 C++17 标准引入 `std::string_view` 之前就已经存在了。LLVM 需要一种轻量级的方式来传递和检查字符串而无需复制底层数据，所以 StringRef 是 LLVM 内部为满足这个需求而创建的
+
+StringRef 的典型用法示例：
 
 ```C++
 #include "llvm/ADT/StringRef.h"
@@ -3483,31 +3485,23 @@ int main() {
 }
 ```
 
-在这个例子中，我们创建了一个 `StringRef` 来引用一个 C 风格字符串，并演示了如何使用其中的一些方法。
+在这个例子中，我们创建了一个 StringRef 来引用一个 C 风格字符串，并展示了如何使用其中的一些方法
 
 使用 StringRef 的时候要谨慎 ，因为它的设计意图主要是用作临时对象，在函数调用过程中传递字符串，而不是长期存储字符串数据。所以使用 StringRef 时，需要小心保证它引用的字符串在 StringRef 被使用的整个时间里都是有效的
 
 ### Twine
 
-Twine 是一个用于高效地进行字符串连接和操作的实用工具类，它被设计为延迟求值的方式以避免不必要的内存分配。Twine 不拥有其引用的字符串数据，而是保持对这些字符串片段（可以是字面量、字符串对象等）的引用，并在最后需要实际的字符串结果时才将它们组合起来
-
-Twine 最常见的使用场景是构建错误消息或其他复杂的字符串，特别是在性能敏感的上下文中，因为它可以避免许多小型的临时字符串分配和复制
-
-
-
-使用二叉树结构来描述字符串临时的拼接，避免 string 的堆开销。如 `auto c = Twine(std::string(a), "b")`，此时 c 的左子树保存 a 的常引用，右子树保存 “b” 的指针，再 `auto e = Twine(c, "d")` 则 e 的左子树保存 c 的常引用；此时调用 `e.str()` 则会从保存的二叉结构构造完整字符串
-
-这个类**不会延长**保存的元素的**生命周期**，特别是临时变量用完就扔在其中是完全不能存在的，必须在确定作用域的情况下使用，多少有点为性能的受虐狂情结
-
-
+C++ 中对 string 的拼接等操作一直是个痛点，LLVM 提供了 Twine 来优化。Twine 是一个用于高效地进行字符串连接和操作的实用工具类，**它的底层是 rope**
 
 下面是关于 Twine 的一些关键特性：
 
-1. **延迟求值**：Twine 会保留对所涉及的各个字符串片段的引用，只在最终需要时（例如输出到流或转换为 `std::string` 时）才进行实际的字符串拼接
-2. **非拥有性质**：因为 Twine 对象不拥有其引用的字符串数据，它应该只用作临时对象，在创建后尽快用于字符串操作，以确保引用的数据在使用时仍然有效
-3. **不修改原始字符串**：Twine 只是引用原始字符串，并不修改它们。所有的拼接和组合操作都是在最终转换为另一个字符串表示时发生的。
-4. **不用于长期存储**：由于其非拥有的特性和对原始数据的引用，Twine 并不适合用于长期存储字符串数据。
-5. **与其他 LLVM 数据结构相互作用**：`Twine` 能够处理 LLVM 的 `StringRef`、基本 C 字符串 (`const char*`) 以及 C++ 标准库的 `std::string` 对象
+1. **延迟求值 lazy evaluation**：Twine 会保留对所涉及的各个字符串片段的引用，只在最终需要时（例如输出到流或转换为 `std::string` 时）才进行实际的字符串拼接
+2. **非拥有性质**：类似于 StringRef，Twine 不拥有其引用的字符串数据，因此它应该只用作临时对象，在创建后尽快用于字符串操作，以确保引用的数据在使用时仍然有效
+3. **不修改原始字符串**：Twine 只是引用原始字符串，并不修改它们。所有的拼接和组合操作都是在**最终转换为另一个字符串**表示时发生的
+4. **不用于长期存储**：由于其非拥有的特性和对原始数据的引用，Twine 并不适合用于长期存储字符串数据
+5. **与其他 LLVM 数据结构相互作用**：Twine 能够处理 LLVM 的 StringRef、基本 C 字符串 (`const char*`) 以及 C++ 标准库的 `std::string` 对象
+
+Twine 最常见的使用场景是构建错误消息或其他复杂的字符串，特别是在性能敏感的上下文中，因为它可以避免许多小型的临时字符串分配和复制
 
 Twine 的使用示例：
 
@@ -3537,24 +3531,38 @@ int main() {
 
 在上述代码中，我们创建了几个不同类型的字符串片段，并使用 `Twine` 将它们连接成一个完整的信息。请注意，只有在调用 `.str()` 方法时，`Twine` 才会生成一个新的 `std::string` 对象。在此之前，所有的操作都没有产生临时字符串对象或执行任何连接操作
 
-总之，`Twine` 是一个高效的工具，用于在需要动态构建字符串但又想避免频繁内存分配时使用。然而，正因为它的这种设计，开发者需要谨慎使用，并确保 `Twine` 使用的上下文适合其设计意图
-
 ### SmallString
+
+SmallString 是 SmallVector 的派生类，它补充了很多 string API
 
 ### Formatting
 
 ## *Sequential Containers*
 
+### ArrayRef
+
+ArrayRef 用于提供对数组的轻量级、不拥有所有权的引用。它是为了在不需要控制底层数组生命周期的情况下方便地传递和使用数组数据
+
+ArrayRef 提供了与 C++20 中 `std::span` 类似的功能，但 ArrayRef 更早提供并专门用于 LLVM 项目中
+
 ### SmallVector
 
-`llvm::SmallVector` 是一个针对小数组进行优化的结构。优化为当数组元素较少时不执行堆分配，只在栈上分配。若添加的元素数量超过了使用自动存储分配的元素数量，它将转回 `std::vector` 的行为并分配越来越大的数组。当明确始终拥有少量元素时，`llvm::SmallVector` 可以带来性能优势
-
+`llvm::SmallVector` 是一个针对小数组进行优化的结构。优化为当数组元素较少时不执行堆分配（不进行 malloc），只在栈上分配。若添加的元素数量超过了使用自动存储分配的元素数量，它将转回 `std::vector` 的行为并分配越来越大的数组。当明确始终拥有少量元素时，`llvm::SmallVector` 可以带来性能优势
 
 ### PagedVector
 
+- **非连续存储**：与 `std::vector` 等容器使用单一连续内存块不同，PagedVector 在多个小块内存中存储数据，每块称为一页
+- **动态扩展**：当现有的页面填满时，PagedVector 会自动添加新页面来存储更多数据
+- **高效追加**：由于采用了分页方式，向 PagedVector 追加新元素通常不需要重新分配和复制整个数据集合，从而提高了效率
+- **缓解内存碎片**：分页存储可以减少大型数据导致的内存碎片问题，因为它允许使用较小的、更易管理的内存块
+
+### PackedVector
+
+PackedVector 是一个模板类，用于将多个值紧密地打包到一块连续的内存。这个容器对于存储大量的小尺寸元素（比如布尔值或者小整数）特别有用，因为它可以减少因内存对齐和额外的空间开销带来的浪费
+
 ### ilist_node
 
-和Linux内核中的双向链表一样，LLVM中实现的是侵入式的双向链表，ilist_node 则是它的基础节点。如 `ClassA : public ilist_node<ClassA, Tag1>` 这种类声明，即在 `ClassA` 内部放置了对应 Tag1 的双向链表指针，使用 `simple_ilist<ClassA, Tag1> list` 即可往 `list` 中插入 `ClassA` 对象，当一个对象需要插入至不同链表中时，多重继承不同的 Tag 的 `ilist_node` 模板，同上链表也使用对应的 Tag。需要**注意**元素对象的**生命周期**问题，`simple_ilist` 不负责管理容器中元素的生命周期，要实现比较复杂的生命周期管理需要在链表插入/删除元素等操作时使用 `iplist_impl` 包装类指定回调函数来实现
+和 Linux 内核中的双向链表一样，LLVM 中实现的是侵入式的双向链表，ilist_node 则是它的基础节点。如 `ClassA : public ilist_node<ClassA, Tag1>` 这种类声明，即在 `ClassA` 内部放置了对应 Tag1 的双向链表指针，使用 `simple_ilist<ClassA, Tag1> list` 即可往 `list` 中插入 `ClassA` 对象，当一个对象需要插入至不同链表中时，多重继承不同的 Tag 的 `ilist_node` 模板，同上链表也使用对应的 Tag。需要**注意**元素对象的**生命周期**问题，`simple_ilist` 不负责管理容器中元素的生命周期，要实现比较复杂的生命周期管理需要在链表插入/删除元素等操作时使用 `iplist_impl` 包装类指定回调函数来实现
 
 ### Sentinels
 
@@ -3562,15 +3570,24 @@ int main() {
 
 迭代器标准行为的约束为 ilist 如何分配和存储哨兵位提供了一些实现自由度。相应的策略由 `ilist_traits<T>` 决定。默认情况下，每当需要哨兵时，就会在堆上分配一个 T 类型的对象
 
-尽管默认策略在大多数情况下是足够的，但当 T 没有提供默认构造函数时，可能会出现问题。此外，在许多 ilist 实例的情况下，与哨兵位关联的内存开销是浪费的。为了缓解众多且体积庞大的 T-哨兵的情况，有时会采用一种技巧，导致出现ghostly sentinels
+尽管默认策略在大多数情况下是足够的，但当 T 没有提供默认构造函数时，可能会出现问题。此外，在许多 ilist 实例的情况下，与哨兵位关联的内存开销是浪费的。为了缓解众多且体积庞大的 T-哨兵的情况，有时会采用一种技巧，导致出现 ghostly sentinels
 
 ghostly sentinels 是通过特别设计的 `ilist_traits<T>` 获得的，它们在内存中与 ilist 实例重叠。使用指针运算来获取相对于 ilist 的 this 指针的哨兵。ilist 增加了一个额外的指针，作为哨兵位的反向链接。这是唯一可以合法访问的ghostly sentinels字段
 
-
-
 ## *Set-like Containers*
 
-## *Map-like Containers*
+* SmallSet：和 SmallVector、SmallString 一样，适用于元素数量较少的情况。当集合小于某个阈值时，它在栈上分配空间，否则会转为用 `std::set` 存储元素
+* SmallPtrSet：高度定制化的专门用于存储指针的 set
+* StringSet：特化的 `StringMap<char>`，用于存储字符串。其内部使用哈希集合进行存储，优化了字符串的唯一性检查和存储
+* DenseSet：基于密集哈希表实现的集合类，适用于存储大量元素。它提供了快速的插入、查找和删除操作
+* SparseSet：用稀疏数组表示的集合，特别适合于当元素是小整数且分布不均匀时。它可以高效地进行元素插入和存在性检查
+* SparseMultiSet：SparseSet 的变体，允许存储多个重复元素。它维护了元素计数来支持多个相同元素的存在
+* FoldingSet：一个去重的容器，它使用自定义的散列和相等性算法来存储节点。FoldingSet 非常适合存储大量可能存在高度相似或重复数据的情况
+* SetVector：结合 `std::set` 和 `std::vector` 的特点，即保证了元素的唯一性，又保留了插入顺序。它在内部同时维护一个向量和一个集合
+* UniqueVector：类似于 SetVector，它保证了元素的唯一性并且为每个元素提供了一个唯一的索引。如果尝试插入一个已经存在的元素，它将返回该元素的索引而不是添加新元素
+* ImmutableSet：一个不可变的集合类，意味着一旦创建就不能改变。它常用于函数式编程风格，以及在需要保证数据不被更改的上下文中
+
+## ***Map-like Containers***
 
 * StringMap
 
@@ -3658,8 +3675,6 @@ public:
 * NumTombstones Tombstone个数（二次探测法删除数据时需要设置deleted标识）
 * NumBuckets 桶的个数
 
-
-
 ## *Bit Storage Containers*
 
 
@@ -3682,9 +3697,17 @@ public:
 
   IntrusiveRefCntPtr 用于持有一个指向继承自 RefCountedBase 的对象的指针
 
+### TinyPtrVector
+
+一个高度定制化的模板类容器，专门用来存放指针，它有三个特点
+
+* 当容器中存放了 0 个或 1 个值的时候，避免进行 heap allocation
+* 只能存放指针类型
+* 不能存放 nullptr
+
 ### PointerIntPair
 
-`PointerIntPair` 是一个通常用于C++编程中的数据结构，它允许在一个指针的存储空间内同时存储一个指针和一个小整数。这通过对指针和整数进行位操作实现，能够在不增加额外存储开销的情况下保存这两种信息
+PointerIntPair 允许在一个指针的存储空间内同时存储一个指针和一个小整数。这通过对指针和整数进行位操作实现，能够在不增加额外存储开销的情况下保存这两种信息
 
 在32或64位架构中，由于指针的对齐要求，指针的低位通常是未使用的（例如，可能是4字节或8字节对齐），因此可以将整数值编码到指针值的低位来利用这些位。这样的编码和解码过程需要依赖特定平台和对象类型的对齐规则
 
@@ -3709,6 +3732,8 @@ PointerIntPair<PointerIntPair<void*, 1, bool>, 1, bool>
 这个结构就能够存储两个独立的布尔值，并且每个布尔值占用不同的位
 
 这种数据结构在性能关键的应用程序中非常有用，尤其是在需要压缩数据表示以减少内存占用和提高缓存利用率的场合。然而，它的使用需要对底层平台的内存对齐和整数编码有较深的理解，以确保正确地进行位操作
+
+### PointerUnion
 
 # 编程接口
 
@@ -4237,8 +4262,8 @@ Plugin 插件 是一种软件组件，可以添加到一个已经存在的计算
 
 加载插件时，可以在调用Clang时使用 `-Xclang` 参数，后跟 `-load` 和插件文件的路径。例如：
 
-```
-sh复制代码clang -Xclang -load -Xclang /path/to/plugin.so your_source_file.c
+```cmd
+$ clang -Xclang -load -Xclang /path/to/plugin.so your_source_file.c
 ```
 
 这会导致Clang在处理你的源文件时加载并运行该插件。
@@ -5458,15 +5483,29 @@ String dump of section '.comment':
 
 ## *LLDB*
 
-LLDB的使用可以看 *IDE与调试工具.md*
+LLDB 的使用可以看 *IDE与调试工具.md*
 
 ## *TableGen*
 
+[Tablegen Language Tutorial - TinyEdi](https://www.tinyedi.com/tablegen-language-tutorial/)
+
 [TableGen Overview — LLVM 19.0.0git documentation](https://llvm.org/docs/TableGen/index.html)
 
-TableGen是LLVM项目用来定义和生成各种数据表和程序结构的一种工具。这些`.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明，然后被TableGen工具处理并输出成不同的结果文件（比如说最常用的C++语法的 `.inc` 后缀文件）
+[1 TableGen Programmer’s Reference — LLVM 20.0.0git documentation](https://llvm.org/docs/TableGen/ProgRef.html)
 
-TableGen工具被LLVM、Clang和MLIR使用，可以从这些定义文件中生成C++代码、文档或其他格式的数据。但是它们的使用目标有所不同
+TableGen 是 LLVM 项目用来定义和生成各种数据结构（或者更专业的说就是特定领域的信息记录 records of domain-specific information）的一种工具。这些 `.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
+
+1. 应当把 TableGen DSL 视为一种 C++ 语言的变体，尽管能看到 `def` 这样的 Python 关键词
+2. `.td` 文件仅仅用于记录，不要把后端的功能和前端的实体绑定起来，不同的后端可能对同样的数据有非常不同的解释
+3. 虽然 TableGen 声称自己是一种声明式语言，但是仅有涉及 **field 之间** 的交叉引用时，才是按照依赖顺序处理的，其他场合都可以认为代码是顺序执行的
+
+> `.td` 这个后缀意思是 "target (machine) description"，这对于 `llvm-tblgen` 是非常有意义的，但对其他后端则显得不太合理，我想这也是一个历史问题，否则可能叫 `.tg` 似乎更加合理
+
+**TableGen 本质是一个 parser，将输入的 `.td` 文件转化为特定的数据结构后再输出为易于阅读的 cpp 代码**（一般是一个 `.inc` 文件）
+
+### TableGen 后端
+
+TableGen 也分为前后端，后端分别被 LLVM、Clang、LLDB 和 MLIR 使用
 
 - LLVM
   - **生成寄存器描述**：TableGen可用于定义处理器的寄存器类、寄存器别名以及其他与寄存器相关的属性
@@ -5475,17 +5514,45 @@ TableGen工具被LLVM、Clang和MLIR使用，可以从这些定义文件中生�
   - **调度信息**：给出CPU的管线模型和指令的延迟，调度算法需要此信息来进行指令重排序以提高性能
 
 - Clang 生成诊断信息
+- LLDB
 - MLIR  定义operation
 
-### TableGen语言（DSL）
+### 数据类型
+
+- bit：表示布尔类型，可取值为 0 或 1
+- int：表示 64 位整数。比如：1、-2
+- string：表示任意长度的字符串
+- dag：表示可嵌套的有向无环图（Directed Acyclic Graph, DAG）。DAG 的节点由一个运算符、零个或多个参数（或操作数）组成。节点中的运算符必须是一个实例化的记录。DAG 的大小等于参数的数量
+- `bits<n>`：表示大小为 `n` 的比特数组（数组中的每个元素占用一个比特）。**注意：** 比特数组中索引为 0 的元素位于最右侧。比如：`bits<2> val = { 1, 0 }`，表示十进制整数 2
+- `list<type>`：表示元素数据类型为 `type` 的列表。列表元素的下标从 0 开始
+- `ClassID`：表示抽象记录的名称
+
+### 定义 class & record
 
 [StormQ's Blog (csstormq.github.io)](https://csstormq.github.io/blog/LLVM 之后端篇（1）：零基础快速入门 TableGen)
+
+- class：类似于 C++ 中的类，用于定义一组字段和它们默认值的集合
+
+  可选带有一个 `<>` 包围的**模板参数列表**，可选带有一个**基类列表**，也可选带有一个 `{//stmts}` 型的 **init-body**
+
+  * 基类列表：基类列表用于进行继承，且 tablegen 允许多继承，在实例化过程中，基类的 init-body 会先于子类执行
+  * 模板参数列表：每个 class 的模板参数中会有一个隐含的 `NAME` 参数，这个参数会在 class 被**实例化**时传入。使用模板参数的 `<>` 符号也额外强调了实参值都是 constexpr
+  * init-body：类似于构造函数，主要是下面几种句子
+    * `defvar a = b;` 用于定义局部变量，它支持类型推导 defvar 创建的值不允许被修改 defvar 初始化时不能引用 field
+    * `Type var_name = init_value;` 用于进行 field-def，它将会创建一个新的 filed，并用 init_value 初始化。注意：这种形式的 stmt 只能作为 filed-def 使用，所以不会出现在其他 scope 中
+    * `let c = d;` 用于修改已经存在的 field
+
+- def 关键词用于实例化 class
+
+  class 的实例一般被称为 **concrete record**，不要和官方的 ProgRef 还把 class 称作的 **abstract record** 搞混了
+
+  如果 def 时没有给出名字，那么这将创建一个匿名 record，匿名 record 虽然可以被后端读取到，但是一般约定后端不对匿名 record 做任何处理
 
 ### `.td` 文件内容
 
 一个`.td`文件会包含一个或多个通过TableGen语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值。下面是一个简单的例子：
 
-```llvm
+```tablegen
 // InstrInfo.td - Example instruction definitions for an imaginary target.
 
 def MyTargetInst : Instruction {

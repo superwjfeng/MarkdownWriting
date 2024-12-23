@@ -1,4 +1,4 @@
-**该笔记来源于《深度学习入门 -- 基于python的理论与实现》、北京邮电大学鲁鹏教授的计算机视觉与神经网络课程、TUM Machine Learningn和TUM i2dl课程**
+**该笔记来源于《深度学习入门 -- 基于python的理论与实现》、北京邮电大学鲁鹏教授的计算机视觉与神经网络课程、TUM Machine Learning 和 TUM i2dl 课程**
 
 # Basic Concepts
 
@@ -27,11 +27,11 @@ $y|\boldsymbol{x}\sim Ber\left(\sigma(\boldsymbol{w}^T\boldsymbol{x})\right)$ �
 $$
 f(\boldsymbol{x},\boldsymbol{w})=\sigma\left(w_0+\sum\limits_{j=1}^{M-1}{w_j\phi_j(\boldsymbol{x})}\right)=\sigma\left(\boldsymbol{w}^T\phi(\boldsymbol{x})\right)\label{logisticRegression}
 $$
-其中 $\phi$ 为我们选择的引入非线形的 Basis function
+其中 $\phi$ 为我们选择的引入非线形的 basis function
 
-比如对于XOR问题可以选择一个 $\R^3\rightarrow\R^2$ 的Basis Function：$\phi(\boldsymbol{x})=\phi(1,x_1,x_2)=\left(\sigma(5+x_1+x_2),\ \sigma(5-x_1-x_2)\right)$
+比如对于 XOR 问题可以选择一个 $\R^3\rightarrow\R^2$ 的 Basis Function：$\phi(\boldsymbol{x})=\phi(1,x_1,x_2)=\left(\sigma(5+x_1+x_2),\ \sigma(5-x_1-x_2)\right)$
 
-借助选择的Basis Function，Overall function $\eqref{logisticRegression}$ can be modeled as
+借助选择的 Basis Function，Overall function $\eqref{logisticRegression}$ can be modeled as
 $$
 f(\boldsymbol{x},\boldsymbol{w})=\sigma\left(\boldsymbol{w}^T\phi(\boldsymbol{x})\right)=\sigma_1\left(\left[\begin{matrix}w_0&w_1\end{matrix}\right]\cdot\sigma_0\left(\left[\begin{matrix}5&1&1\\5&-1&-1\end{matrix}\right]\left[\begin{matrix}1\\x_1\\x_2\end{matrix}\right]\right)\right)
 $$
@@ -49,11 +49,11 @@ $$
 
 ### How to find Basis function?
 
-不同的数据集会需要不同的非线形转换来使得数据线形可分，在上面的例子中我们是选定了一个Basis Function，因此只需要再学习两个权重，但实际中所有的权重都是可以通过学习得到的，即
+不同的数据集会需要不同的非线形转换来使得数据线形可分，在上面的例子中我们是选定了一个 Basis Function，因此只需要再学习两个权重，但实际中所有的权重都是可以通过学习得到的，即
 $$
 f(\boldsymbol{x},W)=\sigma_1\left(\left[\begin{matrix}w_{100}&w_{110}\end{matrix}\right]\cdot\sigma_0\left(\left[\begin{matrix}w_{000}&w_{010}&w_{020}\\w_{001}&w_{011}&w_{021}\end{matrix}\right]\left[\begin{matrix}1\\x_1\\x_2\end{matrix}\right]\right)\right)\\W^*=\underset{W}{\arg\min\ }{\sum\limits_{n=1}^{N}{-\left(y_n\log{f\left(\boldsymbol{x}_n,W\right)}+(1-y_n)\log{\left(1-f\left(\boldsymbol{x}_n,W\right)\right)}\right)}}
 $$
-称这个网络为带有1层隐层 Hidden Layer 的前馈网络 Feed-Forward Neural Network或2层的多层感知器 Multi-Layered Perception MLP（这里采用的记法是有几层权重=几层感知机），或称神经网络。其中 $\sigma_0,\sigma_1$ 可以为任意的激活函数
+称这个网络为带有1层隐层 Hidden Layer 的前馈网络 Feed-Forward Neural Network 或 2 层的多层感知器 Multi-Layered Perception, MLP（这里采用的记法是有几层权重=几层感知机），或称神经网络。其中 $\sigma_0,\sigma_1$ 可以为任意的激活函数
 
 单层感知机只能表示线性空间，多层感知机可以表示非线形空间
 
@@ -2246,7 +2246,13 @@ $$
 
 GAN优化的是JS散度
 
-# RNN & Attention
+# NLP: RNN & LSTM
+
+## *统计语言模型*
+
+统计语言学是基于数学模型和统计方法的自然语言处理方法。在 *GKI.md* 曾经学习过以马尔可夫模型为核心的 NLP，其输入和输出都是一维且保持原有次序的符号序列，可以处理语音识别、词性分析等任务，但是这种方法在面对输出为二维树形结构的句法分析以及符号次序有很大变化的机器翻译等任务时就束手无策了
+
+
 
 ## *RNN 引入*
 
@@ -2383,7 +2389,13 @@ Gated Recurrent Units, GRU 是直接将 hidden state 传给下一个单元
 
   <img src="RNN_Translation.png" width="60%"> 
 
-## *Attention mechanism*
+# Attention 机制
+
+### RNN & CNN 解决长序列的问题
+
+RNN（比如说 LSTM）有递归深度过深，难以训练的问题
+
+
 
 ### 注意力机制
 
@@ -2394,6 +2406,12 @@ https://zhuanlan.zhihu.com/p/53036028
 > **注意力机制**（英语：attention）是人工神经网络中一种模仿认知注意力的技术。这种机制可以增强神经网络输入数据中某些部分的权重，同时减弱其他部分的权重，以此将网络的关注点聚焦于数据中最重要的一小部分。数据中哪些部分比其他部分更重要取决于上下文。可以通过梯度下降法对注意力机制进行训练。-- wikipedia
 
 在一个典型的序列处理任务中，比如机器翻译，attention 机制使得模型在生成每个输出时，都会对输入序列的不同部分赋予不同的权重，即“注意”到最相关的输入部分
+
+Google《Attention is All You Need》提供了第三个方案：**直接使用 Attention 机制编码整个文本**。相比 RNN 要逐步递归才能获得全局信息（因此一般使用双向 RNN），而 CNN 实际只能获取局部信息，需要通过层叠来增大感受野，Attention 机制一步到位获取了全局信息
+$$
+y_t=f(x_t,A,B)
+$$
+其中 A, B 是另外的词语序列（矩阵），如果取 A=B=X 就称为 Self-Attention 自注意力，即直接将 $x_t$ 与自身序列中的每个词语进行比较，最后算出 $y_t$
 
 ### 工作原理
 
@@ -2416,11 +2434,22 @@ https://zhuanlan.zhihu.com/p/53036028
 
 <img src="ScaledDotproductAttention.png" width="30%">
 
-$$
-Attention(Q,K,V)=softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)
-$$
+Q, K, V 分别表示 query vector、key vector 和 value vector
 
-Q 和 K 分别表示 query vector 和 key vector
+Scaled Dot-product Attention 共包含 2 个主要步骤
+
+1. **计算注意力权重**：使用某种相似度函数度量每一个 query 向量和所有 key 向量之间的关联程度。对于长度为 m 的 query 序列和长度为 n 的 key 序列，该步骤会生成一个尺寸为 $m\times n$ 的注意力分数矩阵
+
+   特别地，Scaled Dot-product Attention 使用点积作为相似度函数，这样相似的 queries 和 keys 会具有较大的点积
+
+   由于点积可以产生任意大的数字，这会破坏训练过程的稳定性。因此注意力分数还需要乘以一个缩放因子（比如下式中的 $\sqrt{d_k}$）来标准化它们的方差，然后用一个 softmax 标准化。这样就得到了最终的注意力权重 $w_{ij}$，表示第 i 个 query 向量与第 j 个 key 向量之间的关联程度
+
+2. **更新 token embeddings**：将权重 $w_{ij}$ 与对应的 value 向量 $v_1,\dots,v_n$ 相乘以获得第 i 个 query 向量更新后的语义表示 $x_i'=\sum_{j}{w_{ij}v_j}$
+
+形式化表示为
+$$
+\text{Attention}(Q,K,V)=\text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)\cdot V
+$$
 
 ### attention 的类型
 
@@ -2445,12 +2474,11 @@ Q 和 K 分别表示 query vector 和 key vector
 ### 自注意力
 
 
-
 # Transformer
 
 http://jalammar.github.io/illustrated-transformer/
 
-RNN 中的 attention 效率不高，transfomer 是一种基于 self-attention 的更成熟的注意力模型，用来进行并行训练，提高效率。Transformer 由 Vaswani 等人在 2017 年的论文《Attention Is All You Need》中提出，它在NLP、图像处理领域都取得了极为成功的应用
+Transfomer 是一种基于 self-attention 的更成熟的注意力模型，用来进行并行训练，提高效率。Transformer 由 Vaswani 等人在 2017 年的论文[《Attention Is All You Need》](#[[1706.03762\] Attention Is All You Need](https://arxiv.org/abs/1706.03762))中提出，它在NLP、图像处理领域都取得了极为成功的应用
 
 **自注意力机制**：Transformer 完全放弃了之前常见的循环神经网络（RNNs）和卷积神经网络（CNNs），转而采用自注意力机制。这使得模型能够直接计算序列内任意两个位置之间的关系，从而有效捕获长距离依赖问题。
 
@@ -2475,8 +2503,8 @@ RNN 中的 attention 效率不高，transfomer 是一种基于 self-attention �
 
 Transformer 模型由编码器（Encoder）和解码器（Decoder）两部分组成，每部分由若干相同的层叠加而成
 
-- **Encoder**：负责理解输入文本，为每个输入构造对应的语义表示（语义特征）
-- **Decoder**：负责生成输出，使用 Encoder 输出的语义表示结合其他输入来生成目标序列
+- **Encoder**：负责理解输入文本，为每个输入构造对应的语义表示（语义特征），将把输入的词语序列转换为词向量序列
+- **Decoder**：负责生成输出，使用 Encoder 输出的隐层语义表示结合其他输入来生成目标词语
 
 <img src="Transformer的两大部分.png" width="25%">
 
@@ -2486,11 +2514,21 @@ Transformer 模型由编码器（Encoder）和解码器（Decoder）两部分组
 - **纯 Decoder 模型**：适用于生成式任务，例如文本生成
 - **Encoder-Decoder 模型** 或 **Seq2Seq 模型**：适用于需要基于输入的生成式任务，例如翻译、摘要
 
+### 预训练任务
+
+* 因果语言建模 causal language modelling：基于句子的前 n 个词来预测下一个词，因为输出依赖于过去和当前的输入
+
+  <img src="因果语言建模.png" width="60%">
+
+* 遮盖语言建模 masked language modelling：基于上下文（周围的词语）来预测句子中被遮盖掉的词语 (masked word)
+
+  <img src="遮盖语言建模.png" width="60%">
+
 ### Transformer & RNN, CNN 的区别
 
 ## *Transformer 结构详解*
 
-Transformer的基本原理是使用自注意力机制来捕获输入序列中任意两个位置之间的依赖关系，并通过编码器和解码器的堆叠来提高表达能力
+Transformer 的基本原理是使用自注意力机制来捕获输入序列中任意两个位置之间的依赖关系，并通过编码器和解码器的堆叠来提高表达能力
 
 <img src="transformer结构.jpeg" width="60%">
 
@@ -2512,8 +2550,6 @@ Transformer的基本原理是使用自注意力机制来捕获输入序列中任
 3. **前馈全连接神经网络**：与编码器中的全连接层相同
 
 同样，在这些子层之后也有残差连接和层标准化
-
-
 
 ### 为什么使用 LN？
 

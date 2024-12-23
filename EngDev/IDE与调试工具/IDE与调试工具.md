@@ -1254,7 +1254,7 @@ VS Code为C++项目提供了强大的支持
 ### 顶级属性
 
 * env：用户定义的变量数组，可通过标准环境变量语法在配置中替换：`${<var>}` 或 `${env:<var>}`。接受字符串和字符串数组
-* configurations：一组配置对象的数组，包含了不同编译配置的设置。这些对象为IntelliSense引擎提供有关项目和首选项的信息。默认情况下，扩展会根据使用的操作系统来创建配置。还可以添加其他配置
+* configurations：一组配置对象的数组，包含了不同编译配置的设置。这些对象为 IntelliSense 引擎提供有关项目和首选项的信息。默认情况下，扩展会根据使用的操作系统来创建配置。还可以添加其他配置
 * version：建议不要编辑此字段。它会跟踪 c_cpp_properties.json 文件的当前版本，以便扩展知道应存在哪些属性和设置以及如何将此文件升级到最新版本
 
 ### 配置属性
@@ -1262,7 +1262,7 @@ VS Code为C++项目提供了强大的支持
 * `browse`：这个部分用于配置符号浏览器的设置，包括浏览路径、符号数据库文件等
 * `configurationProvider`
   * VS Code扩展的ID，它可以为源文件提供智能感知配置信息。例如使用VS Code 扩展ID `ms-vscode.cmake-tools` 从 CMake Tools扩展提供配置信息
-  * 若指定了一个configurationProvider，那么它提供的配置将优先于 c_cpp_properties.ison中的其他设置
+  * 若指定了一个configurationProvider，那么它提供的配置将优先于 c_cpp_properties.json 中的其他设置
   * 一个configurationProvider候选扩展必须实现vscode-cpptools-api
 
 * `compilerArgs`：（可选）用于修改所使用的包含或定义的编译體参数，例如 `-nostdinc++`，`-m32` 等
@@ -1378,5 +1378,15 @@ CMake工具不会用到VS的build和debug系统（即tasks.json和launch.json）
 
 ### IntelliSence 缓存文件的坑
 
+IntelliSense 会为项目产生巨大的缓存，包括头文件预编译等等
 
+```cmd
+echo "export VSCODE_AGENT_FOLDER='/mnt/data/vscode_cache/.vscode-server'" >> ~/.bashrc
+echo "export XDG_CACHE_HOME='/mnt/data/vscode_cache'" >> ~/.bashrc
+```
 
+还需要强制 kill 一下 vscode 相关进程，不然不生效
+
+```cmd
+ ps aux | grep 'vscode' | grep -v grep | awk '{print $2}' | xargs kill
+```
