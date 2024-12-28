@@ -1521,6 +1521,12 @@ $$
 * 全连接层 FC，增加模型非线性
 * BN层，缓解梯度弥散
 
+### 数据格式的问题
+
+[神经网络的数据排列:CHW与HWC - 知乎](https://zhuanlan.zhihu.com/p/459501430)
+
+在深度学习中，为了提升数据传输带宽和计算性能，image 或 feature map在内存中的存放通常会使用NCHW、NHWC 和CHWN 等数据格式。例如常用的深度学习框架中默认使用NCHW的有caffe、NCNN、PyTorch、mxnet等，默认使用NHWC的有 Tensorflow、openCV等，设置非默认排布格式只需要修改一些参数即可
+
 ## *卷积层*
 
 ### Conv2D & Conv3D
