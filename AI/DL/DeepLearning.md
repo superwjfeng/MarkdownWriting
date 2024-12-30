@@ -1521,11 +1521,33 @@ $$
 * 全连接层 FC，增加模型非线性
 * BN层，缓解梯度弥散
 
-### 数据格式的问题
+## *数据格式的问题*
+
+### 内存中的排布顺序
 
 [神经网络的数据排列:CHW与HWC - 知乎](https://zhuanlan.zhihu.com/p/459501430)
 
-在深度学习中，为了提升数据传输带宽和计算性能，image 或 feature map在内存中的存放通常会使用NCHW、NHWC 和CHWN 等数据格式。例如常用的深度学习框架中默认使用NCHW的有caffe、NCNN、PyTorch、mxnet等，默认使用NHWC的有 Tensorflow、openCV等，设置非默认排布格式只需要修改一些参数即可
+DL中为了提升数据传输带宽和计算性能，image 或 feature map在内存中的存放通常会使用 NCHW、NHWC 和 CHWN 等数据格式。**内存中数据是按照数据格式从右到左的顺序依次排放的**，比如说 NCHW 的数据格式在内存中就是按照 W (Width)  方向 `->` H (Height) 方向 `->` C (Channel) 方向 `->` N (Batch) 方向排放的
+
+<img src="CNN_data_layout.png">
+
+例如常用的 DL 框架中默认使用 NCHW 的有 caffe、NCNN、PyTorch、mxnet 等，默认使用 NHWC 的有 Tensorflow、openCV 等，设置非默认排布格式只需要修改一些参数即可
+
+### 不同 layout 的优势
+
+数据储存格式都有着各自的优势，因为不同框架中加速器的设计不同，在某些情况使用另一种数据排布格式有着更好的整体性能
+
+> 通常，由于神经网络的计算特性，使用HWC格式不需要参数太多的数据移动，且每次内存读取可以将数据并行传输到多个处理器内。因此HWC 更快。
+>
+> 但是，内存通常是分块的，不同处理器组管理不同的数据块，即多处理器需共享一个数据存储器，这降低了输入的最大允许尺寸。而使用 CHW 数据格式时，一般使用单个处理器处理一个内存数据块，下一个通道需要使用连接到不同数据存储器的处理器，以便机器可以在每个时钟周期将一个字节传送到每个启用的处理器中。
+>
+> 因此，"NHWC"更适合多核CPU运算，CPU的内存带宽相对较小，每个像素计算的时延较低，临时空间也很小，有时计算机采取异步的方式边读边算来减小访存时间，计算控制灵活且复杂。"NCHW"的计算时需要的存储更多，适合GPU运算，正好利用了GPU内存带宽较大并且并行性强的特点，其访存与计算的控制逻辑相对简单。
+>
+> 总的来说，不同排列方式并无优劣之分，它们也有相应的底层优化算法，对上层用户来说这些差异是看不见的。深度学习引擎特别会在推理的时候，根据实际硬件结构和计算资源，对数据排布进行转换，有些中间过程的数据的排布和访存甚至会有多种优化方式。这也是很多kernel优化所要做的。
+
+### layout 之间的转换
+
+[HWC和CHW数据格式以及C++相互转换 - Yuxi001 - 博客园](https://www.cnblogs.com/yuxiyuxi/articles/17014508.html)
 
 ## *卷积层*
 
@@ -1839,295 +1861,6 @@ Naive idea：利用CNN对每一个窗口的中心点像素进行学习分类
 
 ## *实例分割*
 
-# PyTorch
-
-Documentation：https://pytorch.org/docs/stable/index.html
-
-## *PyTorch基础*
-
-### 不同深度学习框架的区别
-
-PyTorch是一个建立在Torch库之上的Python包，Torch本身就是一个科学计算框架，一开始并不支持Python，后来是由facebook将其用Python实现了
-
-PyTorch 用来加速深度学习，它提供一种类似numpy的抽象方法来表示张量 Tensor（一种特殊设计的高效的多维数组结构），可以利用GPU来加速学习
-
-### PyTorch结构 & 架构
-
-下面的结构图展示了 PyTorch 主要模块之间的关系
-
-* `torch`：类似于numpy的通用数组库，主要提供对于tensor的处理，可将tensor转换为 `torch.cuda.TensorFloat` 用来在GPU上进行计算
-* `torch.autograd`：用于构建计算图并自动获取梯度的包
-* `torch.nn`：具有共享层和损失函数的神经网络库
-* `torch.optim`：具有通用优化算法的包，如SGD、Adam等
-
-### PyTorch workflow
-
-<img src="pytorch_workflow.png" width="75%">
-
-## *Tensor数据结构*
-
-### Tensor介绍
-
-Tensor是PyTorch中经过专门设计的，可用于GPU计算的特殊数据结构，它和Numpy中的ndarray非常相似，两者可以共享内存，并且之间可以进行高效的转换。区别是Numpy只能用于CPU计算
-
-### 创建Tensor
-
-* 直接构造，支持list容器
-  * `torch.tensor()`：从数据中推断数据类型
-  * `torch.Tensor()`：传入数据时，默认使用全局默认dtype（FloatTensor），返回一个大小为1的张量，它是随机初始化的值
-* Tensor和ndarray的转换，这两个方法都是对原对象进行操作，不会生成拷贝
-  * 从ndarray中构造tensor `torch.from_numpy(array_np) `
-  * 转换回ndarray `array_ts_2.numpy()`
-
-### 修改Tensor形状
-
-* `size()` 返回tensor形状
-* `view(shape)`，修改tensor形状，修改的是原对象。常用 `view(-1)` 相当于flatten拉平数组
-* `reshape(shape)` 修改tensor形状，但会创建新tensor拷贝
-* `resize(shape)` 和view相似，但在size超出时会重新分配内存空间
-* `squeeze` 和 `unsqueeze` 指定维度降维或升维
-
-## *PyTorch数据处理工具箱*
-
-PyTorch的数据处理部分的工具在Data Preparation部分已经模拟实现过，可以回顾具体的代码实现
-
-### `torch.utils.data` 结构
-
-<img src="torch_utils_data工具包.png" width="75%">
-
-* `Dataset` 是一个抽象类，其他数据集都需要继承这个父类，并重写其中的两个方法 `__getitem__()` 和 `__len__()`
-* `DataLoader` 定义一个新的迭代器，来为神经网络提供自动转换为tensor的mini-Batch
-* `random_split` 把数据集随机拆分为给定长度的非重叠的新数据集
-* `*Sampler` 多种采样函数
-
-### torchvision 视觉处理工具包
-
-torchvision 是独立于PyTorch的视觉处理包，需要独立安装，类似的还有用于语言处理的 torchaudio 等。torchvision包括了下面四个类
-
-* `datasets` 提供常用视觉数据集，设计上继承自 `torch.utils.data.Dataset`，主要包括MNIST，cifar-10，ImageNet和COCO等
-* `models` 提供DL中各种经典的网络结构以及预训练好的模型，比如AlexNet，VGG系列等
-* `transforms` 常用的数据预处理操作，主要包括对Tenosr及PIL Image对象的操作
-  * 对PIL Image对象
-    * `ToTensor` 把一个取值范围是 [0, 255] 的形状为 (H,W,C) 的PIL.Image ndarray转换为取值范围是 [0, 1.0] 的形状为 (C,H,W) 的torch.FloatTensor
-  * 对Tensor对象
-    * `ToPILImage` 将torch.FloatTensor转换为 PIL Image ndarray
-  * 可以用 `transforms.Compose([ ])` 将多个预处理连接起来
-* `utils` 包含两个函数
-  * `make_grid()` 能将多张图片拼接在一个网格中
-  * `save_img()` 能将Tensor保存成图片
-
-### TensorBoard可视化工具
-
-TensorBoard 是 Google TensorFlow 的可视化工具，被 PyTorch 借用了
-
-## *PyTorch神经网络工具箱*
-
-<img src="torch_nn神剧网络工具包.png" width="60%">
-
-### 构建网络以及前向传播
-
-自定义网络需要继承 `nn.Module`
-
-```python
-class Net(nn.Module):
-    def __init__(self, activation=nn.Sigmoid(),
-                 input_size=1*28*28, hidden_size=100, classes=10):
-        
-        super(Net, self).__init__()
-        self.input_size = input_size
-
-        # Here we initialize our activation and set up our two linear layers
-        self.activation = activation
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, classes)
- 
-    def forward(self, x):
-        x = x.view(-1, self.input_size) # flatten
-        x = self.fc1(x)
-        x = self.activation(x)
-        x = self.fc2(x)
-
-        return x
-net = Net() #实例化网络
-```
-
-一般都利用函数 `nn.sequentail()` 来搭建网络
-
-```python
-model = nn.Sequential(
-          nn.Conv2d(1,20,5),
-          nn.ReLU(),
-          nn.Conv2d(20,64,5),
-          nn.ReLU()
-        )
-
-# Using Sequential with OrderedDict. This is functionally the
-# same as the above code
-model = nn.Sequential(OrderedDict([
-          ('conv1', nn.Conv2d(1,20,5)),
-          ('relu1', nn.ReLU()),
-          ('conv2', nn.Conv2d(20,64,5)),
-          ('relu2', nn.ReLU())
-        ]))
-```
-
-### 常用的层
-
-```python
-# Affine/Linear
-torch.nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
-# Batch Normalization
-torch.nn.BatchNorm1d(num_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True, device=None, dtype=None)
-```
-
-### 反向传播
-
-Thanks to the <b>autograd</b> package, we just have to define the <b>forward()</b> function. We can use any of the Tensor operations in the <b>forward()</b>  function.
- The <b>backward()</b> function (where gradients are computed through back-propagation) is automatically defined by PyTorch.
-
-### 优化器 Optimizer
-
-```python
-# 举例
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-```
-
-### 训练模型
-
-使用for循环进行迭代训练
-
-```python
-train_loss_history = [] # loss
-train_acc_history = [] # accuracy
-
-for epoch in range(2):
-
-    running_loss = 0.0
-    correct = 0.0
-    total = 0    
-    # Iterating through the minibatches of the data
-    for i, data in enumerate(fashion_mnist_dataloader, 0):
-        # data is a tuple of (inputs, labels)
-        X, y = data
-
-        X = X.to(device)
-        y = y.to(device)
-
-        # Reset the parameter gradients  for the current  minibatch iteration 
-        optimizer.zero_grad()
-        
-        y_pred = net(X)             # Perform a forward pass on the network with inputs
-        loss = criterion(y_pred, y) # calculate the loss with the network predictions and ground Truth
-        loss.backward()             # Perform a backward pass to calculate the gradients
-        optimizer.step()            # Optimize the network parameters with calculated gradients
-        
-        # Accumulate the loss and calculate the accuracy of predictions
-        running_loss += loss.item()
-        _, preds = torch.max(y_pred, 1) #convert output probabilities of each class to a singular class prediction
-        correct += preds.eq(y).sum().item()
-        total += y.size(0)
-
-        # Print statistics to console
-        if i % 1000 == 999: # print every 1000 mini-batches
-            running_loss /= 1000
-            correct /= total
-            print("[Epoch %d, Iteration %5d] loss: %.3f acc: %.2f %%" % (epoch+1, i+1, running_loss, 100*correct))
-            train_loss_history.append(running_loss)
-            train_acc_history.append(correct)
-            running_loss = 0.0
-            correct = 0.0
-            total = 0
-
-print('FINISH.')
-```
-
-## *PyTorch Lightning*
-
-PyTorch Lightning 是对 PyTorch 的进一步第三方封装
-
-Documentation: https://pytorch-lightning.rtfd.io/en/latest/
-
-### Define a Lightning module
-
-自定义Net要继承 `pl.lightning`，可以将最重要的网络结果、前向传播、train都写在一个class内
-
-具体代码可参考 i2dl exercise 7 lightning_models.py
-
-```python
-class TwoLayerNet(pl.LightningModule):
-    def __init__(self, hparams):
-        super().__init__()
-        # This sets self.hparams the the dict or namespace
-        self.save_hyperparameters(hparams)
-
-        # We can access the parameters here
-        self.model = nn.Sequential(
-            nn.Linear(self.hparams.input_size,
-                      self.hparams.hidden_size),
-            nn.Sigmoid(),
-            nn.Linear(self.hparams.hidden_size,
-                      self.hparams.num_classes),
-        )
-    def forward(self, x):
-        # flatten the image  before sending as input to the model
-        N, _, _, _ = x.shape
-        x = x.view(N, -1)
-
-        x = self.model(x)
-
-        return x
-    
-    def training_step(self, batch, batch_idx):
-        pass
-    def validation_step(self, batch, batch_idx):
-        pass
-    def validation_epoch_end(self, outputs):
-        pass
-    def configure_optimizers(self):
-        pass
-    def visualize_predictions(self, images, preds, targets):
-        pass
-```
-
-### Data pipeline
-
-* Define Dataset：自定义的 DataModule 要继承 `pl.LightningDataModule`
-
-  ```python
-  class FashionMNISTDataModule(pl.LightningDataModule):
-      def __init__(self, batch_size=4):
-          super().__init__()
-          self.batch_size = batch_size
-      def prepare_data(self):
-          # Define the transform
-          transform = transforms.Compose([transforms.ToTensor(),
-                                          transforms.Normalize((0.5,), (0.5,))])
-          # Download the Fashion-MNIST dataset
-          fashion_mnist_train_val = torchvision.datasets.FashionMNIST(root='../datasets', train=True,
-                                                                     download=True, transform=transform)
-          self.fashion_mnist_test = torchvision.datasets.FashionMNIST(root='../datasets', train=False,
-                                                                   download=True, transform=transform)
-          # Apply the Transforms
-          transform = transforms.Compose([transforms.ToTensor(),
-                                          transforms.Normalize((0.5,), (0.5,))])
-          # Perform the training and validation split
-          self.train_dataset, self.val_dataset = random_split(
-              fashion_mnist_train_val, [50000, 10000])
-  ```
-
-* Define dataloader in `pl.LightningDataModule` for each data split
-
-  ```python
-      def train_dataloader(self):
-          return DataLoader(self.train_dataset, batch_size=self.batch_size)
-  
-      def val_dataloader(self):
-          return DataLoader(self.val_dataset, batch_size=self.batch_size)
-  
-      def test_dataloader(self):
-          return DataLoader(self.fashion_mnist_test, batch_size=self.batch_size)
-  ```
 
 # 生成模型
 

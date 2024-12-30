@@ -1,10 +1,14 @@
 [分类: Compile Principle | Liuye Notebook (liuyehcf.github.io)](https://liuyehcf.github.io/categories/Compile-Principle/)
 
+[USTC 编译原理和技术 2023](https://ustc-compiler-principles.github.io/2023/#课程信息)
+
 # Introduction
 
 ## *编译器构造*
 
-<img src="三段优化编译器结构.drawio.png" width="80%">
+<img src="三段优化编译器结构.drawio.png" width="90%">
+
+一言以蔽之：**前端关注的是正确反映了代码含义的静态结构，而后端关注的是让代码良好运行的动态结构**
 
 ### 前端
 
@@ -18,19 +22,19 @@
 
 * 语义分析 Semantic Analysis：将语义信息映射到上一步形成的AST上，比如检查变量的声明、类型匹配、函数调用等，以确保程序的逻辑正确
 
-### 优化/中端
+### 中端 & 体系结构无关优化
 
 优化器分析代码的的IR形式，通过发现有关上下文的事实来重写代码，以求提高实现的效率
 
 理想情况下优化器应该是机器无关的，即它应该通用于所有的机器。但事实并非如此，优化器总是要用到一些机器特性
 
-### 后端
+### 后端 & 体系结构有关优化
 
-后端负责将程序映射到目标机器上
+后端负责将程序映射到目标机器上，即针对不同体系结构的计算机硬件，生成不同的优化过的目标代码
 
 * 指令选择 Instruction Selection：选择适当的目标机器指令来执行高级语言中对应的操作，同时考虑目标机器的特定约束和优化策略
+* 寄存器分配 Register Allocation：最大限度地复用寄存器，减少内存访问次数，从而提高程序的执行速度
 * 指令调度 Instruction Scheduling：通过重排指令 reordering 的执行顺序，指令调度旨在减少指令之间的依赖关系，最大程度地利用目标机器的硬件资源，从而提高程序的性能
-* 寄存器分配 Register Allocation：最大限度地减少内存访问次数，以提高程序的执行速度
 
 ## *ILOC*
 
@@ -1378,7 +1382,21 @@ https://developer.baidu.com/article/detail.html?id=3249854#
 - 尾调用优化（Tail Call Optimization）：在函数末尾的递归调用可以被优化以节省栈空间和调用开销
 - 指令调度（Instruction Scheduling）：重新排序指令序列来避免执行单元的空闲和减少延迟
 
+# 指令选择
+
+指令选择 Instruction Selection：将 IR 转换为具体目标机器的指令集
+
+# 寄存器分配
+
+寄存器分配 Register Allocation：合理分配寄存器以满足程序需要，避免使用过多的寄存器和虚拟寄存器
+
+# 指令调度
+
+指令调度 Instruction Scheduling：重新安排指令的顺序，以改善流水线性能并减少执行延迟
+
 # 目标代码生成
+
+目标代码生成 Target Code Generation：生成最终的机器代码或汇编代码，使其能在目标平台上高效执行
 
 目标代码 target code 是指在编译器前端处理后得到的IR的基础上，针对特定硬件平台的机器语言代码或汇编语言代码，它是直接可被该平台的处理器执行的代码。目标代码可以是机器语言代码（二进制格式）或者汇编语言代码（文本格式），具体取决于编译器的设计和目标机器
 
