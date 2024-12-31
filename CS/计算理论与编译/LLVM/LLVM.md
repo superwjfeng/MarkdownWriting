@@ -78,13 +78,7 @@ LLVM 中优化工作是通过一个个的 Pass（遍）来实现的，它支持�
 2. 做代码转换的 pass（Transform Passes），比如做公共子表达式删除
 3. 工具型的 pass，比如对模块做正确性验证
 
-## *Polly*
 
-Polly 是 LLVM 项目的一个子项目，它提供了自动并行化和循环优化的功能。Polly 使用高级多维数组索引（Affine Expressions）来理解、表示和优化循环嵌套，特别是那些对于性能至关重要的计算密集型循环
-
-Polly 基于一种叫做多面体模型的数学表示，使用这种方法，可以进行复杂的优化
-
-Polly 主要应用于需要大规模数值计算的科学和工程领域，例如物理模拟、矩阵运算和图像处理。在这些领域，循环结构往往占据了程序的绝大部分计算时间，并且有明确的数据依赖模式可供分析和优化
 
 # Clang Static Analyzer
 
@@ -110,7 +104,7 @@ CSA 是基于libclang实现的
 
 ### CSA流程
 
-<img src="D:/fengweijian/Desktop/MarkdownWriting/CS/计算理论与编译/Clang/CSA流程.drawio.png">
+<img src="CSA流程.drawio.png">
 
 1. CSA以源代码为起点，将源代码转换为AST
 2. 将AST转换为控制流图 CFG
