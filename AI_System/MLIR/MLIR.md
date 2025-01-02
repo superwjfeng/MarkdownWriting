@@ -228,6 +228,8 @@ MLIR 是没有可以生成目标代码的 codegen 的，所以必须要将 IR �
 
 这里先引入一个 Legalization 合法化 的概念：改变当前 operation 的表示以符合 conversion target 要求
 
+<img src="Lowering过程.drawio.png" width="80%">
+
 ### Components
 
 * Conversion Target: Specification of what operations are legal and under what circunnstances
