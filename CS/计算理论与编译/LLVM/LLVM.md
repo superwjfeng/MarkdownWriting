@@ -4,11 +4,38 @@
 
 [StormQ's Blog (csstormq.github.io)](https://csstormq.github.io/blog/LLVM 之 IR 篇（1）：零基础快速入门 LLVM IR)
 
+LLVM 可以被认为是 Clang 的优化器和后端，这可以被认为是 “LLVM 语言” 或 “LLVM 汇编” 的编译器。Clang 和其他语言前端（如 Rust）本质上编译为 LLVM IR，然后 LLVM 将其编译为机器代码
+
 LVM IR 是LLVM增强性、优化性和灵活性的核心所在。在编译过程中，源代码首先被转换成LLVM IR，然后经过各种优化和变换处理，最终生成目标平台的机器代码。LLVM的模块化和可扩展特性使得开发者可以很容易地实现新的优化、目标后端、新语言前端并通过共享的LLVM IR进行交互。这使得LLVM成为现代编译器构建的标准工具之一
 
+## *LLVM IR 的格式*
+
+LLVM IR 采用静态单赋值 SSA 的中间表示。它设计用于优化、分析和生成高度优化的机器码。LLVM IR有三种表现形式：内存中表示（In-memory）、字节码（Bitcode）文件和人类可读的文本表示。下面主要介绍其文本表示格式，因为这是开发者最常接触到的形式
+
+### LLVM IR 的核心结构
+
+* **模块（Module）**
+  - 模块是LLVM IR的顶层容器，包含全局变量、函数和符号表等定义。
+  - 通常是由一个源文件编译生成的
+* **类型系统（Type System）**
+  - 支持基本类型（如`i32`、`float`）、复合类型（如数组、结构体）、指针类型以及函数类型等。
+* **函数 Function**：一个函数包含参数列表、返回类型和一系列基本块（Basic Blocks）
+* **基本块 Basic Block**
+  - 基本块是一系列顺序执行的LLVM指令，以终止指令（如`br`或`ret`）结尾
+  - 每个基本块都有一个唯一标识符（Label）
+* **指令（Instructions）**
+  - LLVM指令以SSA形式组织，共享一个无限个寄存器的抽象
+  - 常见指令包括`add`、`mul`、`load`、`store`、`phi`等
 
 
-LLVM 可以被认为是 Clang 的优化器和后端，这可以被认为是 “LLVM 语言” 或 “LLVM 汇编” 的编译器。Clang 和其他语言前端（如 Rust）本质上编译为 LLVM IR，然后 LLVM 将其编译为机器代码
+
+
+
+
+
+
+
+
 
 
 
@@ -23,10 +50,6 @@ LLVM 可以被认为是 Clang 的优化器和后端，这可以被认为是 “L
 - `ret` 返回
 
 
-
-LLVM的优化级别分别是-O0 -O1 -O2 -O3 -Os（第一个是大写英文字母O）
-
-Debug情况下默认是不优化，Release情况下默认Fastest、Smallest
 
 ### 类型系统
 
