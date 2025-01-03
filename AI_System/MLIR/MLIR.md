@@ -254,15 +254,14 @@ MLIR 是没有可以生成目标代码的 codegen 的，所以必须要将 IR �
 
 
 
-# Built-in Dialect
+# Dialect Architecture
 
-## *Overview*
+[机器学习编译器代码生成相关 MLIR Dialect | Lei.Chat()](https://www.lei.chat/zh/posts/mlir-codegen-dialects-for-machine-learning-compilers/#高层用于描述模型的-dialect)
 
 既然 Dialect 的作用是类似于各种库之于 C++，那么 built-in dialect 就类似于 C++ 的标准库
 
-MLIR 原生支持的内建 Dialect 有很多，具体可以查看 [Builtin Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Builtin/)，我们下面只介绍几个最常用的 built-in dialect
+MLIR 原生支持的内建 Dialect 有很多，具体可以查看 [Builtin Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Builtin/)
 
-* Affine dialect：处理循环嵌套，实现了循环展开、多面体变换等一些算法
 * Func dialect：处理函数的 dialect，包含的函数定义、调用、返回等基本操作
 * Arith dialect：处理加减乘除移位等各种运算
 * Math dialect：
@@ -272,6 +271,10 @@ MLIR 原生支持的内建 Dialect 有很多，具体可以查看 [Builtin Diale
 * GPU dialect：
 * LLVM dialect：LLVM IR 的 binding，可以直接翻译给 LLVM 做后续编译
 * SPIR-V dialect
+
+
+
+
 
 ### Standard dialect 的拆分
 
@@ -293,23 +296,46 @@ Standard dialect 已被拆分和重新组织到更为专注的方言中。这种
   - 这些方言分别处理张量和向量相关的操作，是高性能计算、机器学习等领域中的重要组成部分
   - 包含 `tensor.extract`, `tensor.insert` 以及 `vector.add`, `vector.mul` 等操作
 
-### Architecture of Dialect
+
+
+
 
 [【源码研读】MLIR Dialect 分层设计 - Aurelius84 - 博客园](https://www.cnblogs.com/CocoML/p/17632342.html)
 
 <img src="Dialect类型分类图.png">
 
-## *linalg*
+一般将高层次 (high-level) 抽象递降 (lower) 到低层次 (low-level) 抽象。 递降的过程通常会进行某种形式的问题分解 (decomposition) 或者资源分配 (resource assignment) 来逐渐贴近底层硬件。 前者的例子有 tiling, vectorization 等等；后者的例子有 bufferization, 寄存器分配 (register allocation) 等等
+
+### 高层用于描述模型的 dialect
 
 
 
-## *Affine*
+MHLO, Machine Learning High-Level Operations Dialect 是 **XLA: HLO** 向 MLIR 的移植版本，是由 Google 开发的，用于支持将 TensorFlow 和 XLA 高级优化操作向 MLIR 表示的转换
 
-['affine' Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Affine/#dimensions-and-symbols)
+mhlo Dialect 的背景
+
+- **XLA (Accelerated Linear Algebra)**：是 TensorFlow 中的一个特性，用于提升深度学习模型的训练和推理效率。它通过特定的高性能编译器优化，将数学操作编译为更高效的低级代码。
+- **HLO (High-Level Operations)**：是 XLA 定义的一组操作，它们用于描述机器学习计算的各个部分。这些高层次操作为编译器提供了一种描述计算的方式，而不需深入底层实现的细节。
+
+TOSA, Tensor Operator Set Architecture Dialect
+
+### 中间层用于递降的 dialect
+
+高层和低层的 dialect 通常处于 MLIR 系统的边界，所以需要准确地描述某一 MLIR 之外的标的。 中间层的 dialect 则没有这样的限制，所以中间层的 dialect 具有更大的设计空间以及更高的设计灵活性。
+
+传统的中间表示，如 LLVM IR 或者 SPIR-V，通常都是完整 (*complete*) 的； 它们包含所需的所有指令来表示整个 CPU 后者 GPU 程序。相较而言，中间层的 dialect 则可以认为是部分 (*partial*) 中间表示。 这种组织结构有助于解耦 (decoupling) 和可组合性—我们可以通过混用这一层的不同 dialect 来表示原始模型，同时不同 dialect 可以独立发展演进。 这些dialect 有的用来表示计算或者负载 (payload)，有的则表示控制流或者某种结构 (structure)
+
+### 底层用于描述目标的 dialect
+
+在 MLIR 中目前有两个底层 dialect：[`llvm` dialect](https://mlir.llvm.org/docs/Dialects/LLVM/) 和 [`spv` dialect](https://mlir.llvm.org/docs/Dialects/SPIR-V/)。 它们分别用来对 LLVM IR 和 SPIR-V 建模。 转换成任何一个都是对导出到外部系统的准备。 因为这两个 dialect 描述外部中间表示，它们在类型和指令方面受相应的限制。 递降到 `llvm` 或者 `spv` dialect 需要进行整体的 dialect conversion； 完成之后 IR 中不再有任何的非 `llvm` 或者 `spv` dialect 的操作。
+
+一般而言，**上层应该已经完成各种优化，在这个层次不会再有。** 这个层次的转换多是普适的 canonicalization 和清理，以及一些用以**保障合法性**的转换
+
+
+
+
 
 ## *LLVM IR*
-
-## *memref*
 
 
 
@@ -351,16 +377,56 @@ PatternSet 是一组 Patterns，在多个 Passes 间共享
 
 ## *PassManager*
 
-# Support
+# Vector & Linalg
 
-和 Clang 中的 Support 作用一样，就是封装 MLIR 对 OS 系统调用接口的使用，从而提供跨平台的支持
+## *linalg*
 
 
 
-# Polly
+# Bufferization & Memref Dialect
+
+## *Bufferization*
+
+[Bufferization - MLIR](https://mlir.llvm.org/docs/Bufferization/)
+
+Bufferization  是 MLIR 中的一个概念，它指将 `tensor` 语义算子转换为 `memref` 语义算子
+
+<img src="bufferization_passes.svg" width="40%">
+
+## *memref*
+
+
+
+
+
+
+
+# Polly & Affine Dialect
+
+## *多面体模型*
+
+
+
+## *Polly*
+
+
 
 Polly 是 LLVM 项目的一个子项目，它提供了自动并行化和循环优化的功能。Polly 使用高级多维数组索引（Affine Expressions）来理解、表示和优化循环嵌套，特别是那些对于性能至关重要的计算密集型循环
 
 Polly 基于一种叫做多面体模型的数学表示，使用这种方法，可以进行复杂的优化
 
 Polly 主要应用于需要大规模数值计算的科学和工程领域，例如物理模拟、矩阵运算和图像处理。在这些领域，循环结构往往占据了程序的绝大部分计算时间，并且有明确的数据依赖模式可供分析和优化
+
+
+
+## *Affine*
+
+
+
+['affine' Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Affine/#dimensions-and-symbols)
+
+Affine dialect：处理循环嵌套，实现了循环展开、多面体变换等一些算法
+
+# Support
+
+和 Clang 中的 Support 作用一样，就是封装 MLIR 对 OS 系统调用接口的使用，从而提供跨平台的支持
