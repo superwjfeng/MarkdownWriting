@@ -35,7 +35,7 @@ Transitive lowering 传递下降：类似 `A->B->C` 的下降模式。通过部�
 
 
 
-# Architecture
+# MLIR 的核心概念
 
 ## *传统编译器 IR 的问题*
 
@@ -131,7 +131,41 @@ Dialect 是 MLIR 的核心机制，它其实就代表了一层层的 IR（也可
 * Passes: analysis, transformations, and dialect conversions. 分析、转换
 * (optional) Possibly custom parser and assembly printer 针对当前 dialect IR 自定义的解析器、打印器
 
+## *Module*
 
+Module 是一个顶层的容器，用于组织和管理代码，用于包含一组函数 Functions、全局变量 Globals 和其他模块级别的实体。它类似于其他编程语言中的“模块”或“文件”，是 MLIR 程序的基本编译单元
+
+## *Identifiers & Keywords*
+
+采用 EBNF 定义
+
+```
+// Identifiers
+bare-id ::= (letter|[_]) (letter|digit|[_$.])*
+bare-id-list ::= bare-id (`,` bare-id)*
+value-id ::= `%` suffix-id
+alias-name :: = bare-id
+suffix-id ::= (digit+ | ((letter|id-punct) (letter|id-punct|digit)*))
+
+symbol-ref-id ::= `@` (suffix-id | string-literal) (`::` symbol-ref-id)?
+value-id-list ::= value-id (`,` value-id)*
+
+// Uses of value, e.g. in an operand list to an operation.
+value-use ::= value-id (`#` decimal-literal)?
+value-use-list ::= value-use (`,` value-use)*
+```
+
+* bare-id：裸标识符是一个以字母或下划线 `_` 开头的字符串，后面可以跟字母、数字、下划线 `_`、美元符号 `$` 或点号 `.`
+
+* value-id：值标识符以百分号 `%` 开头，后面跟一个后缀标识符 suffix-id
+
+  值引用表示局部变量或临时值
+
+* symbol-ref-id 符号引用：符号引用标识符以 `@` 开头，后面跟一个后缀标识符或字符串字面量，还可以通过 `::` 嵌套引用符号。比如 `@foo`、`@module::function`
+
+  符号引用表示全局唯一的命名实体，通常用于表示函数名、全局变量名、模块名等
+
+* value-use 值引用
 
 # 构建 Dialect
 
@@ -272,33 +306,7 @@ MLIR 原生支持的内建 Dialect 有很多，具体可以查看 [Builtin Diale
 * LLVM dialect：LLVM IR 的 binding，可以直接翻译给 LLVM 做后续编译
 * SPIR-V dialect
 
-
-
-
-
-### Standard dialect 的拆分
-
-Standard dialect 已被拆分和重新组织到更为专注的方言中。这种重构有助于更清晰地表述操作的用途和领域范围，并且加强模块化和可扩展性。以下是对一些关键变化的概述：
-
-* arith Dialect
-  - 这部分承担了几乎所有整数和浮点数的算术及比较操作
-  - 例子包括 `arith.addi`（整数加法）、`arith.subf`（浮点数减法）、`arith.cmpi`（整数比较）、`arith.cmpf`（浮点数比较）等
-* func Dialect ['func' Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Func/)
-  - 用于处理函数定义及相关操作，如函数调用、参数传递和返回
-  - `func.func`, `func.return` 等是该方言的典型操作
-* memref Dialect
-  - 处理内存相关的操作，包括分配、释放、加载和存储等动态内存操作
-  - `memref.alloc`, `memref.dealloc`, `memref.load`, `memref.store` 都属于此类
-* cf Dialect（Control Flow）
-  - 专注于流控制相关的操作，如条件分支、循环控制等
-  - `cf.br`, `cf.cond_br` 是该方言的基本操作
-* tensor 和 vector Dialects
-  - 这些方言分别处理张量和向量相关的操作，是高性能计算、机器学习等领域中的重要组成部分
-  - 包含 `tensor.extract`, `tensor.insert` 以及 `vector.add`, `vector.mul` 等操作
-
-
-
-
+## *Dialect 架构设计*
 
 [【源码研读】MLIR Dialect 分层设计 - Aurelius84 - 博客园](https://www.cnblogs.com/CocoML/p/17632342.html)
 
@@ -333,7 +341,35 @@ TOSA, Tensor Operator Set Architecture Dialect
 
 
 
+## *Standard dialect 的拆分*
 
+Standard dialect 已被拆分和重新组织到更为专注的方言中。这种重构有助于更清晰地表述操作的用途和领域范围，并且加强模块化和可扩展性。以下是对一些关键变化的概述：
+
+* arith Dialect
+  - 这部分承担了几乎所有整数和浮点数的算术及比较操作
+  - 例子包括 `arith.addi`（整数加法）、`arith.subf`（浮点数减法）、`arith.cmpi`（整数比较）、`arith.cmpf`（浮点数比较）等
+* func Dialect ['func' Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Func/)
+  - 用于处理函数定义及相关操作，如函数调用、参数传递和返回
+  - `func.func`, `func.return` 等是该方言的典型操作
+* memref Dialect
+  - 处理内存相关的操作，包括分配、释放、加载和存储等动态内存操作
+  - `memref.alloc`, `memref.dealloc`, `memref.load`, `memref.store` 都属于此类
+* cf Dialect（Control Flow）
+  - 专注于流控制相关的操作，如条件分支、循环控制等
+  - `cf.br`, `cf.cond_br` 是该方言的基本操作
+* tensor 和 vector Dialects
+  - 这些方言分别处理张量和向量相关的操作，是高性能计算、机器学习等领域中的重要组成部分
+  - 包含 `tensor.extract`, `tensor.insert` 以及 `vector.add`, `vector.mul` 等操作
+
+### func
+
+```mlir
+func.func @function_name(%arg1: type1, %arg2: type2, ...) -> return_type {
+  // 函数体
+}
+```
+
+`func.func` 用于定义一个函数
 
 ## *LLVM IR*
 
@@ -345,7 +381,7 @@ TOSA, Tensor Operator Set Architecture Dialect
 
 [Defining Dialect Attributes and Types - MLIR](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 
-* Type：MLIR 中任何数据都必须指定 Type；MLIR 中内置了很多常用的 Type，我们也可以拓展自己的Type，来表示更复杂的数据类型
+* Type：MLIR 中任何数据都必须指定 Type；MLIR 中内置了很多常用的 Type，我们也可以拓展自己的 Type，来表示更复杂的数据类型
 * Attribute：MLIR 中 Attribute 可以简单理解为 Constant 常量数据值，用来定义一些常量和属性。每个 Attribute都有其 Type
 
 ## *Type*
@@ -356,11 +392,18 @@ TOSA, Tensor Operator Set Architecture Dialect
 
 # Pass
 
+## *Pass 介绍*
+
+Pass 是 MLIR 编译器框架中的基本工作单元，负责对 IR 进行分析、优化或转换
+
+Pass 可以组合成 Pass Pipeline（Pass 管道），按顺序执行多个 Pass
+
 ### Pass 分类
 
-* 按场景分
-* 最常用的 Pass：模式匹配并变换 pattern match & rewrite
-* 验证 Pass：借助 llvm-lit & FileCheck
+* Analysis Pass：收集 IR 的信息，但不修改 IR。比如数据流分析、依赖分析、别名分析等
+* Transformation Pass 是最常用的 Pass：模式匹配并变换 pattern match & rewrite
+* Conversino Pass：将 IR 从一种 Dialect 转换为另一种 Dialect
+* Verification Pass：借助 llvm-lit & FileCheck
 * 多线程运行 Pass
 
 ## *两种遍历 IR 的方式*
@@ -389,17 +432,69 @@ PatternSet 是一组 Patterns，在多个 Passes 间共享
 
 [Bufferization - MLIR](https://mlir.llvm.org/docs/Bufferization/)
 
-Bufferization  是 MLIR 中的一个概念，它指将 `tensor` 语义算子转换为 `memref` 语义算子
+Bufferization  是 MLIR 中的一个概念，它指将高层次的内存操作（比如 `tensor` 张量操作算子、抽象内存访问）转换为低层次的具体内存操作（ `memref` 算子所表示的缓冲区分配、加载/存储操作）
+
+它的主要任务包括：
+
+- **内存分配**：为数据分配具体的缓冲区
+- **内存访问**：将抽象的内存访问转换为具体的加载/存储操作
+- **内存布局**：确定数据在缓冲区中的存储方式（如行优先、列优先）
 
 <img src="bufferization_passes.svg" width="40%">
 
 ## *memref*
 
+memref 是 MLIR 中用于表示内存引用的 dialect，广泛应用于编译器优化和代码生成。它提供了一种高效的方式来描述内存布局、形状和访问模式，特别适合处理多维数组和张量
+
+### 基本语法
+
+```mlir
+memref<形状x元素类型, 内存布局, 内存空间>
+```
+
+- **形状**：描述多维数组的维度（如 `2x3x4` 表示 2x3x4 的三维数组）
+- **元素类型**：内存中存储的数据类型（如 `f32`、`i64` 等）
+- **内存布局**（可选）：描述数据在内存中的存储方式
+  * 行优先 `row_major`
+  * 列优先 `column_major`
+  * 自定义布局，比如 `affine_map<(d0, d1) -> (d1, d0)>`
+- **内存空间**（可选）：标识内存所在的物理空间（如 GPU 显存、共享内存等）
+
+### memory-space
 
 
 
+### 操作
 
+- **分配内存**：
 
+  ```
+  %mem = memref.alloc() : memref<4x4xf32>
+  ```
+
+- **释放内存**：
+
+  ```
+  memref.dealloc %mem : memref<4x4xf32>
+  ```
+
+- **加载数据**：
+
+  ```
+  %val = memref.load %mem[%i, %j] : memref<4x4xf32>
+  ```
+
+- **存储数据**：
+
+  ```
+  memref.store %val, %mem[%i, %j] : memref<4x4xf32>
+  ```
+
+- **获取子视图**：
+
+  ```
+  %subview = memref.subview %mem[0, 0][2, 2][1, 1] : memref<4x4xf32> to memref<2x2xf32, strided<[4, 1]>>
+  ```
 
 # Polly & Affine Dialect
 

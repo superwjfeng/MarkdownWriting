@@ -8,6 +8,8 @@ TVM, Tensor Virtual Machine 张量虚拟机。利用 TVM，工程师可以在任
 
 从上图可以看出 TVM 架构的核心部分就是 NNVM 编译器。注意⚠️：最新的 TVM 已经将 NNVM 升级为了 Realy，选择上面这张图只是因为它比较清楚
 
+<img src="TVM结构.drawio.png">
+
 ## *安装*
 
 ### Docker
@@ -42,3 +44,4 @@ dominator tree
 - reduction：约简，如 sum/max/min，输入到输出具有降维性质，如 sum/max/min。
 - complex-out-fusable(can fuse element-wise map to output)：计算复杂类型的融合，如 conv2d。
 - opaque(cannot be fused)：无法被融合的算子，如 sort。
+- 20
