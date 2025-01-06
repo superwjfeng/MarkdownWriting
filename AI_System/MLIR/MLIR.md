@@ -171,9 +171,129 @@ value-use-list ::= value-use (`,` value-use)*
 
 <img src="Operation架构.drawio.png">
 
+## *构建新的 dialect*
+
+[Creating a Dialect - MLIR](https://mlir.llvm.org/docs/Tutorials/CreatingADialect/)
+
+[Defining Dialects - MLIR](https://mlir.llvm.org/docs/DefiningDialects/)
+
+### 编写 dialect 的 td 文件
+
+```tablegen
+// Include the definition of the necessary tablegen constructs for defining
+// our dialect. 
+include "mlir/IR/DialectBase.td"
+
+// Here is a simple definition of a dialect.
+def MyDialect : Dialect {
+  let summary = "A short one line description of my dialect.";
+  let description = [{
+    My dialect is a very important dialect. This section contains a much more
+    detailed description that documents all of the important pieces of information
+    to know about the document.
+  }];
+
+  /// This is the namespace of the dialect. It is used to encapsulate the sub-components
+  /// of the dialect, such as operations ("my_dialect.foo").
+  let name = "my_dialect";
+
+  /// The C++ namespace that the dialect, and its sub-components, get placed in.
+  let cppNamespace = "::my_dialect";
+}
+```
+
+* let dependentDialects：如果依赖别的dialect，则添加该part，例如 linalgOp 中可能会使用 affine_map 和 arithop
+
+## *定义新的 operation*
+
+### 使用 ODS 自动生成
+
 构建 operation 采用了一种声明式的自动化工具 ODS, Operation Definition Specification：基于 TableGen，方便自定义 operation
 
 使用 mlir-tablegen 工具从 `.td` 文件转换为 `.inc` 文件
+
+首先在 ODS 中定义一个继承自 Op 类的基类 `Toy_Op`
+
+```tablegen
+class Toy_Op<string mnemonic, list<OpTrait> traits = []> :
+    Op<Toy_Dialect, mnemonic, traits>;
+// Toy_Dialect : 父类 Dialect 操作
+// mnemonic : 注记符号，一般是一个字符串型的单词，代表了该操作的含义
+// traits : 该操作的一些特征，放在一个列表中
+
+```
+
+```tablegen
+def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
+  // "constant"就是注记符号，[NoSideEffect]说明了该操作的一个特点
+  // Provide a summary and description for this operation. 
+  let summary = "constant";
+  let description = [{
+    Constant operation turns a literal into an SSA value. The data is attached
+    to the operation as an attribute. For example:
+    ```mlir
+      %0 = toy.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]>
+                        : tensor<2x3xf64>
+    ```
+  }];
+
+  /*
+  arguments和results：定义参数和结果,参数可以是SSA操作数的属性或类型。
+  通过为参数或结果提供名称，ODS将自动的生成匹配的访问器。
+  arguments一般模板(results同理): 
+  let arguments = (ins <data_type><data_attribute>:$<variable_name>);
+  - ins: 输入 (results中该参数为 outs)
+  - <data_type>: 数据类型
+  - <data_structure>: 数据属性
+  - ElementsAttr: 稠元(dense element)
+  - <variable_name>: 变量名
+  */
+  // The constant operation takes an attribute as the only input.
+  // `F64ElementsAttr` corresponds to a 64-bit floating-point ElementsAttr.
+  let arguments = (ins F64ElementsAttr:$value);
+  // The constant operation returns a single value of TensorType.
+  let results = (outs F64Tensor);
+
+  // Divert the printer and parser to `parse` and `print` methods on our operation.
+  let hasCustomAssemblyFormat = 1;
+  /*
+  // 自定义程序的组装格式，使最终输出的 IR 格式更精简、易读
+  let parser = [{ return ::parseConstantOp(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+  */
+    
+  // ODS 可以自动生成一些简单的构建方法，用户也可自定义添加一些构造方法
+  let builders = [
+    // Build a constant with a given constant tensor value.
+    OpBuilderDAG<(ins "DenseElementsAttr":$value), [{
+      build($_builder, $_state, value.getType(), value);
+    }]>,
+    // Build a constant with a given constant floating-point value.
+    OpBuilderDAG<(ins "double":$value)>
+  ];
+
+  // Add additional verification logic to the constant operation.
+  // will generate a `::mlir::LogicalResult verify()`
+  let hasVerifier = 1;
+}
+```
+
+
+
+有如下字段
+
+- `Op` 类：继承自 `Op`，指定 Dialect 和操作名称
+- `summary`：操作的简要描述
+- `arguments`：操作的输入（操作数）
+- `results`：操作的输出（结果）
+- `assemblyFormat`：操作的文本格式
+
+### Operation & Op class 的区别
+
+* Operation：用于对所有操作的建模，并提供通用接口给操作的实例
+* op：每种特定的操作都是由 Op 类继承来的。同时它还是 `Operation*` 的 wrapper，这就意味着，当我们定义一个 Dialect 的 Operation 的时候，我们实际上是在提供一个 Operation 类的接口
+
+Op类的定义在 OpBased.td 文件中
 
 ## *OpTrait*
 
@@ -243,6 +363,8 @@ def MyOperation : MyDialect<"my_op">,
 ## *OpInterface*
 
 OpInterface 是一套提供协议和方法的机制，允许为 operation 定义统一的接口。这些接口定义了一组方法，操作可以选择实现这些方法以提供某些行为或属性。这种机制促进了代码的可重用性和多态性，使得不同类型的操作能够以统一的方式进行处理和转换
+
+
 
 # Dialect 转换
 
@@ -386,9 +508,17 @@ func.func @function_name(%arg1: type1, %arg2: type2, ...) -> return_type {
 
 ## *Type*
 
+Type 用于表示数据的类型，类似于编程语言中的数据类型（如 `int`、`float`、`struct` 等）。在 MLIR 中，Type 是静态的、不可变的对象，用于描述操作数（Operand）和结果（Result）的类型
+
 ## *Attribute*
 
 > Attributes are the mechanism for specifying constant data on operations in places where a variable is never allowed - e.g. the comparison predicate of a [`cmpi` operation](https://mlir.llvm.org/docs/Dialects/ArithOps/#arithcmpi-arithcmpiop). Each operation has an attribute dictionary, which associates a set of attribute names to attribute values. MLIR’s builtin dialect provides a rich set of [builtin attribute values](https://mlir.llvm.org/docs/LangRef/#builtin-attribute-values) out of the box (such as arrays, dictionaries, strings, etc.). Additionally, dialects can define their own [dialect attribute values](https://mlir.llvm.org/docs/LangRef/#dialect-attribute-values).
+
+Attribute 用于表示操作的附加信息，通常是编译时常量。Attribute 是静态的、不可变的对象，它的作用有
+
+- **配置操作**：为操作提供额外的信息（如常量值、选项）
+- **优化**：为编译器提供常量信息，便于优化（如常量折叠）
+- **代码生成**：在生成目标代码时，属性信息用于确定操作的配置
 
 # Pass
 
@@ -464,6 +594,12 @@ memref<形状x元素类型, 内存布局, 内存空间>
 
 
 
+
+
+
+
+
+
 ### 操作
 
 - **分配内存**：
@@ -521,6 +657,12 @@ Polly 主要应用于需要大规模数值计算的科学和工程领域，例�
 ['affine' Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Affine/#dimensions-and-symbols)
 
 Affine dialect：处理循环嵌套，实现了循环展开、多面体变换等一些算法
+
+# MLIR 配套工具
+
+## *mlir-opt*
+
+mlir-opt 是一个用于为 MLIR 代码跑 passes & lowering 的命令行 entry-point
 
 # Support
 
