@@ -134,6 +134,20 @@ $ sudo cmake --build build --target install # cmake install
 
 注意安装时文件可能不全，/usr/local/include/llvm/Config/config.h不会被安装进去，需要手动从build文件夹内复制出来。在运行编译时可以根据缺少头文件自行`sudo cp`
 
+```cmd
+$ cd llvm-project/
+$ cmake llvm/ -G Ninja -B build/ \
+    -DLLVM_ENABLE_PROJECTS="clang;lldb;lld;clang-tools-extra;mlir" \
+    -DLLVM_TARGETS_TO_BUILD="Native" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DLLVM_ENABLE_LLD=ON
+$ ninja -C build/ clangd
+```
+
+
+
 ### Shell Script
 
 ```shell
@@ -5348,7 +5362,9 @@ LLDB 的使用可以看 *IDE与调试工具.md*
 
 [1 TableGen Programmer’s Reference — LLVM 20.0.0git documentation](https://llvm.org/docs/TableGen/ProgRef.html)
 
-TableGen 是 LLVM 项目用来定义和生成各种数据结构（或者更专业的说就是特定领域的信息记录 records of domain-specific information）的一种工具。这些 `.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
+TableGen 是 LLVM 项目用来定义和生成各种数据结构（或者更专业的说就是特定领域的信息记录 records of domain-specific information）的一种工具。它说白了就是把不变的内容抽成一个模板（即 Python + Jinja 的形式），然后在 `.td` 文件中给出那些变化的内容，从而避免了直接写很长的 C++ 代码，而是直接用 TableGen 工具直接生成它们
+
+这些 `.td` 文件通常包含着描述编译器组件如指令集架构、寄存器信息、指令选择规则等重要信息的声明
 
 1. 应当把 TableGen DSL 视为一种 C++ 语言的变体，尽管能看到 `def` 这样的 Python 关键词
 2. `.td` 文件仅仅用于记录，不要把后端的功能和前端的实体绑定起来，不同的后端可能对同样的数据有非常不同的解释
@@ -5356,7 +5372,14 @@ TableGen 是 LLVM 项目用来定义和生成各种数据结构（或者更专�
 
 > `.td` 这个后缀意思是 "target (machine) description"，这对于 `llvm-tblgen` 是非常有意义的，但对其他后端则显得不太合理，我想这也是一个历史问题，否则可能叫 `.tg` 似乎更加合理
 
-**TableGen 本质是一个 parser，将输入的 `.td` 文件转化为特定的数据结构后再输出为易于阅读的 cpp 代码**（一般是一个 `.inc` 文件）
+**TableGen 本质是一个 parser，将输入的 `.td` 文件转化为特定的数据结构后再输出为易于阅读的 cpp 代码**（一般是一个 `.h.inc` 文件）
+
+- `.inc` 文件通常包含由 `tablegen` 自动生成的代码片段，例如：
+  - 查找表（lookup tables）
+  - 枚举值（enums）
+  - 常量定义（constants）
+  - 初始化数据（initialization data）
+- `.inc` 文件就是一个 C/C++ 文件，这些内容通过 `#inclue` 会被直接嵌入到 C/C++ 代码中
 
 ### TableGen 后端
 
@@ -5370,7 +5393,7 @@ TableGen 也分为前后端，后端分别被 LLVM、Clang、LLDB 和 MLIR 使�
 
 - Clang 生成诊断信息
 - LLDB
-- MLIR  定义operation
+- MLIR：Operation、Pass、Dialect 等都可以通过 TableGen 来快速生成
 
 ### 数据类型
 
@@ -5405,7 +5428,7 @@ TableGen 也分为前后端，后端分别被 LLVM、Clang、LLDB 和 MLIR 使�
 
 ### `.td` 文件内容
 
-一个`.td`文件会包含一个或多个通过TableGen语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值。下面是一个简单的例子：
+一个`.td`文件会包含一个或多个通过 TableGen 语言攥写的记录（record）格式定义的条目。这些记录描述了各种属性和值。下面是一个简单的例子：
 
 ```tablegen
 // InstrInfo.td - Example instruction definitions for an imaginary target.

@@ -87,8 +87,7 @@ Operation 是 Dialect 的重要组成部分，可以看作是方言语义的基�
 
 <img src="Dialect结构.drawio.png">
 
-* 
-  Op, Operation 操作：表示一个代码单元。是MLIR最重要的概念之一。`Op` 是 `operation*` 的 wrapper
+* Operation 操作：表示一个代码单元。是MLIR最重要的概念之一
 * Operation 的结构是一个嵌套递归结构，即 Operation `->` Region `->` Block `->` Operation `->` `...`
 * Region 域：为多个 Block 的控制流图 CFG/列表
 * Block 块：一个多个不含控制流 control flow 的 Operations 组成的顺序表
@@ -110,6 +109,14 @@ Operation 看起来就像一个函数的定义，有输入输出
 ```
 %result = "dialect.operation_name"(%arg1, %arg2) : (type1, type2) -> type3
 ```
+
+
+
+
+
+### Op 类
+
+`Op` 是 `operation*` 的 wrapper
 
 ## *Dialect*
 
@@ -134,6 +141,8 @@ Dialect 是 MLIR 的核心机制，它其实就代表了一层层的 IR（也可
 ## *Module*
 
 Module 是一个顶层的容器，用于组织和管理代码，用于包含一组函数 Functions、全局变量 Globals 和其他模块级别的实体。它类似于其他编程语言中的“模块”或“文件”，是 MLIR 程序的基本编译单元
+
+代码中用 BuiltinOps 中的 class ModuleOp 来表示，一般都作为 operation 的最外层
 
 ## *Identifiers & Keywords*
 
@@ -202,7 +211,19 @@ def MyDialect : Dialect {
 }
 ```
 
-* let dependentDialects：如果依赖别的dialect，则添加该part，例如 linalgOp 中可能会使用 affine_map 和 arithop
+
+
+
+
+```cmake
+set(LLVM_TARGET_DEFINITIONS FooTransforms.td)
+mlir_tablegen(FooTransforms.h.inc -gen-rewriters)
+add_public_tablegen_target(MLIRFooTransformIncGen)
+```
+
+LLVM_TARGET_DEFINITIONS 用于指定需要处理的 `.td` 文件
+
+`mlir_tablegen` 是一个 CMake 宏，用于调用 MLIR 的 TableGen 工具
 
 ## *定义新的 operation*
 
@@ -231,28 +252,30 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
   let description = [{
     Constant operation turns a literal into an SSA value. The data is attached
     to the operation as an attribute. For example:
-    ```mlir
+    \```mlir
       %0 = toy.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]>
                         : tensor<2x3xf64>
-    ```
+	\```
   }];
 
   /*
+```
   arguments和results：定义参数和结果,参数可以是SSA操作数的属性或类型。
   通过为参数或结果提供名称，ODS将自动的生成匹配的访问器。
   arguments一般模板(results同理): 
   let arguments = (ins <data_type><data_attribute>:$<variable_name>);
+
   - ins: 输入 (results中该参数为 outs)
   - <data_type>: 数据类型
   - <data_structure>: 数据属性
   - ElementsAttr: 稠元(dense element)
   - <variable_name>: 变量名
-  */
-  // The constant operation takes an attribute as the only input.
-  // `F64ElementsAttr` corresponds to a 64-bit floating-point ElementsAttr.
-  let arguments = (ins F64ElementsAttr:$value);
-  // The constant operation returns a single value of TensorType.
-  let results = (outs F64Tensor);
+    */
+    // The constant operation takes an attribute as the only input.
+    // `F64ElementsAttr` corresponds to a 64-bit floating-point ElementsAttr.
+    let arguments = (ins F64ElementsAttr:$value);
+    // The constant operation returns a single value of TensorType.
+    let results = (outs F64Tensor);
 
   // Divert the printer and parser to `parse` and `print` methods on our operation.
   let hasCustomAssemblyFormat = 1;
@@ -276,66 +299,8 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
   // will generate a `::mlir::LogicalResult verify()`
   let hasVerifier = 1;
 }
-```
 
 
-
-有如下字段
-
-- `Op` 类：继承自 `Op`，指定 Dialect 和操作名称
-- `summary`：操作的简要描述
-- `arguments`：操作的输入（操作数）
-- `results`：操作的输出（结果）
-- `assemblyFormat`：操作的文本格式
-
-### Operation & Op class 的区别
-
-* Operation：用于对所有操作的建模，并提供通用接口给操作的实例
-* op：每种特定的操作都是由 Op 类继承来的。同时它还是 `Operation*` 的 wrapper，这就意味着，当我们定义一个 Dialect 的 Operation 的时候，我们实际上是在提供一个 Operation 类的接口
-
-Op类的定义在 OpBased.td 文件中
-
-## *OpTrait*
-
-`OpTrait` 是用于表达 operation 属性和行为的一种机制。它们是一组模板类，能够以一种可组合的方式为操作添加特定的特征或者约束。通过使用 `OpTrait`，开发者可以简化操作的定义，避免重复代码，并使得操作的行为更具一致性和可预测性
-
-### Built-in OpTrait
-
-* `ZeroOperands` 和 `OneResult` 等：用于指定操作的操作数数量或结果数量。例如，`ZeroOperands` 表示操作没有操作数，而 `OneResult` 表示操作有一个结果
-* `NOperands` 和 `NResults`：用于指定确切数量的操作数和结果，自定义操作中可以直接使用
-* `SameOperandsAndResultType`：表示所有操作数和结果类型必须相同，这在很多数学操作中常见
-* `HasNoSideEffect`：表示操作没有副作用，即操作的执行不影响程序的状态，适合用在纯函数或者纯计算的操作中
-* `IsCommutative` 和 `IsIdempotent`：定义操作的数学性质，比如交换律和幂等律，这对于优化和变换很有帮助
-* `AffineScope`：用于标记操作符为仿射作用域的一部分，适用于仿射表达式和仿射循环的上下文
-
-### 自定义 OpTrait
-
-除了使用内置的 `OpTrait`，开发者还可以实现自定义的 `OpTrait` 以满足特定需求。实现自定义 `OpTrait` 涉及到定义接口类以及实现检查逻辑，通常是在模板类中实现的
-
-以下是一个示例，展示如何定义一个简单的自定义 `OpTrait`，例如要求所有操作数的类型必须是整数类型：
-
-```c++
-#include "mlir/IR/OpDefinition.h"
-
-namespace mlir {
-namespace OpTrait {
-
-template <typename ConcreteType>
-class AllOperandsIntegers : public OpTrait::TraitBase<ConcreteType, AllOperandsIntegers> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    for (auto operand : op->getOperands()) {
-      if (!operand.getType().isIntOrIndex()) {
-        return op->emitOpError("requires all operands to be integer or index type");
-      }
-    }
-    return success();
-  }
-};
-
-} // namespace OpTrait
-} // namespace mlir
-```
 
 在这个例子中，我们定义了一个 `AllOperandsIntegers` 特征，检查操作中的所有操作数是否为整数或索引类型。这个特征可以在操作定义中通过模板参数轻松使用
 
@@ -536,9 +501,168 @@ Pass 可以组合成 Pass Pipeline（Pass 管道），按顺序执行多个 Pass
 * Verification Pass：借助 llvm-lit & FileCheck
 * 多线程运行 Pass
 
-## *两种遍历 IR 的方式*
+
+
+## *定义 Pass*
+
+## *Declarative Pass Specification*
+
+类似于 ODS，可以使用 tablegen 来声明式地生成 pass
+
+
+
+
+
+
+
+```tablegen
+// mlir/include/mlir/Pass/PassBase.td
+class PassBase<string passArg, string base> {
+  // The command line argument of the pass.
+  string argument = passArg;
+
+  // The C++ base class for the pass.
+  string baseClass = base;
+
+  // A short 1-line summary of the pass.
+  string summary = "";
+
+  // A human readable description of the pass.
+  string description = "";
+
+  // A C++ constructor call to create an instance of this pass.
+  // If empty, the default constructor declarations and definitions
+  // 'createPassName()' and 'createPassName(const PassNameOptions &options)'
+  // will be generated and the former will be used for the pass instantiation.
+  code constructor = "";
+
+  // A list of dialects this pass may produce entities in.
+  list<string> dependentDialects = [];
+
+  // A set of options provided by this pass.
+  list<Option> options = [];
+
+  // A set of statistics provided by this pass.
+  list<Statistic> statistics = [];
+}
+```
+
+* Base Class
+  * `ModuleOp`：作用于 ModuleOp
+  * `func::FuncOp`：作用于 FuncOp
+  * `mlir::FunctionOpInterface`：作用于 interface 的 pass
+* constructor：使用哪一个 C++ 构造函数来构造这个 pass，如果为空的话，TableGen 会生成 `createPassName()` & `createPassName(const PassNameOptions &options)`
+* Option
+* dependentDialects：如果依赖别的dialect，则添加该 part，例如 linalgOp 中可能会使用 affine_map 和 arithop
+
+
+
+
+
+mlir/include/mlir/TableGen/Pass.h 则提供了 TableGen 如何生成对应的 C/C++ 代码的方法
+
+### 例子
+
+```c++
+struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
+  MyPass() = default;
+  MyPass(const MyPass &) {}
+
+  ...
+
+  // Specify any options.
+  Option<bool> option{
+      *this, "example-option",
+      llvm::cl::desc("An example option"), llvm::cl::init(true)};
+  ListOption<int64_t> listOption{
+      *this, "example-list",
+      llvm::cl::desc("An example list option")};
+
+  // Specify any statistics.
+  Statistic statistic{this, "example-statistic", "An example statistic"};
+};
+
+/// Expose this pass to the outside world.
+std::unique_ptr<Pass> foo::createMyPass() {
+  return std::make_unique<MyPass>();
+}
+
+/// Register this pass.
+void foo::registerMyPass() {
+  PassRegistration<MyPass>();
+}
+```
+
+上面的 pass 所对应的 tablegen 为
+
+```tablegen
+def MyPass : Pass<"my-pass", "ModuleOp"> {
+  let summary = "My Pass Summary";
+  let description = [{
+    Here we can now give a much larger description of `MyPass`, including all of
+    its various constraints and behavior.
+  }];
+
+  // A constructor must be provided to specify how to create a default instance
+  // of MyPass. It can be skipped for this specific example, because both the
+  // constructor and the registration methods live in the same namespace.
+  let constructor = "foo::createMyPass()";
+
+  // Specify any options.
+  let options = [
+    Option<"option", "example-option", "bool", /*default=*/"true",
+           "An example option">,
+    ListOption<"listOption", "example-list", "int64_t",
+               "An example list option">
+  ];
+
+  // Specify any statistics.
+  let statistics = [
+    Statistic<"statistic", "example-statistic", "An example statistic">
+  ];
+}
+```
+
+
+
+
+
+### Option
+
+## *`walk()`*
+
+
+
+
+
+```c++
+/// Traversal order for region, block and operation walk utilities.
+enum class WalkOrder { PreOrder, PostOrder };
+```
+
+* PreOrder：Top Down 先序
+* PostOrder：Bottom Up 后序，默认
+
+
+
+```c++
+class WalkResult {
+  enum ResultEnum { Interrupt, Advance, Skip } result;
+```
+
+* Interrupt
+* Advance：继续 walk
+* Skip
+
+
 
 ### 适合使用裸 `walk()` 的场景
+
+
+
+def-use chain?
+
+## *Pattern 遍历*
 
 ### 适合使用 Pattern 的场景
 
@@ -549,6 +673,22 @@ Pass 可以组合成 Pass Pipeline（Pass 管道），按顺序执行多个 Pass
 PatternSet 是一组 Patterns，在多个 Passes 间共享
 
 ## *PassManager*
+
+
+
+
+
+<img src="Pass继承图.png">
+
+### OperationPass
+
+OperationPass：用于 transform 某种类型的 operation 的 pass
+
+需要提供下面的接口
+
+* `void runOnOperation();`：实现 Pass 的具体逻辑，由 Pass Manager 调用，用于执行对 Operation 的转换或分析
+* `StringRef getName() const;`
+* `std::unique_ptr<Pass> clonePass() const;`
 
 # Vector & Linalg
 

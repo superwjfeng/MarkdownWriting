@@ -3857,11 +3857,13 @@ std::shared_ptr<const Widget> fastLoadWidget(int id) {
 
 ## *条款22：使用Pimpl惯用法时，将特殊成员函数的定义放到实现文件中*
 
-https://fengjungle.blog.csdn.net/article/details/123150564
+[C++ Pimpl惯用法（桥接模式特例） - 明明1109 - 博客园](https://www.cnblogs.com/fortunely/p/16391686.html)
+
+[隐藏实现又解耦，认识认识PImpl模式_pimp设计-CSDN博客](https://fengjungle.blog.csdn.net/article/details/123150564)
 
 ### Pimpl惯用法
 
-Pimpl, Pointer to implementation 指向实现的指针是一种C++中的惯用法 idiom，因为它局限于对指针的使用，所以称不上是一种设计模式 design pattern
+Pimpl, Pointer to implementation 指向实现的指针是一种 C++ 中的惯用法 idiom，因为它局限于对指针的使用，所以称不上是一种设计模式 design pattern。这种 idiom 由 Jeff Summer 最先引入。该技巧可以避免在头文件中暴露私有细节，是促进 API 接口和实现保持完全分离的重要机制
 
 将类的实现细节从其公共接口中分离出来，将这些细节封装在内部实现类中
 
