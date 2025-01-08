@@ -491,15 +491,37 @@ Attribute 用于表示操作的附加信息，通常是编译时常量。Attribu
 
 Pass 是 MLIR 编译器框架中的基本工作单元，负责对 IR 进行分析、优化或转换
 
-Pass 可以组合成 Pass Pipeline（Pass 管道），按顺序执行多个 Pass
+
+
+
+
+<img src="Pass继承图.png">
+
+
 
 ### Pass 分类
 
 * Analysis Pass：收集 IR 的信息，但不修改 IR。比如数据流分析、依赖分析、别名分析等
 * Transformation Pass 是最常用的 Pass：模式匹配并变换 pattern match & rewrite
-* Conversino Pass：将 IR 从一种 Dialect 转换为另一种 Dialect
+  * Operation Pass：针对特定 Operation 的 Pass
+  * Function Pass：针对 Function 的 Pass
+  * Module Pass：针对整个 Module 的 Pass
+
+* Conversion Pass：将 IR 从一种 Dialect 转换为另一种 Dialect
 * Verification Pass：借助 llvm-lit & FileCheck
 * 多线程运行 Pass
+
+
+
+### OperationPass
+
+OperationPass：用于 transform 某种类型的 operation 的 pass
+
+需要提供下面的接口
+
+* `void runOnOperation();`：实现 OperationPass 的具体逻辑，OperationPass 是由 Pass Manager 调用的，用于执行对 Operation 的转换或分析的 Pass
+* `StringRef getName() const;`
+* `std::unique_ptr<Pass> clonePass() const;`
 
 
 
@@ -678,23 +700,153 @@ PatternSet 是一组 Patterns，在多个 Passes 间共享
 
 
 
-<img src="Pass继承图.png">
+Pass 可以组合成 Pass Pipeline（Pass 管道），按顺序执行多个 Pass
 
-### OperationPass
 
-OperationPass：用于 transform 某种类型的 operation 的 pass
 
-需要提供下面的接口
+Pass 的执行顺序由以下因素决定：
 
-* `void runOnOperation();`：实现 Pass 的具体逻辑，由 Pass Manager 调用，用于执行对 Operation 的转换或分析
-* `StringRef getName() const;`
-* `std::unique_ptr<Pass> clonePass() const;`
+- **Pass 管理器的配置**：Pass 管理器会根据 Pass 的依赖关系和配置决定执行顺序。
+- **Pass 的依赖关系**：某些 Pass 可能依赖于其他 Pass 的结果，Pass 管理器会自动处理这些依赖。
+- **Pass 的类型**：不同类型的 Pass 有不同的执行顺序（例如，Module Pass 在 Function Pass 之前执行）
+
+### PassManager 的功能
+
+PassManager 是控制 Pass 执行的核心工具。以下是 PassManager 的关键功能：
+
+- **添加 Pass**：将 Pass 添加到 PassManager 中
+- **设置执行顺序**：通过嵌套 PassManager 或指定依赖关系来控制执行顺序。PassManager 会自动处理 Pass 之间的依赖关系。例如：
+  - 如果 Pass A 依赖于 Pass B，PassManager 会确保 Pass B 在 Pass A 之前执行。
+  - 如果 Pass A 和 Pass B 之间没有依赖关系，PassManager 可能会并行执行它们（如果支持并行）
+- **运行 Pass**：执行所有添加的 Pass
+
+```c++
+PassManager pm(ctx);
+
+// 添加 Pass
+pm.addPass(createMyPass1());
+pm.addPass(createMyPass2());
+
+// 运行 Pass
+if (failed(pm.run(module))) {
+    llvm::errs() << "Pass failed!\n";
+}
+```
+
+### 嵌套 PassManager
+
+MLIR 支持嵌套 PassManager，可以在一个 PassManager 中嵌套另一个 PassManager，从而更精细地控制 Pass 的执行顺序
+
+```c++
+PassManager outerPm(ctx);
+PassManager innerPm(ctx);
+
+// 添加 Pass 到内部 Pass 管理器
+innerPm.addPass(createMyPass1());
+innerPm.addPass(createMyPass2());
+
+// 将内部 Pass 管理器添加到外部 Pass 管理器
+outerPm.addPass(createModulePass(std::move(innerPm)));
+
+// 运行外部 Pass 管理器
+if (failed(outerPm.run(module))) {
+    llvm::errs() << "Pass failed!\n";
+}
+```
+
+### Registration
+
+MLIR 使用 **Pass 注册表**（Pass Registry）来管理 Pass 的注册和发现。开发者可以通过以下方式注册 Pass：
+
+- **静态注册**：使用 `mlir::PassRegistration` 注册 Pass
+- **动态注册**：在运行时动态注册 Pass
+
+# 多面体优化 & ·Polly & Affine Dialect
+
+## *多面体模型*
+
+
+
+## *Polly*
+
+
+
+Polly 是 LLVM 项目的一个子项目，它提供了自动并行化和循环优化的功能。Polly 使用高级多维数组索引（Affine Expressions）来理解、表示和优化循环嵌套，特别是那些对于性能至关重要的计算密集型循环
+
+Polly 基于一种叫做多面体模型的数学表示，使用这种方法，可以进行复杂的优化
+
+Polly 主要应用于需要大规模数值计算的科学和工程领域，例如物理模拟、矩阵运算和图像处理。在这些领域，循环结构往往占据了程序的绝大部分计算时间，并且有明确的数据依赖模式可供分析和优化
+
+
+
+## *Affine*
+
+['affine' Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Affine/#dimensions-and-symbols)
+
+Affine dialect 专门用于表示和优化仿射循环嵌套 Affine Loop Nests 和 仿射内存访问 Affine Memory Accesses。Affine Dialect 的目标是提供一种高级抽象，用于描述循环和内存访问模式，并支持自动优化（如循环变换、并行化、向量化等）
+
+### 核心概念
+
+* 仿射循环 Affine Loops
+
+  - 仿射循环是指循环的上下界和步长是仿射函数（Affine Function）
+
+  - 仿射函数是线性函数加上一个常数，例如 `i + 2 * j + 3`
+
+仿射内存访问 Affine Memory Accesses
+
+- 仿射内存访问是指内存访问的索引是仿射函数
+- 例如，`A[i + 2 * j + 3]` 是一个仿射内存访问
+
+仿射映射 Affine Maps
+
+- 仿射映射定义了索引空间到内存空间的映射关系。
+- 例如，`affine_map<(i, j) -> (i + j, i - j)>` 表示将二维索引 `(i, j)` 映射到二维内存空间。
+
+仿射条件 Affine Conditions
+
+- 仿射条件是指条件表达式是仿射函数。
+- 例如，`if (i + j < 10)` 是一个仿射条件
+
+### Operations
 
 # Vector & Linalg
 
+## *Vector*
+
+### 向量类型
+
+向量类型 Vector Types 表示一组固定大小的标量元素
+
+- 语法：`vector<num_elements x element_type>`
+  - `num_elements`：向量的长度
+  - `element_type`：向量元素的类型（例如 `f32`、`i16` 等）
+- 示例：
+  - `vector<4 x f32>`：包含 4 个 `f32` 元素的向量
+  - `vector<8 x i16>`：包含 8 个 `i16` 元素的向量
+
+### 向量操作
+
+Vector Dialect 提供了一组操作，用于创建、操作和转换向量
+
+常见的操作包括：
+
+- **`vector.extract`**：从向量中提取一个元素
+- **`vector.insert`**：将元素插入向量
+- **`vector.broadcast`**：将标量广播为向量
+- **`vector.contract`**：执行向量收缩操作（例如点积）
+- **`vector.transfer_read`** 和 **`vector.transfer_write`**：从内存加载向量或将向量存储到内存
+- **`vector.shape_cast`**：改变向量的形状（例如从 2D 向量转换为 1D 向量）
+
+### 向量化模式
+
+向量化模式 Vectorization Patterns 指的是 Vector Dialect 支持将标量操作提升为向量操作，从而实现自动向量化
+
+例如，可以将循环中的标量加法提升为向量加法
+
 ## *linalg*
 
-
+linalg dialect 专门用于表示和优化线性代数操作 Linear Algebra Operations
 
 # Bufferization & Memref Dialect
 
@@ -772,32 +924,6 @@ memref<形状x元素类型, 内存布局, 内存空间>
   %subview = memref.subview %mem[0, 0][2, 2][1, 1] : memref<4x4xf32> to memref<2x2xf32, strided<[4, 1]>>
   ```
 
-# Polly & Affine Dialect
-
-## *多面体模型*
-
-
-
-## *Polly*
-
-
-
-Polly 是 LLVM 项目的一个子项目，它提供了自动并行化和循环优化的功能。Polly 使用高级多维数组索引（Affine Expressions）来理解、表示和优化循环嵌套，特别是那些对于性能至关重要的计算密集型循环
-
-Polly 基于一种叫做多面体模型的数学表示，使用这种方法，可以进行复杂的优化
-
-Polly 主要应用于需要大规模数值计算的科学和工程领域，例如物理模拟、矩阵运算和图像处理。在这些领域，循环结构往往占据了程序的绝大部分计算时间，并且有明确的数据依赖模式可供分析和优化
-
-
-
-## *Affine*
-
-
-
-['affine' Dialect - MLIR](https://mlir.llvm.org/docs/Dialects/Affine/#dimensions-and-symbols)
-
-Affine dialect：处理循环嵌套，实现了循环展开、多面体变换等一些算法
-
 # MLIR 配套工具
 
 ## *mlir-opt*
@@ -807,3 +933,22 @@ mlir-opt 是一个用于为 MLIR 代码跑 passes & lowering 的命令行 entry-
 # Support
 
 和 Clang 中的 Support 作用一样，就是封装 MLIR 对 OS 系统调用接口的使用，从而提供跨平台的支持
+
+
+
+### LogicalResult
+
+> This class represents an efficient way to signal success or failure. It
+> should be preferred over the use of `bool` when appropriate, as it avoids
+> all of the ambiguity that arises in interpreting a boolean result. This
+> class is marked as NODISCARD to ensure that the result is processed. Users
+> may explicitly discard a result by using `(void)`, e.g.
+> `(void)functionThatReturnsALogicalResult();`. Given the intended nature of
+> this class, it generally shouldn't be used as the result of functions that
+> very frequently have the result ignored. This class is intended to be used
+> in conjunction with the utility functions below.
+
+LogicalResult 是一个用于表示操作成功或失败的简单类型。它类似于 C++ 中的 `bool`，但专门设计用于 MLIR 的 API 中，以提供更清晰的语义和更好的错误处理支持
+
+- `success()`：表示操作成功
+- `failure()`：表示操作失败

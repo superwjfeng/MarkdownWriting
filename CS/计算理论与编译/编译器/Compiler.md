@@ -1382,6 +1382,85 @@ typedef struct value {
 
 [手把手教你构建 C 语言编译器（0）- 前言 | 三点水 (lotabout.me)](https://lotabout.me/2015/write-a-C-interpreter-0/)
 
+
+
+
+
+### Loop Unrolling
+
+loop unrolling 循环展开是将循环体复制多份以减少循环控制开销的一种技术。例如，将一个简单的循环从执行若干次迭代变为执行较少次数的迭代，但每次迭代中执行多次原来的操作
+
+```c++
+// 原始循环
+for (int i = 0; i < n; i++) {
+    A[i] = B[i] + C[i];
+}
+// 展开后的循环（假设 n 是 4 的倍数）
+for (int i = 0; i < n; i += 4) {
+    A[i] = B[i] + C[i];
+    A[i+1] = B[i+1] + C[i+1];
+    A[i+2] = B[i+2] + C[i+2];
+    A[i+3] = B[i+3] + C[i+3];
+}
+```
+
+### Loop Interchange
+
+loop interchange 循环交换是指重新排列嵌套循环的顺序，以改变内存访问模式或利用更高效的缓存策略
+
+```c++
+// 原始循环
+for (int i = 0; i < N; i++) {
+    for (int j = 0; j < M; j++) {
+        A[j][i] = B[i][j] * 2;
+    }
+}
+// 交换后的循环
+for (int j = 0; j < M; j++) {
+    for (int i = 0; i < N; i++) {
+        A[j][i] = B[i][j] * 2;
+    }
+}
+```
+
+### Loop Fission
+
+loop fission 循环分离是将一个复杂循环分成多个较小的循环，以提高优化机会和利用多核架构的能力
+
+```c++
+// 原始循环
+for (int i = 0; i < n; i++) {
+    A[i] = B[i] + C[i];
+    D[i] = A[i] * 2;
+}
+// 分离后的循环
+for (int i = 0; i < n; i++) {
+    A[i] = B[i] + C[i];
+}
+for (int i = 0; i < n; i++) {
+    D[i] = A[i] * 2;
+}
+```
+
+### Loop Fusion
+
+loop fusion 循环融合是将两个或多个循环合并为一个循环，以提高运行时性能，这通常适用于一系列共享某些计算性质或内存访问模式的循环
+
+```c++
+// 原始循环
+for (int i = 0; i < n; i++) {
+    A[i] = B[i] + C[i];
+}
+for (int i = 0; i < n; i++) {
+    D[i] = E[i] + F[i];
+}
+// 融合后的循环
+for (int i = 0; i < n; i++) {
+    A[i] = B[i] + C[i];
+    D[i] = E[i] + F[i];
+}
+```
+
 # 高级编译概念
 
 ## *自举*

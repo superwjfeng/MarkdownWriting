@@ -1073,6 +1073,71 @@ fi
 
 注意：shell中的 `$@` 和makefile script中的 `$@` 意义是不同的
 
+### shift
+
+`shift` 是 Shell 脚本中的一个内置命令，用于移动位置参数。`shift` 命令的作用是将位置参数向左移动，从而改变 `$1`、`$2` 等变量的值
+
+**`shift n`**：将位置参数向左移动 `n` 位
+
+- 例如，`shift 2` 会将 `$3` 变为 `$1`，`$4` 变为 `$2`，依此类推
+- 原来的 `$1` 和 `$2` 被丢弃
+
+```shell
+#!/bin/bash
+
+echo "Before shift:"
+echo "\$1 = $1"
+echo "\$2 = $2"
+echo "\$3 = $3"
+
+shift
+
+echo "After shift:"
+echo "\$1 = $1"
+echo "\$2 = $2"
+echo "\$3 = $3"
+```
+
+```cmd
+$ ./script.sh one two three
+```
+
+```
+Before shift:
+$1 = one
+$2 = two
+$3 = three
+After shift:
+$1 = two
+$2 = three
+$3 = 
+```
+
+举一个实际处理位置参数的例子
+
+```shell
+#!/bin/bash
+
+while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+        -a) echo "Option -a"; shift ;;
+        -b) echo "Option -b with value $2"; shift 2 ;;
+        *) echo "Unknown option: $1"; shift ;;
+    esac
+done
+```
+
+```cmd
+$ ./script.sh -a -b value
+```
+
+```
+Option -a
+Option -b with value value
+```
+
+对于 `-b` 选项，`shift 2` 跳过了 `-b` 和它的值 `value`
+
 ### 短命名参数：`getopts()`
 
 `getopts()` 是Bash shell自带的命令行参数处理工具，它的语法比较简单，只支持处理单个字母选项，例如`-a`、`-b`等。`getopts()` 只能处理短选项，也就是只能使用一个字母来表示选项，如果要处理长选项，需要编写更多的代码。另外，`getopts()` 处理命令行参数时会把选项和参数分别处理，不能处理连续的选项，比如 `-abc`
@@ -1645,7 +1710,7 @@ fi
 
 ## *流程控制*
 
-### if语句
+### if 语句
 
 ```shell
 if [ condition ]
@@ -1682,14 +1747,14 @@ $ if [ $a -gt 18 ] && [ $a -lt 35 ]; then echo OK; fi
 $ if [ $a -gt 18 -a $a -lt 35 ]; then echo OK; fi # -a -r 表示逻辑与、或
 ```
 
-### case语句
+### case 语句
 
-case就是switch语句
+case 就是 switch 语句
 
 ```shell
 case value in 
-pattern1)   command
-			command
+pattern1)   command; command
+			command; command
             ... 
             command;;
 pattern2)   command
@@ -1706,15 +1771,15 @@ esac
 
 value 会连续地和 pattern1、pattern2、...、patternn比较，直到找到匹配项
 
-若匹配上了则执行所匹配值之后的命令，碰到双分号后停止，**双分号在这里起到一个 break 语句的作用**，表明已经完成了特定条件下指定的语句。在这之后,case 语句就结束了
+若匹配上了则执行所匹配值之后的命令，碰到双分号后停止，**双分号在这里起到一个 break 语句的作用**，表明已经完成了特定条件下指定的语句。在这之后，case 语句就结束了
 
-若没有发现匹配项，则case 中的命令一个都不执行
+若没有发现匹配项，则 case 中的命令一个都不执行
 
 ## *循环*
 
-### for循环
+### for 循环
 
-for循环有两种书写方式
+for 循环有两种书写方式
 
 ```shell
 # 书写方式1
@@ -1750,7 +1815,7 @@ done
 
 ### 循环控制
 
-### read读取控制台输入
+### read 读取控制台输入
 
 `read -p -t` -p指定读取值时的提示符；-t指定读取时等待的时间，若不加-t则一直等待
 
