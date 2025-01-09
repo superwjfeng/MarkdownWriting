@@ -79,45 +79,6 @@ MLIR（多级中间表示，Multi-Level Intermediate Representation 是 LLVM 原
 > MLIR执行过程和LLVM一样,IR会过由Pass组成的Pipeline,不所地变换生成最终的IR。不同的是
 > MLIR的IR可以是不同dialect的,构成了Multi-Level的效果。
 
-## *Operation*
-
-Operation 是 Dialect 的重要组成部分，可以看作是方言语义的基本元素
-
-### Recursive Nesting Architecuture of Operation
-
-<img src="Dialect结构.drawio.png">
-
-* Operation 操作：表示一个代码单元。是MLIR最重要的概念之一
-* Operation 的结构是一个嵌套递归结构，即 Operation `->` Region `->` Block `->` Operation `->` `...`
-* Region 域：为多个 Block 的控制流图 CFG/列表
-* Block 块：一个多个不含控制流 control flow 的 Operations 组成的顺序表
-
-### Operation 的格式
-
-和 LLVM IR 以 SSA instruciton 为核心不同，MLIR 没有预定义的 instruction，全部都是 operation
-
-BTW，不同 dialect 之间统一的 MLIR 形式也是 dialect conversion 高效的原因之一
-
-<img src="OperationFormat.png">
-
-MLIR 的格式类似于 LLVM IR，都是基于 SSA 的
-
-Operation 看起来就像一个函数的定义，有输入输出
-
-上面的完整格式可能看起来有些复杂，一般的 Operation 的格式为
-
-```
-%result = "dialect.operation_name"(%arg1, %arg2) : (type1, type2) -> type3
-```
-
-
-
-
-
-### Op 类
-
-`Op` 是 `operation*` 的 wrapper
-
 ## *Dialect*
 
 ### 什么是 dialect
@@ -138,11 +99,64 @@ Dialect 是 MLIR 的核心机制，它其实就代表了一层层的 IR（也可
 * Passes: analysis, transformations, and dialect conversions. 分析、转换
 * (optional) Possibly custom parser and assembly printer 针对当前 dialect IR 自定义的解析器、打印器
 
+## *Operation*
+
+Operation 是 Dialect 的重要组成部分，可以看作是方言语义的基本元素
+
+### Operaion 嵌套关系
+
+Recursive Nesting Architecuture of Operation
+
+<img src="Dialect结构.drawio.png">
+
+* Operation 操作：表示一个代码单元。是MLIR最重要的概念之一
+* Operation 的结构是一个嵌套递归结构，即 Operation `->` Region `->` Block `->` Operation `->` `...`
+* Region 域：为多个 Block 的控制流图 CFG/列表
+* Block 块：一个多个不含控制流 control flow 的 Operations 组成的顺序表
+
+### MLIR 的格式
+
+~~和 LLVM IR 以 SSA instruciton 为核心不同，MLIR 没有预定义的 instruction，全部都是 operation~~
+
+BTW，不同 dialect 之间统一的 MLIR 形式也是 dialect conversion 高效的原因之一
+
+MLIR 的格式类似于 LLVM IR，都是基于 SSA 的。Operation 看起来就像一个函数的定义，有输入输出
+
+````mlir
+%res:2 = "mydialect.morph"(%input#3){some.attribute = true, other_attribute = 1.5}
+	:(!mydialect<"custom_type">)->(!mydialect<"other_type">, !mydialect<"other_type">)
+								loc(callsite("foo" at "mysource.cc":10:8))
+````
+
+<img src="OperationFormat.png">
+
+上面的完整格式可能看起来有些复杂，一般的 Operation 的格式为
+
+```
+%result = "dialect.operation_name"(%arg1, %arg2) : (type1, type2) -> type3
+```
+
+### Op 类
+
+Op 表示的是算子类
+
+Op 类是 `operation*` 的 wrapper
+
 ## *Module*
 
 Module 是一个顶层的容器，用于组织和管理代码，用于包含一组函数 Functions、全局变量 Globals 和其他模块级别的实体。它类似于其他编程语言中的“模块”或“文件”，是 MLIR 程序的基本编译单元
 
 代码中用 BuiltinOps 中的 class ModuleOp 来表示，一般都作为 operation 的最外层
+
+## *Region & Block*
+
+Region 是 Block 的有序列表，Region 的语义是它所包含的 Operation 所赋予的
+
+MLIR 目前定义了两种 region：SSACFG region & Graph region。SSACFG region 描述 block 之间的控制流， graph region 则不需要块之间的控制流。算子中的 region 类型是使用 RegionKindInterface 描述的
+
+Region 没有名称或地址，只有区域中包含的块才有。Region 必须包含在 operation 之中，并且没有类型或属性。该 Region 中的第一个 block 是一个被称为入口块 entry block 的特殊块。入口块的参数也是 region 本身的参数，入口块不能被列为任何其它快的后续块
+
+函数体是 region 的
 
 ## *Identifiers & Keywords*
 
@@ -481,9 +495,18 @@ Type 用于表示数据的类型，类似于编程语言中的数据类型（如
 
 Attribute 用于表示操作的附加信息，通常是编译时常量。Attribute 是静态的、不可变的对象，它的作用有
 
-- **配置操作**：为操作提供额外的信息（如常量值、选项）
+- **配置操作**：描述操作的特定行为、配置或约束条件，为操作提供额外的信息（如常量值、选项）
 - **优化**：为编译器提供常量信息，便于优化（如常量折叠）
 - **代码生成**：在生成目标代码时，属性信息用于确定操作的配置
+
+### 属性的类型
+
+属性可以是多种类型的值，常见的类型包括：
+
+- 布尔值：如 `some.attribute = true`
+- 数值：如整数 `other_attribute = 42` 或浮点数 `other_attribute = 1.5`
+- 字符串：如 `name = "example"`
+- 复杂类型：如数组、字典或自定义类型
 
 # Pass
 
