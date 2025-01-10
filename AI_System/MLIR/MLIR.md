@@ -1,4 +1,4 @@
-[MLIR (llvm.org)](https://mlir.llvm.org/)
+[3MLIR (llvm.org)](https://mlir.llvm.org/)
 
 
 
@@ -109,7 +109,7 @@ Recursive Nesting Architecuture of Operation
 
 <img src="Dialect结构.drawio.png">
 
-* Operation 操作：表示一个代码单元。是MLIR最重要的概念之一
+* Operation 操作/运算：表示一个代码单元。是MLIR最重要的概念之一
 * Operation 的结构是一个嵌套递归结构，即 Operation `->` Region `->` Block `->` Operation `->` `...`
 * Region 域：为多个 Block 的控制流图 CFG/列表
 * Block 块：一个多个不含控制流 control flow 的 Operations 组成的顺序表
@@ -134,6 +134,25 @@ MLIR 的格式类似于 LLVM IR，都是基于 SSA 的。Operation 看起来就�
 
 ```
 %result = "dialect.operation_name"(%arg1, %arg2) : (type1, type2) -> type3
+```
+
+### Operation 类
+
+代码中 `mlir::Operation` 是通用定义，包含通用的接口和属性；`MulOp`、`TransposeOp`、`ConstantOp`等等是特定定义，包含特定的属性。前者可以通过 `llvm::dyn_cast`（动态）或 `llvm::cast`（静态）转换成后者；后者通过 `getOperation()` 转换成前者
+
+```c++
+void processConstantOp(mlir::Operation *operation) {
+  ConstantOp op = llvm::dyn_cast<ConstantOp>(operation);
+
+  // This operation is not an instance of `ConstantOp`.
+  if (!op)
+    return;
+
+  // Get the internal operation instance wrapped by the smart pointer.
+  mlir::Operation *internalOperation = op.getOperation();
+  assert(internalOperation == operation &&
+         "these operation instances are the same");
+}
 ```
 
 ### Op 类
@@ -339,6 +358,16 @@ def MyOperation : MyDialect<"my_op">,
 
 这里，`MyOperation` 持有多个 traits，如可交换性、纯运算、没有区域（没有控制流子图），两个操作数和一个结果。这使得操作的定义精确且易于阅读，同时实现了良好的属性检查和优化支持
 
+
+
+
+
+
+
+### MLIRContext
+
+mlir 上下文，可以理解成一系列对象的最顶层。所有 mlir 相关对象都依赖 MLIRContext
+
 ## *OpInterface*
 
 OpInterface 是一套提供协议和方法的机制，允许为 operation 定义统一的接口。这些接口定义了一组方法，操作可以选择实现这些方法以提供某些行为或属性。这种机制促进了代码的可重用性和多态性，使得不同类型的操作能够以统一的方式进行处理和转换
@@ -478,20 +507,51 @@ func.func @function_name(%arg1: type1, %arg2: type2, ...) -> return_type {
 
 
 
-# Type & Arrtibute
+# Value & Type & Arrtibute
 
-[Defining Dialect Attributes and Types - MLIR](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 
-* Type：MLIR 中任何数据都必须指定 Type；MLIR 中内置了很多常用的 Type，我们也可以拓展自己的 Type，来表示更复杂的数据类型
-* Attribute：MLIR 中 Attribute 可以简单理解为 Constant 常量数据值，用来定义一些常量和属性。每个 Attribute都有其 Type
+
+## *Value*
+
+> This class represents an instance of an SSA value in the MLIR system,
+> representing a computable value that has a type and a set of users. **An SSA**
+> **value is either a BlockArgument or the result of an operation**. Note: This
+> class has value-type semantics and is just a simple wrapper around a
+> ValueImpl that is either owner by a block(in the case of a BlockArgument) or
+> an Operation(in the case of an OpResult).
+> As most IR constructs, this isn't const-correct, but we keep method
+> consistent and as such method that immediately modify this Value aren't
+> marked `const` (include modifying the Value use-list).
+
+<img src="Value继承关系图.png">
+
+TypedValue 是一个拥有确定静态 Type 的 Value
+
+### ShapedType
+
+ShapedType 用于表示 Shape，有 `ranked` 和 `unranked` 之分，ranked 在维度上又有 `static` 和 `dynamic` 之分
+
+### BlockArgument
+
+### OpResult
 
 ## *Type*
 
-Type 用于表示数据的类型，类似于编程语言中的数据类型（如 `int`、`float`、`struct` 等）。在 MLIR 中，Type 是静态的、不可变的对象，用于描述操作数（Operand）和结果（Result）的类型
+**MLIR 中任何数据都必须指定 Type**；MLIR 中内置了很多常用的 Type，我们也可以拓展自己的 Type，来表示更复杂的数据类型
+
+Type 可以理解成用于表示 Value 的类型，类似于编程语言中的数据类型（如 `int`、`float`、`struct` 等）。在 MLIR 中，Type 是静态的、不可变的对象，用于描述操作数（Operand）和结果（Result）的类型
+
+比如 `tensor<*xf64>`、`tensor<2x3xf64>` 等等对应的是 TensorType，继承自 `mlir::Type`
+
+### 定义 Type
+
+[Defining Dialect Attributes and Types - MLIR](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 
 ## *Attribute*
 
 > Attributes are the mechanism for specifying constant data on operations in places where a variable is never allowed - e.g. the comparison predicate of a [`cmpi` operation](https://mlir.llvm.org/docs/Dialects/ArithOps/#arithcmpi-arithcmpiop). Each operation has an attribute dictionary, which associates a set of attribute names to attribute values. MLIR’s builtin dialect provides a rich set of [builtin attribute values](https://mlir.llvm.org/docs/LangRef/#builtin-attribute-values) out of the box (such as arrays, dictionaries, strings, etc.). Additionally, dialects can define their own [dialect attribute values](https://mlir.llvm.org/docs/LangRef/#dialect-attribute-values).
+
+MLIR 中 Attribute 可以简单理解为 Constant 常量数据值，用来定义一些常量和属性。每个 Attribute都有其 Type
 
 Attribute 用于表示操作的附加信息，通常是编译时常量。Attribute 是静态的、不可变的对象，它的作用有
 
@@ -501,12 +561,26 @@ Attribute 用于表示操作的附加信息，通常是编译时常量。Attribu
 
 ### 属性的类型
 
+- `OptionalAttr`：可选属性
+- `DefaultValuedAttr`：默认属性
+
 属性可以是多种类型的值，常见的类型包括：
 
-- 布尔值：如 `some.attribute = true`
-- 数值：如整数 `other_attribute = 42` 或浮点数 `other_attribute = 1.5`
-- 字符串：如 `name = "example"`
-- 复杂类型：如数组、字典或自定义类型
+- 无符号整型：UI64Attr、UI32Attr、UI16Attr、UI8Attr、UI1Attr
+- 有符号整型：SI64Attr、SI32Attr、SI16Attr、SI8Attr、SI1Attr
+- 浮点型：F32Attr、F64Attr
+- 字符串：StrAttr
+- 布尔型：BoolAttr
+- 数组型：BoolArrayAttr、StrArrayAttr、I32ArrayAttr、F32ArrayAttr
+- 字典型：DictionaryAttr
+
+
+
+
+
+### Enum Attributes
+
+I32EnumAttr
 
 # Pass
 
@@ -676,9 +750,26 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
 
 ## *`walk()`*
 
+`walk()` 会遍历 IR 中的每个元素，并对每个元素调用回调函数。，walk 的命中类型（即回调函数处理的元素类型）是可以由用户指定的。用户可以通过定义回调函数的参数类型来控制 walk 命中的元素类型
 
+不支持设置多个命中元素，需要使用多次 walk
 
+```c++
+// mlir/include/mlir/IR/OpDefinition.h
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 1,
+                   RetT>
+  walk(FnT &&callback) {
+    return state->walk<Order, Iterator>(std::forward<FnT>(callback));
+  }
+```
 
+1. 对每个节点调用回调函数 `callback`
+2. 支持多种遍历顺序（通过 `Order` 参数）
+3. 支持多种迭代器类型（通过 `Iterator` 参数）
+4. 确保回调函数只有一个参数（通过 SFINAE 检查）
 
 ```c++
 /// Traversal order for region, block and operation walk utilities.
@@ -688,7 +779,7 @@ enum class WalkOrder { PreOrder, PostOrder };
 * PreOrder：Top Down 先序
 * PostOrder：Bottom Up 后序，默认
 
-
+### walkResult
 
 ```c++
 class WalkResult {
@@ -894,20 +985,20 @@ memref 是 MLIR 中用于表示内存引用的 dialect，广泛应用于编译�
 ### 基本语法
 
 ```mlir
-memref<形状x元素类型, 内存布局, 内存空间>
+memref<shape x element_type, layout, memory_space>
 ```
 
-- **形状**：描述多维数组的维度（如 `2x3x4` 表示 2x3x4 的三维数组）
-- **元素类型**：内存中存储的数据类型（如 `f32`、`i64` 等）
-- **内存布局**（可选）：描述数据在内存中的存储方式
+- **shape 形状**：描述多维数组的维度（如 `2x3x4` 表示 2x3x4 的三维数组）
+- **element_type 元素类型**：内存中存储的数据类型（如 `f32`、`i64` 等）
+- **layout 内存布局**（可选）：描述数据在内存中的存储方式
   * 行优先 `row_major`
   * 列优先 `column_major`
   * 自定义布局，比如 `affine_map<(d0, d1) -> (d1, d0)>`
-- **内存空间**（可选）：标识内存所在的物理空间（如 GPU 显存、共享内存等）
+- **memory-space 内存空间**（可选）：标识内存所在的物理空间（如 GPU 显存、共享内存等）
 
 ### memory-space
 
-
+Memory Space 内存空间是可以自定义的。MLIR 提供了灵活的机制，允许用户定义自己的内存空间，并将其与 `memref` 类型结合使用。这种自定义能力在面向特定硬件或特殊内存层次结构的编译器中非常有用
 
 
 
