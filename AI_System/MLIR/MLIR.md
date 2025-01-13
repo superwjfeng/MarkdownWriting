@@ -1,7 +1,4 @@
-[3MLIR (llvm.org)](https://mlir.llvm.org/)
-
-
-
+[MLIR (llvm.org)](https://mlir.llvm.org/)
 
 
 
@@ -11,19 +8,11 @@
 
 EDSC, Embedded Domain Specific Constructs 嵌入式域特定构造：一个声明式的构造器库，用于以朴素 C++ API 的方式构造 MLIR 
 
+
+
 Export 导出：一般用以说明从 MLIR 表示体系到其他语义等效的表示的操作，例如翻译 translation
 
-Function 函数：一个有名称操作，它包含一个域 region
-
 Import 导入：一般用以说明从其他表示到 MLIR 体系的语义等效表示的操作，例如翻译 translation
-
-
-
-
-
-Module 单元：一个操作 operation，它包含一个域 region，这个域包含一个块 block，这个块由多个操作 operation 组成
-
-
 
 
 
@@ -32,8 +21,6 @@ Round-trip 往返：原表示到目标表示又回到原表示的过程
 Terminator operation 终止操作：该操作 operation 终止一个块 block
 
 Transitive lowering 传递下降：类似 `A->B->C` 的下降模式。通过部分转换 partial conversion 充分将非法操作合法化
-
-
 
 # MLIR 的核心概念
 
@@ -79,6 +66,75 @@ MLIR（多级中间表示，Multi-Level Intermediate Representation 是 LLVM 原
 > MLIR执行过程和LLVM一样,IR会过由Pass组成的Pipeline,不所地变换生成最终的IR。不同的是
 > MLIR的IR可以是不同dialect的,构成了Multi-Level的效果。
 
+## *MLIR 架构*
+
+### Operaion 嵌套关系
+
+Recursive Nesting Architecuture of Operation
+
+<img src="Dialect结构.drawio.png">
+
+* Operation 操作/运算：表示一个代码单元。是MLIR最重要的概念之一
+  * Operation 的结构是一个嵌套递归结构，即 Operation `->` Region `->` Block `->` Operation `->` `...`
+* Region 域：为多个 Block 的控制流图 CFG/列表
+* Block 块：一个多个不含控制流 control flow 的 Operations 组成的顺序表
+
+### Module
+
+Module 是一个顶层的容器，用于组织和管理代码，用于包含一组函数 Functions、全局变量 Globals 和其他模块级别的实体。它类似于其他编程语言中的“模块”或“文件”，是 MLIR 程序的基本编译单元
+
+代码中用 BuiltinOps 中的 class ModuleOp 来表示，一般都作为 operation 的最外层 top-level operation，即 MLIR IR 的根节点，作为遍历的起点
+
+### MLIRContext
+
+mlir 上下文，可以理解成一系列对象的最顶层。所有 mlir 相关对象都依赖 MLIRContext
+
+### 两种 region
+
+Region 是 Block 的有序列表，Region 的语义是它所包含的 Operation 所赋予的
+
+MLIR 目前定义了两种 region：SSACFG region & Graph region。SSACFG region 描述 block 之间的控制流， graph region 则不需要块之间的控制流。算子中的 region 类型是使用 RegionKindInterface 描述的
+
+Region 没有名称或地址，只有区域中包含的块才有。Region 必须包含在 operation 之中，并且没有类型或属性。该 Region 中的第一个 block 是一个被称为入口块 entry block 的特殊块。入口块的参数也是 region 本身的参数，入口块不能被列为任何其它快的后续块
+
+函数体是 region 的
+
+### Block
+
+Block 是程序执行的最基本的单位，用于表示一系列指令。Block 有如下属性：
+
+- 名称 name：每个 Block 都有一个唯一的名称标识符，用于在 Module 中进行引用和识别
+- 操作集合：Block 包含了一系列的操作指令，这些指令按照其在 Block 中的顺序依次执行
+- 前驱和后继Block：在控制流程中，Block 可以有一个或多个前驱 Block（Predecessor Block）和后继 Block（Successor Block），用于控制程序的流程跳转
+- 输入和输出：Block 的操作可以接收输入和产生输出，从而实现数据的流动和传递
+
+一般 op 是没有 Block 的，而 funcOp 会有一个Block。所以一般 `op->getParentOp()` 得到的是 funcOp
+
+### GlobalOp
+
+GlobalOp 用于定义全局变量，全局变量是真个 module 范围内可见的变量，通常用于存储常量数据、配置信息或其他需要在多个函数之间共享的数据
+
+以下是一个简单的 GlobalOp 示例，展示了如何在 MLIR 中使用 GlobalOp 定义全局变量，并在函数中引用它
+
+```mlir
+module {
+  // 定义一个全局变量 @global_var，类型为 i32，初始值为 42
+  llvm.mlir.global @global_var : i32 = 42
+
+  // 定义一个函数 @main，返回类型为 i32
+  func.func @main() -> i32 {
+    // 加载全局变量 @global_var 的值
+    %value = llvm.mlir.addressof @global_var : !llvm.ptr<i32>
+    %loaded_value = llvm.load %value : !llvm.ptr<i32>
+
+    // 返回加载的值
+    return %loaded_value : i32
+  }
+}
+```
+
+`@main` 函数通过 `llvm.mlir.addressof` 和 `llvm.load` 操作加载全局变量的值，并将其返回
+
 ## *Dialect*
 
 ### 什么是 dialect
@@ -103,22 +159,9 @@ Dialect 是 MLIR 的核心机制，它其实就代表了一层层的 IR（也可
 
 Operation 是 Dialect 的重要组成部分，可以看作是方言语义的基本元素
 
-### Operaion 嵌套关系
-
-Recursive Nesting Architecuture of Operation
-
-<img src="Dialect结构.drawio.png">
-
-* Operation 操作/运算：表示一个代码单元。是MLIR最重要的概念之一
-* Operation 的结构是一个嵌套递归结构，即 Operation `->` Region `->` Block `->` Operation `->` `...`
-* Region 域：为多个 Block 的控制流图 CFG/列表
-* Block 块：一个多个不含控制流 control flow 的 Operations 组成的顺序表
-
 ### MLIR 的格式
 
 ~~和 LLVM IR 以 SSA instruciton 为核心不同，MLIR 没有预定义的 instruction，全部都是 operation~~
-
-BTW，不同 dialect 之间统一的 MLIR 形式也是 dialect conversion 高效的原因之一
 
 MLIR 的格式类似于 LLVM IR，都是基于 SSA 的。Operation 看起来就像一个函数的定义，有输入输出
 
@@ -129,6 +172,8 @@ MLIR 的格式类似于 LLVM IR，都是基于 SSA 的。Operation 看起来就�
 ````
 
 <img src="OperationFormat.png">
+
+注意：**上图并不是所有 operation 通用的格式！只是给出了一种 MLIR 大概长什么样子**一个 beginner 很容易产生疑惑的地方是 MLIR 并没有一种通用的表示方式，它可以通过 ODS 中的 assemblyFormat 字段来自定义给出	
 
 上面的完整格式可能看起来有些复杂，一般的 Operation 的格式为
 
@@ -160,22 +205,6 @@ void processConstantOp(mlir::Operation *operation) {
 Op 表示的是算子类
 
 Op 类是 `operation*` 的 wrapper
-
-## *Module*
-
-Module 是一个顶层的容器，用于组织和管理代码，用于包含一组函数 Functions、全局变量 Globals 和其他模块级别的实体。它类似于其他编程语言中的“模块”或“文件”，是 MLIR 程序的基本编译单元
-
-代码中用 BuiltinOps 中的 class ModuleOp 来表示，一般都作为 operation 的最外层
-
-## *Region & Block*
-
-Region 是 Block 的有序列表，Region 的语义是它所包含的 Operation 所赋予的
-
-MLIR 目前定义了两种 region：SSACFG region & Graph region。SSACFG region 描述 block 之间的控制流， graph region 则不需要块之间的控制流。算子中的 region 类型是使用 RegionKindInterface 描述的
-
-Region 没有名称或地址，只有区域中包含的块才有。Region 必须包含在 operation 之中，并且没有类型或属性。该 Region 中的第一个 block 是一个被称为入口块 entry block 的特殊块。入口块的参数也是 region 本身的参数，入口块不能被列为任何其它快的后续块
-
-函数体是 region 的
 
 ## *Identifiers & Keywords*
 
@@ -221,6 +250,8 @@ value-use-list ::= value-use (`,` value-use)*
 
 ### 编写 dialect 的 td 文件
 
+Dialect 定义在 mlir/include/mlir/IR/DialectBase.td 中
+
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
 // our dialect. 
@@ -258,84 +289,197 @@ LLVM_TARGET_DEFINITIONS 用于指定需要处理的 `.td` 文件
 
 `mlir_tablegen` 是一个 CMake 宏，用于调用 MLIR 的 TableGen 工具
 
-## *定义新的 operation*
-
-### 使用 ODS 自动生成
+## *ODS*
 
 构建 operation 采用了一种声明式的自动化工具 ODS, Operation Definition Specification：基于 TableGen，方便自定义 operation
 
 使用 mlir-tablegen 工具从 `.td` 文件转换为 `.inc` 文件
 
-首先在 ODS 中定义一个继承自 Op 类的基类 `Toy_Op`
+### OpBase.td
+
+ODS 是通过一个叫做 OpDefinitionsGen (mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp) 的 TableGen backend 实现的
+
+具体的 class 和 def 位于 mlir/include/mlir/IR/OpBase.td 中，我们来看一下具体 OpBase.td 中都有什么
+
+最重要的是 class Op
 
 ```tablegen
-class Toy_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<Toy_Dialect, mnemonic, traits>;
-// Toy_Dialect : 父类 Dialect 操作
-// mnemonic : 注记符号，一般是一个字符串型的单词，代表了该操作的含义
-// traits : 该操作的一些特征，放在一个列表中
+// Base class for all ops.
+class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
+  // The dialect of the op.
+  Dialect opDialect = dialect;
 
-```
+  // The mnemonic of the op.
+  string opName = mnemonic;
 
-```tablegen
-def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
-  // "constant"就是注记符号，[NoSideEffect]说明了该操作的一个特点
-  // Provide a summary and description for this operation. 
-  let summary = "constant";
-  let description = [{
-    Constant operation turns a literal into an SSA value. The data is attached
-    to the operation as an attribute. For example:
-    \```mlir
-      %0 = toy.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]>
-                        : tensor<2x3xf64>
-	\```
-  }];
+  // The C++ namespace to use for this op.
+  string cppNamespace = dialect.cppNamespace;
 
-  /*
-```
-  arguments和results：定义参数和结果,参数可以是SSA操作数的属性或类型。
-  通过为参数或结果提供名称，ODS将自动的生成匹配的访问器。
-  arguments一般模板(results同理): 
-  let arguments = (ins <data_type><data_attribute>:$<variable_name>);
+  // One-line human-readable description of what the op does.
+  string summary = "";
 
-  - ins: 输入 (results中该参数为 outs)
-  - <data_type>: 数据类型
-  - <data_structure>: 数据属性
-  - ElementsAttr: 稠元(dense element)
-  - <variable_name>: 变量名
-    */
-    // The constant operation takes an attribute as the only input.
-    // `F64ElementsAttr` corresponds to a 64-bit floating-point ElementsAttr.
-    let arguments = (ins F64ElementsAttr:$value);
-    // The constant operation returns a single value of TensorType.
-    let results = (outs F64Tensor);
+  // Additional, longer human-readable description of what the op does.
+  string description = "";
 
-  // Divert the printer and parser to `parse` and `print` methods on our operation.
-  let hasCustomAssemblyFormat = 1;
-  /*
-  // 自定义程序的组装格式，使最终输出的 IR 格式更精简、易读
-  let parser = [{ return ::parseConstantOp(parser, result); }];
-  let printer = [{ return ::print(p, *this); }];
-  */
-    
-  // ODS 可以自动生成一些简单的构建方法，用户也可自定义添加一些构造方法
-  let builders = [
-    // Build a constant with a given constant tensor value.
-    OpBuilderDAG<(ins "DenseElementsAttr":$value), [{
-      build($_builder, $_state, value.getType(), value);
-    }]>,
-    // Build a constant with a given constant floating-point value.
-    OpBuilderDAG<(ins "double":$value)>
-  ];
+  // Optional. The group of ops this op is part of.
+  OpDocGroup opDocGroup = ?;
 
-  // Add additional verification logic to the constant operation.
-  // will generate a `::mlir::LogicalResult verify()`
-  let hasVerifier = 1;
+  // Dag containing the arguments of the op. Default to 0 arguments.
+  dag arguments = (ins);
+
+  // The list of results of the op. Default to 0 results.
+  dag results = (outs);
+
+  // The list of regions of the op. Default to 0 regions.
+  dag regions = (region);
+
+  // The list of successors of the op. Default to 0 successors.
+  dag successors = (successor);
+
+  // Attribute getters can be added to the op by adding an Attr member
+  // with the name and type of the attribute. E.g., adding int attribute
+  // with name "value" and type "i32":
+  //   I32Attr value;
+
+  // Define the hooks used for building, parsing, printing, verification.
+
+  // Custom builder.
+  // In addition to the custom builder provided here, and unless
+  // skipDefaultBuilders is set, two default builders are generated, with the
+  // following signatures:
+  //
+  // ```c++
+  // static void build(OpBuilder &, OperationState &odsState,
+  //                   Type <result0-name>, Type <result1-name>, ...,
+  //                   Value <arg0-name>, Value <arg1-name>, ...,
+  //                   Attribute <attr0-name>, Attribute <attr1-name>, ...);
+  // ```
+  // * where the attributes follow the same declaration order as in the op.
+  //
+  // ```c++
+  // static void build(OpBuilder &, OperationState &odsState,
+  //                   TypeRange resultTypes,
+  //                   ValueRange operands,
+  //                   ArrayRef<NamedAttribute> attributes);
+  // ```
+  list<OpBuilder> builders = ?;
+
+  // Avoid generating default build functions.  Custom builders must be
+  // provided.
+  bit skipDefaultBuilders = 0;
+
+  // Custom assembly format.
+  /// This field corresponds to a declarative description of the assembly format
+  /// for this operation. If populated, the `hasCustomAssemblyFormat` field is
+  /// ignored.
+  string assemblyFormat = ?;
+  /// This field indicates that the operation has a custom assembly format
+  /// implemented in C++. When set to `1` a `parse` and `print` method are generated
+  /// on the operation class. The operation should implement these methods to
+  /// support the custom format of the operation. The methods have the form:
+  ///   * ParseResult parse(OpAsmParser &parser, OperationState &result)
+  ///   * void print(OpAsmPrinter &p)
+  bit hasCustomAssemblyFormat = 0;
+
+  // A bit indicating if the operation has additional invariants that need to
+  // verified (aside from those verified by other ODS constructs). If set to `1`,
+  // an additional `LogicalResult verify()` declaration will be generated on the
+  // operation class. The operation should implement this method and verify the
+  // additional necessary invariants. This verifier shouldn't access any nested
+  // operations because those operations may ill-formed. Use the
+  // `hasRegionVerifier` below instead.
+  bit hasVerifier = 0;
+
+  // A bit indicating if the operation has additional invariants that need to
+  // verified and which associate with regions (aside from those verified by the
+  // traits). If set to `1`, an additional `LogicalResult verifyRegions()`
+  // declaration will be generated on the operation class. The operation should
+  // implement this method and verify the additional necessary invariants
+  // associated with regions. Note that this method is invoked after all the
+  // region ops are verified.
+  bit hasRegionVerifier = 0;
+
+  // Whether this op has associated canonicalization patterns.
+  bit hasCanonicalizer = 0;
+
+  // Whether this op has a static "canonicalize" method to perform "match and
+  // rewrite patterns".
+  bit hasCanonicalizeMethod = 0;
+
+  // Whether this op has a folder.
+  bit hasFolder = 0;
+
+  // Whether to let ops implement their custom `readProperties` and
+  // `writeProperties` methods to emit bytecode.
+  bit useCustomPropertiesEncoding = 0;
+
+  // Op traits.
+  // Note: The list of traits will be uniqued by ODS.
+  list<Trait> traits = props;
+
+  // Additional code that will be added to the public part of the generated
+  // C++ code of the op declaration.
+  code extraClassDeclaration = ?;
+
+  // Additional code that will be added to the generated source file. The
+  // generated code is placed inside the op's C++ namespace. `$cppClass` is
+  // replaced by the op's C++ class name.
+  code extraClassDefinition = ?;
 }
+```
 
+* 自定义 MLIR 汇编格式
 
+  * 声明式格式 declarative format：通过 assemblyFormat 字段定义
 
-在这个例子中，我们定义了一个 `AllOperandsIntegers` 特征，检查操作中的所有操作数是否为整数或索引类型。这个特征可以在操作定义中通过模板参数轻松使用
+    如果开启，hasCustomAssemblyFormat 会被忽略
+
+    这里使用的 DSL 既不是正则也不是 EBNF，而是另一种由 mlir-tblgen 后端所定义的 DSL
+
+    ```c++
+    // mlir/tools/mlir-tblgen/FormatGen.cpp
+    FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
+      // Match the rest of the identifier regex: [0-9a-zA-Z_\-]*
+      while (isalnum(*curPtr) || *curPtr == '_' || *curPtr == '-')
+        ++curPtr;
+    
+      // Check to see if this identifier is a keyword.
+      StringRef str(tokStart, curPtr - tokStart);
+      auto kind =
+          StringSwitch<FormatToken::Kind>(str)
+              .Case("attr-dict", FormatToken::kw_attr_dict)
+              .Case("attr-dict-with-keyword", FormatToken::kw_attr_dict_w_keyword)
+              .Case("prop-dict", FormatToken::kw_prop_dict)
+              .Case("custom", FormatToken::kw_custom)
+              .Case("functional-type", FormatToken::kw_functional_type)
+              .Case("oilist", FormatToken::kw_oilist)
+              .Case("operands", FormatToken::kw_operands)
+              .Case("params", FormatToken::kw_params)
+              .Case("ref", FormatToken::kw_ref)
+              .Case("regions", FormatToken::kw_regions)
+              .Case("results", FormatToken::kw_results)
+              .Case("struct", FormatToken::kw_struct)
+              .Case("successors", FormatToken::kw_successors)
+              .Case("type", FormatToken::kw_type)
+              .Case("qualified", FormatToken::kw_qualified)
+              .Default(FormatToken::identifier);
+      return FormatToken(kind, str);
+    }
+    ```
+
+  * C++ 实现格式（C++ Implementation Format）：通过 hasCustomAssemblyFormat 字段启用，此时需要实现两个 C++ 方法
+
+    - `parse()`：用于解析 Operation 的文本表示
+
+      ```c++
+      static ParseResult parse(OpAsmParser &parser, OperationState &result);
+      ```
+
+    - `print()` ：用于生成 Operation 的文本表示
+
+      ```c++
+      void print(OpAsmPrinter &p);
+      ```
 
 ### 在 TableGen 中使用 OpTrait
 
@@ -357,16 +501,6 @@ def MyOperation : MyDialect<"my_op">,
 ```
 
 这里，`MyOperation` 持有多个 traits，如可交换性、纯运算、没有区域（没有控制流子图），两个操作数和一个结果。这使得操作的定义精确且易于阅读，同时实现了良好的属性检查和优化支持
-
-
-
-
-
-
-
-### MLIRContext
-
-mlir 上下文，可以理解成一系列对象的最顶层。所有 mlir 相关对象都依赖 MLIRContext
 
 ## *OpInterface*
 
@@ -491,15 +625,25 @@ Standard dialect 已被拆分和重新组织到更为专注的方言中。这种
   - 这些方言分别处理张量和向量相关的操作，是高性能计算、机器学习等领域中的重要组成部分
   - 包含 `tensor.extract`, `tensor.insert` 以及 `vector.add`, `vector.mul` 等操作
 
-### func
+## *func*
 
-```mlir
-func.func @function_name(%arg1: type1, %arg2: type2, ...) -> return_type {
-  // 函数体
-}
-```
+func Dialect 的定义位于 mlir/include/mlir/Dialect/Func/IR 目录中
 
-`func.func` 用于定义一个函数
+- [`func.call_indirect` (func::CallIndirectOp)](https://mlir.llvm.org/docs/Dialects/Func/#funccall_indirect-funccallindirectop)
+
+- [`func.call` (func::CallOp)](https://mlir.llvm.org/docs/Dialects/Func/#funccall-funccallop)
+
+- [`func.constant` (func::ConstantOp)](https://mlir.llvm.org/docs/Dialects/Func/#funcconstant-funcconstantop)
+
+- [`func.func` (func::FuncOp)](https://mlir.llvm.org/docs/Dialects/Func/#funcfunc-funcfuncop) 用于定义一个函数，它里面有一个 SSACFG region
+
+  ```mlir
+  func.func @function_name(%arg1: type1, %arg2: type2, ...) -> return_type {
+    // 函数体
+  }
+  ```
+
+- [`func.return` (func::ReturnOp)](https://mlir.llvm.org/docs/Dialects/Func/#funcreturn-funcreturnop)
 
 ## *LLVM IR*
 
@@ -1000,43 +1144,53 @@ memref<shape x element_type, layout, memory_space>
 
 Memory Space 内存空间是可以自定义的。MLIR 提供了灵活的机制，允许用户定义自己的内存空间，并将其与 `memref` 类型结合使用。这种自定义能力在面向特定硬件或特殊内存层次结构的编译器中非常有用
 
-
-
-
-
-
-
 ### 操作
 
-- **分配内存**：
+- 分配内存：`memref.alloc (memref::AllocOp)`
 
   ```
   %mem = memref.alloc() : memref<4x4xf32>
   ```
 
-- **释放内存**：
+- 在栈上分配内存 `memref.alloca (memref::AllocaOp)`
+
+- 释放内存：
 
   ```
   memref.dealloc %mem : memref<4x4xf32>
   ```
 
-- **加载数据**：
+- 加载数据：
 
   ```
   %val = memref.load %mem[%i, %j] : memref<4x4xf32>
   ```
 
-- **存储数据**：
+- 存储数据 `memref.load (memref::LoadOp)`
 
   ```
   memref.store %val, %mem[%i, %j] : memref<4x4xf32>
   ```
 
-- **获取子视图**：
+- 获取子视图：
 
   ```
   %subview = memref.subview %mem[0, 0][2, 2][1, 1] : memref<4x4xf32> to memref<2x2xf32, strided<[4, 1]>>
   ```
+
+- 定义全局的 memref 类型 `memref.global (memref::GlobalOp)`
+
+  ```mlir
+  memref.global "private" @x : memref<2xf32> = dense<0.0,2.0>
+  ```
+
+- 获取 memref globalop 的引用 `memref.get_global (memref::GetGlobalOp)`
+
+  ```mlir
+  %x = memref.get_global @foo : memref<2xf32>
+  ```
+
+  
 
 # MLIR 配套工具
 
