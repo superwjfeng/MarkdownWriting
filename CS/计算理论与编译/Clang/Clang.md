@@ -4269,9 +4269,7 @@ CommandLine Library 为不同数据类型的参数适配了不同的Parser
 
 
 
-## *raw_ostream & debug logger*
-
-### raw_ostream
+## *raw_ostream*
 
 <img src="raw_ostream.png">
 
@@ -4351,11 +4349,31 @@ int main() {
 }
 ```
 
-### debug logger
+## *debug logger*
 
-和很多C++工程中专门用于log的logger不同，LLVM并没有一个专门的logger，因为编译器并不像其他软件一样需要长时间运行，不需要频繁的记录日志。LLVM只是提供了一些工具用于打印debug信息
+和很多 C++ 工程中专门用于 log 的 logger 不同，LLVM 并没有一个专门的 logger，因为编译器并不像其他软件一样需要长时间运行，不需要频繁的记录日志。LLVM 只是提供了一些工具用于打印 debug 信息
 
-改变 `LLVM_DEBUG` 的值来选择性地打开特定组件的调试输出。例如，设置 `LLVM_DEBUG=Transforms` 将启用所有 Transformations 相关的调试信息
+`LLVM_DEBUG` 是 LLVM 项目中用于调试的宏，它位于 llvm/Support/Debug.h 中。`LLVM_DEBUG` 通常与 `llvm::dbgs()` 结合使用，用于在调试模式下输出调试信息
+
+可以通过以下方法来启动调试模式
+
+* 改变 `LLVM_DEBUG` 的值来选择性地打开特定组件的调试输出。例如，设置 `=Transforms` 将启用所有 Transformations 相关的调试信息
+
+* CMake 配置中启用调试输出
+
+  ```cmake
+  set(CMAKE_BUILD_TYPE Debug)
+  ```
+
+* 在编译时添加 `-DDEBUG` 标志
+
+  ```cmd
+  $ clang++ -DDEBUG -o my_program my_program.cpp
+  ```
+
+### DEBUG_TYPE 细粒度控制
+
+
 
 ## *LLVM-Style RTTI*
 
@@ -4384,9 +4402,9 @@ TODO：如果是用Clang来编译的话可以避免这个问题？
 
 ### 引入的新模板
 
-为了方便在关闭C++默认的RTTI的时候的使用，LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活
+为了方便在关闭C++默认的RTTI的时候的使用，LLVM 手撸 hand-rolled 了一套自己的RTTI，这种特有的RTTI特性更有效而且更加灵活。这些模板都在 llvm/Support/Casting.h 文件中定义
 
-* `isa<>`：用法和Pyhon的 `isinstance()` 基本一样，用来判断一个**指针或引用**是否指向属于某个类的一个实例
+* `isa<>`：用法和 Pyhon 的 `isinstance()` 基本一样，用来判断一个**指针或引用**是否指向属于某个类的一个实例
 
   ```C++
   const CallExpr *initExpr = Result.Nodes.getNodeAs<CallExpr>(binder);
@@ -4422,7 +4440,7 @@ TODO：如果是用Clang来编译的话可以避免这个问题？
   * 用于那些转换可能会失败的情况（a checking cast operation），在这些情形下需要先检查转换是否成功
   * 如果转换合法，它将返回转换后的类型；如果转换不合法，它将返回 `nullptr`
 
-* `isa_and_nonnull<>`、`cast_or_null<>`、`dyn_cast_or_null<>` 可以传递 `nullptr` 作为参数
+* `isa_and_nonnull<>`、`cast_or_null<>`、`dyn_cast_or_null<>` 可以传递 `nullptr` 作为参数，这样可以让将几个 Null 检查合并成一个，有时可能很有用
 
 ### 改造为 LLVM-Sytle RTTI
 
@@ -4430,7 +4448,56 @@ TODO：如果是用Clang来编译的话可以避免这个问题？
 
 [How to set up LLVM-style RTTI for your class hierarchy — LLVM 19.0.0git documentation](https://llvm.org/docs/HowToSetUpLLVMStyleRTTI.html)
 
-LLVM-Style RTTI实际上是把编译成生成V-table的任务交给了用户自己来实现，即按需支持，只有那些真正需要的类才需要实现，而不是为所有类都支持
+LLVM-Style RTTI 实际上是把编译成生成 V-table 的任务交给了用户自己来实现，即按需支持，只有那些真正需要的类才需要实现，而不是为所有类都支持
+
+LLVM-styled RTTI 的核心思想是通过 **手动类型标签** 来实现类型识别。具体实现方式如下：
+
+1. 定义类型标签：在每个类中定义一个枚举类型（`enum class`）或整型常量，用于表示该类的类型标签
+2. 实现类型检查：在每个类中实现一个虚函数（如 `classof`），用于检查对象是否属于某个类型
+
+以下是一个简单的 LLVM-styled RTTI 示例
+
+```c++
+class MyBaseClass {
+public:
+  enum class Kind {
+    KindA,
+    KindB
+  };
+
+  MyBaseClass(Kind K) : KindValue(K) {}
+
+  Kind getKind() const { return KindValue; }
+
+  // 类型检查函数
+  static bool classof(const MyBaseClass *B) {
+    return true; // 基类可以匹配所有派生类
+  }
+
+private:
+  Kind KindValue;
+};
+
+class MyDerivedClassA : public MyBaseClass {
+public:
+  MyDerivedClassA() : MyBaseClass(Kind::KindA) {}
+
+  // 类型检查函数
+  static bool classof(const MyBaseClass *B) {
+    return B->getKind() == Kind::KindA;
+  }
+};
+
+class MyDerivedClassB : public MyBaseClass {
+public:
+  MyDerivedClassB() : MyBaseClass(Kind::KindB) {}
+
+  // 类型检查函数
+  static bool classof(const MyBaseClass *B) {
+    return B->getKind() == Kind::KindB;
+  }
+};
+```
 
 ### 经验法则
 
@@ -4438,8 +4505,6 @@ LLVM-Style RTTI实际上是把编译成生成V-table的任务交给了用户自�
 2. The argument to `classof` should be a `const Base *`, where `Base` is some ancestor in the inheritance hierarchy. The argument should *never* be a derived class or the class itself: the template machinery for `isa<>` already handles this case and optimizes it.
 3. For each class in the hierarchy that has no children, implement a `classof` that checks only against its `Kind`.
 4. For each class in the hierarchy that has children, implement a `classof` that checks a range of the first child’s `Kind` and the last child’s `Kind`.
-
-
 
 # Diagnostics
 

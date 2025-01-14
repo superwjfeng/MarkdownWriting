@@ -883,6 +883,130 @@ def v : Flag<["-"], "v">, Flags<[CC1Option, CoreOption]>,
 
 [1 TableGen Backend Developer’s Guide — LLVM 20.0.0git documentation](https://llvm.org/docs/TableGen/BackGuide.html)
 
-## *测试*
+# LLVM 测试工具
 
-### llvm-lit
+## *llvm-lit*
+
+[lit - LLVM Integrated Tester — LLVM 20.0.0git documentation](https://llvm.org/docs/CommandGuide/lit.html)
+
+lit 代表 LLVM Integrated Tester
+
+llvm-lit 支持多种测试文件格式，常见的有：
+
+- `.mlir` 文件：用于 MLIR 测试
+- `.ll` 文件：用于 LLVM IR 测试
+- `.c` 文件：用于 C 语言测试
+
+### Example
+
+```cmd
+$ llvm-lit [options] [<tests>...]
+```
+
+测试文件通常包含以下内容：
+
+- RUN 指令：指定如何运行测试的命令
+- CHECK 指令：指定如何验证测试输出
+
+以下是一个简单的 MLIR 测试文件 `test.mlir`：
+
+```mlir
+// RUN: mlir-opt %s | FileCheck %s
+
+// CHECK-LABEL: func @foo
+func.func @foo() -> i32 {
+  // CHECK: return %0 : i32
+  %0 = arith.constant 42 : i32
+  return %0 : i32
+}
+```
+
+- `RUN` 指令：运行 `mlir-opt` 工具处理当前文件，并将输出传递给 `FileCheck` 工具
+- `CHECK` 指令：验证 `mlir-opt` 的输出是否符合预期
+
+### 选项
+
+### 测试结果
+
+Lit 的测试结果主要包括以下几种：
+
+* **PASS**：测试成功
+* **FLAKYPASS**：测试在多次重试后成功，仅适用于包含`ALLOW_RETRIES`注解的测试
+* **XFAIL**：测试失败，但这是预期的结果，通常用于已知未通过但仍保留在测试套件中的测试
+* **XPASS**：测试成功，但预期是失败的，通常用于原本预期失败但现已修复的测试
+* **FAIL**：测试失败
+* **UNRESOLVED**：测试结果无法确定，可能是由于测试无法运行、测试本身无效或测试被中断
+* **UNSUPPORTED**：测试在当前环境中不受支持
+* **TIMEOUT**：测试超时未能完成，视为失败
+
+### Run Pattern
+
+在 llvm/utils/lit/lit/TestRunner.py 中定义了很多 RUN 指令的 pattern
+
+* `%s`: source path (path to the file currently being run)
+* `%S` & `%p`:  source dir (directory of the file currently being run)
+
+### 高级指令
+
+## *FileCheck*
+
+[FileCheck - Flexible pattern matching file verifier — LLVM 20.0.0git documentation](https://llvm.org/docs/CommandGuide/FileCheck.html)
+
+FileCheck 用于验证测试输出是否符合预期，通常与 LLVM 测试框架（如 Lit）结合使用，用于验证文本输出是否符合预期。它通过读取输入文件中的 CHECK 指令来检查工具（如 `llc`、`opt`）的输出，并将其与实际的输出进行比较，从而判断测试是否通过。FileCheck 的主要特点是灵活性和精确性，能够处理复杂的文本匹配场景
+
+### CHECK 指令
+
+CHECK 指令是 FileCheck 的核心，用于定义预期的输出模式。常见的指令包括：
+
+- **CHECK**：最基本的指令，用于匹配一行或多行文本
+- **CHECK-NEXT**：匹配紧接在前一个匹配行之后的行
+- **CHECK-SAME**：匹配与**前一个匹配行在同一行**的内容
+- **CHECK-NOT**：确保指定的模式**不**出现在输出中
+- **CHECK-DAG**：匹配无序的内容（允许匹配的行之间插入其他内容）
+- **CHECK-LABEL**：用于标记测试的特定部分，通常用于分隔不同的测试用例
+
+### 变量和正则表达式
+
+FileCheck 支持使用变量和正则表达式来增强匹配的灵活性：
+
+- 正则表达式：可以在 CHECK 指令中使用正则表达式，用 `{{ }}` 包起来。例如：
+
+  ```mlir
+  CHECK: add i32 {{[0-9]+}}, {{[0-9]+}}
+  ```
+
+  这将匹配类似 `add i32 1, 2` 的内容
+
+- String 变量：可以通过 `[[ ]]` 定义变量，并在后续的 `CHECK` 指令中引用。变量名是 `\$[a-zA-Z_][a-zA-Z0-9_]*`，如果变量名后面带冒号就是定义，否则就是引用，例如：
+
+  ```mlir
+  CHECK: [[VAR:.*]] = add i32 1, 2
+  CHECK: mul i32 [[VAR]], 3
+  ```
+
+  这里 `[[VAR:.*]]` 定义了一个变量 `VAR`，并匹配任意内容
+
+- 全局变量：开启 `--enable-var-scope` 后认为 `$` 开头的变量是全局的，其他的变量则是局部的，局部变量的作用域是在 CHECK-LABEL 里
+
+- Numeric 变量：捕获数字值的语法为 `[[#%<fmtspec>,<NUMVAR>:]]`，其中
+
+  - `%<fmtspec>,` 是一个可选的格式说明符，用于指示要匹配的数字格式以及预期的最小数字位数。
+  - `<NUMVAR>:` 是从捕获的值中定义变量 `<NUMVAR>` 的可选定义。
+
+  `<fmtspec>` 的语法为：`#.<precision><conversion specifier>`，其中
+
+  - `#` 是一个可选标志，可用于十六进制值（请参阅下面的 `<conversion specifier>`），它要求匹配的值以 `0x` 为前缀。
+  - `.<precision>` 是一个可选的 printf 风格的精度说明符，其中 `<precision>` 指示匹配的值必须具有的最小数字位数，如果需要，则期望前导零。
+  - `<conversion specifier>` 是一个可选的 scanf 风格的转换说明符，用于指示要匹配的数字格式（例如十六进制数）。当前接受的格式说明符为 `%u`、`%d`、`%x` 和 `%X`。如果不存在，则格式说明符默认为 `%u`
+
+- Pseudo numeric variables
+
+### 自动生成检查指令
+
+`update_test_checks.py` 系列脚本用于自动生成 FileCheck 的检查指令，减少手动编写 `CHECK` 指令的工作量
+
+- `update_llc_test_checks.py`：用于生成 `llc` 测试的检查指令
+- `update_opt_test_checks.py`：用于生成 `opt` 测试的检查指令
+- `update_mca_test_checks.py`：用于生成 `llvm-mca` 测试的检查指令
+
+## *llvm-cov*

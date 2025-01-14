@@ -173,7 +173,7 @@ MLIR 的格式类似于 LLVM IR，都是基于 SSA 的。Operation 看起来就�
 
 <img src="OperationFormat.png">
 
-注意：**上图并不是所有 operation 通用的格式！只是给出了一种 MLIR 大概长什么样子**一个 beginner 很容易产生疑惑的地方是 MLIR 并没有一种通用的表示方式，它可以通过 ODS 中的 assemblyFormat 字段来自定义给出	
+注意：**上图并不是所有 operation 通用的格式！它是当没有指定 assemblyFormat 字段时候的样子**。一个 beginner 很容易产生疑惑的地方是 MLIR 并没有一种通用的表示方式，它可以通过 ODS 中的 assemblyFormat 字段来自定义给出	
 
 上面的完整格式可能看起来有些复杂，一般的 Operation 的格式为
 
@@ -200,11 +200,54 @@ void processConstantOp(mlir::Operation *operation) {
 }
 ```
 
+Operation 的核心接口可以分为以下几类：
+
+- 操作数（Operands）：访问和操作 Operation 的输入数据
+
+  - 返回操作数
+
+    ```c++
+    Value mlir::Operation::getOperand(unsigned idx); // 返回指定索引的操作数
+    operand_range mlir::Operation::getOperands();
+    operand_type_range mlir::Operation::getOperandTypes();	
+    OpOperand& mlir::Operation::getOpOperand(unsigned idx);	
+    MutableArrayRef<OpOperand> mlir::Operation::getOpOperands();
+    ```
+
+- 结果（Results）：访问和操作 Operation 的输出数据
+
+  * 返回指定索引的操作数
+
+    ```c++
+    OpResult mlir::Operation::getOpResult(unsigned idx);
+    result_range mlir::Operation::getOpResults();
+    ```
+
+- 属性（Attributes）：访问和操作 Operation 的属性
+
+- 区域（Regions）：访问和操作 Operation 的区域
+
+- 位置（Location）：访问 Operation 的位置信息
+
+- 类型（Type）：访问 Operation 的结果类型
+
 ### Op 类
 
 Op 表示的是算子类
 
 Op 类是 `operation*` 的 wrapper
+
+### OpOperand 类
+
+OpOperand 类用于描述 Opration 的操作数，它的主要作用是作为 MLIR 中 Operation 和 Value 之间的桥梁，用于管理 Operation 的输入数据：
+
+- 管理 Operation 的输入数据（Value）
+- 提供访问和操作操作数的接口
+- 支持操作数的动态更新
+
+它提供了如下主要接口
+
+
 
 ## *Identifiers & Keywords*
 
@@ -428,6 +471,36 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
 }
 ```
 
+* builder 字段用于定义 Operation 的自定义构建器 custom builder，用于创建 Operation 的实例
+
+  ```tablegen
+  let builders = [
+    OpBuilder<(ins "Type":$resultType, "Value":$operand), [{
+      build($_builder, $_state, resultType, operand);
+    }]>
+  ];
+  ```
+
+  若没有显示定义 builder，则会自动生成两个默认构建器
+
+  * 基于参数的构建器
+
+    ```c++
+    static void build(OpBuilder &, OperationState &odsState,
+                      Type <result0-name>, Type <result1-name>, ...,
+                      Value <arg0-name>, Value <arg1-name>, ...,
+                      Attribute <attr0-name>, Attribute <attr1-name>, ...);
+    ```
+
+  * 基于范围的构建器
+
+    ```c++
+    static void build(OpBuilder &, OperationState &odsState,
+                      TypeRange resultTypes,
+                      ValueRange operands,
+                      ArrayRef<NamedAttribute> attributes);
+    ```
+
 * 自定义 MLIR 汇编格式
 
   * 声明式格式 declarative format：通过 assemblyFormat 字段定义
@@ -505,8 +578,6 @@ def MyOperation : MyDialect<"my_op">,
 ## *OpInterface*
 
 OpInterface 是一套提供协议和方法的机制，允许为 operation 定义统一的接口。这些接口定义了一组方法，操作可以选择实现这些方法以提供某些行为或属性。这种机制促进了代码的可重用性和多态性，使得不同类型的操作能够以统一的方式进行处理和转换
-
-
 
 # Dialect 转换
 
@@ -653,8 +724,6 @@ func Dialect 的定义位于 mlir/include/mlir/Dialect/Func/IR 目录中
 
 # Value & Type & Arrtibute
 
-
-
 ## *Value*
 
 > This class represents an instance of an SSA value in the MLIR system,
@@ -674,6 +743,14 @@ TypedValue 是一个拥有确定静态 Type 的 Value
 ### ShapedType
 
 ShapedType 用于表示 Shape，有 `ranked` 和 `unranked` 之分，ranked 在维度上又有 `static` 和 `dynamic` 之分
+
+### 通用 Value 接口
+
+* 获取 Value 的所属 Operation：如果 Value 是 Operation 的结果，则返回其所属的 Operation；否则返回 nullptr
+
+  ```c++
+  Operation * Value::getDefiningOp() const;
+  ```
 
 ### BlockArgument
 
@@ -761,7 +838,11 @@ OperationPass：用于 transform 某种类型的 operation 的 pass
 需要提供下面的接口
 
 * `void runOnOperation();`：实现 OperationPass 的具体逻辑，OperationPass 是由 Pass Manager 调用的，用于执行对 Operation 的转换或分析的 Pass
+
+  大致的调用流程为：`MlirOptMain() -> PassManager::run() -> runOnOperation()`
+
 * `StringRef getName() const;`
+
 * `std::unique_ptr<Pass> clonePass() const;`
 
 
@@ -1190,13 +1271,23 @@ Memory Space 内存空间是可以自定义的。MLIR 提供了灵活的机制�
   %x = memref.get_global @foo : memref<2xf32>
   ```
 
-  
+- 产生一个更高 rank 的 memref `memref.expand_shape (memref::ExpandShapeOp)`
 
 # MLIR 配套工具
 
 ## *mlir-opt*
 
-mlir-opt 是一个用于为 MLIR 代码跑 passes & lowering 的命令行 entry-point
+[Using `mlir-opt` - MLIR](https://mlir.llvm.org/docs/Tutorials/MlirOpt/#building-a-pass-pipeline-on-the-command-line)
+
+mlir-opt 是一个用于为 MLIR 代码跑 passes & lowering 的命令行 entry-point，即一个 MLIR modular optimizer driver
+
+### Pass Pipeline
+
+`--pass-pipeline`
+
+### 自定义一个 opt 工具
+
+可以继承 mlir/include/mlir/Tools/mlir-opt/MlirOptMain.h 中的 MlirOptMainConfig，重写其
 
 # Support
 
